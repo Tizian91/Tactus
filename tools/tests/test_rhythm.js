@@ -46,6 +46,26 @@ module.exports = function (T) {
   T.eq('7/8: last eighth', lay([ev(2880, 480)], [7, 8]).slice(-2), ['r1920:960', 'n2880:480']);
   T.eq('event longer than the bar is cut', lay([ev(2880, 9999)]), ['r0:1920', 'r1920:960', 'n2880:960']);
 
+  // rest cleanup (fill): notes grow up to the next one, the saved durations stay
+  const fl = (evs, fill, ts = [4, 4], beam = null) => show(R.layout(evs, ts, true, beam, fill));
+  const e8 = (ticks) => ticks.map((t) => ev(t, 480));
+  T.eq('fill beat: kick on 1 and 3 = quarter + quarter rest', fl(e8([0, 1920]), 'beat'), ['n0:960', 'r960:960', 'n1920:960', 'r2880:960']);
+  T.eq('fill next: kick on 1 and 3 = two halves', fl(e8([0, 1920]), 'next'), ['n0:1920', 'n1920:960', 'r2880:960']);
+  T.eq('fill off: as written', fl(e8([0, 1920]), 'off'), ['n0:480', 'r480:480', 'r960:960', 'n1920:480', 'r2400:480', 'r2880:960']);
+  T.eq('fill beat: 1 and 2+ = quarter, eighth rest, eighth', fl(e8([0, 1440]), 'beat').slice(0, 3), ['n0:960', 'r960:480', 'n1440:480']);
+  T.eq('fill next: 1 and 2+ = dotted quarter', fl(e8([0, 1440]), 'next').slice(0, 2), ['n0:960.', 'n1440:480']);
+  T.eq('fill beat: 16ths 1 and 1+ = two eighths', fl([ev(0, 240), ev(480, 240)], 'beat').slice(0, 2), ['n0:480', 'n480:480']);
+  T.eq('fill beat: a note written longer stays longer', fl([ev(480, 960), ev(1440, 480)], 'beat').slice(0, 3), ['r0:480', 'n480:960', 'n1440:480']);
+  T.eq('fill beat: triplet with a gap = quarter + eighth in the triplet', fl([ev(0, 320), ev(640, 320)], 'beat').slice(0, 2), ['n0:960t', 'n640:480t']);
+  T.eq('fill next: 16th triplet stays in its triplet', fl([ev(960, 160), ev(1120, 160), ev(1280, 160), ev(1920, 480)], 'next').slice(1, 5),
+    ['n960:240t', 'n1120:240t', 'n1280:240t', 'r1440:480']);
+  T.eq('fill beat: 7/8 by beam groups 2+2+3', fl(e8([0, 960, 1920]), 'beat', [7, 8]), ['n0:960', 'n960:960', 'n1920:960.']);
+  T.eq('fill beat: 6/8 by dotted quarters', fl(e8([0, 1440]), 'beat', [6, 8]), ['n0:960.', 'n1440:960.']);
+  T.eq('fill: other instruments are never filled', show(R.layout(e8([0, 1920]), [4, 4], false, null, 'next')).slice(0, 2), ['n0:480', 'r480:480']);
+  const evs = e8([0, 1920]);
+  R.layout(evs, [4, 4], true, null, 'next');
+  T.eq('fill: saved durations unchanged', evs.map((e) => e.dur), [480, 480]);
+
   // beams
   const beams = (evs, ts = [4, 4]) => R.beams(R.layout(evs, ts), ts).map((g) => g.map((it) => it.tick));
   T.eq('eighths: beamed per beat', beams([0, 480, 960, 1440].map((t) => ev(t, 480))), [[0, 480], [960, 1440]]);

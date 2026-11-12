@@ -15,7 +15,7 @@
  *   BarHeader: { ts: [4, 4], tempo: null | bpm, repeatStart, repeatEnd, marker,
  *                beam: null | [2, 2, 3]  beam groups in units of the lower number (7/8: eighths), null = default
  *                simile: false           true = "repeat the bar before" (% sign; plays the bar before) }
- *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume,
+ *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill,
  *                bars: [ { voices: [ [Event], [Event] ] } ] }   // bars[i] belongs to header bars[i]
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
  *   Note:      drums:   { id, art, accent, ghost, head, vel,
@@ -105,6 +105,7 @@
       channel: kind === 'drums' ? 9 : 0, // MIDI channel 10 = drums
       program: 0,
       volume: 100,
+      fill: kind === 'drums' ? 'beat' : 'off', // rest cleanup on screen (rhythm.js R.ends): beat | next | off
       bars: [],
     };
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
@@ -174,6 +175,7 @@
       out.channel = TC.clamp(Math.round(num(t.channel, out.channel)), 0, 15);
       out.program = TC.clamp(Math.round(num(t.program, 0)), 0, 127);
       out.volume = TC.clamp(Math.round(num(t.volume, 100)), 0, 127);
+      if (['beat', 'next', 'off'].includes(t.fill)) out.fill = t.fill;
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
         const bar = TC.newTrackBar();

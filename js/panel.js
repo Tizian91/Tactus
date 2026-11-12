@@ -195,7 +195,12 @@
   }
 
   function viewSection() {
+    const fill = S.doc.tracks[0].fill;
+    const fills = [['beat', 'Up to the end of the beat'], ['next', 'Up to the next note'], ['off', 'As written']];
+    const opts = fills.map(([k, label]) => `<option value="${k}"${k === fill ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
     return `<section><h3>${tr('View')}</h3>
+      <div class="row"><label>${tr('Note values')}</label><select data-action="setFill">${opts}</select></div>
+      <p class="hint tight">${tr('Rest cleanup: a note lasts until the next one instead of leaving rests (saved with the score).')}</p>
       ${check('toggleCounts', S.settings.showCounts, tr('Counting under the staff (1 e + a)'))}
       ${check('toggleLeftHanded', S.settings.leftHanded, tr('Left-handed mode (swap the panels)'))}
     </section>`;
@@ -208,6 +213,7 @@
       ['H O S K', tr('Hi-hat closed / open, snare, kick')], ['R C F P', tr('Ride, crash, floor tom, pedal hi-hat')],
       ['A / G', tr('Accent / ghost note')], ['↑ ↓', tr('Selected notes to the next instrument')],
       [tr('Drag'), tr('Write a row of notes (e.g. hi-hat eighths)')],
+      [tr('Finger'), tr('Hold a note, then drag: row of notes')],
       [tr('Ctrl+click'), tr('Select several notes')],
       [tr('Space'), tr('Play / stop')], ['Ctrl+C / V / D', tr('Copy / paste / duplicate the bar')],
       [tr('Del'), tr('Delete selected notes')], ['Ctrl+Z / Y', tr('Undo / redo')],
@@ -235,7 +241,7 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
-    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.doc.meta, lang,
+    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.doc.meta, S.doc.tracks[0].fill, lang,
       S.settings, !!S.clipboard, S.doc.bars.length]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

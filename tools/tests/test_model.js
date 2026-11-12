@@ -85,4 +85,10 @@ module.exports = function (T) {
 
   T.eq('input ticks', [TC.inputTicks({ value: 8 }), TC.inputTicks({ value: 8, dotted: true }), TC.inputTicks({ value: 8, triplet: true })], [480, 720, 320]);
   T.eq('grid ticks', [TC.gridTicks({ value: 16 }), TC.gridTicks({ value: 8, dotted: true }), TC.gridTicks({ value: 8, triplet: true })], [240, 240, 320]);
+
+  // rest cleanup setting of a track
+  const fillOf = (t) => TC.normalizeDoc({ bars: [{}], tracks: [t] }).tracks[0].fill;
+  T.eq('fill: drums default beat, saved value kept, bad value dropped',
+    [TC.emptyScore(1).tracks[0].fill, fillOf({ kind: 'drums' }), fillOf({ kind: 'drums', fill: 'next' }), fillOf({ kind: 'drums', fill: 'x' }), fillOf({ kind: 'pitched' })],
+    ['beat', 'beat', 'next', 'beat', 'off']);
 };

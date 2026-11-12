@@ -71,10 +71,12 @@
       const h = doc.bars[bi], spt = tick(h, T.tempoAt(doc, bi)), L = TC.barTicks(h.ts);
       const src = TC.score.sourceBar(doc, bi);
       for (const voice of track.bars[src].voices) {
+        // a roll fills the note as it is shown (rest cleanup, rhythm.js R.ends)
+        const ends = track.kind === 'drums' && TC.rhythm ? TC.rhythm.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
         for (const ev of voice) {
           if (ev.tick >= L) continue;
           const t0 = t + ev.tick * spt;
-          const dur = Math.min(ev.dur, L - ev.tick);
+          const dur = ends && ends.has(ev) ? ends.get(ev) - ev.tick : Math.min(ev.dur, L - ev.tick);
           for (const n of ev.notes) {
             const art = TC.drums.byId(n.art);
             if (!art) continue;

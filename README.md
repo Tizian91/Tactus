@@ -13,7 +13,8 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 
 - Choose a **note value** on the left (keys `1`–`7`, `.` dotted, `T` triplet). It is also the **click grid**:
   only positions of that value can be clicked; a finer grid widens the bars so a cell never gets too small.
-- **Click on a line** of the staff: the note appears, its name is shown next to the preview. The nearest line
+- **Click on a line** of the staff: the preview shows the note and its name; keep the button down and move up /
+  down to pick another line – the note is written when you release. The nearest line
   with an instrument of the kit decides ("magnet"); where several instruments share a line (hi-hat closed / half /
   open, snare / rimshot / side stick …), the one chosen in the panel is written.
 - **Instrument lock** (panel switch for tablets, key `L`, or hold `Shift`): the height no longer matters – a click
@@ -27,15 +28,19 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
   in the note panel and the drum map.
 - **Drum map**: short names (HH, SN, BD …) exactly at the height of their line; pointer on one lights its line
   up, a click chooses the instrument. Option: only the instruments used in the score.
-- **Drag** after writing a note (mouse / pen): the same instrument is written at every grid position passed –
-  a row of hi-hat eighths in one go (one undo step).
+- **Drag sideways** from a new or existing note (mouse / pen; finger: hold the note first): the same instrument
+  is written at every grid position passed – a row of hi-hat eighths in one go (one undo step).
+- **Rest cleanup** (settings → view → note values, drums): a note lasts up to the next one, at most to the end
+  of its beat, so fewer rests are written. Alternatives: up to the next note, or as written. Only the display
+  changes; the saved durations stay.
 - **Flam, drag, roll, sticking** per note in the note panel: grace notes, 1–3 strokes through the stem,
   R / L under the staff. **Counting** (1 e + a) under the staff can be switched on (settings → view).
 - **Bars**: copy / paste / duplicate (`Ctrl+C` / `V` / `D`), **% = repeat the bar before**, **beam groups**
   for odd meters (7/8 = 2+2+3, 3+2+2 …).
 - **Playback** (`Space` or ▶): synthesized drum sounds, running cursor, metronome, count-in, loop of the
   selected bar, tempo in the toolbar. Changes are heard while it plays. A note sounds when it is written.
-- **Tablet**: one finger drag scrolls, tap writes, hold opens the bar menu, two fingers zoom; a pen writes.
+- **Tablet**: one finger drag scrolls, tap writes, hold opens the bar menu, hold a note and drag writes a row,
+  two fingers zoom; a pen writes.
 
 ## Code layout
 

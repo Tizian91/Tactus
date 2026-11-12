@@ -149,6 +149,13 @@
     TC.saveSettings();
     TC.refresh();
   };
+  /** Rest cleanup of the drum track (rhythm.js R.ends): part of the score, so undoable. */
+  A.setFill = function (fill) {
+    const t = S.doc.tracks[0];
+    if (!TC.rhythm.FILLS.includes(fill) || t.fill === fill) return;
+    t.fill = fill;
+    TC.commit();
+  };
   /** Instrument in / out of the kit (the kit becomes a custom one). */
   A.toggleKitArt = function (id) {
     id = Number(id);

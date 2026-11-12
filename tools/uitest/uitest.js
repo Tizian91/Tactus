@@ -182,10 +182,43 @@ setTimeout(() => {
   TC.actions.toggleTheme(); TC.actions.toggleTheme();
   ok('dark theme attr ' + document.documentElement.dataset.theme, document.documentElement.dataset.theme === 'dark');
   TC.actions.toggleTheme();
-  S.doc.view.x = 190; TC.refresh();
-  const pre = document.createElement('pre');
-  pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
-  pre.textContent = out.join('\n');
-  document.body.appendChild(pre);
+  // aim: the note is written on release, on the line the pointer reached
+  const nb = S.doc.bars.length;
+  TC.actions.addBar();
+  TC.actions.setValue(8); TC.actions.setArt(38);
+  mouse('pointerdown', at(nb, 0, -1));
+  ok('press writes nothing yet', voice(nb, 0).length === 0);
+  mouse('pointermove', at(nb, 0, 1));
+  mouse('pointermove', at(nb, 0, 3));
+  mouse('pointerup', at(nb, 0, 3));
+  ok('released on the snare line: snare written ' + voice(nb, 0).join(' '), voice(nb, 0).join() === '0:480:38');
+  click(nb, 0, 3);
+  mouse('pointerdown', at(nb, 0, 3));
+  mouse('pointermove', at(nb, 0, 8));
+  mouse('pointerup', at(nb, 0, 8));
+  ok('released away from the selected note: not deleted', voice(nb, 0).length === 1);
+  // rest cleanup: kick on 1 and 3 drawn as quarters, setting saved in the score and undoable
+  ok('rest cleanup default: beat', S.doc.tracks[0].fill === 'beat');
+  TC.actions.setFill('next');
+  ok('rest cleanup: next', S.doc.tracks[0].fill === 'next');
+  TC.actions.undo();
+  ok('rest cleanup: undo', S.doc.tracks[0].fill === 'beat');
+  // finger: hold a note, then drag = a row of its instrument (waits for the hold)
+  const [hx, hy] = screenOf(nb, 0, 3);
+  finger('pointerdown', 11, hx, hy);
+  setTimeout(() => {
+    [480, 960, 1440].forEach((t) => { const [x, y] = screenOf(nb, t, 3); finger('pointermove', 11, x, y); });
+    const [ux, uy] = screenOf(nb, 1440, 3);
+    finger('pointerup', 11, ux, uy);
+    ok('finger: hold a note + drag writes a snare row ' + voice(nb, 0).join(' '),
+      voice(nb, 0).join() === '0:480:38,480:480:38,960:480:38,1440:480:38' && !TC.menu.isOpen());
+    TC.actions.undo();
+    ok('finger row: one undo step', voice(nb, 0).join() === '0:480:38');
+    S.doc.view.x = 190; TC.refresh();
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
+    pre.textContent = out.join('\n');
+    document.body.appendChild(pre);
+  }, 700);
 }, 500);
 window.addEventListener('error', (e) => { document.title = 'ERR ' + e.message; const d = document.createElement('pre'); d.style.cssText='position:fixed;top:0;left:0;background:red;color:#fff;z-index:99999'; d.textContent = e.message + ' ' + e.filename + ':' + e.lineno; document.body.appendChild(d); });

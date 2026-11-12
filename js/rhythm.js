@@ -3,7 +3,7 @@
  * From events to notation: which note values, rests, dots, tuplets and beams a voice
  * of one bar is written with. Pure functions without the DOM (tested in tools/tests).
  *
- *   TC.rhythm.layout(events, ts, drums) -> items, in time order:
+ *   TC.rhythm.layout(events, ts, drums, beam, fill) -> items, in time order:
  *     { kind: 'note' | 'rest', tick, dur,        actual position and length in ticks
  *       base, dots,                                written value (3840 whole … 60 = 64th) and dots
  *       tup: null | { s, e, n: 3, m: 2 },         inside a triplet (window from s to e)
@@ -11,6 +11,7 @@
  *
  * Rules (as in printed drum music):
  *   - a note keeps the value it was written with; it ends early at the next event of its voice
+ *   - drums, rest cleanup (fill, see R.ends): a note grows up to the next one instead of a rest
  *   - drums: what cannot be shown as one note value becomes a rest (no ties on drums);
  *     other instruments: tied notes
  *   - rests never hide a beat (a half rest only on beat 1 or 3 in 4/4), an empty voice
@@ -48,8 +49,8 @@
   /** Spans that rests must not cross (null: the beats decide; 6/8 etc. keep counting in beats). */
   const restSpans = (ts, beam) => (TC.isCompound(ts) && !beam ? null : R.groupSpans(ts, beam));
 
-  /** Notes and the gaps between them, from 0 to the bar end. */
-  function segments(events, L) {
+  /** Notes and the gaps between them, from 0 to the bar end. ends: Map event -> end tick (rest cleanup). */
+  function segments(events, L, ends) {
     const evs = events.filter((e) => e.tick >= 0 && e.tick < L && e.notes && e.notes.length).sort((a, b) => a.tick - b.tick);
     const segs = [];
     let pos = 0;
@@ -57,7 +58,7 @@
       if (e.tick < pos) return; // overlaps the one before (should not happen)
       if (e.tick > pos) segs.push({ s: pos, e: e.tick, ev: null });
       const next = i + 1 < evs.length ? evs[i + 1].tick : L;
-      let end = Math.min(e.tick + e.dur, next, L);
+      let end = Math.min(ends && ends.has(e) ? ends.get(e) : e.tick + e.dur, next, L);
       if (!(end > e.tick)) end = Math.min(next, L);
       segs.push({ s: e.tick, e: end, ev: e });
       pos = end;
@@ -142,16 +143,50 @@
     return [UNIT, 0];
   }
 
+  /** Rest cleanup modes (drums), see R.ends. */
+  R.FILLS = ['beat', 'next', 'off'];
+
+  /**
+   * Rest cleanup (drums): how far every note of a voice reaches, as Map event -> end tick.
+   *   'beat'  a note grows up to the next note of its voice, at most to the end of its beat
+   *           (odd meters: its beam group) - a beat without a stroke keeps its rest
+   *   'next'  a note grows up to the next note of its voice (the last one of the bar: to the end of its beat)
+   *   'off'   as written
+   * A note written longer stays longer; a note in a triplet stays inside its triplet.
+   * The saved durations do not change: a note put in between shortens the one before only on screen.
+   */
+  R.ends = function (events, ts, beam = null, fill = 'beat') {
+    const L = TC.barTicks(ts), B = R.beatTicks(ts), G = restSpans(ts, beam);
+    const segs = segments(events, L);
+    const ends = new Map();
+    if (!fill || fill === 'off') {
+      segs.forEach((g) => { if (g.ev) ends.set(g.ev, g.e); });
+      return ends;
+    }
+    const regs = regions(segs, L, B);
+    const notes = segs.filter((g) => g.ev);
+    notes.forEach((g, i) => {
+      const last = i + 1 === notes.length, next = last ? L : notes[i + 1].s;
+      const sp = G && G.find(([a, z]) => g.s >= a && g.s < z);
+      const beatEnd = sp ? sp[1] : (Math.floor(g.s / B) + 1) * B;
+      const reg = regs.find((r) => g.s >= r.s && g.s < r.e);
+      let lim = fill === 'next' && !last ? next : Math.min(next, beatEnd);
+      if (reg) lim = Math.min(lim, reg.e);
+      ends.set(g.ev, Math.min(L, Math.max(g.e, lim)));
+    });
+    return ends;
+  };
+
   /**
    * Note values, rests and tuplets of one voice in one bar.
    * drums: what is left of a note after its value becomes rests instead of tied notes.
    */
-  R.layout = function (events, ts, drums = true, beam = null) {
+  R.layout = function (events, ts, drums = true, beam = null, fill = 'off') {
     const L = TC.barTicks(ts), B = R.beatTicks(ts), G = restSpans(ts, beam);
     if (!events.some((e) => e.notes && e.notes.length && e.tick < L)) {
       return [{ kind: 'rest', tick: 0, dur: L, base: 3840, dots: 0, tup: null, ev: null, tie: false, measure: true }];
     }
-    const segs = segments(events, L);
+    const segs = segments(events, L, drums && fill && fill !== 'off' ? R.ends(events, ts, beam, fill) : null);
     const items = [];
     for (const r of regions(segs, L, B)) {
       const f = r.tup ? 1.5 : 1;           // written = actual * f

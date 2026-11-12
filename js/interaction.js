@@ -3,7 +3,8 @@
  * Mouse, pen and keyboard on the score.
  *
  *   move           preview of the note a click would write (grid position + line), with its name
- *   click          on an empty grid position: write the note. The nearest line that carries an
+ *   press          on an empty grid position: the preview stays in that column; moving up / down picks the
+ *                  line, releasing writes the note. The nearest line that carries an
  *                  instrument of the kit decides ("magnet"); the selected instrument if it sits there.
  *   instrument lock  (panel switch or key L; while Shift is held): the height does not matter,
  *                  a click anywhere in the column writes the selected instrument
@@ -12,9 +13,10 @@
  *                  (again: the next one on that line)
  *   right-click    bar menu (time signature, insert / delete bars)
  *   wheel          scroll sideways; Shift + wheel: up / down; Ctrl + wheel: zoom
- *   drag           (mouse / pen, after writing a note) writes the same instrument at every grid position
+ *   drag sideways  (mouse / pen, from a new note or a note held) writes the same instrument at every grid position
  *   middle button or Space + drag: move the view · Space tapped: play / stop
- *   fingers        one finger drag: scroll · tap: like a click · hold: bar menu · two fingers: zoom
+ *   fingers        one finger drag: scroll · tap: write / select at once · hold: bar menu ·
+ *                  hold a note, then drag: row of notes · two fingers: zoom
  */
 (function (TC) {
   const S = TC.state;
@@ -133,6 +135,7 @@
 
   function onPointerMove(e) {
     if (e.pointerType === 'touch') return touchMove(e);
+    if (S.drag && S.drag.mode === 'aim') return aimMove(e);
     if (S.drag && S.drag.mode === 'write') return dragWrite(e);
     if (S.drag && S.drag.mode === 'pan') {
       const v = S.doc.view;
@@ -158,7 +161,79 @@
       return;
     }
     if (e.button !== 0) return;
-    press(e);
+    const t = target(I.toWorld(e.clientX, e.clientY), e);
+    if (t && (t.kind === 'place' || t.kind === 'head')) {
+      // the note is written (or the note selected) when the button is released, see aimMove
+      S.drag = { mode: 'aim', t, sx: e.clientX };
+      try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
+      if (t.kind === 'place') showAim(t, true);
+      return;
+    }
+    act(t, e);
+  }
+
+  // ---- Aim: button held down on the score -----------------------------------------------------
+  // up / down: the preview moves from line to line (the note is written on release);
+  // sideways to a later grid position: the note is written and a row follows (same instrument).
+  // Held on an existing note: release = select / delete; sideways = a row of that instrument.
+
+  const DRAG_MIN = 6; // px sideways before a row begins
+
+  function showAim(t, sound) {
+    S.hover = { bar: t.bar, tick: t.tick, line: t.line, art: t.art, lock: !!t.lock, label: TC.drums.label(t.art, true) };
+    I.hoverKey = null;
+    TC.render.drawHover();
+    TC.ui.status(`${where(t)} · ${TC.drums.label(t.art)} · ${tr('release: write')}`);
+    if (sound && S.settings.sound) TC.audio.preview(TC.newDrumNote(t.art.id, S.input));
+  }
+
+  function aimMove(e) {
+    const d = S.drag, RD = TC.render, t = d.t;
+    const p = I.toWorld(e.clientX, e.clientY);
+    if (Math.abs(e.clientX - d.sx) >= DRAG_MIN) {
+      const bar = RD.barAt(p.x);
+      if (bar && !bar.simile && p.x >= bar.x0) {
+        const tick = RD.snapTick(bar, p.x);
+        if (bar.i > t.bar || (bar.i === t.bar && tick > t.tick)) {
+          startRow(t, e);
+          return dragWrite(e);
+        }
+      }
+    }
+    if (t.kind !== 'place' || t.lock) return;
+    const art = TC.drums.resolve(RD.posAt(p.y), S.input.art, TC.drums.clickable());
+    if (art && art.id !== t.art.id) {
+      d.t = Object.assign({}, t, { art, line: art.line });
+      showAim(d.t, true);
+    }
+  }
+
+  /** From aiming to writing a row: the first note is the one aimed at (or the note held). */
+  function startRow(t, e) {
+    let art = t.art, fresh = true;
+    if (t.kind === 'place') {
+      fresh = !writeNote(t, e, false);
+    } else {
+      const hit = TC.score.findNote(S.doc, t.head.id);
+      art = hit && TC.drums.byId(hit.note.art);
+    }
+    S.drag = art ? { mode: 'write', art, bar: t.bar, tick: t.tick, n: 0, fresh } : null;
+  }
+
+  function aimUp(e) {
+    const t = S.drag.t;
+    S.drag = null;
+    if (t.kind === 'place') return act(t, e);
+    // a note: only when the pointer is still on it
+    const t2 = target(I.toWorld(e.clientX, e.clientY), e);
+    if (t2 && t2.kind === 'head' && t2.head.id === t.head.id) act(t2, e);
+  }
+
+  /** The row is done: one undo step (with the note it started from, if that was written now). */
+  function finishRow() {
+    const d = S.drag;
+    S.drag = null;
+    if (d && d.n) TC.commit({ merge: !d.fresh });
   }
 
   // ---- Fingers (tablet / phone) ---------------------------------------------------------------
@@ -197,10 +272,24 @@
       holdTimer = setTimeout(() => {
         if (!gesture || gesture.mode !== 'tap') return;
         const d = gesture.down;
+        const t = target(I.toWorld(d.clientX, d.clientY), d);
+        if (t && t.kind === 'head') {
+          // held on a note: dragging sideways now writes a row of its instrument
+          startRow(t, d);
+          if (!S.drag) return void (gesture = { mode: 'none' });
+          gesture = { mode: 'row' };
+          if (navigator.vibrate) navigator.vibrate(15);
+          S.hover = { bar: t.bar, tick: t.tick, line: t.line, headId: t.head.id, hx: t.head.x, hy: t.head.y,
+            label: `${TC.drums.label(S.drag.art, true)} – ${tr('drag: row of notes')}` };
+          TC.render.drawHover();
+          TC.ui.status(`${where(t)} · ${TC.drums.label(S.drag.art)} · ${tr('drag: row of notes')}`);
+          return;
+        }
         gesture = { mode: 'none' };
         onContextMenu({ clientX: d.clientX, clientY: d.clientY, preventDefault() {}, fromHold: true });
       }, HOLD_MS);
     } else if (touches.size === 2) {
+      if (gesture && gesture.mode === 'row') finishRow(); // a second finger ends the row
       startPinch();
     }
   }
@@ -212,6 +301,10 @@
     p.y = e.clientY;
     lastTouch = Date.now();
     const v = S.doc.view;
+    if (gesture.mode === 'row') {
+      if (touches.size === 1 && S.drag) dragWrite(e);
+      return;
+    }
     if (gesture.mode === 'tap') {
       if (Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy) < TAP_MOVE) return;
       clearTimeout(holdTimer);
@@ -242,6 +335,10 @@
     lastTouch = Date.now();
     clearTimeout(holdTimer);
     const g = gesture;
+    if (g && g.mode === 'row') {
+      finishRow();
+      clearHover();
+    }
     if (touches.size === 0) {
       gesture = null;
       vp.classList.remove('panning');
@@ -255,9 +352,13 @@
     }
   }
 
-  /** Mouse click, pen tap or finger tap at the position of event e. */
+  /** Finger tap at the position of event e. */
   function press(e) {
-    const t = target(I.toWorld(e.clientX, e.clientY), e);
+    act(target(I.toWorld(e.clientX, e.clientY), e), e);
+  }
+
+  /** What a click / tap on target t does (e: the event, for Ctrl and the pointer position). */
+  function act(t, e) {
     if (!t) {
       if (S.selection.size || S.selBar !== null) A().selectNone();
       return;
@@ -292,7 +393,14 @@
       TC.refresh();
       return;
     }
-    // write a note
+    writeNote(t, e, e.pointerType === 'touch');
+  }
+
+  /**
+   * Write the note of target t (kind 'place'). Already there: it is selected instead.
+   * Returns true when the score changed (one undo step).
+   */
+  function writeNote(t, e, sound) {
     S.selection.clear();
     const art = t.art;
     const note = TC.newDrumNote(art.id, S.input);
@@ -300,19 +408,15 @@
     if (res.status === 'exists') {
       S.selection = new Set([res.note.id]);
       TC.refresh();
-      return;
+      return false;
     }
     TC.commit();
-    if (S.settings.sound) TC.audio.preview(note);
+    if (sound && S.settings.sound) TC.audio.preview(note); // mouse / pen: heard while aiming
     TC.ui.status(`${where(t)} · ${TC.drums.label(art)}`);
     I.hoverKey = null;
     lastMove = e;
-    updateHover();
-    // mouse / pen held down: dragging writes the same instrument at every grid position it passes
-    if (e.pointerType !== 'touch' && e.type === 'pointerdown') {
-      S.drag = { mode: 'write', art, bar: t.bar, tick: t.tick, n: 0 };
-      try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
-    }
+    if (!S.drag) updateHover();
+    return true;
   }
 
   /** Grid positions after (bar, tick) up to and including (bar2, tick2), in time order. */
@@ -362,11 +466,11 @@
 
   function onPointerUp(e) {
     if (e.pointerType === 'touch') return touchUp(e, e.type === 'pointercancel');
-    if (S.drag && S.drag.mode === 'write') {
-      const n = S.drag.n;
-      S.drag = null;
+    if (S.drag && (S.drag.mode === 'aim' || S.drag.mode === 'write')) {
       try { vp.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
-      if (n) TC.commit({ merge: true }); // the whole row is one undo step
+      if (S.drag.mode === 'write') finishRow(); // the whole row is one undo step
+      else if (e.type === 'pointercancel') S.drag = null;
+      else aimUp(e);
       I.hoverKey = null;
       lastMove = e;
       updateHover();

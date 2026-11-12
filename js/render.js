@@ -92,7 +92,7 @@
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');
       const simile = !!h.simile && i > 0; // "%": repeats the bar before, no notes of its own
-      const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam));
+      const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam, track.fill));
       let finest = L;
       voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); }));
       const scale = Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);

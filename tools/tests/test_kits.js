@@ -73,6 +73,9 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   K.setKeys(la, 57, [42]);
   T.eq('look-alikes found', K.lookalikes(la).map((g) => g.map((a) => a.id)), [[57, 30]]);
 
+  const uj = K.fromDrm(drm('UJAM-Drummer', [item(48, 48, 'Crash 1'), item(49, 49, 'Crash L'), item(57, 57, 'Crash R')], [49, 57, 48]));
+  T.eq('UJAM: 49 is crash 1 (high), 57 crash 2, as in the instrument', [uj.assign[49], uj.assign[57]], [[49, 48], [57]]);
+
   K.list = [p, bm];
   const text = K.exportText();
   K.list = [];

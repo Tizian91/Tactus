@@ -70,7 +70,12 @@
     accent: R(69, 34, 'latin.unpitched.claves'), // short accent click (BeatMaker "Kick 2"), on the claves line
   };
   /** Keys whose name misleads, per map name: { input note: role }. */
-  C.KNOWN = { BeatMaker: { 38: 'accent' } }; // "Kick 2" is a short accent click, not a kick
+  C.KNOWN = {
+    BeatMaker: { 38: 'accent' }, // "Kick 2" is a short accent click, not a kick
+    // UJAM Virtual Drummer plays Crash 1 on 49 and Crash 2 on 57 (named "Crash L" / "Crash R" in the map;
+    // 48 "Crash 1" is not used by the instrument)
+    'UJAM-Drummer': { 49: 'crash1', 57: 'crash2' },
+  };
 
   // Tom rim shot / rim only: same line, rim-shot or side-stick head
   const TOM_TECH = { rimshot: [2, 'pt.rimShot'], rim: [23, 'pt.sideStick'] };

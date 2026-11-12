@@ -399,12 +399,16 @@
     const v = prompt(tr('Text above bar {n} (e.g. Verse, Chorus) – empty: remove', { n: i + 1 }), S.doc.bars[i].marker || '');
     if (v !== null) A.setMarker(v, i);
   };
-  /** Page view: bar i starts a new line. */
+  /** Page view: bar i starts a new line (the break is kept at the bar after it). */
   A.toggleLineBreak = function (i = curBar()) {
     if (i <= 0) return;
     S.doc.bars[i].lineBreak = !S.doc.bars[i].lineBreak;
     TC.commit();
     if (!TC.render.isPage()) TC.ui.hint(tr('Line breaks show in the page view'));
+  };
+  /** Page view: a new line after bar i (= from bar i + 1). */
+  A.toggleBreakAfter = function (i = curBar()) {
+    if (i < S.doc.bars.length - 1) A.toggleLineBreak(i + 1);
   };
   A.setBarsPerLine = function (n) {
     n = TC.clamp(Math.round(Number(n) || 0), 0, 12);
@@ -488,6 +492,7 @@
       { label: 'Repeat the bar before (%)', checked: !!h.simile, action: () => A.toggleSimile(i), disabled: i === 0 },
       '-',
       { label: 'Text above the bar…', action: () => A.editMarker(i) },
+      { label: 'Line break after this bar', checked: !!(S.doc.bars[i + 1] && S.doc.bars[i + 1].lineBreak), action: () => A.toggleBreakAfter(i), disabled: i === S.doc.bars.length - 1 },
       { label: 'New line from this bar', checked: !!h.lineBreak, action: () => A.toggleLineBreak(i), disabled: i === 0 },
       '-',
       { label: 'Insert bar before', action: () => A.insertBarBefore(i) },

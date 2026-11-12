@@ -332,3 +332,4 @@ details > summary { list-style-position: outside; }
   #print-root svg:last-child { break-after: auto; page-break-after: auto; }
 }
 .score.print { --ink: #000; --staff: #000; --text: #000; --label: #222; --muted: #555; background: #fff; }
+.score .break-mark { font-size: 16px; font-weight: 700; fill: var(--accent); opacity: 0.8; }

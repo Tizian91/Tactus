@@ -371,6 +371,10 @@
       } else {
         o.push(line(end, 0, end, 4 * SP, 'barline'));
       }
+      // page view (not printed): a manual line break after this bar
+      if (page && !print && doc.bars[i + 1] && doc.bars[i + 1].lineBreak) {
+        o.push(`<text class="break-mark" x="${f(end + 0.5 * SP)}" y="${f(2.6 * SP)}"><title>${esc(TC.tr('manual line break'))}</title>↵</text>`);
+      }
       const lineStart = i === s.first;
       if (numbers === 'every' || (numbers === 'system' && lineStart && i > 0)) {
         const nx = page && lineStart ? s.ox + 0.3 * SP : b.x + 0.25 * SP;

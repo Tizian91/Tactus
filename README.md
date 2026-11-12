@@ -40,7 +40,7 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 - **Playback** (`Space` or ▶): synthesized drum sounds, running cursor, metronome, count-in, loop of the
   selected bar, tempo in the toolbar. Changes are heard while it plays. A note sounds when it is written.
 - **Page view** (toolbar "Page"): A4 pages as printed – bars break into lines that fill the width, bars per
-  line automatic or fixed, a new line from any bar (bar menu). **Text above a bar** (Intro, Verse, Chorus …)
+  line automatic or fixed, a line break after any bar (bar menu, marked ↵). **Text above a bar** (Intro, Verse, Chorus …)
   and **bar numbers** (start of each line / every bar / none). **PDF**: File → PDF / print (`Ctrl+P`),
   choose "Save as PDF".
 - **Tablet**: one finger drag scrolls, tap writes, hold opens the bar menu, hold a note and drag writes a row,

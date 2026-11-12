@@ -140,6 +140,7 @@
       <p class="hint">${tr('Applies from this bar up to the next change.')}</p>
       <div class="row"><label>${tr('Text')}</label><input type="text" data-marker maxlength="40" value="${esc(h.marker || '')}" placeholder="${esc(tr('e.g. Verse, Chorus'))}"></div>
       ${i > 0 ? check('toggleLineBreak', !!h.lineBreak, tr('New line from this bar (page view)')) : ''}
+      ${S.doc.bars[i + 1] ? check('toggleBreakAfter', !!S.doc.bars[i + 1].lineBreak, tr('Line break after this bar (page view)')) : ''}
       <div class="btn-row">
         ${btn('copyBar', undefined, tr('Copy'), false, tr('Copy bar') + ' (Ctrl+C)')}
         ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
@@ -259,7 +260,7 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
-    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.doc.meta, S.doc.tracks[0].fill, S.doc.page, lang,
+    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, S.doc.tracks[0].fill, S.doc.page, lang,
       S.settings, !!S.clipboard, S.doc.bars.length]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

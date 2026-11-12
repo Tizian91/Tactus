@@ -219,6 +219,9 @@ setTimeout(() => {
   ok('page view: click writes into a bar of a later line ' + voice(lastBar, 0).join(' '), voice(lastBar, 0).some((s) => s.startsWith('960:') && s.endsWith(':38')));
   TC.actions.setMarker('Chorus', 2);
   ok('bar text drawn ' + (document.querySelector('#score .marker-text') || {}).textContent, S.doc.bars[2].marker === 'Chorus' && document.querySelector('#score .marker-text').textContent === 'Chorus');
+  TC.actions.toggleBreakAfter(1);
+  ok('line break after bar 2: bar 3 starts a line, marked', PL().systems.some((s) => s.first === 2) && S.doc.bars[2].lineBreak && !!document.querySelector('#score .break-mark'));
+  TC.actions.undo();
   TC.actions.toggleLineBreak(2);
   ok('new line from bar 3', PL().systems.some((s) => s.first === 2));
   TC.actions.undo();

@@ -93,7 +93,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
   für den Import. Verdächtige Tasten (gleiche Ausgangsnote wie ein anderes Instrument) werden gemeldet, Tasten ohne
   Tactus-Instrument aufgelistet. „Drummap für Cubase speichern“ schreibt die `.drm` mit der Tactus-Darstellung.
   Gespeichert im Browser, Export / Import als `*.tactus-kits.json`.
-- Crash 3 / 4 einer Drummap werden Crash 2 zugeordnet (zwei Crash-Linien bleiben lesbar, klingen aber verschieden).
+- Crash 3 einer Drummap wird Crash 1 (hoch) zugeordnet, Crash 4 Crash 2 (zwei Crash-Linien bleiben lesbar, klingen aber verschieden).
 - **MIDI-Export** (Datei → MIDI exportieren): General MIDI (auch für Guitar Pro) oder ein Kit-Profil. Tempo, Taktart,
   Takt-Texte als Marker, Anschlag (Ghost / Akzent), Flam / Drag / Wirbel ausgeschrieben, %-Takte ausgeschrieben;
   fehlt im Profil eine Taste, wird ein verwandtes Instrument genommen und gemeldet.

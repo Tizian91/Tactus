@@ -33,7 +33,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   const p = K.fromDrm(ez);
   T.eq('profile name from the map', p.name, 'EZDrummer3');
   T.eq('auto: kick, snare, hi-hat with two keys (order of the map), floor tom', [p.assign[36], p.assign[38], p.assign[42], p.assign[43]], [[36], [38], [61, 22], [44]]);
-  T.eq('auto: crash 3 joins crash 2; drum key without instrument: tom rim shot', [p.assign[57], K.unassigned(p).map((e) => e.inote)], [[57], [73]]);
+  T.eq('auto: crash 3 joins crash 1 (high); drum key without instrument: tom rim shot', [p.assign[49], K.unassigned(p).map((e) => e.inote)], [[57], [73]]);
   T.eq('unnamed keys that were set up can be chosen', K.keys(K.fromDrm(drm('U', [item(30, 30, '').replace('name="DisplayNote" value="30"', 'name="DisplayNote" value="79"'), item(31, 31, 'Sound 32')], [30, 31]))).map((e) => e.inote), [30]);
   T.eq('keys list: named only, map order first', K.keys(p).map((e) => e.inote), [38, 36, 61, 22, 44, 73, 57, 20]);
 

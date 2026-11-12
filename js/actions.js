@@ -149,6 +149,8 @@
     TC.saveSettings();
     TC.refresh();
   };
+  /** Kit profiles: which key of a drum VST is which instrument (dialog, js/kits.js). */
+  A.openKits = () => TC.kits.open();
   /** Notation layout (where the instruments sit): a view setting, the score does not change. */
   A.setNotation = function (key) {
     if (!TC.NOTATIONS[key]) return;

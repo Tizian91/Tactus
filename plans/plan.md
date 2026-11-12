@@ -88,9 +88,13 @@ Formate und MIDI-Werte wie in Guitar Pro.
   oder „Guitar Pro“. Nur die Zeichnung ändert sich; das Stück speichert weiter das Instrument (Guitar-Pro-Nummer).
 - Cubase-Drummaps (`.drm`) lesen und auf die Tactus-Darstellung umschreiben (`js/cubase.js`,
   `tools/restyle_drummaps.js`): EZDrummer 3, Groove Agent (Ozzie), UJAM BeatMaker.
-- Als Nächstes: **Kit-Profile** (pro VST / Kit: welche Taste welches Instrument ist; Instrumente mit fester
-  Position, nur die Taste wird zugeordnet), daraus `.drm` für Cubase erzeugen; dann **MIDI-Export** (Zielwahl,
-  General MIDI auch für Guitar Pro) und **MIDI-Import** (Herkunft wählen, Anschlag → Ghost / Akzent).
+- **Kit-Profile** (Einstellungen → Drum-Kit → „Kit-Profile (Cubase)…“): Cubase-Drummap eines Drum-VSTs laden, Tactus
+  ordnet die Tasten über die Namen zu; pro Instrument (feste Linie und Kopf) nur die Taste wählen, weitere Tasten
+  für den Import. Verdächtige Tasten (gleiche Ausgangsnote wie ein anderes Instrument) werden gemeldet, Tasten ohne
+  Tactus-Instrument aufgelistet. „Drummap für Cubase speichern“ schreibt die `.drm` mit der Tactus-Darstellung.
+  Gespeichert im Browser, Export / Import als `*.tactus-kits.json`.
+- Als Nächstes: **MIDI-Export** (Kit-Profil oder General MIDI, auch für Guitar Pro), dann **MIDI-Import**
+  (Herkunft wählen, Anschlag → Ghost / Akzent), fehlende Instrumente ergänzen (Crash 3 / 4, Tom-Rimshots …).
 
 ## Phase 3 – Wiedergabe (Grundfunktion) ✅
 

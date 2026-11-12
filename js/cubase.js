@@ -47,6 +47,7 @@
     tomMidLow: R(71, 0, 'band.unpitched.tomtom.medium-low'),
     tomLow: R(68, 0, 'band.unpitched.tomtom.low.alias.tom-low'),
     tomFloor: R(65, 0, 'band.unpitched.floortom.low'),
+    tomFloor2: R(62, 0, 'band.unpitched.floortom.high'), // second floor tom, below the staff
     hhClosed: R(79, 34, HH, 'pt.closed'),
     hhHalf: R(79, 3, HH, 'pt.halfOpen'),
     hhOpen: R(79, 3, HH, 'pt.open2'),
@@ -59,12 +60,18 @@
     ride: R(77, 34, RIDE),
     rideEdge: R(77, 34, RIDE, 'pt.edgeCymbals'),
     rideBell: R(77, 25, RIDE, 'pt.bell'),
+    ride2: R(74, 34, 'orchestral.unpitched.ride.cymbal.low'),
+    ride2Edge: R(74, 34, 'orchestral.unpitched.ride.cymbal.low', 'pt.edgeCymbals'),
+    ride2Bell: R(74, 25, 'orchestral.unpitched.ride.cymbal.low', 'pt.bell'),
     china: R(84, 34, 'unpitched.china.cymbal'),
     splash: R(86, 34, 'unpitched.splash.cymbal'),
     cowbell: R(76, 28, 'percussion.other.cowbell.high'),
     clapPerc: R(71, 34, 'body.patsch'), // clap-like percussion (BeatMaker FX 1 / Perc 1)
     accent: R(69, 34, 'latin.unpitched.claves'), // short accent click (BeatMaker "Kick 2"), on the claves line
   };
+  /** Keys whose name misleads, per map name: { input note: role }. */
+  C.KNOWN = { BeatMaker: { 38: 'accent' } }; // "Kick 2" is a short accent click, not a kick
+
   // Tom rim shot / rim only: same line, rim-shot or side-stick head
   const TOM_TECH = { rimshot: [2, 'pt.rimShot'], rim: [23, 'pt.sideStick'] };
 
@@ -205,6 +212,38 @@
     let out = text.slice(0, m.index) + m[1] + body + m[3] + text.slice(m.index + m[0].length);
     if (opts.name) out = out.replace(/(<DrumMap>\s*<string name="Name" value=")[^"]*(")/, `$1${opts.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}$2`);
     return { text: out, changes, collisions: C.collisions(C.parse(out), opts.roles) };
+  };
+
+  /**
+   * Writes a drum map with the given notation: styles = { inote: {display, head, instrument, technique, name?} }.
+   * Other entries stay. opts.name: map name; opts.order: input notes listed first (the rest follow as before).
+   */
+  C.write = function (text, styles, opts = {}) {
+    const m = mapList(text);
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const body = m[2].replace(/<item>([\s\S]*?)<\/item>/g, (all, item) => {
+      const f = fields(item);
+      const s = f.INote !== undefined && styles[+f.INote];
+      if (!s) return all;
+      let out = item;
+      out = setField(out, 'DisplayNote', s.display);
+      out = setField(out, 'NoteheadSet', s.head);
+      out = setField(out, 'InstrumentEntityID', s.instrument || '', true);
+      out = setField(out, 'TechniqueEntityID', s.technique || '', true);
+      if (s.name) out = setField(out, 'Name', esc(s.name), true);
+      return '<item>' + out + '</item>';
+    });
+    let out = text.slice(0, m.index) + m[1] + body + m[3] + text.slice(m.index + m[0].length);
+    if (opts.name) out = out.replace(/(<DrumMap>\s*<string name="Name" value=")[^"]*(")/, `$1${esc(opts.name)}$2`);
+    if (opts.order) {
+      out = out.replace(/(<list name="Order"[^>]*>)([\s\S]*?)(\s*<\/list>)/, (all, open, items, close) => {
+        const old = (items.match(/value="(\d+)"/g) || []).map((s) => +s.slice(7, -1));
+        const first = opts.order.filter((n, i, a) => a.indexOf(n) === i);
+        const indent = (/\n(\s*)<item/.exec(items) || [, '      '])[1];
+        return open + first.concat(old.filter((n) => !first.includes(n))).map((n) => `\n${indent}<item value="${n}"/>`).join('') + close;
+      });
+    }
+    return out;
   };
 
   /** Different instruments (by role) that share display note, instrument and technique. */

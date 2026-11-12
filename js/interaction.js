@@ -534,6 +534,10 @@
       shiftDown = true;
       I.refreshHover();
     }
+    if (TC.kits && TC.kits.isOpen()) {
+      if (e.key === 'Escape') TC.kits.close();
+      return;
+    }
     if (TC.menu.isOpen()) return;
     const ctrl = e.ctrlKey || e.metaKey;
     const k = e.key;

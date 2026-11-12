@@ -10,13 +10,11 @@
 const fs = require('fs'), path = require('path');
 require(path.join(__dirname, '..', 'js', 'cubase.js'));
 const C = globalThis.TC.cubase;
-// Where a name misleads: { map name: { input note: role } }
-const ROLES = { BeatMaker: { 38: 'accent' } }; // "Kick 2" is a short accent click, not a kick
 const log = [];
 for (const file of process.argv.slice(2)) {
   const src = fs.readFileSync(file, 'utf8');
   const map = C.parse(src);
-  const res = C.restyle(src, { roles: ROLES[map.name], name: map.name.replace(/\s*\[\d+\]$/, '') + ' (Tactus)' });
+  const res = C.restyle(src, { roles: C.KNOWN[map.name], name: map.name.replace(/\s*\[\d+\]$/, '') + ' (Tactus)' });
   const out = path.join(path.dirname(file), path.basename(file, '.drm') + ' (Tactus).drm');
   fs.writeFileSync(out, res.text, 'utf8');
   log.push(`=== ${path.basename(file)} -> ${path.basename(out)}  (${res.changes.length} entries)`);

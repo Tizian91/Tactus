@@ -181,6 +181,7 @@
       <details class="kit-list"><summary>${tr('Choose instruments')}</summary>${list}</details>
       <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
       <p class="hint tight">${tr('Where the instruments sit on the staff. Only the display changes.')}</p>
+      <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>
       <h3 class="sub">${tr('Drum map')}</h3>
       ${check('toggleDrumMap', S.settings.showDrumMap, tr('Show next to the staff'))}
       ${check('toggleMapUsed', S.settings.mapUsedOnly, tr('Only instruments used in the score'))}

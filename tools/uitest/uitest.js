@@ -257,6 +257,10 @@ setTimeout(() => {
     ok('notation tactus: a click on the bottom line writes the kick (not the pedal)', TC.drums.resolve(8, 42, TC.drums.kit()).id === 36);
     ok('notation tactus: a click on the top line writes the ride (not tom 1)', TC.drums.resolve(0, 42, TC.drums.kit()).id === 51);
     ok('notation: panel offers it', !!document.querySelector('select[data-action="setNotation"] option[value="tactus"][selected]'));
+    TC.actions.openKits();
+    ok('kit profiles: dialog opens', !!document.querySelector('.kit-dialog') && TC.kits.isOpen());
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    ok('kit profiles: Escape closes it', !document.querySelector('.kit-dialog') && !TC.kits.isOpen());
     TC.actions.setNotation('gp');
     ok('notation gp: kick back on F4, score unchanged', TC.drums.byId(36).line === 7 && voice(nb, 0).join() === '0:480:38');
     S.doc.view.x = 190; TC.refresh();

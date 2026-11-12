@@ -28,6 +28,9 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
   in the note panel and the drum map.
 - **Notation** (settings panel → drum kit): "Tactus" (default; kick and pedal hi-hat on the bottom line, toms from
   the top line down, crash 2 / china / splash above the hi-hat) or "Guitar Pro". Only the drawing changes.
+- **Kit profiles** (settings → drum kit → "Kit profiles (Cubase)…"): load the Cubase drum map of a drum VST, Tactus
+  matches the keys by name; per instrument (fixed line and head) only the key is chosen. "Save drum map for Cubase"
+  writes a `.drm` with the Tactus notation. Kept in the browser; export / import as `*.tactus-kits.json`.
 - **Drum map**: short names (HH, SN, BD …) exactly at the height of their line; pointer on one lights its line
   up, a click chooses the instrument. Option: only the instruments used in the score.
 - **Drag sideways** from a new or existing note (mouse / pen; finger: hold the note first): the same instrument
@@ -55,7 +58,8 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 | `js/state.js` | Namespace `TC`, app state, undo/redo (`TC.commit()`) |
 | `js/model.js` | Score model (bar headers, tracks, voices, events, notes), loading, operations (`TC.score`) |
 | `js/drummap.js` | Drum map: Guitar Pro articulations (line, MIDI note, notehead), notation layouts (Tactus / Guitar Pro), drum kits, "magnet" |
-| `js/cubase.js` | Cubase drum maps (`.drm`): read, recognise instruments, rewrite to the Tactus layout (not loaded by the app yet) |
+| `js/cubase.js` | Cubase drum maps (`.drm`): read, recognise instruments, write with the Tactus notation |
+| `js/kits.js` | Kit profiles (which VST key is which instrument), their dialog, drum maps for Cubase |
 | `js/rhythm.js` | Events → note values, rests, dots, triplets, beams (pure, tested) |
 | `js/render.js` | SVG engraving with the Bravura font (SMuFL), grid, hover preview; endless and page view (lines, A4 pages), PDF / print |
 | `js/panel.js` | Note panel and settings panel, widths, left-handed mode |

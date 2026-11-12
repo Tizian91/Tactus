@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    Local only: the browser blocks every connection to other servers. Everything comes
+    from this folder / site; the music font is embedded (css/bravura.css, data: URL).
+    'unsafe-inline' only for styles (positions set with style attributes).
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; font-src 'self' file: data:; connect-src 'self' file:; worker-src 'self'; manifest-src 'self' file:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Tactus</title>
+  <meta name="theme-color" content="#2b6cde">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/bravura.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app">
+    <header id="toolbar">
+      <div class="tb-group"><span class="brand">Tactus</span></div>
+      <div class="tb-group">
+        <button data-action="fileMenu" id="file-btn" data-i18n="File ▾" data-i18n-title="New, open, save">File ▾</button>
+      </div>
+      <div class="tb-group">
+        <button data-action="undo" data-i18n-title="Undo (Ctrl+Z)">↶</button>
+        <button data-action="redo" data-i18n-title="Redo (Ctrl+Y)">↷</button>
+      </div>
+      <div class="tb-group">
+        <div class="seg">
+          <button data-action="layout" data-value="endless" class="active" data-i18n="Endless" data-i18n-title="Endless view: all bars in one row">Endless</button>
+          <button data-action="layout" data-value="page" class="soon" data-i18n="Page" data-i18n-title="Page view (A4) – phase 2">Page</button>
+        </div>
+        <button data-action="toggleDrumMap" data-i18n="Drum map" data-i18n-title="Show which instrument sits on which line">Drum map</button>
+      </div>
+      <div class="tb-group tb-right">
+        <button data-action="zoomMenu" id="zoom-label">100% ▾</button>
+      </div>
+      <div class="tb-group">
+        <button data-action="togglePanel" data-i18n="Notes" data-i18n-title="Show / hide the note panel">Notes</button>
+        <button data-action="togglePanelRight" data-i18n="Settings" data-i18n-title="Show / hide the settings panel (score, bar, drum kit)">Settings</button>
+      </div>
+      <div class="tb-group">
+        <button data-action="toggleTheme" id="theme-btn" data-i18n-title="Toggle theme (light / dark / auto)">🌓</button>
+        <button data-action="toggleLang" id="lang-btn" data-i18n-title="Switch language">DE</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <aside id="panel-notes" class="panel"></aside>
+      <div class="panel-resizer" data-panel="notes" data-i18n-title="Drag: width · double-click: default width"></div>
+      <div id="viewport" tabindex="0">
+        <svg id="score" xmlns="http://www.w3.org/2000/svg">
+          <g id="world"><g class="static"></g><g class="hover"></g></g>
+        </svg>
+      </div>
+      <div class="panel-resizer" data-panel="settings" data-i18n-title="Drag: width · double-click: default width"></div>
+      <aside id="panel-settings" class="panel"></aside>
+      <button type="button" class="panel-expand" data-panel="notes" data-i18n-title="Show the note panel">♪</button>
+      <button type="button" class="panel-expand" data-panel="settings" data-i18n-title="Show the settings panel">⚙</button>
+    </main>
+
+    <footer id="statusbar">
+      <span id="status-file"></span>
+      <span id="status-info"></span>
+      <span id="status-hint"></span>
+    </footer>
+  </div>
+
+  <div id="context-menu" class="menu" hidden></div>
+  <input type="file" id="file-input" accept=".json,application/json" hidden>
+
+  <!-- Plain scripts (no modules), so the app also works when opened by double click (file://) -->
+  <script src="js/state.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/drummap.js"></script>
+  <script src="js/rhythm.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/contextmenu.js"></script>
+  <script src="js/actions.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/interaction.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

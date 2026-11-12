@@ -1,0 +1,13 @@
+{
+  "name": "Tactus",
+  "short_name": "Tactus",
+  "description": "Drum notation by clicking – in the browser, local files, no account.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#2b6cde",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

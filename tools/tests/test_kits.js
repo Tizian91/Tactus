@@ -34,6 +34,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   T.eq('profile name from the map', p.name, 'EZDrummer3');
   T.eq('auto: kick, snare, hi-hat with two keys (order of the map), floor tom', [p.assign[36], p.assign[38], p.assign[42], p.assign[43]], [[36], [38], [61, 22], [44]]);
   T.eq('auto: drum keys without instrument (tom rim shot, crash 3)', K.unassigned(p).map((e) => e.inote), [73, 57]);
+  T.eq('unnamed keys that were set up can be chosen', K.keys(K.fromDrm(drm('U', [item(30, 30, '').replace('name="DisplayNote" value="30"', 'name="DisplayNote" value="79"'), item(31, 31, 'Sound 32')], [30, 31]))).map((e) => e.inote), [30]);
   T.eq('keys list: named only, map order first', K.keys(p).map((e) => e.inote), [38, 36, 61, 22, 44, 73, 57, 20]);
 
   K.setKeys(p, 46, [22]);
@@ -53,8 +54,24 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   const bm = K.fromDrm(drm('BeatMaker', [item(36, 36, 'Kick 1'), item(38, 38, 'Kick 2'), item(57, 57, 'FX 2, Perc')], [36, 38, 57]));
   T.eq('BeatMaker: "Kick 2" is the accent (no Tactus instrument), FX 2 the tambourine', [bm.assign[36], bm.assign[35], bm.assign[54], K.unassigned(bm).map((e) => e.inote)], [[36], undefined, [57], [38]]);
 
+  const u = K.fromDrm(drm('U', [item(42, 42, 'Hihat.Closed'), item(30, 30, '-')], [42, 30]));
+  K.setKeys(u, 49, [30]);
+  const uo = C.parse(K.toDrm(u)).entries.find((e) => e.inote === 30);
+  T.eq('unnamed key assigned to the crash: crash line, named after the instrument', [uo.display, uo.name], [81, 'Crash high']);
+
   const odd = K.fromDrm(drm('EZDrummer3', [item(40, 43, 'Hi-Hat Closed Tip'), item(61, 61, 'Hi-Hat Closed Tip'), item(42, 43, 'Floortom 1  Center')], [40, 61, 42]));
   T.eq('mislabelled key (sends the note of another instrument) is not the first key, and is reported', [odd.assign[42], K.suspicious(odd).map((e) => e.inote)], [[61, 40], [40, 42]]);
+
+  TC.drums.setNotation('gp');
+  const gpOut = C.parse(K.toDrm(p)).entries.find((e) => e.inote === 44);
+  T.eq('drum map uses the Tactus layout even while the view shows Guitar Pro', [gpOut.display, K.rows()[0].id], [65, K.rows()[0].id]);
+  TC.drums.setNotation('tactus');
+
+  const la = K.fromDrm(drm('L', [item(42, 42, 'Hihat.Closed'), item(30, 30, 'Reverse')], [42]));
+  K.setKeys(la, 30, [30]);
+  T.eq('look-alikes: reverse cymbal and crash medium (B5, cross); hi-hat alone is fine', K.lookalikes(la).length, 0);
+  K.setKeys(la, 57, [42]);
+  T.eq('look-alikes found', K.lookalikes(la).map((g) => g.map((a) => a.id)), [[57, 30]]);
 
   K.list = [p, bm];
   const text = K.exportText();

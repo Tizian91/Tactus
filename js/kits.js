@@ -51,10 +51,18 @@
   const CUBASE_HEAD = { normal: 0, x: 34, circleX: 3, circleSlash: 3, heavyX: 34, heavyXHat: 34, diamond: 25, triangle: 28, slashed: 0 };
 
   /** Cubase notation of a Tactus instrument in the current layout. */
+  /**
+   * Cubase drum maps always get the Tactus layout, whatever the view shows: in the Guitar Pro
+   * layout "crash medium" shares the hi-hat line (only a bolder cross), Cubase would show both alike.
+   */
+  K.LAYOUT = 'tactus';
+  K.place = (a) => TC.drums.inLayout(a, K.LAYOUT);
+
+  /** Cubase notation of a Tactus instrument. */
   K.styleOf = function (a) {
-    const role = K.ART_ROLE[a.id];
-    const s = (role && C.style(role)) || { head: CUBASE_HEAD[a.head] || 0, instrument: '', technique: '' };
-    return { display: K.linePitch(a.line), head: s.head, instrument: s.instrument, technique: s.technique };
+    const pl = K.place(a), role = K.ART_ROLE[a.id];
+    const s = (role && C.style(role)) || { head: CUBASE_HEAD[pl.head] || 0, instrument: '', technique: '' };
+    return { display: K.linePitch(pl.line), head: s.head, instrument: s.instrument, technique: s.technique };
   };
 
   // ---- Profiles (pure) ------------------------------------------------------------------
@@ -66,11 +74,17 @@
     return parsed.get(p.drm);
   };
 
-  /** Named keys of a profile's drum map (in Cubase's order), without empty ones. */
+  /** A key without a real name ("", "-", Cubase's "Sound 12"). */
+  K.noName = (e) => !e.name || e.name.trim() === '-' || /^sound \d+$/i.test(e.name);
+
+  /**
+   * Keys of a profile's drum map that can be chosen (in Cubase's order): named ones, and unnamed
+   * ones that were set up (instrument or display note set) - e.g. UJAM's keys 30 and 34.
+   */
   K.keys = function (p) {
     const m = K.map(p), by = new Map(m.entries.map((e) => [e.inote, e]));
     const order = m.order.concat(m.entries.map((e) => e.inote)).filter((n, i, a) => a.indexOf(n) === i);
-    return order.map((n) => by.get(n)).filter((e) => e && e.name && e.name !== '-' && !/^sound \d+$/i.test(e.name));
+    return order.map((n) => by.get(n)).filter((e) => e && (!K.noName(e) || e.instrument || (e.display !== 0 && e.display !== e.inote)));
   };
 
   /** Assignment guessed from the key names (and known misleading names of a map). */
@@ -145,9 +159,24 @@
     return K.keys(p).filter((e) => K.artOfKey(p, e.inote) === null && (known[e.inote] || C.roleOf(e)));
   };
 
+  /**
+   * Assigned instruments of different kinds that would look the same in Cubase (display note and
+   * notehead), e.g. hi-hat and a crash. Variants of one kind (ride / ride edge) are fine.
+   */
+  K.lookalikes = function (p) {
+    const groups = new Map();
+    for (const a of K.rows()) {
+      if (!p.assign[a.id]) continue;
+      const s = K.styleOf(a), k = s.display + '|' + s.head;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(a);
+    }
+    return [...groups.values()].filter((g) => new Set(g.map((a) => a.el)).size > 1);
+  };
+
   /** Instruments in the order of the dialog and of the Cubase map: top of the staff first. */
   K.rows = function () {
-    return TC.DRUM_ARTS.map((a, i) => [a, i]).sort((x, y) => x[0].line - y[0].line || x[1] - y[1]).map((x) => x[0]);
+    return TC.DRUM_ARTS.map((a, i) => [a, i, K.place(a).line]).sort((x, y) => x[2] - y[2] || x[1] - y[1]).map((x) => x[0]);
   };
 
   /** Cubase drum map of a profile: every assigned key gets the notation of its instrument. */
@@ -156,6 +185,8 @@
     for (const a of K.rows()) {
       for (const n of p.assign[a.id] || []) {
         styles[n] = K.styleOf(a);
+        const e = K.map(p).entries.find((x) => x.inote === n);
+        if (e && K.noName(e)) styles[n].name = TC.drums.label(a); // unnamed key: name it after the instrument
         order.push(n);
       }
     }
@@ -235,7 +266,7 @@
   };
 
   function keyLabel(e) {
-    return `${e.inote} · ${e.name}` + (e.onote !== e.inote ? ` (→ ${e.onote})` : '');
+    return `${e.inote} · ${K.noName(e) ? tr('(no name)') : e.name}` + (e.onote !== e.inote ? ` (→ ${e.onote})` : '');
   }
 
   function draw() {
@@ -257,16 +288,17 @@
           const mark = other !== null && other !== a.id ? ' ◦' : '';
           return `<option value="${e.inote}"${e.inote === first ? ' selected' : ''}>${esc(keyLabel(e))}${mark}</option>`;
         }).join('');
-        const g = TC.HEADS[a.head] || TC.HEADS.normal;
+        const pl = K.place(a), g = TC.HEADS[pl.head] || TC.HEADS.normal;
         return `<tr class="${notes.length ? '' : 'none'}">
-          <td class="pos"><span class="mus-head">${g.g[0]}</span> ${K.lineName(a.line)}</td>
+          <td class="pos"><span class="mus-head">${g.g[0]}</span> ${K.lineName(pl.line)}</td>
           <td class="name">${esc(TC.drums.label(a))}</td>
           <td><select data-art="${a.id}">${options}</select></td>
           <td><input type="text" data-extra="${a.id}" value="${notes.slice(1).join(', ')}" placeholder="${tr('more keys')}"></td></tr>`;
       }).join('');
-      const free = K.unassigned(p), odd = K.suspicious(p);
-      body = `<p class="hint tight">${tr('Line and notehead are fixed per instrument (setting "Notation"). Choose the key of your drum map for each one; more keys (e.g. 11, 61) are recognised on import.')}</p>
+      const free = K.unassigned(p), odd = K.suspicious(p), alike = K.lookalikes(p);
+      body = `<p class="hint tight">${tr('Line and notehead are fixed per instrument (Tactus notation, also in the Cubase drum map). Choose the key of your drum map for each one; more keys (e.g. 11, 61) are recognised on import.')}</p>
         <table class="kit-table"><thead><tr><th>${tr('Line')}</th><th>${tr('Instrument')}</th><th>${tr('Key in the drum map')}</th><th>${tr('More keys')}</th></tr></thead><tbody>${rows}</tbody></table>
+        ${alike.length ? `<p class="hint warn"><b>${tr('Look the same in Cubase (same line and notehead):')}</b> ${alike.map((g) => g.map((a) => esc(TC.drums.label(a))).join(' / ') + ' (' + K.lineName(K.place(g[0]).line) + ')').join(' · ')}</p>` : ''}
         ${odd.length ? `<p class="hint warn"><b>${tr('Please check (same output note as another instrument):')}</b> ${odd.map((e) => esc(keyLabel(e)) + ' = ' + esc(TC.drums.label(TC.drums.byId(e.art)))).join(' · ')}</p>` : ''}
         ${free.length ? `<p class="hint"><b>${tr('Drum keys without a Tactus instrument:')}</b> ${free.map((e) => esc(keyLabel(e))).join(' · ')}</p>` : ''}`;
     }

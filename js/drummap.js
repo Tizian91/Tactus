@@ -150,6 +150,8 @@
   };
   /** Guitar Pro line / head of an instrument, whatever layout is shown (sound, exports). */
   D.base = (a) => BASE.get(a.id) || a;
+  /** Line / head / def of an instrument in a layout, whatever layout is shown (Cubase drum maps use 'tactus'). */
+  D.inLayout = (a, key) => Object.assign({}, BASE.get(a.id), (TC.NOTATIONS[key] || TC.NOTATIONS.tactus).set[a.id] || {});
 
   /** All articulations on a staff line. */
   D.atLine = (line) => TC.DRUM_ARTS.filter((a) => a.line === line);

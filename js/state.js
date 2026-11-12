@@ -46,7 +46,7 @@ window.TC = window.TC || {};
       mapUsedOnly: false,   // drum map: only instruments used in the score (+ the selected one)
       kit: 'standard',      // drum kit (drummap.js TC.KITS)
       kitCustom: null,      // ids of the custom kit
-      layout: 'endless',    // 'endless' | 'page' (page view: phase 2)
+      layout: 'endless',    // 'endless' | 'page' (A4 pages as printed)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)
       showCounts: false,    // counting (1 e + a) under the staff
       sound: true,          // play a note when it is written

@@ -39,6 +39,10 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
   for odd meters (7/8 = 2+2+3, 3+2+2 …).
 - **Playback** (`Space` or ▶): synthesized drum sounds, running cursor, metronome, count-in, loop of the
   selected bar, tempo in the toolbar. Changes are heard while it plays. A note sounds when it is written.
+- **Page view** (toolbar "Page"): A4 pages as printed – bars break into lines that fill the width, bars per
+  line automatic or fixed, a new line from any bar (bar menu). **Text above a bar** (Intro, Verse, Chorus …)
+  and **bar numbers** (start of each line / every bar / none). **PDF**: File → PDF / print (`Ctrl+P`),
+  choose "Save as PDF".
 - **Tablet**: one finger drag scrolls, tap writes, hold opens the bar menu, hold a note and drag writes a row,
   two fingers zoom; a pen writes.
 
@@ -50,7 +54,7 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 | `js/model.js` | Score model (bar headers, tracks, voices, events, notes), loading, operations (`TC.score`) |
 | `js/drummap.js` | Drum map: Guitar Pro articulations (line, MIDI note, notehead), drum kits, "magnet" |
 | `js/rhythm.js` | Events → note values, rests, dots, triplets, beams (pure, tested) |
-| `js/render.js` | SVG engraving with the Bravura font (SMuFL), grid, hover preview |
+| `js/render.js` | SVG engraving with the Bravura font (SMuFL), grid, hover preview; endless and page view (lines, A4 pages), PDF / print |
 | `js/panel.js` | Note panel and settings panel, widths, left-handed mode |
 | `js/actions.js` | Commands used by toolbar, panel, menus and keys |
 | `js/interaction.js` | Mouse, pen, fingers and keyboard on the score |

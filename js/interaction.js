@@ -12,7 +12,7 @@
  *   drum map       pointer on a short name: its line lights up; click: choose that instrument
  *                  (again: the next one on that line)
  *   right-click    bar menu (time signature, insert / delete bars)
- *   wheel          scroll sideways; Shift + wheel: up / down; Ctrl + wheel: zoom
+ *   wheel          scroll sideways (page view: down); Shift + wheel: the other way; Ctrl + wheel: zoom
  *   drag sideways  (mouse / pen, from a new note or a note held) writes the same instrument at every grid position
  *   middle button or Space + drag: move the view · Space tapped: play / stop
  *   fingers        one finger drag: scroll · tap: write / select at once · hold: bar menu ·
@@ -24,6 +24,9 @@
   const A = () => TC.actions;
   const tr = (s, v) => TC.tr(s, v);
   let vp, spaceDown = false, spaceUsed = false, shiftDown = false, raf = 0, lastMove = null;
+
+  /** A pointer position in staff coordinates ({ x, y, sys }, see TC.render.toLocal), or null. */
+  I.toLocal = (clientX, clientY) => TC.render.toLocal(I.toWorld(clientX, clientY));
 
   I.toWorld = function (clientX, clientY) {
     const r = vp.getBoundingClientRect(), v = S.doc.view;
@@ -45,15 +48,15 @@
     return null;
   }
 
-  /** What a click at world point p would do. */
+  /** What a click at point p (staff coordinates, null: off every line) would do. */
   function target(p, e) {
     const RD = TC.render, L = RD.layout;
-    if (!L) return null;
+    if (!L || !p) return null;
     const a = L.add;
-    if (p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y - 10 && p.y <= a.y + a.h + 10) return { kind: 'add' };
-    if (p.x < 0) {
+    if (p.sys === L.systems[L.systems.length - 1] && p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y - 10 && p.y <= a.y + a.h + 10) return { kind: 'add' };
+    if (p.x < p.sys.ox) {
       const ml = RD.mapLineAt(p);
-      return ml === null ? null : { kind: 'map', line: ml };
+      return ml === null ? null : { kind: 'map', line: ml, sys: p.sys.i };
     }
     if (p.y < RD.stepY(RD.LINE_MIN) - 5 || p.y > RD.stepY(RD.LINE_MAX) + 5) return null;
     const bar = RD.barAt(p.x);
@@ -90,7 +93,7 @@
     raf = 0;
     const e = lastMove;
     if (!e || S.drag) return;
-    const t = target(I.toWorld(e.clientX, e.clientY), e);
+    const t = target(I.toLocal(e.clientX, e.clientY), e);
     let h = null;
     if (t && (t.kind === 'place' || t.kind === 'head')) {
       h = { bar: t.bar, tick: t.tick, line: t.line, art: t.art || null, lock: !!t.lock };
@@ -108,7 +111,7 @@
         TC.ui.status(`${where(t)} · ${TC.drums.label(t.art)}${t.lock ? ' · ' + tr('instrument lock') : ''}`);
       }
     } else if (t && t.kind === 'map') {
-      h = { mapLine: t.line };
+      h = { mapLine: t.line, sys: t.sys };
       TC.ui.status(TC.drums.lines(TC.drums.mapIds()).filter(([l]) => l === t.line).map(([, arts]) => arts.map((a) => TC.drums.label(a)).join(', '))[0] +
         ' – ' + tr('click: choose'));
     } else if (t && t.kind === 'add') {
@@ -161,7 +164,7 @@
       return;
     }
     if (e.button !== 0) return;
-    const t = target(I.toWorld(e.clientX, e.clientY), e);
+    const t = target(I.toLocal(e.clientX, e.clientY), e);
     if (t && (t.kind === 'place' || t.kind === 'head')) {
       // the note is written (or the note selected) when the button is released, see aimMove
       S.drag = { mode: 'aim', t, sx: e.clientX };
@@ -189,7 +192,8 @@
 
   function aimMove(e) {
     const d = S.drag, RD = TC.render, t = d.t;
-    const p = I.toWorld(e.clientX, e.clientY);
+    const p = I.toLocal(e.clientX, e.clientY);
+    if (!p) return;
     if (Math.abs(e.clientX - d.sx) >= DRAG_MIN) {
       const bar = RD.barAt(p.x);
       if (bar && !bar.simile && p.x >= bar.x0) {
@@ -225,7 +229,7 @@
     S.drag = null;
     if (t.kind === 'place') return act(t, e);
     // a note: only when the pointer is still on it
-    const t2 = target(I.toWorld(e.clientX, e.clientY), e);
+    const t2 = target(I.toLocal(e.clientX, e.clientY), e);
     if (t2 && t2.kind === 'head' && t2.head.id === t.head.id) act(t2, e);
   }
 
@@ -272,7 +276,7 @@
       holdTimer = setTimeout(() => {
         if (!gesture || gesture.mode !== 'tap') return;
         const d = gesture.down;
-        const t = target(I.toWorld(d.clientX, d.clientY), d);
+        const t = target(I.toLocal(d.clientX, d.clientY), d);
         if (t && t.kind === 'head') {
           // held on a note: dragging sideways now writes a row of its instrument
           startRow(t, d);
@@ -354,7 +358,7 @@
 
   /** Finger tap at the position of event e. */
   function press(e) {
-    act(target(I.toWorld(e.clientX, e.clientY), e), e);
+    act(target(I.toLocal(e.clientX, e.clientY), e), e);
   }
 
   /** What a click / tap on target t does (e: the event, for Ctrl and the pointer position). */
@@ -443,8 +447,8 @@
 
   function dragWrite(e) {
     const d = S.drag, RD = TC.render;
-    const p = I.toWorld(e.clientX, e.clientY);
-    const bar = RD.barAt(p.x);
+    const p = I.toLocal(e.clientX, e.clientY);
+    const bar = p && RD.barAt(p.x);
     if (!bar || bar.simile || p.x < bar.x0) return;
     const tick = RD.snapTick(bar, p.x);
     const row = between(d.bar, d.tick, bar.i, tick);
@@ -490,11 +494,13 @@
     if (e.ctrlKey) {
       const r = vp.getBoundingClientRect();
       TC.zoomAt(S.doc.view.zoom * Math.exp(-dy * 0.0015), e.clientX - r.left, e.clientY - r.top);
-    } else if (e.shiftKey) {
+    } else if (TC.render.isPage() !== !!e.shiftKey) {
+      // page view: the pages run downwards (Shift: sideways)
       S.doc.view.y -= dy;
+      S.doc.view.x -= dx;
       TC.render.applyView();
     } else {
-      S.doc.view.x -= dx + dy; // the endless staff runs sideways
+      S.doc.view.x -= dx + dy; // the endless staff runs sideways (Shift: up / down)
       TC.render.applyView();
     }
     lastMove = e;
@@ -505,8 +511,8 @@
     e.preventDefault();
     // a finger held down opens the menu by itself (above); the browser's own long-press menu is ignored
     if (!e.fromHold && (touches.size || Date.now() - lastTouch < 1000)) return;
-    const p = I.toWorld(e.clientX, e.clientY);
-    const bar = TC.render.barAt(p.x);
+    const p = I.toLocal(e.clientX, e.clientY);
+    const bar = p && TC.render.barAt(p.x);
     if (!bar) return;
     S.selBar = bar.i;
     TC.refresh();
@@ -537,6 +543,7 @@
       else if (lk === 'y' || (lk === 'z' && e.shiftKey)) A().redo();
       else if (lk === 's') e.shiftKey ? A().saveAs() : A().save();
       else if (lk === 'o') A().open();
+      else if (lk === 'p') A().print();
       else if (lk === 'c' && !isTyping(e)) A().copyBar();
       else if (lk === 'v' && !isTyping(e)) A().pasteBar();
       else if (lk === 'd') A().duplicateBar();

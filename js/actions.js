@@ -296,8 +296,15 @@
   /** Back to the start of the piece. */
   A.home = function () {
     const v = S.doc.view;
-    v.x = (S.settings.showDrumMap ? 150 : 30) * v.zoom;
-    v.y = 140 * v.zoom;
+    if (TC.render.isPage()) {
+      // the first page, centred
+      const w = document.getElementById('viewport').clientWidth;
+      v.x = Math.max((S.settings.showDrumMap ? 130 : 20) * v.zoom, (w - TC.render.PAGE_W * v.zoom) / 2);
+      v.y = 20;
+    } else {
+      v.x = (S.settings.showDrumMap ? 150 : 30) * v.zoom;
+      v.y = 165 * v.zoom;
+    }
     TC.render.applyView();
   };
 
@@ -352,9 +359,63 @@
   A.toggleLang = function () {
     TC.setLang(S.settings.lang === 'de' ? 'en' : 'de');
   };
+  /** Endless view (all bars in one row) or page view (A4 pages, as printed). */
   A.layout = function (mode) {
-    if (mode === 'page') return TC.ui.hint(tr('The page view follows in phase 2 (together with the PDF export)'));
-    S.settings.layout = 'endless';
+    mode = mode === 'page' ? 'page' : 'endless';
+    if (S.settings.layout === mode) return;
+    S.settings.layout = mode;
+    TC.saveSettings();
+    const v = S.doc.view;
+    if (mode === 'page') {
+      // the whole width of a page in view
+      const w = document.getElementById('viewport').clientWidth;
+      v.zoom = TC.clamp((w - 40) / TC.render.PAGE_W, 0.3, TC.DEFAULT_ZOOM);
+    } else {
+      v.zoom = TC.DEFAULT_ZOOM;
+    }
+    TC.render.draw();
+    A.home();
+    TC.refresh();
+  };
+  A.toggleLayout = () => A.layout(S.settings.layout === 'page' ? 'endless' : 'page');
+
+  /** PDF / print: the page view on A4 (the browser's print dialog: "Save as PDF"). */
+  A.print = function () {
+    if (TC.player.playing) TC.player.stop();
+    TC.render.print();
+  };
+
+  // ---- Page: bar text, line breaks, bars per line, bar numbers --------------------------------
+
+  /** Text above bar i (Verse, Chorus, Fill …); empty removes it. */
+  A.setMarker = function (text, i = curBar()) {
+    const h = S.doc.bars[i];
+    const t = String(text || '').trim().slice(0, 40);
+    if (!h || h.marker === t) return;
+    h.marker = t;
+    TC.commit();
+  };
+  A.editMarker = function (i = curBar()) {
+    const v = prompt(tr('Text above bar {n} (e.g. Verse, Chorus) – empty: remove', { n: i + 1 }), S.doc.bars[i].marker || '');
+    if (v !== null) A.setMarker(v, i);
+  };
+  /** Page view: bar i starts a new line. */
+  A.toggleLineBreak = function (i = curBar()) {
+    if (i <= 0) return;
+    S.doc.bars[i].lineBreak = !S.doc.bars[i].lineBreak;
+    TC.commit();
+    if (!TC.render.isPage()) TC.ui.hint(tr('Line breaks show in the page view'));
+  };
+  A.setBarsPerLine = function (n) {
+    n = TC.clamp(Math.round(Number(n) || 0), 0, 12);
+    if (S.doc.page.barsPerLine === n) return;
+    S.doc.page.barsPerLine = n;
+    TC.commit();
+  };
+  A.setBarNumbers = function (mode) {
+    if (!TC.BAR_NUMBERS.includes(mode) || S.doc.page.barNumbers === mode) return;
+    S.doc.page.barNumbers = mode;
+    TC.commit();
   };
 
   // ---- History, files -----------------------------------------------------------------------
@@ -389,7 +450,7 @@
       { label: 'Save as…', action: A.saveAs, shortcut: 'Ctrl+Shift+S' },
       '-',
       { label: 'Load example groove', action: A.demo },
-      { label: 'PDF / print (phase 2)', disabled: true },
+      { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },
     ], r.left, r.bottom + 2);
   };
   A.zoomMenu = function () {
@@ -425,6 +486,9 @@
       { label: 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
       { label: 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
       { label: 'Repeat the bar before (%)', checked: !!h.simile, action: () => A.toggleSimile(i), disabled: i === 0 },
+      '-',
+      { label: 'Text above the bar…', action: () => A.editMarker(i) },
+      { label: 'New line from this bar', checked: !!h.lineBreak, action: () => A.toggleLineBreak(i), disabled: i === 0 },
       '-',
       { label: 'Insert bar before', action: () => A.insertBarBefore(i) },
       { label: 'Insert bar after', action: () => A.insertBarAfter(i) },

@@ -91,4 +91,13 @@ module.exports = function (T) {
   T.eq('fill: drums default beat, saved value kept, bad value dropped',
     [TC.emptyScore(1).tracks[0].fill, fillOf({ kind: 'drums' }), fillOf({ kind: 'drums', fill: 'next' }), fillOf({ kind: 'drums', fill: 'x' }), fillOf({ kind: 'pitched' })],
     ['beat', 'beat', 'next', 'beat', 'off']);
+
+  // page view: bar text, line breaks, bars per line, bar numbers (saved with the score)
+  const pd = TC.normalizeDoc({ bars: [{ marker: 'Intro', lineBreak: true }, { marker: 'Chorus', lineBreak: true }, {}],
+    tracks: [{ kind: 'drums' }], page: { barsPerLine: 4, barNumbers: 'every' } });
+  T.eq('page: markers and line breaks loaded (bar 1 never breaks)',
+    pd.bars.map((h) => [h.marker, h.lineBreak]), [['Intro', false], ['Chorus', true], ['', false]]);
+  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every' });
+  T.eq('page: defaults and bad values', [TC.emptyScore(1).page, TC.normalizeDoc({ bars: [{}], page: { barsPerLine: 99, barNumbers: 'x' } }).page],
+    [{ barsPerLine: 0, barNumbers: 'system' }, { barsPerLine: 0, barNumbers: 'system' }]);
 };

@@ -38,6 +38,7 @@
     document.querySelector('#toolbar [data-action="undo"]').disabled = !TC.history.undoStack.length;
     document.querySelector('#toolbar [data-action="redo"]').disabled = !TC.history.redoStack.length;
     document.querySelector('#toolbar [data-action="toggleDrumMap"]').classList.toggle('active', !!S.settings.showDrumMap);
+    document.querySelectorAll('#toolbar [data-action="layout"]').forEach((b) => b.classList.toggle('active', b.dataset.value === (S.settings.layout === 'page' ? 'page' : 'endless')));
     const play = document.getElementById('play-btn');
     play.textContent = TC.player.playing ? '■' : '▶';
     play.classList.toggle('active', TC.player.playing);
@@ -85,6 +86,12 @@
         toStart = true;
       }
       S.settings.zoomV2 = true;
+      TC.saveSettings();
+    }
+    // the title moved up (room for bar texts): back to the start once, so it is not cut off
+    if (!S.settings.viewV3) {
+      S.settings.viewV3 = true;
+      toStart = true;
       TC.saveSettings();
     }
     TC.history.reset();

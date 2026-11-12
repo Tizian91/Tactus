@@ -302,13 +302,23 @@
       TC.render.drawCursor(pos && pos.bar < 0 ? range[0] : null, 0, S.settings.loop ? range : null);
       return;
     }
-    const x = TC.render.drawCursor(pos.bar, pos.tick, S.settings.loop ? range : null);
-    // keep the cursor in view
+    const c = TC.render.drawCursor(pos.bar, pos.tick, S.settings.loop ? range : null);
+    if (!c) return;
+    // keep the cursor in view: sideways (endless view), its line downwards (page view)
     const vp = document.getElementById('viewport');
-    const v = S.doc.view, sx = v.x + x * v.zoom, w = vp.clientWidth;
-    if (sx > w * 0.85 || sx < 0) {
-      v.x = w * 0.15 - x * v.zoom;
-      TC.render.applyView();
+    const v = S.doc.view;
+    if (TC.render.isPage()) {
+      const sy = v.y + c.y * v.zoom, h = vp.clientHeight;
+      if (sy > h * 0.75 || sy < 60) {
+        v.y = h * 0.3 - c.y * v.zoom;
+        TC.render.applyView();
+      }
+    } else {
+      const sx = v.x + c.x * v.zoom, w = vp.clientWidth;
+      if (sx > w * 0.85 || sx < 0) {
+        v.x = w * 0.15 - c.x * v.zoom;
+        TC.render.applyView();
+      }
     }
   }
 

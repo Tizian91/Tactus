@@ -18,7 +18,7 @@ Die erste Zeile der Ausgabe lautet `ALL OK: … passed` oder `FAILED: …`, daru
 | Skript | prüft |
 |---|---|
 | `test_rhythm.js` | Notenwerte, Punktierung, Pausen ohne verdeckte Zählzeiten, Pausenbereinigung (bis Schlagende / nächste Note), Achtel-/Sechzehntel-/Viertel-Triolen, 3/4, 6/8, 7/8, Haltebögen (nur ohne Schlagzeug), Balken, Zählnamen |
-| `test_model.js` | Noten setzen (Akkord, gleiche Stelle, Kürzen), löschen, Taktart ab einem Takt / nur ein Takt, Takte einfügen / löschen, Laden mit kaputten Werten, Drum-Map, Drum-Kits, Magnet zur nächsten Linie |
+| `test_model.js` | Noten setzen (Akkord, gleiche Stelle, Kürzen), löschen, Takt-Text / Zeilenumbruch / Seiteneinstellungen laden, Taktart ab einem Takt / nur ein Takt, Takte einfügen / löschen, Laden mit kaputten Werten, Drum-Map, Drum-Kits, Magnet zur nächsten Linie |
 | `test_bars.js` | Balkengruppen (7/8, 5/8, eigene Gruppen), Pausen in den Gruppen, Takte kopieren / einfügen / verdoppeln, %-Takt, Flam / Wirbel / Sticking speichern und laden |
 | `test_playback.js` | Wiedergabe-Zeitplan: Zeiten bei 120 BPM, Lautstärke (Ghost / Akzent), Flam, Drag, Wirbel, Metronom, Einzähler, %-Takt, Tempowechsel, ungerade Taktarten |
 | `harness.js`, `run.js` | Hilfsmittel: Dateien laden, Prüfungen zählen, alle `test_*.js` ausführen |

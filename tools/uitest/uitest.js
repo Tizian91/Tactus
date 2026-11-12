@@ -203,6 +203,39 @@ setTimeout(() => {
   ok('rest cleanup: next', S.doc.tracks[0].fill === 'next');
   TC.actions.undo();
   ok('rest cleanup: undo', S.doc.tracks[0].fill === 'beat');
+  // page view: lines, a click on a later line, bar text, line break, bars per line, print
+  TC.actions.layout('page');
+  const PL = () => TC.render.layout;
+  ok('page view: ' + PL().systems.length + ' lines on ' + PL().pages.length + ' page(s)', PL().page && PL().systems.length >= 2);
+  const onPage = (bar, tick, line) => {
+    const b = PL().bars[bar], s = PL().systems[b.sys], v = S.doc.view, r = vp.getBoundingClientRect();
+    return [r.left + v.x + (TC.render.tickX(b, tick) + s.tx) * v.zoom, r.top + v.y + (TC.render.stepY(line) + s.ty) * v.zoom];
+  };
+  const lastBar = S.doc.bars.length - 1;
+  ok('the last bar is on a later line', PL().bars[lastBar].sys > 0);
+  TC.actions.setArt(38);
+  mouse('pointerdown', onPage(lastBar, 960, 3));
+  mouse('pointerup', onPage(lastBar, 960, 3));
+  ok('page view: click writes into a bar of a later line ' + voice(lastBar, 0).join(' '), voice(lastBar, 0).some((s) => s.startsWith('960:') && s.endsWith(':38')));
+  TC.actions.setMarker('Chorus', 2);
+  ok('bar text drawn ' + (document.querySelector('#score .marker-text') || {}).textContent, S.doc.bars[2].marker === 'Chorus' && document.querySelector('#score .marker-text').textContent === 'Chorus');
+  TC.actions.toggleLineBreak(2);
+  ok('new line from bar 3', PL().systems.some((s) => s.first === 2));
+  TC.actions.undo();
+  TC.actions.setBarsPerLine(2);
+  ok('2 bars per line', PL().systems.every((s) => s.last - s.first + 1 <= 2) && PL().systems[0].last === 1);
+  TC.actions.setBarNumbers('every');
+  ok('bar numbers on every bar ' + document.querySelectorAll('#score .barno').length, document.querySelectorAll('#score .barno').length === S.doc.bars.length);
+  TC.actions.undo(); TC.actions.undo();
+  const realPrint = window.print;
+  window.print = () => {};
+  const np = TC.render.print();
+  ok('print: ' + np + ' A4 page(s) as SVG', np >= 1 && document.querySelectorAll('#print-root svg').length === np && !document.querySelector('#print-root .grid'));
+  window.print = realPrint;
+  window.dispatchEvent(new Event('afterprint'));
+  ok('print: emptied afterwards, page view kept', !document.querySelector('#print-root svg') && TC.render.isPage());
+  TC.actions.layout('endless');
+  ok('back to the endless view: one line', PL().systems.length === 1 && !PL().page);
   // finger: hold a note, then drag = a row of its instrument (waits for the hold)
   const [hx, hy] = screenOf(nb, 0, 3);
   finger('pointerdown', 11, hx, hy);

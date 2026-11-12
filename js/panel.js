@@ -138,6 +138,8 @@
       <div class="row"><label>${tr('Time sig.')}</label><select data-ts>${opts}<option value="other">${tr('Other…')}</option></select></div>
       ${beamRow}
       <p class="hint">${tr('Applies from this bar up to the next change.')}</p>
+      <div class="row"><label>${tr('Text')}</label><input type="text" data-marker maxlength="40" value="${esc(h.marker || '')}" placeholder="${esc(tr('e.g. Verse, Chorus'))}"></div>
+      ${i > 0 ? check('toggleLineBreak', !!h.lineBreak, tr('New line from this bar (page view)')) : ''}
       <div class="btn-row">
         ${btn('copyBar', undefined, tr('Copy'), false, tr('Copy bar') + ' (Ctrl+C)')}
         ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
@@ -194,6 +196,22 @@
     </section>`;
   }
 
+  function pageSection() {
+    const pg = S.doc.page;
+    const per = [0, 2, 3, 4, 5, 6, 8].map((n) => `<option value="${n}"${n === pg.barsPerLine ? ' selected' : ''}>${n ? n : esc(tr('Automatic'))}</option>`).join('');
+    const nums = [['system', 'At the start of each line'], ['every', 'Every bar'], ['off', 'None']]
+      .map(([k, label]) => `<option value="${k}"${k === pg.barNumbers ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
+    return `<section><h3>${tr('Page')}</h3>
+      <div class="row"><label>${tr('Bars per line')}</label><select data-action="setBarsPerLine">${per}</select></div>
+      <div class="row"><label>${tr('Bar numbers')}</label><select data-action="setBarNumbers">${nums}</select></div>
+      <div class="btn-row">
+        ${btn('toggleLayout', undefined, tr(S.settings.layout === 'page' ? 'Endless view' : 'Page view'), false)}
+        ${btn('print', undefined, tr('PDF / print…'), false, 'Ctrl+P')}
+      </div>
+      <p class="hint">${tr('PDF: choose "Save as PDF" as the printer. Bar menu: text above a bar, new line.')}</p>
+    </section>`;
+  }
+
   function viewSection() {
     const fill = S.doc.tracks[0].fill;
     const fills = [['beat', 'Up to the end of the beat'], ['next', 'Up to the next note'], ['off', 'As written']];
@@ -241,13 +259,13 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
-    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.doc.meta, S.doc.tracks[0].fill, lang,
+    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.doc.meta, S.doc.tracks[0].fill, S.doc.page, lang,
       S.settings, !!S.clipboard, S.doc.bars.length]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const open = setRoot.querySelector('details.kit-list[open]') !== null;
-      setRoot.innerHTML = head(tr('Settings'), 'right') + barSection() + playSection() + scoreSection() + kitSection() + viewSection() + keysSection();
+      setRoot.innerHTML = head(tr('Settings'), 'right') + barSection() + playSection() + scoreSection() + pageSection() + kitSection() + viewSection() + keysSection();
       if (open) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
     }
@@ -271,6 +289,9 @@
       else TC.actions.setTimeSig(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
+    } else if (el.matches('input[data-marker]')) {
+      el.blur();
+      TC.actions.setMarker(el.value);
     } else if (el.matches('input[data-meta]')) {
       const k = el.dataset.meta;
       S.doc.meta[k] = k === 'tempo' ? TC.clamp(Math.round(Number(el.value) || 120), 20, 400) : el.value;

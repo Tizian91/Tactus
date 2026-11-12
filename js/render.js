@@ -63,47 +63,175 @@
     }
   };
 
-  /** Playback cursor at (bar, tick); null hides it. loop: [fromBar, toBar] marked while looping. */
+  /** Group drawn on line s (staff coordinates -> view). */
+  const onLine = (s, inner) => `<g transform="translate(${f(s.tx)},${f(s.ty)})">${inner}</g>`;
+
+  /**
+   * Playback cursor at (bar, tick); null hides it. loop: [fromBar, toBar] marked while looping.
+   * Returns where the cursor is in the view ({ x, y }: y = top line of its staff).
+   */
   RD.drawCursor = function (bar, tick, loop) {
     const L = RD.layout;
     if (!L || bar === null || !L.bars[bar]) {
       play.innerHTML = '';
       return null;
     }
-    const b = L.bars[bar], x = RD.tickX(b, tick);
-    let s = rect(b.x, -3.5 * SP, b.w, 11 * SP, 'play-bar') + rect(x - 1, -3.5 * SP, 2, 11 * SP, 'play-cursor');
+    const b = L.bars[bar], s = L.systems[b.sys], x = RD.tickX(b, tick);
+    let html = onLine(s, rect(b.x, -3.5 * SP, b.w, 11 * SP, 'play-bar') + rect(x - 1, -3.5 * SP, 2, 11 * SP, 'play-cursor'));
     if (loop && L.bars[loop[0]] && L.bars[loop[1]]) {
       const a = L.bars[loop[0]], z = L.bars[loop[1]];
-      s += rect(a.x + 1, -4 * SP, z.x + z.w - a.x - 2, 12 * SP, 'loop-range');
+      for (let k = a.sys; k <= z.sys; k++) {
+        const sy = L.systems[k];
+        const x1 = k === a.sys ? a.x : L.bars[sy.first].x, x2 = k === z.sys ? z.x + z.w : sy.end;
+        html += onLine(sy, rect(x1 + 1, -4 * SP, x2 - x1 - 2, 12 * SP, 'loop-range'));
+      }
     }
-    play.innerHTML = s;
-    return x;
+    play.innerHTML = html;
+    return { x: x + s.tx, y: s.ty };
   };
 
   // ---- Layout -------------------------------------------------------------------------
+  //
+  // The bars stand in lines ("systems"). The endless view is one long line; the page view breaks
+  // the bars into lines that fill the width of an A4 page and stacks the pages downwards.
+  // Every bar keeps an x of its own in "staff coordinates": the lines follow each other
+  // there without overlapping (each starts with room for the clef and the drum map), and line s
+  // is drawn at translate(s.tx, s.ty). So a bar, a tick and a notehead have one x, whatever
+  // line they are on; RD.toLocal() turns a point of the view into staff coordinates.
 
-  /** Positions of all bars and the notation items of every voice. */
+  const PAGE_W = (RD.PAGE_W = 1200), PAGE_H = (RD.PAGE_H = 1697); // A4: one staff space = 1.75 mm
+  const PAGE_GAP = 4 * SP, MARGIN = 85;
+  const PAGE_QUARTER = 5.5 * SP;  // page view: width of a quarter at the least
+  const PAGE_NOTE = 1.7 * SP;     // … and of the shortest note of a bar
+  const TEXT_Y = -7.6 * SP;       // bar text (Verse, Chorus …) and the tempo
+  const SYS_GAP = 30 * SP;        // staff coordinates between two lines
+
+  RD.isPage = () => S.settings.layout === 'page';
+
+  /** Does a bar write sticking under the staff? */
+  const hasSticking = (b) => b.voices.some((items) => items.some((it) => it.kind === 'note' && it.ev.notes.some((n) => n.stick)));
+
+  /** Height of the title block on the first page. */
+  function headerHeight(meta) {
+    let h = 0;
+    if (meta.title) h += 3.4 * SP;
+    if (meta.subtitle) h += 2.4 * SP;
+    if (meta.artist) h += 2.2 * SP;
+    return h ? h + 1.5 * SP : 0;
+  }
+
+  /** Positions of all bars and lines, the notation items of every voice. */
   RD.computeLayout = function () {
-    const doc = S.doc, track = doc.tracks[0];
+    const doc = S.doc, track = doc.tracks[0], page = RD.isPage();
     const grid = TC.gridTicks(S.input);
-    const bars = [];
-    let x = CLEF_W;
-    doc.bars.forEach((h, i) => {
+    const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');
       const simile = !!h.simile && i > 0; // "%": repeats the bar before, no notes of its own
       const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam, track.fill));
       let finest = L;
       voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); }));
-      const scale = Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
-      const tsW = showTs ? TS_W : 0;
-      const x0 = x + tsW; // content start
-      const w = tsW + HEAD_OFF + L * scale + 0.2 * SP;
-      bars.push({ i, x, x0, w, L, ts: h.ts, beam: h.beam, simile, scale, showTs, voices });
-      x += w;
+      // endless: a finer click grid widens the bar; page: the notes alone decide (as printed)
+      const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
+      return { i, L, ts: h.ts, beam: h.beam, simile, scale, showTs, tsW: showTs ? TS_W : 0, voices, marker: h.marker || '' };
     });
-    RD.layout = { bars, width: x, grid, heads: [], add: { x: x + 1.5 * SP, y: 0, w: 3 * SP, h: 4 * SP } };
+    const fixed = (b) => b.tsW + HEAD_OFF + 0.2 * SP;
+    const width = (b) => fixed(b) + b.L * b.scale;
+
+    // line breaks: as many bars as fit (or the chosen number), a bar may start a new line
+    const lines = [];
+    if (!page) lines.push(bars);
+    else {
+      const avail = PAGE_W - 2 * MARGIN - CLEF_W, per = doc.page.barsPerLine;
+      let cur = [], used = 0;
+      for (const b of bars) {
+        const w = width(b);
+        if (cur.length && (doc.bars[b.i].lineBreak || (per ? cur.length >= per : used + w > avail))) {
+          lines.push(cur);
+          cur = [];
+          used = 0;
+        }
+        cur.push(b);
+        used += w;
+      }
+      if (cur.length) lines.push(cur);
+      // justify: the notes spread over the whole line; the last line is not stretched more than the one before
+      let prev = null;
+      lines.forEach((ln, k) => {
+        const fx = ln.reduce((a, b) => a + fixed(b), 0), mv = ln.reduce((a, b) => a + b.L * b.scale, 0);
+        let k2 = (avail - fx) / mv;
+        if (k === lines.length - 1 && k2 > 1) k2 = Math.min(k2, prev || (fx + mv > 0.7 * avail ? k2 : 1));
+        ln.forEach((b) => { b.scale *= k2; });
+        prev = k2;
+      });
+    }
+
+    // positions
+    const systems = [], pages = [];
+    let ux = 0, yRel = MARGIN + headerHeight(doc.meta), pageNo = 0;
+    if (page) pages.push({ y: 0 });
+    lines.forEach((ln, k) => {
+      const s = { i: k, ox: ux, first: ln[0].i, last: ln[ln.length - 1].i };
+      ux += CLEF_W;
+      for (const b of ln) {
+        b.sys = k;
+        b.x = ux;
+        b.x0 = ux + b.tsW; // content start
+        b.w = width(b);
+        ux += b.w;
+      }
+      s.end = ux;
+      if (page) {
+        const text = k === 0 || ln.some((b) => b.marker); // the first line carries the tempo
+        const under = S.settings.showCounts || ln.some(hasSticking);
+        s.above = (text ? 9.8 : 7.2) * SP;
+        s.below = (under ? 12.4 : 8.4) * SP;
+        const h = s.above + 4 * SP + s.below;
+        if (yRel + h > PAGE_H - MARGIN && yRel > MARGIN + 1) {
+          pageNo++;
+          pages.push({ y: pageNo * (PAGE_H + PAGE_GAP) });
+          yRel = MARGIN;
+        }
+        s.page = pageNo;
+        s.tx = MARGIN - s.ox;
+        s.ty = pages[pageNo].y + yRel + s.above;
+        yRel += h;
+      } else {
+        s.tx = 0;
+        s.ty = 0;
+        s.above = s.below = Infinity;
+      }
+      systems.push(s);
+      ux += SYS_GAP;
+    });
+    const last = systems[systems.length - 1];
+    RD.layout = {
+      bars, systems, pages, page, grid, heads: [], map: [], mapSys: 0,
+      width: page ? PAGE_W : last.end,
+      add: { x: last.end + 1.5 * SP, y: 0, w: 3 * SP, h: 4 * SP },
+    };
     return RD.layout;
+  };
+
+  /**
+   * A point of the view (world units) in staff coordinates: { x, y, sys } with y from the top
+   * line of that staff - or null away from every line (page view: margins, between lines).
+   */
+  RD.toLocal = function (p) {
+    const L = RD.layout;
+    if (!L) return null;
+    let best = null, bd = Infinity;
+    for (const s of L.systems) {
+      const lx = p.x - s.tx, ly = p.y - s.ty;
+      if (L.page && (lx < s.ox - 12 * SP || lx > s.end + 6 * SP)) continue;
+      const d = ly < -s.above ? -s.above - ly : ly > 4 * SP + s.below ? ly - 4 * SP - s.below : 0;
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    if (!best || bd > 2 * SP) return null;
+    return { x: p.x - best.tx, y: p.y - best.ty, sys: best };
   };
 
   /** x of a tick in a bar. */
@@ -149,49 +277,87 @@
   };
 
   RD.draw = function () {
+    stat.innerHTML = RD.content(false);
+    RD.applyView();
+    RD.drawHover();
+  };
+
+  const TEMPO_W = 7.5 * SP; // room of "♩ = 120" before the text of bar 1
+
+  /** The score as SVG markup (view coordinates). print: without grid, selection, page shadows and the "+" box. */
+  RD.content = function (print) {
     const L = RD.computeLayout();
-    const doc = S.doc;
+    const doc = S.doc, page = L.page;
     const out = [];
+    const lines = L.systems.map(() => []); // markup of each line, in staff coordinates
+    const O = (b) => lines[b.sys];
     const top = -3.5 * SP, bottom = 7.5 * SP;
 
-    // title, tempo
+    // pages, title, tempo
     const meta = doc.meta;
-    if (meta.title) out.push(`<text class="title" x="0" y="${f(-11 * SP)}">${esc(meta.title)}</text>`);
-    const sub = [meta.subtitle, meta.artist].filter(Boolean).join(' · ');
-    if (sub) out.push(`<text class="subtitle" x="0" y="${f(-8.6 * SP)}">${esc(sub)}</text>`);
-    out.push(`<text class="tempo" x="${f(0.4 * SP)}" y="${f(-5.6 * SP)}"><tspan class="mus-sm"></tspan> = ${esc(meta.tempo)}</text>`);
+    if (page) {
+      L.pages.forEach((pg, k) => {
+        if (!print) out.push(rect(0, pg.y, PAGE_W, PAGE_H, 'page'));
+        if (k > 0) out.push(`<text class="pageno" x="${f(PAGE_W / 2)}" y="${f(pg.y + PAGE_H - MARGIN / 2)}">${k + 1}</text>`);
+      });
+      let y = MARGIN;
+      if (meta.title) {
+        y += 3.0 * SP;
+        out.push(`<text class="title center" x="${f(PAGE_W / 2)}" y="${f(y)}">${esc(meta.title)}</text>`);
+        y += 0.4 * SP;
+      }
+      if (meta.subtitle) {
+        y += 2.2 * SP;
+        out.push(`<text class="subtitle center" x="${f(PAGE_W / 2)}" y="${f(y)}">${esc(meta.subtitle)}</text>`);
+      }
+      if (meta.artist) {
+        y += 2.2 * SP;
+        out.push(`<text class="subtitle right" x="${f(PAGE_W - MARGIN)}" y="${f(y)}">${esc(meta.artist)}</text>`);
+      }
+    } else {
+      if (meta.title) out.push(`<text class="title" x="0" y="${f(-13 * SP)}">${esc(meta.title)}</text>`);
+      const sub = [meta.subtitle, meta.artist].filter(Boolean).join(' · ');
+      if (sub) out.push(`<text class="subtitle" x="0" y="${f(-10.6 * SP)}">${esc(sub)}</text>`);
+    }
+    const s0 = L.systems[0];
+    lines[0].push(`<text class="tempo" x="${f(s0.ox + 0.4 * SP)}" y="${f(TEXT_Y)}"><tspan class="mus-sm"></tspan> = ${esc(meta.tempo)}</text>`);
 
     // selected bar, selected instrument's line
-    if (S.selBar !== null && L.bars[S.selBar]) {
+    if (!print && S.selBar !== null && L.bars[S.selBar]) {
       const b = L.bars[S.selBar];
-      out.push(rect(b.x, top, b.w, bottom - top, 'bar-sel'));
+      O(b).push(rect(b.x, top, b.w, bottom - top, 'bar-sel'));
     }
     const selArt = TC.drums.byId(S.input.art);
-    if (selArt) out.push(rect(0, stepY(selArt.line) - SP / 4, L.width, SP / 2, 'line-band'));
+    if (!print && selArt) L.systems.forEach((s) => lines[s.i].push(rect(s.ox, stepY(selArt.line) - SP / 4, s.end - s.ox, SP / 2, 'line-band')));
 
     // grid
-    for (const b of L.bars) {
+    for (const b of print ? [] : L.bars) {
       if (b.simile) continue;
       const beat = TC.rhythm.beatTicks(b.ts);
       const G = TC.rhythm.groupSpans(b.ts, b.beam);
       const starts = G && new Set(G.map((g) => g[0])); // odd meters: the beam groups are the strong lines
       for (let t = 0; t < b.L; t += L.grid) {
         const x = RD.tickX(b, t);
-        out.push(line(x, top + SP, x, bottom - SP, (starts ? starts.has(t) : t % beat === 0) ? 'grid beat' : 'grid'));
+        O(b).push(line(x, top + SP, x, bottom - SP, (starts ? starts.has(t) : t % beat === 0) ? 'grid beat' : 'grid'));
       }
     }
 
-    // staff
-    for (let k = 0; k < 5; k++) out.push(line(0, k * SP, L.width, k * SP, 'staff'));
-    out.push(glyph('', 0.9 * SP, 2 * SP)); // percussion clef
+    // staff: every line starts with the clef
+    for (const s of L.systems) {
+      for (let k = 0; k < 5; k++) lines[s.i].push(line(s.ox, k * SP, s.end, k * SP, 'staff'));
+      lines[s.i].push(glyph('', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
+    }
+    // bar numbers: endless view every bar (to find your way); page view as chosen
+    const numbers = page ? doc.page.barNumbers : 'every';
     L.bars.forEach((b, i) => {
+      const o = O(b), s = L.systems[b.sys];
       if (b.showTs) {
         const num = String(b.ts[0]), den = String(b.ts[1]);
-        const put = (s, y) => {
-          const w = s.length * 1.9 * SP;
+        const put = (str, y) => {
+          const w = str.length * 1.9 * SP;
           let x = b.x + TS_W / 2 - w / 2 + 0.05 * SP;
-          for (const d of s) {
-            out.push(glyph(TS_DIGIT(+d), x, y));
+          for (const d of str) {
+            o.push(glyph(TS_DIGIT(+d), x, y));
             x += 1.9 * SP;
           }
         };
@@ -200,12 +366,23 @@
       }
       const end = b.x + b.w;
       if (i === L.bars.length - 1) {
-        out.push(line(end - 0.75 * SP, 0, end - 0.75 * SP, 4 * SP, 'barline'));
-        out.push(rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
+        o.push(line(end - 0.75 * SP, 0, end - 0.75 * SP, 4 * SP, 'barline'));
+        o.push(rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
       } else {
-        out.push(line(end, 0, end, 4 * SP, 'barline'));
+        o.push(line(end, 0, end, 4 * SP, 'barline'));
       }
-      out.push(`<text class="barno" x="${f(b.x + 0.25 * SP)}" y="${f(-2.9 * SP)}">${i + 1}</text>`);
+      const lineStart = i === s.first;
+      if (numbers === 'every' || (numbers === 'system' && lineStart && i > 0)) {
+        const nx = page && lineStart ? s.ox + 0.3 * SP : b.x + 0.25 * SP;
+        o.push(`<text class="barno" x="${f(nx)}" y="${f(-2.9 * SP)}">${i + 1}</text>`);
+      }
+      // text above the bar (Verse, Chorus …), in a box
+      if (b.marker) {
+        const x = b.x + 0.2 * SP + (i === 0 ? TEMPO_W : 0);
+        const w = markerW(b.marker);
+        o.push(`<g class="marker">${rect(x, TEXT_Y - 1.4 * SP, w, 1.95 * SP, 'marker-box')}` +
+          `<text class="marker-text" x="${f(x + 0.5 * SP)}" y="${f(TEXT_Y)}">${esc(b.marker)}</text></g>`);
+      }
     });
 
     // notes
@@ -213,23 +390,27 @@
     const track = doc.tracks[0];
     for (const b of L.bars) {
       if (b.simile) {
-        out.push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
+        O(b).push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
         continue;
       }
       const used = b.voices.map((items) => items.some((it) => it.kind === 'note'));
-      b.voices.forEach((items, vi) => drawVoice(out, b, items, vi, used, track));
-      drawUnder(out, b);
+      b.voices.forEach((items, vi) => drawVoice(O(b), b, items, vi, used, track));
+      drawUnder(O(b), b);
     }
 
     // "+" after the last bar
-    const a = L.add;
-    out.push(`<g class="add-bar">${rect(a.x, a.y, a.w, a.h, 'add-box')}` +
-      `<text class="add-plus" x="${f(a.x + a.w / 2)}" y="${f(a.y + a.h / 2 + 5)}">+</text></g>`);
+    if (!print) {
+      const a = L.add;
+      lines[lines.length - 1].push(`<g class="add-bar">${rect(a.x, a.y, a.w, a.h, 'add-box')}` +
+        `<text class="add-plus" x="${f(a.x + a.w / 2)}" y="${f(a.y + a.h / 2 + 5)}">+</text></g>`);
+    }
 
-    stat.innerHTML = out.join('');
-    RD.applyView();
-    RD.drawHover();
+    L.systems.forEach((s) => out.push(onLine(s, lines[s.i].join(''))));
+    return out.join('');
   };
+
+  /** Width of the box of a bar text (12 px bold). */
+  const markerW = (s) => s.length * 7.4 + 1.2 * SP;
 
   /** One voice of one bar: rests, heads, stems, flags, beams, dots, accents, tuplets. */
   function drawVoice(out, b, items, vi, used, track) {
@@ -479,7 +660,7 @@
    */
   const MAP_FONT = 9;
   const textW = (s) => s.length * MAP_FONT * 0.62 + 2;
-  function drawDrumMap(out, hl) {
+  function drawDrumMap(out, hl, ox) {
     const lines = TC.drums.lines(TC.drums.mapIds());
     const rows = lines.map(([l, arts]) => {
       const abs = [];
@@ -489,15 +670,15 @@
       return { line: l, y: stepY(l), text, names, w: textW(text), sel: arts.some((a) => a.id === S.input.art) };
     });
     const near = rows.filter((r) => r.line % 2 === 0), far = rows.filter((r) => r.line % 2 !== 0);
-    const xNear = -0.8 * SP;
+    const xNear = ox - 0.8 * SP;
     const xFar = xNear - Math.max(0, ...near.map((r) => r.w)) - 1.0 * SP;
     near.forEach((r) => { r.x2 = xNear; });
     far.forEach((r) => { r.x2 = xFar; });
-    RD.layout.map = rows.map((r) => ({ line: r.line, y: r.y, x1: r.x2 - r.w, x2: 0 }));
+    RD.layout.map = rows.map((r) => ({ line: r.line, y: r.y, x1: r.x2 - r.w, x2: ox }));
     out.push('<g class="drummap">');
     for (const r of rows) {
       const cls = (r.sel ? ' sel' : '') + (r.line === hl ? ' hl' : '');
-      out.push(`<path class="dm-lead${cls}" d="M${f(r.x2 + 0.25 * SP)},${f(r.y)} L${f(0)},${f(r.y)}"/>`);
+      out.push(`<path class="dm-lead${cls}" d="M${f(r.x2 + 0.25 * SP)},${f(r.y)} L${f(ox)},${f(r.y)}"/>`);
       out.push(`<text class="dm-label${cls}" x="${f(r.x2)}" y="${f(r.y + MAP_FONT * 0.36)}"><title>${esc(r.names)}</title>${esc(r.text)}</text>`);
     }
     out.push('</g>');
@@ -505,14 +686,23 @@
 
   // ---- Live layer: drum map, line under the pointer, preview ---------------------------------
 
+  /** Line of the live layer: under the pointer, else the one of the selected bar, else the first. */
+  function hoverLine(h, L) {
+    if (h && h.sys !== undefined && L.systems[h.sys]) return L.systems[h.sys];
+    if (h && L.bars[h.bar]) return L.systems[L.bars[h.bar].sys];
+    if (S.selBar !== null && L.bars[S.selBar]) return L.systems[L.bars[S.selBar].sys];
+    return L.systems[0];
+  }
+
   RD.drawHover = function () {
     const h = S.hover, L = RD.layout;
     if (!L) return;
-    const out = [];
+    const out = [], s = hoverLine(h, L);
     const hl = h ? (h.mapLine !== undefined ? h.mapLine : h.line) : null;
-    if (hl !== null && hl !== undefined) out.push(rect(0, stepY(hl) - SP / 4, L.width, SP / 2, 'hover-band'));
+    if (hl !== null && hl !== undefined) out.push(rect(s.ox, stepY(hl) - SP / 4, s.end - s.ox, SP / 2, 'hover-band'));
     L.map = [];
-    if (S.settings.showDrumMap) drawDrumMap(out, hl);
+    L.mapSys = s.i; // the drum map stands next to this line
+    if (S.settings.showDrumMap) drawDrumMap(out, hl, s.ox);
     if (h && L.bars[h.bar] && h.tick !== undefined) {
       const b = L.bars[h.bar];
       const x = RD.tickX(b, h.tick);
@@ -541,13 +731,13 @@
         out.push(`<text class="hover-label" x="${f(labelX)}" y="${f(labelY + 3.6)}">${esc(text)}</text>`);
       }
     }
-    hov.innerHTML = out.join('');
+    hov.innerHTML = onLine(s, out.join(''));
   };
 
-  /** The drum map row under world point p (its line), or null. */
+  /** The drum map row under point p (staff coordinates, see RD.toLocal), or null. */
   RD.mapLineAt = function (p) {
     const rows = RD.layout && RD.layout.map;
-    if (!rows || !rows.length) return null;
+    if (!rows || !rows.length || !p.sys || p.sys.i !== RD.layout.mapSys) return null;
     let best = null, bd = SP / 2;
     for (const r of rows) {
       if (p.x < r.x1 - 4 || p.x > r.x2 + 2) continue;
@@ -558,5 +748,43 @@
       }
     }
     return best;
+  };
+
+  // ---- PDF / print ---------------------------------------------------------------------------
+
+  /**
+   * Every page of the page view as an SVG of its own (A4) in #print-root, then the browser's print
+   * dialog ("Save as PDF"). css/app.css shows only #print-root on paper, in black on white.
+   */
+  RD.print = function () {
+    const keep = { layout: S.settings.layout, sel: S.selection, bar: S.selBar };
+    S.settings.layout = 'page';
+    S.selection = new Set();
+    S.selBar = null;
+    let html = '', pages = [];
+    try {
+      html = RD.content(true);
+      pages = RD.layout.pages;
+    } finally {
+      S.settings.layout = keep.layout;
+      S.selection = keep.sel;
+      S.selBar = keep.bar;
+      RD.draw();
+    }
+    let root = document.getElementById('print-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'print-root';
+      document.body.appendChild(root);
+    }
+    root.innerHTML = pages.map((pg) => `<svg class="score print" xmlns="http://www.w3.org/2000/svg" ` +
+      `viewBox="0 ${f(pg.y)} ${PAGE_W} ${PAGE_H}" width="210mm" height="297mm">${html}</svg>`).join('');
+    const done = () => {
+      root.innerHTML = '';
+      window.removeEventListener('afterprint', done);
+    };
+    window.addEventListener('afterprint', done);
+    window.print();
+    return pages.length;
   };
 })(window.TC);

@@ -9,10 +9,13 @@
  *     meta:   { title, subtitle, artist, album, music, words, transcriber, copyright, notes, tempo },
  *     bars:   [ BarHeader ],            // one per bar, for all tracks
  *     tracks: [ Track ],
+ *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off' }   page view / PDF
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
- *   BarHeader: { ts: [4, 4], tempo: null | bpm, repeatStart, repeatEnd, marker,
+ *   BarHeader: { ts: [4, 4], tempo: null | bpm, repeatStart, repeatEnd,
+ *                marker: ''               text above the bar (Verse, Chorus …)
+ *                lineBreak: false        page view: this bar starts a new line
  *                beam: null | [2, 2, 3]  beam groups in units of the lower number (7/8: eighths), null = default
  *                simile: false           true = "repeat the bar before" (% sign; plays the bar before) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill,
@@ -58,7 +61,9 @@
     title: '', subtitle: '', artist: '', album: '', music: '', words: '', transcriber: '', copyright: '', notes: '', tempo: 120,
   });
 
-  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, marker: '', beam: null, simile: false });
+  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, marker: '', beam: null, simile: false, lineBreak: false });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system' });
+  TC.BAR_NUMBERS = ['system', 'every', 'off'];
 
   /** Is the time signature compound (6/8, 9/8, 12/8: counted in dotted quarters)? */
   TC.isCompound = (ts) => ts[1] === 8 && ts[0] % 3 === 0 && ts[0] > 3;
@@ -116,7 +121,7 @@
   TC.DEFAULT_ZOOM = 1.6;
 
   TC.emptyScore = function (barCount = 8) {
-    const doc = { app: 'Tactus', version: 1, meta: TC.emptyMeta(), bars: [], tracks: [], view: { x: 40, y: 220, zoom: TC.DEFAULT_ZOOM } };
+    const doc = { app: 'Tactus', version: 1, meta: TC.emptyMeta(), bars: [], tracks: [], page: TC.newPage(), view: { x: 40, y: 220, zoom: TC.DEFAULT_ZOOM } };
     for (let i = 0; i < barCount; i++) doc.bars.push(TC.newBarHeader());
     doc.tracks.push(TC.newTrack('drums', barCount));
     return doc;
@@ -162,10 +167,14 @@
         h.marker = str(b.marker);
         if (Array.isArray(b.beam) && b.beam.every((x) => Number.isInteger(x) && x > 0) && b.beam.reduce((a, c) => a + c, 0) === h.ts[0]) h.beam = b.beam.slice();
         h.simile = !!b.simile && i > 0;
+        h.lineBreak = !!b.lineBreak && i > 0;
       }
       return h;
     });
     if (!doc.bars.length) doc.bars.push(TC.newBarHeader());
+    const pg = raw.page && typeof raw.page === 'object' ? raw.page : {};
+    if (Number.isInteger(pg.barsPerLine) && pg.barsPerLine >= 0 && pg.barsPerLine <= 12) doc.page.barsPerLine = pg.barsPerLine;
+    if (TC.BAR_NUMBERS.includes(pg.barNumbers)) doc.page.barNumbers = pg.barNumbers;
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];
     doc.tracks = tracks.map((t) => {
       const kind = ['drums', 'pitched', 'tab'].includes(t.kind) ? t.kind : 'drums';

@@ -224,6 +224,13 @@
   };
   K.byId = (id) => K.list.find((p) => p.id === id) || null;
 
+  /** Kit profile of a score (doc.meta.kit; by name when the id is unknown here), null = General MIDI. */
+  K.current = function (doc) {
+    const m = doc && doc.meta;
+    if (!m || (!m.kit && !m.kitName)) return null;
+    return K.byId(m.kit) || K.list.find((p) => p.name === m.kitName) || null;
+  };
+
   K.exportText = () => JSON.stringify({ format: 'tactus-kits', version: 1, profiles: K.list }, null, 1);
   /** Adds the profiles of an exported file (same id: replaced). Returns how many. */
   K.importText = function (text) {
@@ -266,6 +273,7 @@
   K.close = function () {
     if (root) root.remove();
     root = null;
+    if (TC.refresh) TC.refresh(); // status bar: name of the kit profile
   };
 
   function keyLabel(e) {
@@ -309,6 +317,7 @@
       <div class="kit-bar">
         ${K.list.length ? `<select data-k="pick">${opts}</select>` : ''}
         <button type="button" data-k="new">${tr('New from drum map…')}</button>
+        ${p && TC.state.doc && K.current(TC.state.doc) !== p ? `<button type="button" data-k="use" class="primary">${tr('Use for this score')}</button>` : p ? `<span class="muted">✓ ${tr('used by this score')}</span>` : ''}
         ${p ? `<button type="button" data-k="copy">${tr('Copy')}</button><button type="button" data-k="rename">${tr('Rename…')}</button><button type="button" class="danger" data-k="delete">${tr('Delete')}</button>` : ''}
       </div>
       <div class="kit-body">${body}</div>
@@ -371,6 +380,10 @@
           }
         });
         break;
+      case 'use':
+        TC.actions.setKitProfile(p.id);
+        draw();
+        break;
       case 'copy': {
         const q = JSON.parse(JSON.stringify(p));
         q.id = 'k' + Date.now().toString(36);
@@ -382,7 +395,11 @@
       }
       case 'rename': {
         const name = prompt(tr('Name of the kit profile:'), p.name);
-        if (name && name.trim()) { p.name = name.trim(); changed(); }
+        if (name && name.trim()) {
+          p.name = name.trim();
+          if (TC.state.doc && TC.state.doc.meta.kit === p.id) TC.state.doc.meta.kitName = p.name;
+          changed();
+        }
         break;
       }
       case 'delete':

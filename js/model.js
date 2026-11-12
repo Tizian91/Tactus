@@ -6,7 +6,7 @@
  *
  *   {
  *     app: 'Tactus', version: 1,
- *     meta:   { title, subtitle, artist, album, music, words, transcriber, copyright, notes, tempo },
+ *     meta:   { title, subtitle, artist, album, music, words, transcriber, copyright, notes, tempo, kit, kitName },
  *     bars:   [ BarHeader ],            // one per bar, for all tracks
  *     tracks: [ Track ],
  *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off' }   page view / PDF
@@ -59,6 +59,7 @@
 
   TC.emptyMeta = () => ({
     title: '', subtitle: '', artist: '', album: '', music: '', words: '', transcriber: '', copyright: '', notes: '', tempo: 120,
+    kit: '', kitName: '', // kit profile for MIDI export / import (js/kits.js): id, and the name to find it on another computer
   });
 
   TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, marker: '', beam: null, simile: false, lineBreak: false });

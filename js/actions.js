@@ -465,9 +465,13 @@
       '-',
       { label: 'Load example groove', action: A.demo },
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },
-      { label: 'Export MIDI', submenu: A.midiTargets() },
+      { label: TC.tr('Export MIDI ({name})', { name: kitName() }), action: () => A.exportMidiCurrent(), shortcut: 'Ctrl+E' },
+      { label: 'Export MIDI for', submenu: A.midiTargets() },
     ], r.left, r.bottom + 2);
   };
+
+  const curKit = () => { const p = TC.kits.current(S.doc); return p ? p.id : null; };
+  const kitName = () => { const p = TC.kits.current(S.doc); return p ? p.name : 'General MIDI'; };
 
   /** Targets of the MIDI export: General MIDI (also Guitar Pro) and every kit profile. */
   A.midiTargets = function () {
@@ -477,6 +481,27 @@
     for (const p of TC.kits.list) items.push({ label: TC.tr('Kit profile: {name}', { name: p.name }), action: () => A.exportMidi(p.id) });
     items.push('-', { label: 'Kit profiles (Cubase)…', action: A.openKits });
     return items;
+  };
+
+  /** MIDI export with the score's kit profile (Ctrl+E). */
+  A.exportMidiCurrent = () => A.exportMidi(curKit());
+
+  /** Kit profile of the score (status bar): which keys the MIDI export uses. Part of the score. */
+  A.setKitProfile = function (id) {
+    const p = id ? TC.kits.byId(id) : null;
+    S.doc.meta.kit = p ? p.id : '';
+    S.doc.meta.kitName = p ? p.name : '';
+    TC.commit();
+  };
+  A.kitMenu = function () {
+    TC.kits.load();
+    const r = document.getElementById('status-kit').getBoundingClientRect();
+    const cur = curKit();
+    const items = [{ label: 'General MIDI (Guitar Pro …)', checked: !cur, action: () => A.setKitProfile(null) }];
+    if (TC.kits.list.length) items.push('-');
+    for (const p of TC.kits.list) items.push({ label: p.name, checked: p.id === cur, action: () => A.setKitProfile(p.id) });
+    items.push('-', { label: 'Kit profiles (Cubase)…', action: A.openKits });
+    TC.menu.open(items, r.left, r.top - 4 - items.length * 30);
   };
 
   /** Writes the score as a MIDI file (js/midi.js) for General MIDI or a kit profile. */

@@ -257,6 +257,15 @@ setTimeout(() => {
     ok('notation tactus: a click on the bottom line writes the kick (not the pedal)', TC.drums.resolve(8, 42, TC.drums.kit()).id === 36);
     ok('notation tactus: a click on the top line writes the ride (not tom 1)', TC.drums.resolve(0, 42, TC.drums.kit()).id === 51);
     ok('notation: panel offers it', !!document.querySelector('select[data-action="setNotation"] option[value="tactus"][selected]'));
+    const sk = document.getElementById('status-kit');
+    ok('status bar: kit General MIDI for a new score (' + sk.textContent + ')', /General MIDI/.test(sk.textContent));
+    const saveKits = TC.kits.save; TC.kits.save = () => true;
+    TC.kits.list.push({ id: 'ui-test', name: 'UI-Kit', drm: '<DrumMap><list name="Map"></list></DrumMap>', assign: {} });
+    TC.actions.setKitProfile('ui-test');
+    ok('status bar shows the kit profile of the score', /UI-Kit/.test(sk.textContent) && S.doc.meta.kitName === 'UI-Kit');
+    TC.actions.undo();
+    ok('kit profile: undo', /General MIDI/.test(sk.textContent));
+    TC.kits.list = TC.kits.list.filter((p) => p.id !== 'ui-test'); TC.kits.save = saveKits;
     const mt = TC.actions.midiTargets();
     ok('MIDI export: General MIDI and kit profiles in the menu', mt[0].label.startsWith('General MIDI') && mt.some((x) => x.label === 'Kit profiles (Cubase)…'));
     const mb = TC.midi.build(S.doc, null).bytes;

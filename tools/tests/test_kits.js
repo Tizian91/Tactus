@@ -77,6 +77,16 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   T.eq('UJAM: 49 is crash 1 (high), 57 crash 2, as in the instrument', [uj.assign[49], uj.assign[57]], [[49, 48], [57]]);
 
   K.list = [p, bm];
+  const sd = TC.emptyScore(1);
+  T.eq('score without kit profile: General MIDI', K.current(sd), null);
+  sd.meta.kit = bm.id;
+  T.eq('score kit profile by id', K.current(sd).name, 'BeatMaker');
+  sd.meta.kit = 'other-computer';
+  sd.meta.kitName = 'EZDrummer3';
+  T.eq('unknown id (other computer): found by name', K.current(sd) === p, true);
+  T.eq('kit profile kept when the score is loaded', TC.normalizeDoc(JSON.parse(JSON.stringify(sd))).meta.kitName, 'EZDrummer3');
+
+  K.list = [p, bm];
   const text = K.exportText();
   K.list = [];
   T.eq('export / import', [K.importText(text), K.list.map((q) => q.name)], [2, ['EZDrummer3', 'BeatMaker']]);

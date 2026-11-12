@@ -548,6 +548,7 @@
       else if (lk === 's') e.shiftKey ? A().saveAs() : A().save();
       else if (lk === 'o') A().open();
       else if (lk === 'p') A().print();
+      else if (lk === 'e') A().exportMidiCurrent();
       else if (lk === 'c' && !isTyping(e)) A().copyBar();
       else if (lk === 'v' && !isTyping(e)) A().pasteBar();
       else if (lk === 'd') A().duplicateBar();

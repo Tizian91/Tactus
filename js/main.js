@@ -47,6 +47,13 @@
     const tempo = document.getElementById('tempo-input');
     if (document.activeElement !== tempo) tempo.value = S.doc.meta.tempo;
     UI.updateZoom();
+    const kit = document.getElementById('status-kit');
+    if (kit) {
+      const p = TC.kits.current(S.doc), missing = !p && S.doc.meta.kitName;
+      kit.textContent = tr('Kit: {name}', { name: p ? p.name : missing ? S.doc.meta.kitName + ' ' + tr('(missing)') : 'General MIDI' });
+      kit.classList.toggle('missing', !!missing);
+      kit.title = tr('Kit profile of this score: MIDI export uses its keys. Click: change');
+    }
     document.title = (S.doc.meta.title ? S.doc.meta.title + ' – ' : '') + 'Tactus';
   };
 
@@ -57,6 +64,7 @@
       const fn = TC.actions[b.dataset.action];
       if (fn) fn(b.dataset.value);
     });
+    document.getElementById('status-kit').addEventListener('click', () => TC.actions.kitMenu());
     const tempo = document.getElementById('tempo-input');
     tempo.addEventListener('change', () => {
       S.doc.meta.tempo = TC.clamp(Math.round(Number(tempo.value) || 120), 20, 400);
@@ -69,6 +77,7 @@
 
   function init() {
     TC.storage.loadSettings();
+    TC.kits.load();
     TC.drums.setNotation(S.settings.notation);
     const back = TC.storage.restore();
     if (back) {

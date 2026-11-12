@@ -31,7 +31,9 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 - **Kit profiles** (settings → drum kit → "Kit profiles (Cubase)…"): load the Cubase drum map of a drum VST, Tactus
   matches the keys by name; per instrument (fixed line and head) only the key is chosen. "Save drum map for Cubase"
   writes a `.drm` with the Tactus notation. Kept in the browser; export / import as `*.tactus-kits.json`.
-- **MIDI export** (File → Export MIDI): General MIDI (also for Guitar Pro) or a kit profile – tempo, time signature,
+- **Kit profile of the score** (status bar "Kit: …", click to change): saved with the score.
+- **MIDI export** (File → Export MIDI, `Ctrl+E`, with the kit profile of the score; "Export MIDI for" picks another):
+  General MIDI (also for Guitar Pro) or a kit profile – tempo, time signature,
   bar texts as markers, velocity (ghost / accent), flam / drag / rolls and %-bars written out.
 - **Drum map**: short names (HH, SN, BD …) exactly at the height of their line; pointer on one lights its line
   up, a click chooses the instrument. Option: only the instruments used in the score.

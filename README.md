@@ -3,7 +3,9 @@
 Drum notation by clicking, in the browser. No installation, no account, no build step.
 Values and MIDI numbers follow Guitar Pro, so scores can later go to Guitar Pro / MIDI.
 
-**Start:** double-click `index.html` (Edge or Chrome recommended).
+**Online:** https://tizian91.github.io/Tactus/
+
+**Start locally:** double-click `index.html` (Edge or Chrome recommended).
 **As a web app:** put the folder on any web server with https (e.g. GitHub Pages) – Chrome / Edge then
 offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 

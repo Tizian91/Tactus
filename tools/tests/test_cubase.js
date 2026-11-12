@@ -45,4 +45,8 @@ ${[item(20, 20, 0, 0, 'Intro'), item(28, 28, 0, 0, 'Kick A'), item(36, 36, 62, 0
   T.eq('restyle: only notation lines change',
     r.text.split('\n').filter((l) => !/DisplayNote|NoteheadSet|EntityID|name="Name"/.test(l)).join('\n'),
     drm.split('\n').filter((l) => !/DisplayNote|NoteheadSet|EntityID|name="Name"/.test(l)).join('\n'));
+
+  const role = (name) => C.roleOf({ name, inote: 50, display: 50, instrument: '' });
+  T.eq('BeatMaker slots', ['Kick 1', 'Kick 2', 'Snare 2', 'Snare 3, Clap', 'HiHat 1', 'HiHat 2', 'HiHat 3', 'Tom L', 'Tom H, Fx, Perc', 'FX 1, Bass, Perc', 'FX 2, Perc', 'Cym 1', 'Cym 2', 'Cym 3', 'Verse 1', 'Fill 2'].map(role),
+    ['kick', 'kick2', 'snare2', 'clap', 'hhClosed', 'hhHalf', 'hhOpen', 'tomLow', 'tomHigh', 'clapPerc', 'tambourine', 'crash1', 'ride', 'crash2', null, null]);
 };

@@ -31,9 +31,10 @@
   const RIDE = 'orchestral.unpitched.ride.cymbal.high';
   C.ROLES = {
     kick: R(64, 0, 'unpitched.kick.drum.low'),
-    kick2: R(64, 0, 'unpitched.kick.drum.very.low'),
+    kick2: R(65, 0, 'unpitched.kick.drum.very.low'),
     snare: R(72, 0, SIDE, 'pt.centre'),
     snareEdge: R(72, 0, SNARE, 'pt.centre'),
+    snare2: R(72, 0, SNARE),
     sidestick: R(72, 23, SNARE, 'pt.sideStick'),
     rimshot: R(72, 2, SIDE, 'pt.rimShot'),
     snareRim: R(72, 23, SIDE, 'pt.sideStick'),
@@ -60,6 +61,8 @@
     china: R(84, 34, 'unpitched.china.cymbal'),
     splash: R(86, 34, 'unpitched.splash.cymbal'),
     cowbell: R(76, 28, 'percussion.other.cowbell.high'),
+    clapPerc: R(71, 34, 'body.patsch'), // clap-like percussion (BeatMaker FX 1 / Perc 1)
+    accent: R(69, 34, 'latin.unpitched.claves'), // short accent click (BeatMaker "Kick 2"), on the UJAM claves line
   };
   // Tom rim shot / rim only: same line, rim-shot or side-stick head
   const TOM_TECH = { rimshot: [2, 'pt.rimShot'], rim: [23, 'pt.sideStick'] };
@@ -104,6 +107,16 @@
       if (/rim only|rim click/.test(n)) return role + ':rim';
       return role;
     };
+    // UJAM BeatMaker: numbered slots (HiHat 1–3, Cym 1–3, Tom L / M / H, FX 1–2)
+    const slot = /^hihat ([123])$/.exec(n);
+    if (slot) return ['hhClosed', 'hhHalf', 'hhOpen'][slot[1] - 1];
+    const cym = /^cym ([123])\b/.exec(n);
+    if (cym) return ['crash1', 'ride', 'crash2'][cym[1] - 1];
+    const t = /^tom ([lmh])\b/.exec(n);
+    if (t) return { l: 'tomLow', m: 'tomMid', h: 'tomHigh' }[t[1]];
+    const fx = /^fx ([12])\b/.exec(n);
+    if (fx) return fx[1] === '1' ? 'clapPerc' : 'tambourine';
+    if (/^snare 2$/.test(n)) return 'snare2';
     if (/hihat/.test(n)) {
       if (/pedal/.test(n)) return /open/.test(n) ? 'hhPedalOpen' : 'hhPedal';
       if (/half/.test(n)) return 'hhHalf';
@@ -166,7 +179,7 @@
 
   /**
    * Rewrites display note, notehead, instrument and technique of every recognised entry.
-   * opts.name: new map name (Cubase lists maps by name). Unrecognised entries stay as they are.
+   * opts.name: new map name (Cubase lists maps by name). opts.roles: { inote: role } where the name misleads. Unrecognised entries stay as they are.
    * Returns the new text, the changes and pairs that still collide on one display note.
    */
   C.restyle = function (text, opts = {}) {
@@ -176,7 +189,7 @@
       const f = fields(item);
       if (f.INote === undefined) return all;
       const e = { name: f.Name || '', inote: +f.INote, display: +f.DisplayNote, instrument: f.InstrumentEntityID || '' };
-      const role = C.roleOf(e);
+      const role = (opts.roles && opts.roles[e.inote]) || C.roleOf(e);
       const s = role && C.style(role);
       if (!s) return all;
       let out = item;
@@ -190,14 +203,14 @@
     });
     let out = text.slice(0, m.index) + m[1] + body + m[3] + text.slice(m.index + m[0].length);
     if (opts.name) out = out.replace(/(<DrumMap>\s*<string name="Name" value=")[^"]*(")/, `$1${opts.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}$2`);
-    return { text: out, changes, collisions: C.collisions(C.parse(out)) };
+    return { text: out, changes, collisions: C.collisions(C.parse(out), opts.roles) };
   };
 
   /** Different instruments (by role) that share display note, instrument and technique. */
-  C.collisions = function (map) {
+  C.collisions = function (map, roles = {}) {
     const seen = new Map(), out = [];
     for (const e of map.entries) {
-      const role = C.roleOf(e);
+      const role = (roles || {})[e.inote] || C.roleOf(e);
       if (!role || !e.instrument) continue;
       const k = `${e.display}|${e.instrument}|${e.technique}`;
       const base = role;

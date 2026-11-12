@@ -465,7 +465,37 @@
       '-',
       { label: 'Load example groove', action: A.demo },
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },
+      { label: 'Export MIDI', submenu: A.midiTargets() },
     ], r.left, r.bottom + 2);
+  };
+
+  /** Targets of the MIDI export: General MIDI (also Guitar Pro) and every kit profile. */
+  A.midiTargets = function () {
+    TC.kits.load();
+    const items = [{ label: 'General MIDI (Guitar Pro …)', action: () => A.exportMidi(null) }];
+    if (TC.kits.list.length) items.push('-');
+    for (const p of TC.kits.list) items.push({ label: TC.tr('Kit profile: {name}', { name: p.name }), action: () => A.exportMidi(p.id) });
+    items.push('-', { label: 'Kit profiles (Cubase)…', action: A.openKits });
+    return items;
+  };
+
+  /** Writes the score as a MIDI file (js/midi.js) for General MIDI or a kit profile. */
+  A.exportMidi = function (profileId) {
+    const p = profileId ? TC.kits.byId(profileId) : null;
+    const res = TC.midi.build(S.doc, p);
+    const clean = (s) => s.replace(/[\\/:*?"<>|]+/g, '-');
+    const base = clean(S.doc.meta.title || S.file.name.replace(/\.tactus\.json$|\.json$/i, '') || 'Tactus');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([res.bytes], { type: 'audio/midi' }));
+    a.download = base + (p ? ' (' + clean(p.name) + ')' : '') + '.mid';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    const lab = (x) => TC.drums.label(x);
+    const lines = res.replaced.map((r) => TC.tr('{a} played as {b}', { a: lab(r.art), b: lab(r.by) }))
+      .concat(res.missing.map((x) => TC.tr('{a}: no key in the profile, left out', { a: lab(x) })));
+    if (lines.length) alert(TC.tr('MIDI exported. The kit profile "{name}" has no key for:', { name: p.name }) + '\n\n' + lines.join('\n'));
+    else TC.ui.status(TC.tr('MIDI exported: {file}', { file: a.download }));
   };
   A.zoomMenu = function () {
     const r = document.getElementById('zoom-label').getBoundingClientRect();

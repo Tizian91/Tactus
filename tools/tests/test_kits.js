@@ -33,7 +33,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   const p = K.fromDrm(ez);
   T.eq('profile name from the map', p.name, 'EZDrummer3');
   T.eq('auto: kick, snare, hi-hat with two keys (order of the map), floor tom', [p.assign[36], p.assign[38], p.assign[42], p.assign[43]], [[36], [38], [61, 22], [44]]);
-  T.eq('auto: drum keys without instrument (tom rim shot, crash 3)', K.unassigned(p).map((e) => e.inote), [73, 57]);
+  T.eq('auto: crash 3 joins crash 2; drum key without instrument: tom rim shot', [p.assign[57], K.unassigned(p).map((e) => e.inote)], [[57], [73]]);
   T.eq('unnamed keys that were set up can be chosen', K.keys(K.fromDrm(drm('U', [item(30, 30, '').replace('name="DisplayNote" value="30"', 'name="DisplayNote" value="79"'), item(31, 31, 'Sound 32')], [30, 31]))).map((e) => e.inote), [30]);
   T.eq('keys list: named only, map order first', K.keys(p).map((e) => e.inote), [38, 36, 61, 22, 44, 73, 57, 20]);
 
@@ -48,7 +48,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   T.eq('drum map: kick on the bottom line, snare C5, hi-hat G5 with cross', [at(36).display, at(38).display, at(61).display, at(61).head], [64, 72, 79, 34]);
   T.eq('drum map: floor tom (F4) keeps its output note', [at(44).display, at(44).onote], [65, 41]);
   T.eq('drum map: drum key without instrument placed like its kind, no Cubase instrument; pattern key unchanged', [at(73).display, at(73).head, at(73).instrument, at(20).display], [65, 2, '', 20]);
-  T.eq('drum map: order = top of the staff first, then the rest', out.order, [61, 38, 44, 36, 22]);
+  T.eq('drum map: order = top of the staff first, then the rest', out.order, [57, 61, 38, 44, 36, 22]);
   T.eq('drum map: no collisions', C.collisions(out), []);
 
   const bm = K.fromDrm(drm('BeatMaker', [item(36, 36, 'Kick 1'), item(38, 38, 'Kick 2'), item(57, 57, 'FX 2, Perc')], [36, 38, 57]));

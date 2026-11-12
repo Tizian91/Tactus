@@ -257,6 +257,10 @@ setTimeout(() => {
     ok('notation tactus: a click on the bottom line writes the kick (not the pedal)', TC.drums.resolve(8, 42, TC.drums.kit()).id === 36);
     ok('notation tactus: a click on the top line writes the ride (not tom 1)', TC.drums.resolve(0, 42, TC.drums.kit()).id === 51);
     ok('notation: panel offers it', !!document.querySelector('select[data-action="setNotation"] option[value="tactus"][selected]'));
+    const mt = TC.actions.midiTargets();
+    ok('MIDI export: General MIDI and kit profiles in the menu', mt[0].label.startsWith('General MIDI') && mt.some((x) => x.label === 'Kit profiles (Cubase)…'));
+    const mb = TC.midi.build(S.doc, null).bytes;
+    ok('MIDI export: a MIDI file (' + mb.length + ' bytes)', String.fromCharCode(...mb.slice(0, 4)) === 'MThd' && mb.length > 40);
     TC.actions.openKits();
     ok('kit profiles: dialog opens', !!document.querySelector('.kit-dialog') && TC.kits.isOpen());
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

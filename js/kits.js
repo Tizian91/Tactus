@@ -33,6 +33,9 @@
   /** Role -> Tactus instrument for the automatic assignment (variants join their instrument). */
   K.ROLE_ART = Object.assign({}, ...Object.entries(K.ART_ROLE).map(([id, r]) => ({ [r]: +id })), {
     snareEdge: 38, snare2: 40,
+    // more crashes join crash 2: two crash lines (high / low, like crash L / R) stay readable,
+    // the keys still sound different in the VST
+    crash3: 57, crash4: 57, 'crash3:muted': 98, 'crash4:muted': 98,
   });
 
   // ---- Staff line <-> pitch (treble clef positions, as Cubase display notes) --------------

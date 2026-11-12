@@ -93,6 +93,29 @@ setTimeout(() => {
   ok('left-handed: note panel on the right', main.style.gridTemplateAreas === '"sp sr vp nr np"');
   TC.actions.toggleLeftHanded();
   ok('right-handed again', main.style.gridTemplateAreas === '"np nr vp sr sp"');
+  // fingers: tap writes, drag scrolls, two fingers zoom
+  const finger = (type, id, x, y) => vp.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: 1, bubbles: true, pointerId: id, pointerType: 'touch', isPrimary: id === 11 }));
+  const screenOf = (bar, tick, line) => {
+    const b = TC.render.layout.bars[bar], v = S.doc.view, r = vp.getBoundingClientRect();
+    return [r.left + v.x + TC.render.tickX(b, tick) * v.zoom, r.top + v.y + TC.render.stepY(line) * v.zoom];
+  };
+  TC.actions.setValue(8); TC.actions.setArt(38);
+  let [fx, fy] = screenOf(4, 0, 3);
+  finger('pointerdown', 11, fx, fy); finger('pointerup', 11, fx, fy);
+  ok('finger tap writes a snare ' + voice(4, 0), voice(4, 0).join() === '0:480:38');
+  const n4 = voice(4, 0).length, vx0 = S.doc.view.x, vy0 = S.doc.view.y;
+  [fx, fy] = screenOf(4, 960, 3);
+  finger('pointerdown', 11, fx, fy);
+  for (let k = 1; k <= 5; k++) finger('pointermove', 11, fx - k * 20, fy + k * 4);
+  finger('pointerup', 11, fx - 100, fy + 20);
+  ok('finger drag scrolls (' + Math.round(S.doc.view.x - vx0) + ', ' + Math.round(S.doc.view.y - vy0) + ') and writes nothing',
+    Math.round(S.doc.view.x - vx0) === -100 && Math.round(S.doc.view.y - vy0) === 20 && voice(4, 0).length === n4);
+  const z0 = S.doc.view.zoom;
+  finger('pointerdown', 11, 300, 300); finger('pointerdown', 12, 400, 300);
+  finger('pointermove', 12, 450, 300);  // distance 100 -> 150
+  finger('pointerup', 12, 450, 300); finger('pointerup', 11, 300, 300);
+  ok('two fingers zoom ' + z0 + ' -> ' + S.doc.view.zoom.toFixed(2), Math.abs(S.doc.view.zoom - Math.min(4, z0 * 1.5)) < 0.01 && voice(4, 0).length === n4);
+  TC.actions.zoomReset();
   TC.setLang('en');
   ok('English toolbar', document.getElementById('file-btn').textContent === 'File ▾');
   TC.setLang('de');

@@ -13,6 +13,7 @@
  *   right-click    bar menu (time signature, insert / delete bars)
  *   wheel          scroll sideways; Shift + wheel: up / down; Ctrl + wheel: zoom
  *   middle button or Space + drag: move the view
+ *   fingers        one finger drag: scroll · tap: like a click · hold: bar menu · two fingers: zoom
  */
 (function (TC) {
   const S = TC.state;
@@ -127,6 +128,7 @@
   };
 
   function onPointerMove(e) {
+    if (e.pointerType === 'touch') return touchMove(e);
     if (S.drag && S.drag.mode === 'pan') {
       const v = S.doc.view;
       v.x = S.drag.vx + e.clientX - S.drag.sx;
@@ -140,6 +142,7 @@
 
   function onPointerDown(e) {
     vp.focus({ preventScroll: true });
+    if (e.pointerType === 'touch') return touchDown(e);
     if (e.button === 1 || (e.button === 0 && spaceDown)) {
       e.preventDefault();
       const v = S.doc.view;
@@ -149,6 +152,105 @@
       return;
     }
     if (e.button !== 0) return;
+    press(e);
+  }
+
+  // ---- Fingers (tablet / phone) ---------------------------------------------------------------
+  // one finger: drag = scroll, tap = like a click, hold = bar menu; two fingers: zoom + move.
+  // A pen or mouse works as before (the pen writes notes).
+
+  const touches = new Map(); // pointerId -> {x, y}
+  let gesture = null, holdTimer = 0, lastTouch = 0;
+  const TAP_MOVE = 10, HOLD_MS = 550;
+
+  function startPan(x, y) {
+    const v = S.doc.view;
+    gesture = { mode: 'pan', sx: x, sy: y, vx: v.x, vy: v.y };
+  }
+  function startPinch() {
+    const [a, b] = [...touches.values()], v = S.doc.view;
+    gesture = { mode: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, vx: v.x, vy: v.y, z0: v.zoom };
+  }
+  function clearHover() {
+    lastMove = null;
+    if (S.hover) {
+      S.hover = null;
+      I.hoverKey = null;
+      TC.render.drawHover();
+    }
+  }
+
+  function touchDown(e) {
+    e.preventDefault();
+    lastTouch = Date.now();
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { vp.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    clearTimeout(holdTimer);
+    if (touches.size === 1) {
+      gesture = { mode: 'tap', sx: e.clientX, sy: e.clientY, down: e };
+      holdTimer = setTimeout(() => {
+        if (!gesture || gesture.mode !== 'tap') return;
+        const d = gesture.down;
+        gesture = { mode: 'none' };
+        onContextMenu({ clientX: d.clientX, clientY: d.clientY, preventDefault() {}, fromHold: true });
+      }, HOLD_MS);
+    } else if (touches.size === 2) {
+      startPinch();
+    }
+  }
+
+  function touchMove(e) {
+    const p = touches.get(e.pointerId);
+    if (!p || !gesture) return;
+    p.x = e.clientX;
+    p.y = e.clientY;
+    lastTouch = Date.now();
+    const v = S.doc.view;
+    if (gesture.mode === 'tap') {
+      if (Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy) < TAP_MOVE) return;
+      clearTimeout(holdTimer);
+      startPan(gesture.sx, gesture.sy);
+      vp.classList.add('panning');
+      clearHover();
+    }
+    if (gesture.mode === 'pan') {
+      v.x = gesture.vx + e.clientX - gesture.sx;
+      v.y = gesture.vy + e.clientY - gesture.sy;
+      TC.render.applyView();
+    } else if (gesture.mode === 'pinch' && touches.size >= 2) {
+      const [a, b] = [...touches.values()], r = vp.getBoundingClientRect(), g = gesture;
+      const z = TC.clamp(g.z0 * Math.hypot(a.x - b.x, a.y - b.y) / g.d0, 0.25, 4);
+      // the point of the score that was between the fingers stays between them
+      const wx = (g.mx - r.left - g.vx) / g.z0, wy = (g.my - r.top - g.vy) / g.z0;
+      v.zoom = z;
+      v.x = (a.x + b.x) / 2 - r.left - wx * z;
+      v.y = (a.y + b.y) / 2 - r.top - wy * z;
+      TC.render.applyView();
+      TC.ui.updateZoom();
+    }
+  }
+
+  function touchUp(e, cancelled) {
+    if (!touches.has(e.pointerId)) return;
+    touches.delete(e.pointerId);
+    lastTouch = Date.now();
+    clearTimeout(holdTimer);
+    const g = gesture;
+    if (touches.size === 0) {
+      gesture = null;
+      vp.classList.remove('panning');
+      if (g && g.mode === 'tap' && !cancelled) {
+        press(g.down);
+        clearHover(); // no pointer stays above the score
+      }
+    } else if (touches.size === 1 && g && g.mode === 'pinch') {
+      const [p] = [...touches.values()];
+      startPan(p.x, p.y); // one finger left: keep moving
+    }
+  }
+
+  /** Mouse click, pen tap or finger tap at the position of event e. */
+  function press(e) {
     const t = target(I.toWorld(e.clientX, e.clientY), e);
     if (!t) {
       if (S.selection.size || S.selBar !== null) A().selectNone();
@@ -199,6 +301,7 @@
   }
 
   function onPointerUp(e) {
+    if (e.pointerType === 'touch') return touchUp(e, e.type === 'pointercancel');
     if (S.drag) {
       S.drag = null;
       vp.classList.remove('panning');
@@ -226,6 +329,8 @@
 
   function onContextMenu(e) {
     e.preventDefault();
+    // a finger held down opens the menu by itself (above); the browser's own long-press menu is ignored
+    if (!e.fromHold && (touches.size || Date.now() - lastTouch < 1000)) return;
     const p = I.toWorld(e.clientX, e.clientY);
     const bar = TC.render.barAt(p.x);
     if (!bar) return;
@@ -307,7 +412,8 @@
     vp.addEventListener('pointermove', onPointerMove);
     vp.addEventListener('pointerup', onPointerUp);
     vp.addEventListener('pointercancel', onPointerUp);
-    vp.addEventListener('pointerleave', () => {
+    vp.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'touch') return;
       lastMove = null;
       S.hover = null;
       I.hoverKey = null;

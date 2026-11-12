@@ -154,7 +154,7 @@
       }
       case 51: case 93: case 94: case 126: case 59: { // ride
         const d = cut(a.id === 93 || a.id === 59 ? 1.1 : 0.9);
-        metal(out, t, a.line === 2 ? 52 : 60, 6000, 0.22 * v, d);
+        metal(out, t, TC.drums.base(a).line === 2 ? 52 : 60, 6000, 0.22 * v, d);
         hiss(out, t, 'bandpass', 8500, 1.5, 0.12 * v, d * 0.7);
         tone(out, t, 'sine', 3100, 3000, 0.1, 0.05 * v, 0.6);
         break;
@@ -192,9 +192,9 @@
           tone(out, t, 'triangle', f * 2.2, f * 1.5, 0.05, 0.12 * v, 0.12);
           hiss(out, t, 'lowpass', 3000, 0.7, 0.18 * v, 0.05);
         } else if (a.el === 'cowbell') {
-          const f = a.line === 1 ? 480 : a.line === -1 ? 640 : 560;
+          const gl = TC.drums.base(a).line, f = gl === 1 ? 480 : gl === -1 ? 640 : 560;
           const bp = filter('bandpass', f * 1.5, 2);
-          bp.connect(env(out, t, 0.35 * v, a.head === 'x' ? 0.08 : 0.28));
+          bp.connect(env(out, t, 0.35 * v, TC.drums.base(a).head === 'x' ? 0.08 : 0.28));
           [f, f * 1.48].forEach((hz) => {
             const o = ctx.createOscillator();
             o.type = 'square';

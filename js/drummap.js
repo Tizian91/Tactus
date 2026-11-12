@@ -104,6 +104,29 @@
   const byId = new Map(TC.DRUM_ARTS.map((a) => [a.id, a]));
 
   /**
+   * Notation layouts: where an instrument sits and which head it gets. Only the drawing changes,
+   * the score keeps the instrument (Guitar Pro articulation), so exports stay the same.
+   *   gp      Guitar Pro (the values above)
+   *   tactus  the layout set up by hand in a Cubase drum map (js/cubase.js ROLES): kick and pedal
+   *           hi-hat on the bottom line, toms from the top line down, china / splash above crash
+   * def: which instrument a click on a shared line writes (see D.resolve).
+   */
+  const BASE = new Map(TC.DRUM_ARTS.map((a) => [a.id, { line: a.line, head: a.head, def: a.def }]));
+  TC.NOTATIONS = {
+    tactus: {
+      en: 'Tactus', de: 'Tactus',
+      set: {
+        36: { line: 8 }, 35: { line: 8, def: false }, 44: { line: 8, def: false },
+        50: { line: 0, def: false }, 48: { line: 2 }, 47: { line: 4 }, 45: { line: 6 }, 43: { line: 7 }, 41: { line: 9 },
+        57: { line: -3 }, 98: { line: -3 }, 52: { line: -4 }, 96: { line: -4 }, 55: { line: -5 }, 95: { line: -5 },
+        102: { line: 0 }, 103: { line: 0 }, 56: { line: 1 }, 101: { line: 1 }, 99: { line: 2 }, 100: { line: 2 },
+        39: { line: 4, head: 'x' },
+      },
+    },
+    gp: { en: 'Guitar Pro', de: 'Guitar Pro', set: {} },
+  };
+
+  /**
    * Drum kits: which instruments the panel and the drum map offer (notes of other
    * instruments in a score are still shown). 'custom' = the list in settings.kitCustom.
    */
@@ -117,6 +140,16 @@
 
   const D = (TC.drums = {});
   D.byId = (id) => byId.get(id) || null;
+
+  /** Applies a notation layout (TC.NOTATIONS key) to all instruments. */
+  D.notation = 'gp';
+  D.setNotation = function (key) {
+    if (!TC.NOTATIONS[key]) key = 'tactus';
+    for (const a of TC.DRUM_ARTS) Object.assign(a, BASE.get(a.id), TC.NOTATIONS[key].set[a.id] || {});
+    D.notation = key;
+  };
+  /** Guitar Pro line / head of an instrument, whatever layout is shown (sound, exports). */
+  D.base = (a) => BASE.get(a.id) || a;
 
   /** All articulations on a staff line. */
   D.atLine = (line) => TC.DRUM_ARTS.filter((a) => a.line === line);

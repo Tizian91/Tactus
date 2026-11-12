@@ -167,6 +167,7 @@
   function kitSection() {
     const kit = S.settings.kit;
     const opts = Object.keys(TC.KITS).map((k) => `<option value="${k}"${k === kit ? ' selected' : ''}>${esc(de() ? TC.KITS[k].de : TC.KITS[k].en)}</option>`).join('');
+    const notationOpts = Object.keys(TC.NOTATIONS).map((k) => `<option value="${k}"${k === TC.drums.notation ? ' selected' : ''}>${esc(de() ? TC.NOTATIONS[k].de : TC.NOTATIONS[k].en)}</option>`).join('');
     const ids = TC.drums.kit();
     const list = Object.keys(TC.DRUM_ELEMENTS).map((el) => {
       const arts = TC.DRUM_ARTS.filter((a) => a.el === el);
@@ -178,6 +179,8 @@
       <div class="row"><label>${tr('Kit')}</label><select data-action="setKit">${opts}</select></div>
       <p class="hint tight">${tr('{n} instruments – only these appear in the note panel and the drum map.', { n: ids.size })}</p>
       <details class="kit-list"><summary>${tr('Choose instruments')}</summary>${list}</details>
+      <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
+      <p class="hint tight">${tr('Where the instruments sit on the staff. Only the display changes.')}</p>
       <h3 class="sub">${tr('Drum map')}</h3>
       ${check('toggleDrumMap', S.settings.showDrumMap, tr('Show next to the staff'))}
       ${check('toggleMapUsed', S.settings.mapUsedOnly, tr('Only instruments used in the score'))}

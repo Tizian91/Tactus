@@ -1,11 +1,11 @@
 'use strict';
 /*
- * Gives Cubase drum maps the notation of a reference layout (TC.cubase.ROLES, the UJAM layout):
+ * Gives Cubase drum maps the notation of a reference layout (TC.cubase.ROLES, the Tactus layout):
  * display note, notehead, instrument and technique. Sounds (INote / ONote) and names stay.
  *
  *   ELECTRON_RUN_AS_NODE=1 "<VS Code>/Code.exe" tools/restyle_drummaps.js <in.drm> [...]
  *
- * Writes "<name> (UJAM-Ansicht).drm" next to each file and prints what changed.
+ * Writes "<name> (Tactus).drm" next to each file and prints what changed.
  */
 const fs = require('fs'), path = require('path');
 require(path.join(__dirname, '..', 'js', 'cubase.js'));
@@ -16,8 +16,8 @@ const log = [];
 for (const file of process.argv.slice(2)) {
   const src = fs.readFileSync(file, 'utf8');
   const map = C.parse(src);
-  const res = C.restyle(src, { roles: ROLES[map.name], name: map.name.replace(/\s*\[\d+\]$/, '') + ' (UJAM-Ansicht)' });
-  const out = path.join(path.dirname(file), path.basename(file, '.drm') + ' (UJAM-Ansicht).drm');
+  const res = C.restyle(src, { roles: ROLES[map.name], name: map.name.replace(/\s*\[\d+\]$/, '') + ' (Tactus)' });
+  const out = path.join(path.dirname(file), path.basename(file, '.drm') + ' (Tactus).drm');
   fs.writeFileSync(out, res.text, 'utf8');
   log.push(`=== ${path.basename(file)} -> ${path.basename(out)}  (${res.changes.length} entries)`);
   for (const c of res.changes) log.push(`  ${c.inote}>${c.onote}\t${c.name}\t${c.role}\t${c.from.display}/${c.from.head} -> ${c.to.display}/${c.to.head}`);

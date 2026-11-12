@@ -12,6 +12,7 @@ setTimeout(() => {
   S.dirty = false;
   window.confirm = () => true;
   TC.actions.newScore();
+  TC.actions.setNotation('gp');                                // positions below are Guitar Pro lines
   const click = (bar, tick, line, opts = {}) => {
     const L = TC.render.layout, b = L.bars[bar], v = S.doc.view, r = vp.getBoundingClientRect();
     const wx = TC.render.tickX(b, tick) + (opts.dx || 0), wy = TC.render.stepY(line) + (opts.dy || 0);
@@ -250,6 +251,14 @@ setTimeout(() => {
       voice(nb, 0).join() === '0:480:38,480:480:38,960:480:38,1440:480:38' && !TC.menu.isOpen());
     TC.actions.undo();
     ok('finger row: one undo step', voice(nb, 0).join() === '0:480:38');
+    // notation layout: Tactus puts kick and pedal hi-hat on the bottom line, toms from the top line down
+    TC.actions.setNotation('tactus');
+    ok('notation tactus: kick on the bottom line, floor tom on G4, crash 2 above', TC.drums.byId(36).line === 8 && TC.drums.byId(45).line === 6 && TC.drums.byId(57).line === -3);
+    ok('notation tactus: a click on the bottom line writes the kick (not the pedal)', TC.drums.resolve(8, 42, TC.drums.kit()).id === 36);
+    ok('notation tactus: a click on the top line writes the ride (not tom 1)', TC.drums.resolve(0, 42, TC.drums.kit()).id === 51);
+    ok('notation: panel offers it', !!document.querySelector('select[data-action="setNotation"] option[value="tactus"][selected]'));
+    TC.actions.setNotation('gp');
+    ok('notation gp: kick back on F4, score unchanged', TC.drums.byId(36).line === 7 && voice(nb, 0).join() === '0:480:38');
     S.doc.view.x = 190; TC.refresh();
     const pre = document.createElement('pre');
     pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';

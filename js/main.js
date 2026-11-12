@@ -69,6 +69,7 @@
 
   function init() {
     TC.storage.loadSettings();
+    TC.drums.setNotation(S.settings.notation);
     const back = TC.storage.restore();
     if (back) {
       S.doc = back.doc;

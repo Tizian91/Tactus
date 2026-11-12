@@ -81,6 +81,17 @@ Formate und MIDI-Werte wie in Guitar Pro.
   „Notenzeilen-Koordinaten“, die Zeilen werden nur verschoben gezeichnet (`TC.render.toLocal`).
 - Offen: Velocity, Wiederholungszeichen / Volta, Kopf auf Folgeseiten, Seitenränder einstellbar.
 
+## Phase 4a – Drummaps und Darstellung (begonnen)
+
+- **Darstellung** umschaltbar (Einstellungen → Drum-Kit): „Tactus“ (Standard, wie in der eigenen Cubase-Drummap:
+  Bassdrum und Pedal auf der untersten Linie, Toms von oben nach unten, Crash 2 / China / Splash über der Hi-Hat)
+  oder „Guitar Pro“. Nur die Zeichnung ändert sich; das Stück speichert weiter das Instrument (Guitar-Pro-Nummer).
+- Cubase-Drummaps (`.drm`) lesen und auf die Tactus-Darstellung umschreiben (`js/cubase.js`,
+  `tools/restyle_drummaps.js`): EZDrummer 3, Groove Agent (Ozzie), UJAM BeatMaker.
+- Als Nächstes: **Kit-Profile** (pro VST / Kit: welche Taste welches Instrument ist; Instrumente mit fester
+  Position, nur die Taste wird zugeordnet), daraus `.drm` für Cubase erzeugen; dann **MIDI-Export** (Zielwahl,
+  General MIDI auch für Guitar Pro) und **MIDI-Import** (Herkunft wählen, Anschlag → Ghost / Akzent).
+
 ## Phase 3 – Wiedergabe (Grundfunktion) ✅
 
 - Synthetisierte Klänge (Web Audio, keine Dateien): Bassdrum, Snare / Rimshot / Sidestick, Toms, Hi-Hat zu /

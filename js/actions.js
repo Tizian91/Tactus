@@ -149,6 +149,14 @@
     TC.saveSettings();
     TC.refresh();
   };
+  /** Notation layout (where the instruments sit): a view setting, the score does not change. */
+  A.setNotation = function (key) {
+    if (!TC.NOTATIONS[key]) return;
+    S.settings.notation = key;
+    TC.drums.setNotation(key);
+    TC.saveSettings();
+    TC.refresh();
+  };
   /** Rest cleanup of the drum track (rhythm.js R.ends): part of the score, so undoable. */
   A.setFill = function (fill) {
     const t = S.doc.tracks[0];

@@ -45,6 +45,7 @@ window.TC = window.TC || {};
       showDrumMap: true,    // instrument names next to the lines
       mapUsedOnly: false,   // drum map: only instruments used in the score (+ the selected one)
       kit: 'standard',      // drum kit (drummap.js TC.KITS)
+      notation: 'tactus',   // where instruments sit on the staff (drummap.js TC.NOTATIONS)
       kitCustom: null,      // ids of the custom kit
       layout: 'endless',    // 'endless' | 'page' (A4 pages as printed)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)

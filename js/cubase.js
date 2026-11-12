@@ -18,20 +18,21 @@
  *   TC.cubase.parse(text)         -> { name, entries: [ {inote, onote, display, head, voice, name, instrument, technique} ], order }
  *   TC.cubase.roleOf(entry)       -> role key of TC.cubase.ROLES or null (pattern keys, empty entries)
  *   TC.cubase.restyle(text, opts) -> { text, changes, collisions }  notation of every recognised entry
- *                                    set to ROLES (the UJAM Virtual Drummer layout)
+ *                                    set to ROLES (the Tactus layout)
  */
 (function (TC) {
   const C = (TC.cubase = {});
 
-  // Role: display note, notehead set, instrument, technique. Taken from the UJAM Virtual Drummer
-  // map where it has the instrument; the rest is placed next to its relatives.
+  // Role: display note, notehead set, instrument, technique. The Tactus layout: set up by hand in
+  // the Cubase drum map used for UJAM Virtual Drummer (its note numbers fit UJAM, the notation is our own);
+  // instruments that map lacks are placed next to their relatives.
   const R = (display, head, instrument, technique = '') => ({ display, head, instrument: instrument ? 'instrument.' + instrument : '', technique });
   const SIDE = 'orchestral.unpitched.side.drum', SNARE = 'orchestral.unpitched.snare.drum';
   const HH = 'orchestral.unpitched.hihat', PEDAL = 'orchestral.unpitched.hihat.pedal';
   const RIDE = 'orchestral.unpitched.ride.cymbal.high';
   C.ROLES = {
     kick: R(64, 0, 'unpitched.kick.drum.low'),
-    kick2: R(65, 0, 'unpitched.kick.drum.very.low'),
+    kick2: R(64, 0, 'unpitched.kick.drum.very.low'), // with the kick, as in the UJAM map
     snare: R(72, 0, SIDE, 'pt.centre'),
     snareEdge: R(72, 0, SNARE, 'pt.centre'),
     snare2: R(72, 0, SNARE),
@@ -62,7 +63,7 @@
     splash: R(86, 34, 'unpitched.splash.cymbal'),
     cowbell: R(76, 28, 'percussion.other.cowbell.high'),
     clapPerc: R(71, 34, 'body.patsch'), // clap-like percussion (BeatMaker FX 1 / Perc 1)
-    accent: R(69, 34, 'latin.unpitched.claves'), // short accent click (BeatMaker "Kick 2"), on the UJAM claves line
+    accent: R(69, 34, 'latin.unpitched.claves'), // short accent click (BeatMaker "Kick 2"), on the claves line
   };
   // Tom rim shot / rim only: same line, rim-shot or side-stick head
   const TOM_TECH = { rimshot: [2, 'pt.rimShot'], rim: [23, 'pt.sideStick'] };

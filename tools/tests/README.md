@@ -21,7 +21,7 @@ Die erste Zeile der Ausgabe lautet `ALL OK: … passed` oder `FAILED: …`, daru
 | `test_model.js` | Noten setzen (Akkord, gleiche Stelle, Kürzen), löschen, Takt-Text / Zeilenumbruch / Seiteneinstellungen laden, Taktart ab einem Takt / nur ein Takt, Takte einfügen / löschen, Laden mit kaputten Werten, Drum-Map, Drum-Kits, Magnet zur nächsten Linie |
 | `test_bars.js` | Balkengruppen (7/8, 5/8, eigene Gruppen), Pausen in den Gruppen, Takte kopieren / einfügen / verdoppeln, %-Takt, Flam / Wirbel / Sticking speichern und laden |
 | `test_playback.js` | Wiedergabe-Zeitplan: Zeiten bei 120 BPM, Lautstärke (Ghost / Akzent), Flam, Drag, Wirbel, Metronom, Einzähler, %-Takt, Tempowechsel, ungerade Taktarten |
-| `test_cubase.js` | Cubase-Drummaps (`.drm`): lesen, Instrumente an den Namen erkennen (Pattern-Tasten auslassen), auf die UJAM-Darstellung umschreiben, Klänge (INote / ONote) bleiben |
+| `test_cubase.js` | Cubase-Drummaps (`.drm`): lesen, Instrumente an den Namen erkennen (Pattern-Tasten auslassen), auf die Tactus-Darstellung umschreiben, Klänge (INote / ONote) bleiben |
 | `harness.js`, `run.js` | Hilfsmittel: Dateien laden, Prüfungen zählen, alle `test_*.js` ausführen |
 
 ## Klick-Test (im Browser)

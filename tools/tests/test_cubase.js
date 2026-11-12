@@ -1,5 +1,5 @@
 'use strict';
-// Cubase drum maps (js/cubase.js): read, recognise instruments, restyle to the UJAM layout.
+// Cubase drum maps (js/cubase.js): read, recognise instruments, restyle to the Tactus layout.
 module.exports = function (T) {
   const C = T.load(['cubase.js']).cubase;
   const item = (i, o, d, head, name, ins = '', tech = '') => `      <item>
@@ -34,9 +34,9 @@ ${[item(20, 20, 0, 0, 'Intro'), item(28, 28, 0, 0, 'Kick A'), item(36, 36, 62, 0
   T.eq('parse: input / output note', [m.entries[3].inote, m.entries[3].onote, m.entries[3].name], [44, 41, 'Floortom 2 Center']);
   T.eq('roles', m.entries.map(C.roleOf), [null, null, 'kick', 'tomFloor', 'snare', 'sidestick', 'hhOpen', 'hhHalf', 'crash2:muted', 'rideBell', 'tomFloor:rimshot', null]);
 
-  const r = C.restyle(drm, { name: 'Test (UJAM-Ansicht)' });
+  const r = C.restyle(drm, { name: 'Test (Tactus)' });
   const n = C.parse(r.text);
-  T.eq('restyle: new name', n.name, 'Test (UJAM-Ansicht)');
+  T.eq('restyle: new name', n.name, 'Test (Tactus)');
   T.eq('restyle: display notes', n.entries.map((e) => e.display), [0, 0, 64, 65, 72, 72, 79, 79, 81, 77, 65, 0]);
   T.eq('restyle: noteheads', n.entries.map((e) => e.head), [0, 0, 0, 0, 0, 23, 3, 3, 34, 25, 2, 0]);
   T.eq('restyle: techniques', n.entries.map((e) => e.technique), ['', '', '', '', 'pt.centre', 'pt.sideStick', 'pt.open2', 'pt.halfOpen', 'pt.muted', 'pt.bell', 'pt.rimShot', '']);

@@ -42,6 +42,8 @@
     'Other instruments: drum kit in the settings panel.': 'Weitere Instrumente: Drum-Kit im Einstellungs-Panel.',
     'Drum kit': 'Drum-Kit',
     Kit: 'Kit',
+    Notation: 'Darstellung',
+    'Where the instruments sit on the staff. Only the display changes.': 'Wo die Instrumente im Notensystem stehen. Nur die Anzeige ändert sich, das Stück bleibt gleich.',
     '{n} instruments – only these appear in the note panel and the drum map.': '{n} Instrumente – nur diese erscheinen im Noten-Panel und in der Drum-Map.',
     'Choose instruments': 'Instrumente auswählen',
     'Show next to the staff': 'Neben den Notenlinien zeigen',

@@ -18,6 +18,10 @@ module.exports = function (T) {
     ['n0:960', 'r960:960', 'r1920:960', 'n2880:960']);
   T.eq('16th + dotted 8th (scotch snap)', lay([ev(0, 240), ev(240, 720), ev(960, 960)]).slice(0, 3), ['n0:240', 'n240:480.', 'n960:960']);
   T.eq('dotted 8th + 16th', lay([ev(0, 720), ev(720, 240)]).slice(0, 2), ['n0:480.', 'n720:240']);
+  T.eq('dotted eighths in a row keep their dots', lay([0, 720, 1440, 2160, 2880].map((t) => ev(t, 720)).concat([ev(3600, 240)])),
+    ['n0:480.', 'n720:480.', 'n1440:480.', 'n2160:480.', 'n2880:480.', 'n3600:240']);
+  T.eq('dotted quarter on 1+', lay([ev(480, 1440), ev(1920, 960)]).slice(0, 3), ['r0:480', 'n480:960.', 'n1920:960']);
+  T.eq('a quarter cut on 1 a stays an eighth + rest', lay([ev(720, 960)]).slice(2, 4), ['n720:480', 'r1200:240']);
   T.eq('syncopated quarter on 1+', lay([ev(0, 480), ev(480, 960), ev(1440, 480)]).slice(0, 3), ['n0:480', 'n480:960', 'n1440:480']);
   T.eq('eighth triplets on beat 1', lay([ev(0, 320), ev(320, 320), ev(640, 320)]),
     ['n0:480t', 'n320:480t', 'n640:480t', 'r960:960', 'r1920:1920']);
@@ -50,7 +54,10 @@ module.exports = function (T) {
   T.eq('triplets: one beam', beams([ev(0, 320), ev(320, 320), ev(640, 320)]), [[0, 320, 640]]);
   T.eq('6/8: three eighths per beam', beams([0, 480, 960, 1440, 1920, 2400].map((t) => ev(t, 480)), [6, 8]),
     [[0, 480, 960], [1440, 1920, 2400]]);
-  T.eq('flags', [480, 240, 120, 60, 960].map(R.flags), [1, 2, 3, 4, 0]);
+  T.eq('dotted eighths in a row: beamed 3+3+2', beams([0, 720, 1440, 2160, 2880].map((t) => ev(t, 720)).concat([ev(3600, 240)])),
+    [[0, 720, 1440, 2160], [2880, 3600]]);
+  T.eq('3/4 dotted eighths: one beam', beams([0, 720, 1440, 2160].map((t) => ev(t, 720)), [3, 4]), [[0, 720, 1440, 2160]]);
+  T.eq('flags',[480, 240, 120, 60, 960].map(R.flags), [1, 2, 3, 4, 0]);
 
   T.eq('count labels', [0, 240, 480, 720, 960, 320].map((t) => R.countLabel(t, [4, 4])), ['1', '1 e', '1 +', '1 a', '2', '1 trip']);
 };

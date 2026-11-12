@@ -117,12 +117,16 @@
     return out;
   }
 
-  /** Largest note value that may start at `pos` (written ticks) and fits into `len`. */
+  /**
+   * Largest note value that may start at `pos` (written ticks) and fits into `len`.
+   * A dotted note off the beat stays within its beat - unless it is exactly as long as the note
+   * left there (then it was written with that value: dotted eighths in a row keep their dots).
+   */
   function pickNote(pos, len, beat) {
     for (const v of PLAIN) {
       const d = v * 1.5;
       if (v >= 120 && d <= len && (pos % v === 0 ||
-        (pos % (v / 2) === 0 && Math.floor(pos / beat) === Math.floor((pos + d - 1) / beat)))) return [v, 1];
+        (pos % (v / 2) === 0 && (d === len || Math.floor(pos / beat) === Math.floor((pos + d - 1) / beat))))) return [v, 1];
       if (v <= len && pos % (v / 2) === 0 && (v < 3840 || pos === 0)) return [v, 0];
     }
     return [UNIT, 0];
@@ -191,10 +195,15 @@
     return items.sort((a, b) => a.tick - b.tick);
   };
 
-  /** Groups of note items joined by a beam (each group has 2 or more notes). */
+  /**
+   * Groups of note items joined by a beam (each group has 2 or more notes): one group per beat
+   * (or beam group). A note that sounds across the start of the next group takes the notes of
+   * that group into its beam (dotted eighths in a row: 3+3+2 sixteenths in 4/4).
+   */
   R.beams = function (items, ts, beam = null) {
     const BT = R.beamTicks(ts), G = R.groupSpans(ts, beam);
     const group = (t) => (G ? G.findIndex(([a, z]) => t >= a && t < z) : Math.floor(t / BT));
+    const groupStart = (t) => (G ? (G.find(([a, z]) => t >= a && t < z) || [t])[0] : Math.floor(t / BT) * BT);
     const groups = [];
     let cur = [], key = null;
     const flush = () => {
@@ -204,11 +213,13 @@
     };
     for (const it of items) {
       const beamable = it.kind === 'note' && it.base <= 480;
-      const k = it.tup ? 't' + it.tup.s : 'b' + group(it.tick);
+      let k = it.tup ? 't' + it.tup.s : 'b' + group(it.tick);
       if (!beamable) {
         flush();
         continue;
       }
+      const prev = cur[cur.length - 1];
+      if (k !== key && prev && !prev.tup && !it.tup && prev.tick + prev.dur > groupStart(it.tick)) k = key; // crosses into this group
       if (k !== key) flush();
       cur.push(it);
       key = k;

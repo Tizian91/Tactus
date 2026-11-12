@@ -29,6 +29,10 @@
   RD.LINE_MAX = 15;
   const CLEF_W = 4.2 * SP;
   const TS_W = 3.4 * SP;
+  const TREM_GAP = 0.6 * SP;     // distance of roll strokes
+  const GRACE = 0.6;             // size of grace notes (flam, drag)
+  const STICK_Y = 9.6 * SP;      // sticking row under the staff
+  const COUNT_Y = 11.2 * SP;     // counting row
 
   const f = (v) => Math.round(v * 100) / 100;
   const esc = (RD.esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
@@ -44,13 +48,36 @@
   const FLAG_DOWN = (n) => String.fromCharCode(0xe241 + 2 * (n - 1));
   const ACCENT = { 1: ['', '', 1.356], 2: ['', '', 0.94] };
 
-  let svg, world, stat, hov;
+  let svg, world, stat, hov, play;
 
   RD.init = function () {
     svg = document.getElementById('score');
     world = document.getElementById('world');
     stat = world.querySelector('.static');
     hov = world.querySelector('.hover');
+    play = world.querySelector('.play');
+    if (!play) {
+      play = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      play.setAttribute('class', 'play');
+      world.appendChild(play);
+    }
+  };
+
+  /** Playback cursor at (bar, tick); null hides it. loop: [fromBar, toBar] marked while looping. */
+  RD.drawCursor = function (bar, tick, loop) {
+    const L = RD.layout;
+    if (!L || bar === null || !L.bars[bar]) {
+      play.innerHTML = '';
+      return null;
+    }
+    const b = L.bars[bar], x = RD.tickX(b, tick);
+    let s = rect(b.x, -3.5 * SP, b.w, 11 * SP, 'play-bar') + rect(x - 1, -3.5 * SP, 2, 11 * SP, 'play-cursor');
+    if (loop && L.bars[loop[0]] && L.bars[loop[1]]) {
+      const a = L.bars[loop[0]], z = L.bars[loop[1]];
+      s += rect(a.x + 1, -4 * SP, z.x + z.w - a.x - 2, 12 * SP, 'loop-range');
+    }
+    play.innerHTML = s;
+    return x;
   };
 
   // ---- Layout -------------------------------------------------------------------------
@@ -64,14 +91,15 @@
     doc.bars.forEach((h, i) => {
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');
-      const voices = track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums'));
+      const simile = !!h.simile && i > 0; // "%": repeats the bar before, no notes of its own
+      const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam));
       let finest = L;
       voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); }));
       const scale = Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
       const tsW = showTs ? TS_W : 0;
       const x0 = x + tsW; // content start
       const w = tsW + HEAD_OFF + L * scale + 0.2 * SP;
-      bars.push({ i, x, x0, w, L, ts: h.ts, scale, showTs, voices });
+      bars.push({ i, x, x0, w, L, ts: h.ts, beam: h.beam, simile, scale, showTs, voices });
       x += w;
     });
     RD.layout = { bars, width: x, grid, heads: [], add: { x: x + 1.5 * SP, y: 0, w: 3 * SP, h: 4 * SP } };
@@ -143,10 +171,13 @@
 
     // grid
     for (const b of L.bars) {
+      if (b.simile) continue;
       const beat = TC.rhythm.beatTicks(b.ts);
+      const G = TC.rhythm.groupSpans(b.ts, b.beam);
+      const starts = G && new Set(G.map((g) => g[0])); // odd meters: the beam groups are the strong lines
       for (let t = 0; t < b.L; t += L.grid) {
         const x = RD.tickX(b, t);
-        out.push(line(x, top + SP, x, bottom - SP, t % beat === 0 ? 'grid beat' : 'grid'));
+        out.push(line(x, top + SP, x, bottom - SP, (starts ? starts.has(t) : t % beat === 0) ? 'grid beat' : 'grid'));
       }
     }
 
@@ -181,8 +212,13 @@
     L.heads = [];
     const track = doc.tracks[0];
     for (const b of L.bars) {
+      if (b.simile) {
+        out.push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
+        continue;
+      }
       const used = b.voices.map((items) => items.some((it) => it.kind === 'note'));
       b.voices.forEach((items, vi) => drawVoice(out, b, items, vi, used, track));
+      drawUnder(out, b);
     }
 
     // "+" after the last bar
@@ -206,7 +242,7 @@
       return;
     }
     if (!used[vi]) return;
-    const beams = TC.rhythm.beams(items, b.ts);
+    const beams = TC.rhythm.beams(items, b.ts, b.beam);
     const groupOf = new Map();
     beams.forEach((g) => g.forEach((it) => groupOf.set(it, g)));
 
@@ -235,10 +271,11 @@
       const mainW = (up ? lo : hi).w;
       const stemX = up ? x + mainW / 2 - 0.06 * SP : x - mainW / 2 + 0.06 * SP;
       const flags = TC.rhythm.flags(it.base);
-      const extra = Math.max(0, flags - 2) * BEAM_GAP;
+      const trem = Math.max(0, ...it.ev.notes.map((n) => n.trem || 0)); // roll strokes need a longer stem
+      const extra = Math.max(0, flags - 2) * BEAM_GAP + (trem ? (trem + 0.5) * TREM_GAP : 0);
       const startY = up ? stepY(lo.line) - lo.head.stem * SP : stepY(hi.line) + hi.head.stem * SP;
       const endY = up ? stepY(hi.line) - STEM - extra : stepY(lo.line) + STEM + extra;
-      geo.set(it, { x, heads, stemX, startY, endY, flags });
+      geo.set(it, { x, heads, stemX, startY, endY, flags, trem });
     }
     // beams: flat, at the outermost stem end of the group
     for (const g of beams) {
@@ -303,6 +340,19 @@
           out.push(glyph(up ? FLAG_UP(q.flags) : FLAG_DOWN(q.flags), q.stemX - 0.06 * SP, q.endY, 'head'));
         }
       }
+      // roll: strokes through the stem (above the head of a whole note)
+      if (q.trem) {
+        const sx = it.base < 3840 ? q.stemX : q.x;
+        const y0 = it.base < 3840 ? q.startY + (up ? -1 : 1) * 1.1 * SP : stepY(q.heads[0].line) - 1.6 * SP;
+        for (let k = 0; k < q.trem; k++) {
+          const cy = y0 + (up || it.base >= 3840 ? -1 : 1) * k * TREM_GAP;
+          out.push(`<path class="beam" d="M${f(sx - 0.6 * SP)},${f(cy + 0.3 * SP)} L${f(sx + 0.6 * SP)},${f(cy - 0.3 * SP)} ` +
+            `L${f(sx + 0.6 * SP)},${f(cy + 0.05 * SP)} L${f(sx - 0.6 * SP)},${f(cy + 0.65 * SP)}Z"/>`);
+        }
+      }
+      // flam / drag: small notes just before the head
+      const orn = it.ev.notes.find((n) => n.orn);
+      if (orn) drawGrace(out, q, orn);
       // accents and techniques: outside, at the stem end
       const marks = [];
       const acc = Math.max(...it.ev.notes.map((n) => n.accent || 0));
@@ -354,6 +404,63 @@
         const a = x1 - 0.6 * SP, z = x2 + 0.6 * SP;
         out.push(`<path class="bracket" d="M${f(a)},${f(by + hook)} L${f(a)},${f(by)} L${f(mx - 1.0 * SP)},${f(by)} M${f(mx + 1.0 * SP)},${f(by)} L${f(z)},${f(by)} L${f(z)},${f(by + hook)}"/>`);
       }
+    }
+  }
+
+  /**
+   * Grace notes of a flam (one small slashed eighth) or a drag (two small beamed sixteenths),
+   * left of the head of note n, stems up.
+   */
+  function drawGrace(out, q, n) {
+    const h = q.heads.find((z) => z.n === n) || q.heads[0];
+    const y = stepY(h.line), gw = 1.18 * SP * GRACE;
+    const right = q.x + h.dx - h.w / 2 - 0.35 * SP; // right edge of the graces
+    const count = n.orn === 'drag' ? 2 : 1;
+    const top = y - 2.5 * SP;
+    const stems = [];
+    out.push('<g class="grace">');
+    for (let k = 0; k < count; k++) {
+      const cx = right - gw / 2 - (count - 1 - k) * (gw + 0.25 * SP);
+      out.push(`<text class="mus grace" x="${f(cx - gw / 2)}" y="${f(y)}"></text>`);
+      const sx = cx + gw / 2 - 0.05 * SP;
+      stems.push(sx);
+      out.push(line(sx, y - 0.12 * SP, sx, top, 'stem thin'));
+      for (let l = -2; l >= h.line; l -= 2) out.push(line(cx - gw / 2 - 0.25 * SP, stepY(l), cx + gw / 2 + 0.25 * SP, stepY(l), 'ledger thin'));
+    }
+    if (count === 1) {
+      out.push(`<text class="mus grace" x="${f(stems[0] - 0.04 * SP)}" y="${f(top)}"></text>`);
+      out.push(line(stems[0] - 0.55 * SP, top + 1.6 * SP, stems[0] + 0.75 * SP, top + 0.7 * SP, 'stem thin')); // slash
+    } else {
+      out.push(rect(stems[0], top, stems[1] - stems[0], 0.3 * SP, 'beam'));
+      out.push(rect(stems[0], top + 0.55 * SP, stems[1] - stems[0], 0.3 * SP, 'beam'));
+    }
+    out.push('</g>');
+  }
+
+  /** Under the staff: sticking (R / L) and, if switched on, counting (1 e + a). */
+  function drawUnder(out, b) {
+    const sticks = new Map();
+    b.voices.forEach((items) => items.forEach((it) => {
+      if (it.kind !== 'note' || it.cont) return;
+      it.ev.notes.forEach((n) => {
+        if (!n.stick) return;
+        const s = sticks.get(it.tick) || '';
+        if (!s.includes(n.stick)) sticks.set(it.tick, s + n.stick);
+      });
+    }));
+    for (const [t, s] of sticks) out.push(`<text class="sticking" x="${f(RD.tickX(b, t))}" y="${f(STICK_Y)}">${esc(s)}</text>`);
+    if (!S.settings.showCounts) return;
+    const ticks = new Set();
+    const beat = (4 * TC.TPQ) / b.ts[1];
+    for (let t = 0; t < b.L; t += beat) ticks.add(t);
+    b.voices.forEach((items) => items.forEach((it) => { if (it.kind === 'note' && !it.cont) ticks.add(it.tick); }));
+    const de = TC.getLang() === 'de';
+    const SHORT = { e: 'e', und: '+', '+': '+', a: de ? 'e' : 'a', trip: 'tri', let: 'let' };
+    for (const t of ticks) {
+      const p = TC.rhythm.countLabel(t, b.ts).split(' ');
+      const main = p.length === 1;
+      const text = main ? p[0] : SHORT[p[1]] || '·';
+      out.push(`<text class="count${main ? ' beat' : ''}" x="${f(RD.tickX(b, t))}" y="${f(COUNT_Y)}">${esc(text)}</text>`);
     }
   }
 

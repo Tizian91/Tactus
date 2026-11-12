@@ -38,6 +38,13 @@
     document.querySelector('#toolbar [data-action="undo"]').disabled = !TC.history.undoStack.length;
     document.querySelector('#toolbar [data-action="redo"]').disabled = !TC.history.redoStack.length;
     document.querySelector('#toolbar [data-action="toggleDrumMap"]').classList.toggle('active', !!S.settings.showDrumMap);
+    const play = document.getElementById('play-btn');
+    play.textContent = TC.player.playing ? '■' : '▶';
+    play.classList.toggle('active', TC.player.playing);
+    document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
+    document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
+    const tempo = document.getElementById('tempo-input');
+    if (document.activeElement !== tempo) tempo.value = S.doc.meta.tempo;
     UI.updateZoom();
     document.title = (S.doc.meta.title ? S.doc.meta.title + ' – ' : '') + 'Tactus';
   };
@@ -48,6 +55,14 @@
       if (!b) return;
       const fn = TC.actions[b.dataset.action];
       if (fn) fn(b.dataset.value);
+    });
+    const tempo = document.getElementById('tempo-input');
+    tempo.addEventListener('change', () => {
+      S.doc.meta.tempo = TC.clamp(Math.round(Number(tempo.value) || 120), 20, 400);
+      TC.commit();
+    });
+    tempo.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === 'Escape') tempo.blur();
     });
   }
 

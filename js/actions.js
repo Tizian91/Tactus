@@ -97,6 +97,22 @@
     }
   };
 
+  /** Flam / drag before the note (null = none). */
+  A.setOrn = (o) => noteProp('orn', o === 'flam' || o === 'drag' ? o : null);
+  /** Roll: 0 … 3 strokes through the stem. */
+  A.setTrem = (v) => noteProp('trem', TC.clamp(Math.round(Number(v) || 0), 0, 3));
+  /** Sticking under the note: 'R', 'L' or '' (none). */
+  A.setStick = (v) => noteProp('stick', v === 'R' || v === 'L' ? v : '');
+  function noteProp(k, v) {
+    if (S.selection.size) {
+      forSelected((n) => { n[k] = v; });
+      TC.commit();
+    } else {
+      S.input[k] = v;
+      TC.refresh();
+    }
+  }
+
   function forSelected(fn) {
     for (const id of S.selection) {
       const hit = TC.score.findNote(S.doc, id);
@@ -185,6 +201,7 @@
   };
   A.deleteBar = function (i = curBar()) {
     if (!TC.score.deleteBars(S.doc, i, 1)) return TC.ui.hint(tr('The last bar cannot be deleted'));
+    S.doc.bars[0].simile = false; // the first bar has nothing before it to repeat
     S.selBar = Math.min(i, S.doc.bars.length - 1);
     TC.pruneSelection();
     TC.commit();
@@ -204,6 +221,50 @@
   A.customTimeSig = function (i = curBar()) {
     const v = prompt(tr('Time signature (e.g. 7/8, 11/16)'), S.doc.bars[i].ts.join('/'));
     if (v) A.setTimeSig(v, i);
+  };
+  /** Beam groups "2+2+3" from bar i on ('default': as usual for the time signature). */
+  A.setBeam = function (value, i = curBar()) {
+    const groups = !value || value === 'default' ? null : String(value).split('+').map(Number);
+    if (!TC.score.setBeam(S.doc, i, groups)) return;
+    TC.commit();
+  };
+
+  A.copyBar = function (i = curBar()) {
+    S.clipboard = TC.score.copyBar(S.doc, i);
+    S.selBar = i;
+    TC.ui.hint(tr('Bar {n} copied – click a bar and paste (Ctrl+V)', { n: i + 1 }));
+    TC.refresh();
+  };
+  A.pasteBar = function (i = curBar()) {
+    if (!S.clipboard) return TC.ui.hint(tr('Copy a bar first (Ctrl+C)'));
+    TC.score.pasteBar(S.doc, i, S.clipboard);
+    S.selBar = i;
+    TC.pruneSelection();
+    TC.commit();
+    TC.ui.hint(tr('Pasted into bar {n}', { n: i + 1 }));
+  };
+  /** A copy of the bar right after it. */
+  A.duplicateBar = function (i = curBar()) {
+    TC.score.duplicateBar(S.doc, i);
+    S.selBar = i + 1;
+    TC.commit();
+  };
+  /**
+   * "%": the bar repeats the bar before it. Switching it on empties the bar; switching it off
+   * writes out the notes it repeated, so you can change them from there.
+   */
+  A.toggleSimile = function (i = curBar()) {
+    if (i <= 0) return TC.ui.hint(tr('The first bar has no bar before it to repeat'));
+    const h = S.doc.bars[i];
+    if (h.simile) {
+      TC.score.pasteBar(S.doc, i, TC.score.copyBar(S.doc, i - 1));
+    } else {
+      TC.score.clearBar(S.doc, i);
+      h.simile = true;
+    }
+    S.selBar = i;
+    TC.pruneSelection();
+    TC.commit();
   };
 
   // ---- View -------------------------------------------------------------------------------
@@ -254,6 +315,27 @@
     TC.panel.applyLayout();
     TC.refresh();
   };
+  function toggleSetting(k) {
+    S.settings[k] = !S.settings[k];
+    TC.saveSettings();
+    TC.refresh();
+  }
+  A.toggleCounts = () => toggleSetting('showCounts');
+  A.toggleSound = () => toggleSetting('sound');
+  A.toggleMetronome = () => toggleSetting('metronome');
+  A.toggleCountIn = () => toggleSetting('countIn');
+  A.toggleLoop = function () {
+    toggleSetting('loop');
+    if (TC.player.playing) TC.player.restartHere();
+  };
+  A.togglePlay = () => TC.player.toggle();
+  A.stop = () => TC.player.stop();
+  A.setVolume = function (v) {
+    S.settings.volume = TC.clamp(Number(v), 0, 1);
+    TC.audio.setVolume(S.settings.volume);
+    TC.saveSettings();
+  };
+
   A.toggleTheme = function () {
     const order = ['auto', 'light', 'dark'];
     S.settings.theme = order[(order.indexOf(S.settings.theme) + 1) % 3];
@@ -316,16 +398,31 @@
 
   /** Right-click on a bar. */
   A.barMenu = function (i, x, y) {
+    const h = S.doc.bars[i];
     const sigs = TC.TIME_SIGS.map((ts) => ({
-      label: ts.join('/'), checked: S.doc.bars[i].ts.join('/') === ts.join('/'), action: () => A.setTimeSig(ts.join('/'), i),
+      label: ts.join('/'), checked: h.ts.join('/') === ts.join('/'), action: () => A.setTimeSig(ts.join('/'), i),
+    }));
+    const groups = TC.beamChoices(h.ts);
+    const cur = (TC.beamGroups(h.ts, h.beam) || []).join('+');
+    const beamItems = groups.map((g, k) => ({
+      label: g.join('+') + (k === 0 ? ' ' + tr('(default)') : ''), checked: g.join('+') === cur,
+      action: () => A.setBeam(k === 0 ? 'default' : g.join('+'), i),
     }));
     TC.menu.open([
       { label: 'Time signature from here', submenu: sigs.concat(['-', { label: 'Other…', action: () => A.customTimeSig(i) }]) },
+      beamItems.length ? { label: 'Beam groups', submenu: beamItems } : null,
+      '-',
+      { label: 'Play from here', action: () => TC.player.play(i), shortcut: tr('Space') },
+      '-',
+      { label: 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
+      { label: 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
+      { label: 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
+      { label: 'Repeat the bar before (%)', checked: !!h.simile, action: () => A.toggleSimile(i), disabled: i === 0 },
       '-',
       { label: 'Insert bar before', action: () => A.insertBarBefore(i) },
       { label: 'Insert bar after', action: () => A.insertBarAfter(i) },
       { label: 'Clear bar', action: () => A.clearBar(i) },
       { label: 'Delete bar', action: () => A.deleteBar(i), disabled: S.doc.bars.length < 2 },
-    ], x, y);
+    ].filter(Boolean), x, y);
   };
 })(window.TC);

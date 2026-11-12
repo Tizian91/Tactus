@@ -99,6 +99,20 @@
         ${btn('setAccent', 2, '<span class="mus-btn sm"></span>', src.accent === 2, tr('Marcato'))}
       </div></div>
       <div class="row"><label>${tr('Ghost note')}</label>${btn('toggleGhost', undefined, '( ● )', !!src.ghost, tr('Ghost note: head in brackets, played softly (G)'))}</div>
+      <div class="row"><label>${tr('Grace')}</label><div class="seg">
+        ${btn('setOrn', '', '–', !src.orn, tr('No grace note'))}
+        ${btn('setOrn', 'flam', 'Flam', src.orn === 'flam', tr('Flam: one grace note just before'))}
+        ${btn('setOrn', 'drag', 'Drag', src.orn === 'drag', tr('Drag (ruff): two grace notes just before'))}
+      </div></div>
+      <div class="row"><label>${tr('Roll')}</label><div class="seg">
+        ${[0, 1, 2, 3].map((k) => btn('setTrem', k, k ? '<span class="trem">' + '⁄'.repeat(k) + '</span>' : '–', (src.trem || 0) === k,
+          k ? tr('{n} stroke(s) through the stem: the note is played as a roll', { n: k }) : tr('No roll'))).join('')}
+      </div></div>
+      <div class="row"><label>${tr('Sticking')}</label><div class="seg">
+        ${btn('setStick', '', '–', !src.stick, tr('No sticking'))}
+        ${btn('setStick', 'R', 'R', src.stick === 'R', tr('Right hand (written under the staff)'))}
+        ${btn('setStick', 'L', 'L', src.stick === 'L', tr('Left hand (written under the staff)'))}
+      </div></div>
       <div class="row"><label>${tr('Notehead')}</label><select data-action="setHead">${heads}</select></div>
       ${hit ? `<div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
         ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>` : ''}
@@ -112,12 +126,24 @@
     if (i === null || !S.doc.bars[i]) {
       return `<section><h3>${tr('Bar')}</h3><p class="hint">${tr('Click a bar or right-click it: time signature, insert, delete.')}</p></section>`;
     }
-    const cur = S.doc.bars[i].ts.join('/');
+    const h = S.doc.bars[i];
+    const cur = h.ts.join('/');
     const known = TC.TIME_SIGS.map((t) => t.join('/'));
     const opts = (known.includes(cur) ? known : [cur].concat(known)).map((t) => `<option${t === cur ? ' selected' : ''}>${t}</option>`).join('');
+    const choices = TC.beamChoices(h.ts);
+    const curBeam = (TC.beamGroups(h.ts, h.beam) || []).join('+');
+    const beamRow = choices.length ? `<div class="row"><label>${tr('Beams')}</label><select data-action="setBeam">${choices.map((g, k) =>
+      `<option value="${k === 0 ? 'default' : g.join('+')}"${g.join('+') === curBeam ? ' selected' : ''}>${g.join('+')}${k === 0 ? ' ' + tr('(default)') : ''}</option>`).join('')}</select></div>` : '';
     return `<section><h3>${tr('Bar')} ${i + 1}</h3>
       <div class="row"><label>${tr('Time sig.')}</label><select data-ts>${opts}<option value="other">${tr('Other…')}</option></select></div>
+      ${beamRow}
       <p class="hint">${tr('Applies from this bar up to the next change.')}</p>
+      <div class="btn-row">
+        ${btn('copyBar', undefined, tr('Copy'), false, tr('Copy bar') + ' (Ctrl+C)')}
+        ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
+        ${btn('duplicateBar', undefined, tr('Duplicate'), false, tr('Duplicate bar') + ' (Ctrl+D)')}
+        ${i > 0 ? btn('toggleSimile', undefined, '%', !!h.simile, tr('Repeat the bar before (%)')) : ''}
+      </div>
       <div class="btn-row">
         ${btn('insertBarBefore', undefined, tr('+ before'), false, tr('Insert bar before'))}
         ${btn('insertBarAfter', undefined, tr('+ after'), false, tr('Insert bar after'))}
@@ -156,8 +182,21 @@
     </section>`;
   }
 
+  function playSection() {
+    const st = S.settings;
+    return `<section><h3>${tr('Playback')}</h3>
+      ${check('toggleMetronome', st.metronome, tr('Metronome'))}
+      ${check('toggleCountIn', st.countIn, tr('Count-in (one bar)'))}
+      ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
+      ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
+      <div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="1" step="0.05" value="${st.volume}" data-volume></div>
+      <p class="hint">${tr('Space: play / stop · plays from the selected bar.')}</p>
+    </section>`;
+  }
+
   function viewSection() {
     return `<section><h3>${tr('View')}</h3>
+      ${check('toggleCounts', S.settings.showCounts, tr('Counting under the staff (1 e + a)'))}
       ${check('toggleLeftHanded', S.settings.leftHanded, tr('Left-handed mode (swap the panels)'))}
     </section>`;
   }
@@ -168,7 +207,9 @@
       ['L / Shift', tr('Lock instrument (switch / while held)')],
       ['H O S K', tr('Hi-hat closed / open, snare, kick')], ['R C F P', tr('Ride, crash, floor tom, pedal hi-hat')],
       ['A / G', tr('Accent / ghost note')], ['↑ ↓', tr('Selected notes to the next instrument')],
+      [tr('Drag'), tr('Write a row of notes (e.g. hi-hat eighths)')],
       [tr('Ctrl+click'), tr('Select several notes')],
+      [tr('Space'), tr('Play / stop')], ['Ctrl+C / V / D', tr('Copy / paste / duplicate the bar')],
       [tr('Del'), tr('Delete selected notes')], ['Ctrl+Z / Y', tr('Undo / redo')],
       [tr('Wheel'), tr('Scroll (Ctrl: zoom, Shift: up/down)')], [tr('Space+drag'), tr('Move the view')],
     ];
@@ -194,13 +235,13 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
-    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, S.doc.meta, lang,
-      S.settings.showDrumMap, S.settings.mapUsedOnly, S.settings.kit, S.settings.kitCustom, S.settings.leftHanded, S.doc.bars.length]);
+    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.doc.meta, lang,
+      S.settings, !!S.clipboard, S.doc.bars.length]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const open = setRoot.querySelector('details.kit-list[open]') !== null;
-      setRoot.innerHTML = head(tr('Settings'), 'right') + barSection() + scoreSection() + kitSection() + viewSection() + keysSection();
+      setRoot.innerHTML = head(tr('Settings'), 'right') + barSection() + playSection() + scoreSection() + kitSection() + viewSection() + keysSection();
       if (open) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
     }
@@ -222,6 +263,8 @@
     } else if (el.matches('select[data-ts]')) {
       if (el.value === 'other') TC.actions.customTimeSig();
       else TC.actions.setTimeSig(el.value);
+    } else if (el.matches('input[data-volume]')) {
+      TC.actions.setVolume(el.value);
     } else if (el.matches('input[data-meta]')) {
       const k = el.dataset.meta;
       S.doc.meta[k] = k === 'tempo' ? TC.clamp(Math.round(Number(el.value) || 120), 20, 400) : el.value;

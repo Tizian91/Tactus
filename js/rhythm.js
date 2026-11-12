@@ -17,7 +17,8 @@
  *     gets a whole-bar rest
  *   - a beat whose positions only fit a triplet grid is written as a triplet (3 in the time of 2);
  *     quarter triplets (spanning two beats) are found as well
- *   - beams join eighths and shorter notes within one beat (6/8: within a dotted quarter)
+ *   - beams join eighths and shorter notes within one beat (6/8: within a dotted quarter;
+ *     odd meters by their beam groups, e.g. 7/8 = 2+2+3, see TC.beamGroups); rests fill those groups
  */
 (function (TC) {
   const R = (TC.rhythm = {});
@@ -32,6 +33,20 @@
     if (ts[1] === 16) return 480;
     return 960;
   };
+
+  /**
+   * Beam groups of a bar as tick spans [[start, end], …], or null (beams per beat).
+   * 7/8 = 2+2+3: [[0, 960], [960, 1920], [1920, 3360]].
+   */
+  R.groupSpans = function (ts, beam) {
+    const g = TC.beamGroups(ts, beam);
+    if (!g) return null;
+    const unit = (4 * TC.TPQ) / ts[1];
+    let s = 0;
+    return g.map((k) => [s, (s += k * unit)]);
+  };
+  /** Spans that rests must not cross (null: the beats decide; 6/8 etc. keep counting in beats). */
+  const restSpans = (ts, beam) => (TC.isCompound(ts) && !beam ? null : R.groupSpans(ts, beam));
 
   /** Notes and the gaps between them, from 0 to the bar end. */
   function segments(events, L) {
@@ -127,8 +142,8 @@
    * Note values, rests and tuplets of one voice in one bar.
    * drums: what is left of a note after its value becomes rests instead of tied notes.
    */
-  R.layout = function (events, ts, drums = true) {
-    const L = TC.barTicks(ts), B = R.beatTicks(ts);
+  R.layout = function (events, ts, drums = true, beam = null) {
+    const L = TC.barTicks(ts), B = R.beatTicks(ts), G = restSpans(ts, beam);
     if (!events.some((e) => e.notes && e.notes.length && e.tick < L)) {
       return [{ kind: 'rest', tick: 0, dur: L, base: 3840, dots: 0, tup: null, ev: null, tie: false, measure: true }];
     }
@@ -147,8 +162,17 @@
         const end = (e - origin) * f;
         let first = !cont;
         while (end - pos > 1e-6) {
-          const len = end - pos;
-          const [v, dots] = kind === 'note' ? pickNote(pos, len, beat) : pickRest(pos, len, beat);
+          let len = end - pos, rp = pos, rb = beat;
+          if (kind === 'rest' && !r.tup && G) {
+            // odd meters (7/8 = 2+2+3 …): rests fill the beam groups
+            const sp = G.find(([a, z]) => pos >= a && pos < z);
+            if (sp) {
+              len = Math.min(end, sp[1]) - pos;
+              rp = pos - sp[0];
+              rb = sp[1] - sp[0];
+            }
+          }
+          const [v, dots] = kind === 'note' ? pickNote(pos, len, beat) : pickRest(rp, len, rb);
           const d = Math.min(v * (dots ? 1.5 : 1), len);
           const it = {
             kind, tick: Math.round(origin + pos / f), dur: Math.round(d / f), base: v, dots,
@@ -168,8 +192,9 @@
   };
 
   /** Groups of note items joined by a beam (each group has 2 or more notes). */
-  R.beams = function (items, ts) {
-    const BT = R.beamTicks(ts);
+  R.beams = function (items, ts, beam = null) {
+    const BT = R.beamTicks(ts), G = R.groupSpans(ts, beam);
+    const group = (t) => (G ? G.findIndex(([a, z]) => t >= a && t < z) : Math.floor(t / BT));
     const groups = [];
     let cur = [], key = null;
     const flush = () => {
@@ -179,7 +204,7 @@
     };
     for (const it of items) {
       const beamable = it.kind === 'note' && it.base <= 480;
-      const k = it.tup ? 't' + it.tup.s : 'b' + Math.floor(it.tick / BT);
+      const k = it.tup ? 't' + it.tup.s : 'b' + group(it.tick);
       if (!beamable) {
         flush();
         continue;

@@ -12,7 +12,8 @@
  *                  (again: the next one on that line)
  *   right-click    bar menu (time signature, insert / delete bars)
  *   wheel          scroll sideways; Shift + wheel: up / down; Ctrl + wheel: zoom
- *   middle button or Space + drag: move the view
+ *   drag           (mouse / pen, after writing a note) writes the same instrument at every grid position
+ *   middle button or Space + drag: move the view · Space tapped: play / stop
  *   fingers        one finger drag: scroll · tap: like a click · hold: bar menu · two fingers: zoom
  */
 (function (TC) {
@@ -20,7 +21,7 @@
   const I = (TC.interaction = {});
   const A = () => TC.actions;
   const tr = (s, v) => TC.tr(s, v);
-  let vp, spaceDown = false, shiftDown = false, raf = 0, lastMove = null;
+  let vp, spaceDown = false, spaceUsed = false, shiftDown = false, raf = 0, lastMove = null;
 
   I.toWorld = function (clientX, clientY) {
     const r = vp.getBoundingClientRect(), v = S.doc.view;
@@ -55,6 +56,7 @@
     if (p.y < RD.stepY(RD.LINE_MIN) - 5 || p.y > RD.stepY(RD.LINE_MAX) + 5) return null;
     const bar = RD.barAt(p.x);
     if (!bar) return null;
+    if (bar.simile) return { kind: 'bar', bar: bar.i, simile: true }; // "%" bar: nothing to write into
     if (I.locked(e)) {
       // the height does not matter: the selected instrument at this grid position
       if (p.x < bar.x0) return { kind: 'bar', bar: bar.i };
@@ -109,6 +111,8 @@
         ' – ' + tr('click: choose'));
     } else if (t && t.kind === 'add') {
       TC.ui.status(tr('Add a bar'));
+    } else if (t && t.simile) {
+      TC.ui.status(`${tr('Bar')} ${t.bar + 1} · ${tr('repeats the bar before (%) – bar menu: write it out')}`);
     } else {
       TC.ui.status('');
     }
@@ -129,6 +133,7 @@
 
   function onPointerMove(e) {
     if (e.pointerType === 'touch') return touchMove(e);
+    if (S.drag && S.drag.mode === 'write') return dragWrite(e);
     if (S.drag && S.drag.mode === 'pan') {
       const v = S.doc.view;
       v.x = S.drag.vx + e.clientX - S.drag.sx;
@@ -145,6 +150,7 @@
     if (e.pointerType === 'touch') return touchDown(e);
     if (e.button === 1 || (e.button === 0 && spaceDown)) {
       e.preventDefault();
+      if (spaceDown) spaceUsed = true;
       const v = S.doc.view;
       S.drag = { mode: 'pan', sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y };
       vp.setPointerCapture(e.pointerId);
@@ -261,7 +267,10 @@
       // choose an instrument of that line; clicking again goes to the next one there
       const arts = TC.drums.atLine(t.line).filter((a) => TC.drums.mapIds().has(a.id));
       const k = arts.findIndex((a) => a.id === S.input.art);
-      if (arts.length) A().setArt(arts[(k + 1) % arts.length].id);
+      if (arts.length) {
+        A().setArt(arts[(k + 1) % arts.length].id);
+        if (S.settings.sound && !S.selection.size) TC.audio.preview(TC.newDrumNote(S.input.art, S.input));
+      }
       return;
     }
     S.selBar = t.bar;
@@ -294,14 +303,72 @@
       return;
     }
     TC.commit();
+    if (S.settings.sound) TC.audio.preview(note);
     TC.ui.status(`${where(t)} · ${TC.drums.label(art)}`);
     I.hoverKey = null;
     lastMove = e;
     updateHover();
+    // mouse / pen held down: dragging writes the same instrument at every grid position it passes
+    if (e.pointerType !== 'touch' && e.type === 'pointerdown') {
+      S.drag = { mode: 'write', art, bar: t.bar, tick: t.tick, n: 0 };
+      try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
+    }
+  }
+
+  /** Grid positions after (bar, tick) up to and including (bar2, tick2), in time order. */
+  function between(bar, tick, bar2, tick2) {
+    const grid = TC.gridTicks(S.input), out = [];
+    const fwd = bar2 > bar || (bar2 === bar && tick2 > tick);
+    if (!fwd) return bar2 === bar && tick2 === tick ? [] : [[bar2, tick2]]; // backwards: only the new position
+    let b = bar, t = tick + grid;
+    while (b < bar2 || (b === bar2 && t <= tick2)) {
+      const L = TC.barTicks(S.doc.bars[b].ts);
+      if (t >= L) {
+        b++;
+        t = 0;
+        continue;
+      }
+      if (!S.doc.bars[b].simile) out.push([b, t]);
+      t += grid;
+    }
+    return out;
+  }
+
+  function dragWrite(e) {
+    const d = S.drag, RD = TC.render;
+    const p = I.toWorld(e.clientX, e.clientY);
+    const bar = RD.barAt(p.x);
+    if (!bar || bar.simile || p.x < bar.x0) return;
+    const tick = RD.snapTick(bar, p.x);
+    if (bar.i === d.bar && tick === d.tick) return;
+    let added = 0;
+    for (const [bi, tk] of between(d.bar, d.tick, bar.i, tick)) {
+      const note = TC.newDrumNote(d.art.id, S.input);
+      const res = TC.score.place(S.doc, S.doc.tracks[0], bi, d.art.voice, tk, TC.inputTicks(S.input), note);
+      if (res.status !== 'exists' && res.status !== 'outside') added++;
+    }
+    d.bar = bar.i;
+    d.tick = tick;
+    if (!added) return;
+    d.n += added;
+    S.rev++;
+    TC.render.draw();
+    if (S.settings.sound) TC.audio.preview(TC.newDrumNote(d.art.id, S.input));
+    TC.ui.status(`${tr('Bar')} ${bar.i + 1} · ${TC.rhythm.countLabel(tick, S.doc.bars[bar.i].ts)} · ${TC.drums.label(d.art)} · ${tr('{n} more', { n: d.n })}`);
   }
 
   function onPointerUp(e) {
     if (e.pointerType === 'touch') return touchUp(e, e.type === 'pointercancel');
+    if (S.drag && S.drag.mode === 'write') {
+      const n = S.drag.n;
+      S.drag = null;
+      try { vp.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+      if (n) TC.commit({ merge: true }); // the whole row is one undo step
+      I.hoverKey = null;
+      lastMove = e;
+      updateHover();
+      return;
+    }
     if (S.drag) {
       S.drag = null;
       vp.classList.remove('panning');
@@ -363,6 +430,9 @@
       else if (lk === 'y' || (lk === 'z' && e.shiftKey)) A().redo();
       else if (lk === 's') e.shiftKey ? A().saveAs() : A().save();
       else if (lk === 'o') A().open();
+      else if (lk === 'c' && !isTyping(e)) A().copyBar();
+      else if (lk === 'v' && !isTyping(e)) A().pasteBar();
+      else if (lk === 'd') A().duplicateBar();
       else if (k === '+' || k === '=') A().zoomIn();
       else if (k === '-') A().zoomOut();
       else if (k === '0') A().zoomReset();
@@ -372,8 +442,16 @@
     }
     if (isTyping(e)) return;
     if (k === ' ') {
+      // a focused button would also react to Space (e.g. ▶ after a click): Space is ours
+      if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur();
+      if (!spaceDown) spaceUsed = false;
       spaceDown = true;
       vp.classList.add('space-pan');
+      e.preventDefault();
+      return;
+    }
+    if (k === 'Escape' && TC.player.playing) {
+      TC.player.stop();
       e.preventDefault();
       return;
     }
@@ -397,6 +475,11 @@
 
   function onKeyUp(e) {
     if (e.key === ' ') {
+      // Space tapped (not held to move the view): play / stop
+      if (spaceDown && !spaceUsed && !isTyping(e) && !TC.menu.isOpen()) {
+        e.preventDefault();
+        A().togglePlay();
+      }
       spaceDown = false;
       vp.classList.remove('space-pan');
     }

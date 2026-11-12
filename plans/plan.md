@@ -26,9 +26,9 @@ Formate und MIDI-Werte wie in Guitar Pro.
 | Phase | Inhalt | Stand |
 |---|---|---|
 | **0: Grundlagen** | Gerüst aus MindMapper (Undo, Panel, Menüs, Sprache, Farbschema, Offline-App), Datenmodell, Drum-Map nach Guitar Pro, Rhythmus-Logik mit Tests | ✅ fertig |
-| **1: Schlagzeug-Editor** | Klick ins Raster mit Vorschau, Notenwert-Panel, Instrumentwahl, zwei Stimmen, Balken, Pausen, Triolen, Auswahl / Löschen, Rückgängig, Endlos-Ansicht | ✅ Grundfunktion fertig – jetzt ausprobieren und nachschärfen |
+| **1: Schlagzeug-Editor** | Klick ins Raster mit Vorschau, Notenwert-Panel, Instrumentwahl, zwei Stimmen, Balken, Pausen, Triolen, Auswahl / Löschen, Rückgängig, Endlos-Ansicht | ✅ fertig (Feinschliff nach Rückmeldung) |
 | **2: Notenblatt** | Seitenansicht A4 mit Zeilen- und Seitenumbruch, Kopf mit Titel / Interpret / Tempo, **PDF** über den Druckdialog (wie MindMapper `printPages`), Velocity, Wiederholungen | |
-| **3: Wiedergabe** | Web Audio: synthetisierte Schlagzeugklänge (später eingebettete Samples), mitlaufender Cursor, Metronom, Schleife, Tempo | |
+| **3: Wiedergabe** | Web Audio: synthetisierte Schlagzeugklänge (später eingebettete Samples), mitlaufender Cursor, Metronom, Schleife, Tempo | ✅ Grundfunktion fertig (Samples später) |
 | **4: Teilen & Austausch** | ~~GitHub Pages~~ ✅ (https://tizian91.github.io/Tactus/), Teilen per Link (Stück komprimiert im `#`-Teil der Adresse), MIDI-Export, MusicXML-Export (Import in Guitar Pro) | |
 | **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | |
 | **6: Tabulatur** | Saiten / Bünde, Stimmungen, Tabulatur unter dem Notensystem, Bend / Slide | |
@@ -45,11 +45,25 @@ Formate und MIDI-Werte wie in Guitar Pro.
 - Mehrfachauswahl jetzt mit Strg+Klick (Shift ist die Sperre)
 - **Tablet:** ein Finger ziehen = scrollen, tippen = setzen, lange drücken = Taktmenü, zwei Finger = Zoom; der Stift setzt sofort
 
-## Offene Punkte aus Phase 1 (zum Ausprobieren)
+## Phase 1c – Phase 1 abgeschlossen ✅
+
+- **Balkengruppen** für ungerade Taktarten (7/8 = 2+2+3, 3+2+2 …, 5/8 = 3+2), Pausen füllen die Gruppen
+- **Ziehen** setzt eine Notenreihe (z. B. Hi-Hat-Achtel in einem Zug), ein Rückgängig-Schritt
+- **Takte** kopieren / einfügen / verdoppeln (Strg+C / V / D), **%-Takt** (wiederholt den vorigen; ausschreibbar)
+- **Flam, Drag, Wirbel (1–3 Striche), Sticking (R/L)** pro Note im Noten-Panel
+- **Zählhilfe** (1 e + e, 1 tri let) unter den Noten, abschaltbar
+
+## Phase 3 – Wiedergabe (Grundfunktion) ✅
+
+- Synthetisierte Klänge (Web Audio, keine Dateien): Bassdrum, Snare / Rimshot / Sidestick, Toms, Hi-Hat zu /
+  halb / offen / Pedal, Ride / Glocke, Crash, Splash, China, Cowbell, Percussion; abgestoppte Becken kurz
+- Ghost leise, Akzent laut; Flam / Drag als Vorschläge, Wirbel als schnelle Schläge
+- Abspielen ab dem ausgewählten Takt (Leertaste / ▶), mitlaufender Cursor, Ansicht folgt
+- Metronom, Einzähler, Schleife (ausgewählter Takt, sonst alles), Tempo in der Werkzeugleiste, Lautstärke
+- Änderungen während des Abspielens sind sofort zu hören; Klang beim Setzen einer Note
+- Später: echte Samples, Swing / Shuffle, Tempo pro Takt im Panel, Wiederholungszeichen beim Abspielen
+
+## Offen zum Ausprobieren
 
 - Fühlt sich das Raster richtig an (Breite der Zellen, Einrasten, Vorschau)?
-- Balkengruppen in 7/8 und 5/8 (z. B. 2+2+3) einstellbar machen
-- Ziehen zum Setzen mehrerer Noten (z. B. Hi-Hat-Achtel in einem Zug)
-- Kopieren / Einfügen von Takten, Takt wiederholen (Simile-Zeichen)
-- Flam, Drag, Wirbel, Sticking (R/L) im Panel
-- Schlagzahlen unter den Takten (1 e + a) als Orientierung
+- Klingen die synthetischen Sounds brauchbar, oder lohnen sich bald echte Samples?

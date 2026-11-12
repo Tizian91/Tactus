@@ -116,6 +116,52 @@ setTimeout(() => {
   finger('pointerup', 12, 450, 300); finger('pointerup', 11, 300, 300);
   ok('two fingers zoom ' + z0 + ' -> ' + S.doc.view.zoom.toFixed(2), Math.abs(S.doc.view.zoom - Math.min(4, z0 * 1.5)) < 0.01 && voice(4, 0).length === n4);
   TC.actions.zoomReset();
+  // drag: a row of hi-hat eighths in one go, one undo step
+  TC.actions.setValue(8); TC.actions.setArt(42);
+  const at = (bar, tick, line) => screenOf(bar, tick, line);
+  const mouse = (type, [x, y]) => vp.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 1, pointerType: 'mouse' }));
+  mouse('pointerdown', at(5, 0, -1));
+  [480, 960, 1440, 1920, 2400].forEach((t) => mouse('pointermove', at(5, t, -1)));
+  mouse('pointerup', at(5, 2400, -1));
+  ok('drag writes 6 hi-hat eighths (3/4) ' + voice(5, 0).length, voice(5, 0).length === 6 && voice(5, 0).every((s) => s.endsWith(':42')));
+  TC.actions.undo();
+  ok('one undo removes the whole row', voice(5, 0).length === 0);
+  TC.actions.redo();
+  // copy / paste / simile
+  TC.actions.copyBar(5);
+  TC.actions.pasteBar(7);
+  ok('paste: bar 8 = bar 6', voice(7, 0).join() === voice(5, 0).join());
+  TC.actions.toggleSimile(6);
+  ok('% bar: flagged and empty', S.doc.bars[6].simile && voice(6, 0).length === 0 && document.querySelector('#score .static').innerHTML.includes(''));
+  click(6, 960, 3);
+  ok('click into a % bar writes nothing', voice(6, 0).length === 0);
+  TC.actions.toggleSimile(6);
+  ok('% off: the notes are written out', voice(6, 0).join() === voice(5, 0).join());
+  // flam, roll, sticking on a selected note; counting
+  click(5, 0, -1);
+  TC.actions.setOrn('flam'); TC.actions.setTrem(2); TC.actions.setStick('R');
+  const sn = TC.score.findNote(S.doc, [...S.selection][0]).note;
+  ok('flam, roll, sticking on the selected note', sn.orn === 'flam' && sn.trem === 2 && sn.stick === 'R');
+  ok('drawn: grace note and sticking ' + document.querySelectorAll('#score g.grace').length + ' ' + (document.querySelector('#score .sticking') || {}).textContent, document.querySelectorAll('#score g.grace').length === 1 && document.querySelector('#score .sticking').textContent === 'R');
+  ok('next notes stay plain', !S.input.orn && !S.input.trem && !S.input.stick);
+  TC.actions.selectNone();
+  TC.actions.toggleCounts();
+  ok('counting under the staff ' + document.querySelectorAll('#score .count').length, document.querySelectorAll('#score .count').length > 20);
+  TC.actions.toggleCounts();
+  // 7/8 with beam groups
+  S.selBar = 7; TC.actions.setTimeSig('7/8', 7, true);
+  ok('7/8: beam choice in the panel', !!document.querySelector('#panel-settings select[data-action="setBeam"]'));
+  TC.actions.setBeam('3+2+2', 7);
+  ok('beam groups 3+2+2', S.doc.bars[7].beam.join('+') === '3+2+2');
+  // every instrument makes a sound without errors; playback starts and stops
+  let bad = '';
+  TC.DRUM_ARTS.forEach((a) => { try { TC.audio.hit(a.id, TC.audio.context().currentTime + 0.05, 0.5, a.tech === 'choke'); } catch (e) { bad += a.id + ':' + e.message + ' '; } });
+  try { TC.audio.click(TC.audio.context().currentTime + 0.05, 2); } catch (e) { bad += 'click:' + e.message; }
+  ok('all ' + TC.DRUM_ARTS.length + ' instruments + click sound ' + bad, !bad);
+  TC.player.play(0);
+  ok('playing ' + document.getElementById('play-btn').textContent, TC.player.playing && document.getElementById('play-btn').textContent === '■');
+  TC.player.stop();
+  ok('stopped', !TC.player.playing && document.getElementById('play-btn').textContent === '▶');
   TC.setLang('en');
   ok('English toolbar', document.getElementById('file-btn').textContent === 'File ▾');
   TC.setLang('de');

@@ -30,6 +30,9 @@ window.TC = window.TC || {};
       ghost: false,         // ghost note: head in parentheses, played softly
       head: 'auto',         // notehead: 'auto' = as the drum map says
       lock: false,          // instrument lock: a click anywhere in the column writes the selected instrument
+      orn: null,            // grace notes: null | 'flam' | 'drag'
+      trem: 0,              // roll strokes 0 … 3
+      stick: '',            // sticking '' | 'R' | 'L'
     },
     settings: {
       theme: 'auto',        // 'auto' | 'light' | 'dark'
@@ -45,7 +48,14 @@ window.TC = window.TC || {};
       kitCustom: null,      // ids of the custom kit
       layout: 'endless',    // 'endless' | 'page' (page view: phase 2)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)
+      showCounts: false,    // counting (1 e + a) under the staff
+      sound: true,          // play a note when it is written
+      metronome: false,     // click while playing
+      countIn: false,       // one bar of clicks before playing
+      loop: false,          // playback repeats (the selected bar, or everything)
+      volume: 0.8,
     },
+    clipboard: null,        // copied bar (TC.score.copyBar)
     file: { handle: null, name: 'Untitled.tactus.json', saved: false },
     dirty: false,
     rev: 0,                 // bumped on every change of the doc
@@ -113,10 +123,14 @@ window.TC = window.TC || {};
     if (TC.state.selBar !== null && TC.state.selBar >= TC.state.doc.bars.length) TC.state.selBar = null;
   };
 
-  /** Finish a user operation: record undo step, autosave, redraw. */
-  TC.commit = function () {
+  /**
+   * Finish a user operation: record undo step, autosave, redraw.
+   * opts.merge: join this step with the one before (e.g. a row of notes written by dragging).
+   */
+  TC.commit = function (opts) {
     TC.state.rev++;
     if (TC.history.commit()) {
+      if (opts && opts.merge && TC.history.undoStack.length > 1) TC.history.undoStack.pop();
       TC.state.dirty = true;
       if (TC.storage) TC.storage.scheduleAutosave();
     }

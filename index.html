@@ -34,6 +34,12 @@
         </div>
         <button data-action="toggleDrumMap" data-i18n="Drum map" data-i18n-title="Show which instrument sits on which line">Drum map</button>
       </div>
+      <div class="tb-group transport">
+        <button data-action="togglePlay" id="play-btn" class="play-btn" data-i18n-title="Play / stop (Space) – from the selected bar">▶</button>
+        <button data-action="toggleLoop" id="loop-btn" data-i18n-title="Loop: the selected bar, otherwise everything">⟳</button>
+        <button data-action="toggleMetronome" id="metro-btn" data-i18n="Click" data-i18n-title="Metronome">Click</button>
+        <label class="tempo-field" data-i18n-title="Tempo (quarter notes per minute)"><span class="mus-btn sm">&#xE1D5;</span>=<input id="tempo-input" type="number" min="20" max="400" step="1"></label>
+      </div>
       <div class="tb-group tb-right">
         <button data-action="zoomMenu" id="zoom-label">100% ▾</button>
       </div>
@@ -82,6 +88,8 @@
   <script src="js/actions.js"></script>
   <script src="js/panel.js"></script>
   <script src="js/interaction.js"></script>
+  <script src="js/playback.js"></script>
+  <script src="js/audio.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/main.js"></script>
 </body>

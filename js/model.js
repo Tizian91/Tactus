@@ -12,11 +12,16 @@
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
- *   BarHeader: { ts: [4, 4], tempo: null | bpm, repeatStart, repeatEnd, marker }
+ *   BarHeader: { ts: [4, 4], tempo: null | bpm, repeatStart, repeatEnd, marker,
+ *                beam: null | [2, 2, 3]  beam groups in units of the lower number (7/8: eighths), null = default
+ *                simile: false           true = "repeat the bar before" (% sign; plays the bar before) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume,
  *                bars: [ { voices: [ [Event], [Event] ] } ] }   // bars[i] belongs to header bars[i]
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
- *   Note:      drums:   { id, art, accent, ghost, head, vel }
+ *   Note:      drums:   { id, art, accent, ghost, head, vel,
+ *                         orn: null | 'flam' | 'drag'   grace notes before the note
+ *                         trem: 0 … 3                   roll: strokes through the stem
+ *                         stick: '' | 'R' | 'L' }       sticking (right / left hand), written under the staff
  *              (later)  pitched: { id, pitch, ... }, tab: { id, string, fret, ... }
  *
  * Time is counted in ticks: 960 per quarter note (as in Guitar Pro / MIDI files).
@@ -53,7 +58,43 @@
     title: '', subtitle: '', artist: '', album: '', music: '', words: '', transcriber: '', copyright: '', notes: '', tempo: 120,
   });
 
-  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, marker: '' });
+  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, marker: '', beam: null, simile: false });
+
+  /** Is the time signature compound (6/8, 9/8, 12/8: counted in dotted quarters)? */
+  TC.isCompound = (ts) => ts[1] === 8 && ts[0] % 3 === 0 && ts[0] > 3;
+
+  /**
+   * Beam groups of a bar in units of the lower number (7/8 -> [2, 2, 3] eighths), or null when
+   * the beats decide (4/4, 3/4, 2/2 …: one beam per quarter). Odd eighth / sixteenth meters get
+   * the usual grouping; any bar may have its own (header.beam).
+   */
+  const ODD = { 5: [3, 2], 7: [2, 2, 3], 11: [3, 3, 3, 2], 13: [3, 3, 3, 2, 2] };
+  TC.beamGroups = function (ts, beam) {
+    if (Array.isArray(beam) && beam.reduce((a, b) => a + b, 0) === ts[0]) return beam.slice();
+    if (ts[1] < 8) return null;
+    if (TC.isCompound(ts)) return Array(ts[0] / 3).fill(3);
+    const per = ts[1] === 8 ? 2 : 4; // eighths in quarters, sixteenths in fours
+    if (ts[0] % per === 0) return Array(ts[0] / per).fill(per);
+    if (ODD[ts[0]]) return ODD[ts[0]].slice();
+    const g = Array(Math.floor(ts[0] / 2)).fill(2);
+    if (ts[0] % 2) g[g.length - 1] = 3;
+    return g;
+  };
+  /** Ways to group a bar of n units into 2s, 3s (and 4s for sixteenths), the default first. */
+  TC.beamChoices = function (ts) {
+    const n = ts[0], out = [];
+    const sizes = ts[1] >= 16 ? [2, 3, 4] : [2, 3];
+    const walk = (rest, cur) => {
+      if (out.length > 30) return;
+      if (rest === 0) return void out.push(cur);
+      sizes.forEach((k) => { if (rest >= k) walk(rest - k, cur.concat(k)); });
+    };
+    if (ts[1] >= 8 && n >= 4 && n <= 13) walk(n, []);
+    const def = TC.beamGroups(ts, null);
+    const key = (g) => g && g.join('+');
+    const list = out.filter((g) => key(g) !== key(def));
+    return def ? [def].concat(list) : list;
+  };
   TC.newTrackBar = (voices = 2) => ({ voices: Array.from({ length: voices }, () => []) });
 
   TC.newTrack = function (kind = 'drums', bars = 0) {
@@ -98,6 +139,9 @@
     out.ghost = !!n.ghost;
     out.head = typeof n.head === 'string' && (n.head === 'auto' || TC.HEADS[n.head]) ? n.head : 'auto';
     out.vel = n.vel === null || n.vel === undefined ? null : TC.clamp(Math.round(num(n.vel, 100)), 1, 127);
+    out.orn = n.orn === 'flam' || n.orn === 'drag' ? n.orn : null;
+    out.trem = [1, 2, 3].includes(n.trem) ? n.trem : 0;
+    out.stick = n.stick === 'R' || n.stick === 'L' ? n.stick : '';
     return out;
   }
 
@@ -108,13 +152,15 @@
     Object.keys(doc.meta).forEach((k) => {
       if (raw.meta && raw.meta[k] !== undefined) doc.meta[k] = k === 'tempo' ? TC.clamp(num(raw.meta.tempo, 120), 20, 400) : str(raw.meta[k]);
     });
-    doc.bars = raw.bars.map((b) => {
+    doc.bars = raw.bars.map((b, i) => {
       const h = TC.newBarHeader(b && validTs(b.ts) ? b.ts : [4, 4]);
       if (b) {
         h.tempo = typeof b.tempo === 'number' ? TC.clamp(b.tempo, 20, 400) : null;
         h.repeatStart = !!b.repeatStart;
         h.repeatEnd = TC.clamp(Math.round(num(b.repeatEnd, 0)), 0, 99);
         h.marker = str(b.marker);
+        if (Array.isArray(b.beam) && b.beam.every((x) => Number.isInteger(x) && x > 0) && b.beam.reduce((a, c) => a + c, 0) === h.ts[0]) h.beam = b.beam.slice();
+        h.simile = !!b.simile && i > 0;
       }
       return h;
     });
@@ -221,11 +267,65 @@
     const old = doc.bars[bi].ts.join('/');
     let i = bi;
     do {
+      if (doc.bars[i].ts.join('/') !== ts.join('/')) doc.bars[i].beam = null;
       doc.bars[i].ts = ts.slice();
       doc.tracks.forEach((t) => SC.fitBar(doc, t, i));
       i++;
     } while (!onlyThis && i < doc.bars.length && doc.bars[i].ts.join('/') === old);
     return true;
+  };
+
+  /**
+   * Beam groups from bar `bi` on (like the time signature: up to the next bar with another
+   * time signature or other groups). groups: null = default.
+   */
+  SC.setBeam = function (doc, bi, groups) {
+    const ts = doc.bars[bi].ts;
+    if (groups && groups.reduce((a, b) => a + b, 0) !== ts[0]) return false;
+    const key = (h) => h.ts.join('/') + '|' + (h.beam ? h.beam.join('+') : '');
+    const old = key(doc.bars[bi]);
+    let i = bi;
+    do {
+      doc.bars[i].beam = groups ? groups.slice() : null;
+      i++;
+    } while (i < doc.bars.length && key(doc.bars[i]) === old);
+    return true;
+  };
+
+  /** The bar whose notes bar `bi` plays: a simile bar ("%") plays the bar before it. */
+  SC.sourceBar = function (doc, bi) {
+    while (bi > 0 && doc.bars[bi].simile) bi--;
+    return bi;
+  };
+
+  /** Copy of the notes of a bar (all tracks), for the clipboard. */
+  SC.copyBar = function (doc, bi) {
+    const src = SC.sourceBar(doc, bi);
+    return { ts: doc.bars[src].ts.slice(), tracks: doc.tracks.map((t) => TC.clone(t.bars[src])) };
+  };
+
+  /** Put copied notes into bar `bi` (replaces its notes; new ids; cut to its length). */
+  SC.pasteBar = function (doc, bi, clip) {
+    if (!clip) return false;
+    doc.bars[bi].simile = false;
+    doc.tracks.forEach((t, k) => {
+      const bar = TC.clone(clip.tracks[k] || clip.tracks[0]);
+      bar.voices.forEach((v) => v.forEach((ev) => {
+        ev.id = TC.uid('e');
+        ev.notes.forEach((n) => { n.id = TC.uid('n'); });
+      }));
+      t.bars[bi] = bar;
+      SC.fitBar(doc, t, bi);
+    });
+    return true;
+  };
+
+  /** A copy of bar `bi` right after it. */
+  SC.duplicateBar = function (doc, bi) {
+    const clip = SC.copyBar(doc, bi);
+    SC.insertBars(doc, bi + 1, 1, doc.bars[bi].ts);
+    doc.bars[bi + 1].beam = doc.bars[bi].beam ? doc.bars[bi].beam.slice() : null;
+    SC.pasteBar(doc, bi + 1, clip);
   };
 
   /** Two drum notes are "the same" if they sit on the same line of the same instrument. */
@@ -300,5 +400,6 @@
   /** A new drum note from the input settings. */
   TC.newDrumNote = (art, inp) => ({
     id: TC.uid('n'), art, accent: inp.accent || 0, ghost: !!inp.ghost, head: inp.head || 'auto', vel: null,
+    orn: inp.orn || null, trem: inp.trem || 0, stick: inp.stick || '',
   });
 })(window.TC);

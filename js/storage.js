@@ -203,17 +203,24 @@
     }
     put(1, 3360, 480, 46);
     put(1, 2160, 240, 38, { ghost: true });
-    // bar 3: sixteenths and triplets
+    // bar 3: sixteenths and triplets with sticking, a flam on 2
     for (let t = 0; t < 1920; t += 240) put(2, t, 240, 42);
-    put(2, 960, 240, 38);
+    put(2, 960, 240, 38, { orn: 'flam' });
     put(2, 0, 960, 36);
-    [1920, 2240, 2560].forEach((t) => put(2, t, 320, 38));
-    [2880, 3200, 3520].forEach((t, k) => put(2, t, 320, [48, 47, 43][k]));
+    [1920, 2240, 2560].forEach((t, k) => put(2, t, 320, 38, { stick: 'RLR'[k] }));
+    [2880, 3200, 3520].forEach((t, k) => put(2, t, 320, [48, 47, 43][k], { stick: 'LRL'[k] }));
     put(2, 1920, 960, 44);
     put(2, 2880, 960, 44);
-    // bar 4: crash and kick on 1
-    put(3, 0, 3840, 49, { accent: 1 });
-    put(3, 0, 3840, 36);
+    // bar 4: the groove of bar 2 again, bar 5: "%" (repeats bar 4)
+    doc.bars.splice(3, 0, TC.newBarHeader(), TC.newBarHeader());
+    doc.tracks[0].bars.splice(3, 0, TC.newTrackBar(), TC.newTrackBar());
+    TC.score.pasteBar(doc, 3, TC.score.copyBar(doc, 1));
+    doc.bars[4].simile = true;
+    // bar 6: snare roll, a drag, crash and kick on 4
+    put(5, 0, 1920, 38, { trem: 3 });
+    put(5, 1920, 960, 38, { accent: 1, orn: 'drag' });
+    put(5, 2880, 960, 49, { accent: 1 });
+    put(5, 2880, 960, 36);
     return doc;
   };
 })(window.TC);

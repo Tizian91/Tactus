@@ -27,6 +27,15 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
   in the note panel and the drum map.
 - **Drum map**: short names (HH, SN, BD …) exactly at the height of their line; pointer on one lights its line
   up, a click chooses the instrument. Option: only the instruments used in the score.
+- **Drag** after writing a note (mouse / pen): the same instrument is written at every grid position passed –
+  a row of hi-hat eighths in one go (one undo step).
+- **Flam, drag, roll, sticking** per note in the note panel: grace notes, 1–3 strokes through the stem,
+  R / L under the staff. **Counting** (1 e + a) under the staff can be switched on (settings → view).
+- **Bars**: copy / paste / duplicate (`Ctrl+C` / `V` / `D`), **% = repeat the bar before**, **beam groups**
+  for odd meters (7/8 = 2+2+3, 3+2+2 …).
+- **Playback** (`Space` or ▶): synthesized drum sounds, running cursor, metronome, count-in, loop of the
+  selected bar, tempo in the toolbar. Changes are heard while it plays. A note sounds when it is written.
+- **Tablet**: one finger drag scrolls, tap writes, hold opens the bar menu, two fingers zoom; a pen writes.
 
 ## Code layout
 
@@ -39,7 +48,9 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 | `js/render.js` | SVG engraving with the Bravura font (SMuFL), grid, hover preview |
 | `js/panel.js` | Note panel and settings panel, widths, left-handed mode |
 | `js/actions.js` | Commands used by toolbar, panel, menus and keys |
-| `js/interaction.js` | Mouse and keyboard on the score |
+| `js/interaction.js` | Mouse, pen, fingers and keyboard on the score |
+| `js/playback.js` | Playback timeline: which stroke at which second (pure, tested) |
+| `js/audio.js` | Synthesized drum sounds (Web Audio) and the player with cursor |
 | `js/contextmenu.js` | Menus (from MindMapper) |
 | `js/storage.js` | Open / save `*.tactus.json`, autosave in the browser, example groove |
 | `js/i18n.js` | German / English, light / dark theme |

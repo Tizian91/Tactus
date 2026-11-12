@@ -191,6 +191,13 @@ input[type="number"] { width: 70px; }
 .row select, .row input[type="text"] { flex: 1; min-width: 0; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
 .btn-row button { padding: 3px 8px; display: flex; align-items: center; gap: 4px; }
+.btn-row button.off { opacity: 0.5; }
+.transport .play-btn { min-width: 38px; font-size: 15px; }
+.tempo-field { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; color: var(--label); }
+.tempo-field input { width: 52px; padding: 3px 4px; }
+.tempo-field .mus-btn { top: 6px; }
+.trem { font-weight: 700; letter-spacing: -2px; }
+.row input[type="range"] { flex: 1; min-width: 0; }
 label.check { display: flex; align-items: center; gap: 5px; cursor: pointer; }
 label.check.small { font-size: 12px; color: var(--label); }
 .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
@@ -259,6 +266,15 @@ details > summary { list-style-position: outside; }
 #score .hover-col.lock { opacity: 0.12; }
 #score .hover-label-bg { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; opacity: 0.92; }
 #score .hover-label { font-size: 9px; font-weight: 600; fill: var(--accent); }
+#score .mus.mid { text-anchor: middle; }
+#score .mus.grace { font-size: 24px; }
+#score .stem.thin, #score .ledger.thin { stroke-width: 0.9; }
+#score .sticking { font-size: 11px; font-weight: 700; text-anchor: middle; fill: var(--text); }
+#score .count { font-size: 9px; text-anchor: middle; fill: var(--muted); }
+#score .count.beat { font-weight: 700; font-size: 10px; fill: var(--label); }
+#score .play-cursor { fill: var(--accent); opacity: 0.85; }
+#score .play-bar { fill: var(--accent); opacity: 0.07; }
+#score .loop-range { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 3; opacity: 0.6; }
 
 /* ---- Status bar ------------------------------------------------------------- */
 

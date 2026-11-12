@@ -100,8 +100,13 @@ Formate und MIDI-Werte wie in Guitar Pro.
   Kit-Profil des Stücks, „MIDI exportieren für“ wählt ein anderes. Tempo, Taktart,
   Takt-Texte als Marker, Anschlag (Ghost / Akzent), Flam / Drag / Wirbel ausgeschrieben, %-Takte ausgeschrieben;
   fehlt im Profil eine Taste, wird ein verwandtes Instrument genommen und gemeldet.
-- Als Nächstes: **MIDI-Import** (Herkunft wählen, Anschlag → Ghost / Akzent), fehlende Instrumente ergänzen
-  (Tom-Rimshots, Accent, Hi-Hat-Pedal offen …).
+- **MIDI-Import** (Datei → MIDI importieren oder `.mid` aufs Fenster ziehen): Herkunft (Kit-Profil des Stücks
+  vorgeschlagen, alle Tasten eines Instruments zählen) und Raster wählen (1/16 + Triolen …; pro Schlag gerade oder
+  Triole, je nachdem was besser passt), Vorschau mit Anzahl und unbekannten Tasten. Anschlag → Ghost / Akzent,
+  leise Schläge kurz davor → Flam / Drag, Tempo, Taktarten und Marker werden übernommen. Ersetzt das offene Stück.
+- Später: fehlende Instrumente (Tom-Rimshots, Accent, Hi-Hat-Pedal offen …), Wirbel beim Import erkennen,
+  Import in das offene Stück (ab einem Takt), `.gp`-Export (ZIP + eigenes XML, größerer Aufwand; Guitar Pro
+  liest MIDI ohne Triolen).
 
 ## Phase 3 – Wiedergabe (Grundfunktion) ✅
 

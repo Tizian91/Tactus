@@ -78,6 +78,22 @@
   function init() {
     TC.storage.loadSettings();
     TC.kits.load();
+    // a MIDI file dropped on the window: import it
+    window.addEventListener('dragover', (e) => {
+      if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault();
+    });
+    window.addEventListener('drop', (e) => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      e.preventDefault();
+      if (!/\.midi?$/i.test(f.name)) {
+        UI.hint(tr('Drop a MIDI file (.mid) here to import it.'));
+        return;
+      }
+      const r = new FileReader();
+      r.onload = () => TC.midiIn.open(new Uint8Array(r.result), f.name);
+      r.readAsArrayBuffer(f);
+    });
     TC.drums.setNotation(S.settings.notation);
     const back = TC.storage.restore();
     if (back) {

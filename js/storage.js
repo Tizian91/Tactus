@@ -100,6 +100,8 @@
     TC.refresh();
   }
 
+  ST.setDoc = setDoc;
+
   ST.newScore = function () {
     if (S.dirty && !confirm(tr('Discard the changes of the open score?'))) return;
     setDoc(TC.emptyScore(8));

@@ -465,6 +465,8 @@
       '-',
       { label: 'Load example groove', action: A.demo },
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },
+      '-',
+      { label: 'Import MIDI…', action: A.importMidi },
       { label: TC.tr('Export MIDI ({name})', { name: kitName() }), action: () => A.exportMidiCurrent(), shortcut: 'Ctrl+E' },
       { label: 'Export MIDI for', submenu: A.midiTargets() },
     ], r.left, r.bottom + 2);
@@ -482,6 +484,9 @@
     items.push('-', { label: 'Kit profiles (Cubase)…', action: A.openKits });
     return items;
   };
+
+  /** MIDI import (js/midiin.js): choose a file, where it comes from and the grid. */
+  A.importMidi = () => TC.midiIn.pick();
 
   /** MIDI export with the score's kit profile (Ctrl+E). */
   A.exportMidiCurrent = () => A.exportMidi(curKit());

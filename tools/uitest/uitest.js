@@ -270,6 +270,10 @@ setTimeout(() => {
     ok('MIDI export: General MIDI and kit profiles in the menu', mt[0].label.startsWith('General MIDI') && mt.some((x) => x.label === 'Kit profiles (Cubase)…'));
     const mb = TC.midi.build(S.doc, null).bytes;
     ok('MIDI export: a MIDI file (' + mb.length + ' bytes)', String.fromCharCode(...mb.slice(0, 4)) === 'MThd' && mb.length > 40);
+    TC.midiIn.open(TC.midi.build(S.doc, null).bytes, 'Test.mid');
+    ok('MIDI import: dialog with source, grid and a preview', !!document.querySelector('.midi-dialog select[data-k="source"]') && /Takten|bars/.test(document.querySelector('.midi-dialog').textContent));
+    document.querySelector('.midi-dialog [data-k="close"]').click();
+    ok('MIDI import: cancel closes it, score unchanged', !TC.midiIn.isOpen() && voice(nb, 0).join() === '0:480:38');
     TC.actions.openKits();
     ok('kit profiles: dialog opens', !!document.querySelector('.kit-dialog') && TC.kits.isOpen());
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

@@ -534,8 +534,8 @@
       shiftDown = true;
       I.refreshHover();
     }
-    if (TC.kits && TC.kits.isOpen()) {
-      if (e.key === 'Escape') TC.kits.close();
+    if ((TC.kits && TC.kits.isOpen()) || (TC.midiIn && TC.midiIn.isOpen())) {
+      if (e.key === 'Escape') { TC.kits.close(); TC.midiIn.close(); }
       return;
     }
     if (TC.menu.isOpen()) return;

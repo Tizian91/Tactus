@@ -31,6 +31,9 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 - **Kit profiles** (settings → drum kit → "Kit profiles (Cubase)…"): load the Cubase drum map of a drum VST, Tactus
   matches the keys by name; per instrument (fixed line and head) only the key is chosen. "Save drum map for Cubase"
   writes a `.drm` with the Tactus notation. Kept in the browser; export / import as `*.tactus-kits.json`.
+- **MIDI import** (File → Import MIDI, or drop a `.mid` on the window): choose where it comes from (kit profile or
+  General MIDI) and the grid (1/16 + triplets …); velocity becomes ghost / accent, soft hits just before become
+  flams. Replaces the open score.
 - **Kit profile of the score** (status bar "Kit: …", click to change): saved with the score.
 - **MIDI export** (File → Export MIDI, `Ctrl+E`, with the kit profile of the score; "Export MIDI for" picks another):
   General MIDI (also for Guitar Pro) or a kit profile – tempo, time signature,
@@ -65,6 +68,7 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 | `js/cubase.js` | Cubase drum maps (`.drm`): read, recognise instruments, write with the Tactus notation |
 | `js/kits.js` | Kit profiles (which VST key is which instrument), their dialog, drum maps for Cubase |
 | `js/midi.js` | MIDI export (Standard MIDI File) for General MIDI or a kit profile |
+| `js/midiin.js` | MIDI import: read the file, snap to the grid (straight / triplets), dialog |
 | `js/rhythm.js` | Events → note values, rests, dots, triplets, beams (pure, tested) |
 | `js/render.js` | SVG engraving with the Bravura font (SMuFL), grid, hover preview; endless and page view (lines, A4 pages), PDF / print |
 | `js/panel.js` | Note panel and settings panel, widths, left-handed mode |

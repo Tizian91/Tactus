@@ -127,6 +127,20 @@ setTimeout(() => {
   TC.actions.undo();
   ok('one undo removes the whole row', voice(5, 0).length === 0);
   TC.actions.redo();
+  // dotted eighths and triplets: the row steps by the note length, the pointer passes every grid position
+  TC.actions.toggleDotted();
+  mouse('pointerdown', at(8, 0, -1));
+  for (let t = 240; t <= 2400; t += 240) mouse('pointermove', at(8, t, -1));
+  mouse('pointerup', at(8, 2400, -1));
+  TC.actions.toggleDotted();
+  ok('drag dotted eighths (3/4) ' + voice(8, 0).join(' '), voice(8, 0).join() === '0:720:42,720:720:42,1440:720:42,2160:720:42');
+  TC.actions.addBar();
+  TC.actions.toggleTriplet();
+  mouse('pointerdown', at(9, 0, -1));
+  for (let t = 320; t <= 2560; t += 320) mouse('pointermove', at(9, t, -1));
+  mouse('pointerup', at(9, 2560, -1));
+  TC.actions.toggleTriplet();
+  ok('drag triplet eighths (3/4): 9 ' + voice(9, 0).length, voice(9, 0).length === 9 && voice(9, 0).every((s) => s.split(':')[1] === '320'));
   // copy / paste / simile
   TC.actions.copyBar(5);
   TC.actions.pasteBar(7);

@@ -316,20 +316,23 @@
   }
 
   /** Grid positions after (bar, tick) up to and including (bar2, tick2), in time order. */
+  /**
+   * Positions of the row after the note at (bar, tick) up to the pointer at (bar2, tick2).
+   * The row steps by the length of the note (not by the click grid): dotted eighths follow each
+   * other every three sixteenths, triplets every triplet. In a new bar the row starts on beat 1.
+   * Backwards: nothing.
+   */
   function between(bar, tick, bar2, tick2) {
-    const grid = TC.gridTicks(S.input), out = [];
-    const fwd = bar2 > bar || (bar2 === bar && tick2 > tick);
-    if (!fwd) return bar2 === bar && tick2 === tick ? [] : [[bar2, tick2]]; // backwards: only the new position
-    let b = bar, t = tick + grid;
+    const step = TC.inputTicks(S.input), out = [];
+    let b = bar, t = tick + step;
     while (b < bar2 || (b === bar2 && t <= tick2)) {
-      const L = TC.barTicks(S.doc.bars[b].ts);
-      if (t >= L) {
+      if (t >= TC.barTicks(S.doc.bars[b].ts)) {
         b++;
         t = 0;
         continue;
       }
       if (!S.doc.bars[b].simile) out.push([b, t]);
-      t += grid;
+      t += step;
     }
     return out;
   }
@@ -340,15 +343,15 @@
     const bar = RD.barAt(p.x);
     if (!bar || bar.simile || p.x < bar.x0) return;
     const tick = RD.snapTick(bar, p.x);
-    if (bar.i === d.bar && tick === d.tick) return;
+    const row = between(d.bar, d.tick, bar.i, tick);
+    if (!row.length) return;
     let added = 0;
-    for (const [bi, tk] of between(d.bar, d.tick, bar.i, tick)) {
+    for (const [bi, tk] of row) {
       const note = TC.newDrumNote(d.art.id, S.input);
       const res = TC.score.place(S.doc, S.doc.tracks[0], bi, d.art.voice, tk, TC.inputTicks(S.input), note);
       if (res.status !== 'exists' && res.status !== 'outside') added++;
     }
-    d.bar = bar.i;
-    d.tick = tick;
+    [d.bar, d.tick] = row[row.length - 1]; // the row goes on from its last note
     if (!added) return;
     d.n += added;
     S.rev++;

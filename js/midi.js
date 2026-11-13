@@ -11,11 +11,13 @@
  *
  * Contents: track name (title), tempo and time signature (also where they change), bar texts as
  * markers, the notes with velocity (ghost soft, accent loud, as played back), flam / drag grace notes
- * and rolls written out as single strokes, %-bars written out.
+ * and rolls written out as single strokes, %-bars written out, repeats and endings written out as
+ * played (a MIDI file knows no repeats; Cubase gets every bar, with a marker where a repeat starts again).
  */
 (function (TC) {
   const M = (TC.midi = {});
   const NOTE_LEN = 120; // a 32nd: drum hits are short, the length does not matter to a drum VST
+  const tr = (s, v) => (TC.tr ? TC.tr(s, v) : s.replace(/\{(\w+)\}/g, (m, k) => v[k]));
 
   /** Related instruments to fall back on when a profile has no key for one. */
   const FALLBACK = {
@@ -67,9 +69,14 @@
     const add = (t, order, bytes) => ev.push({ t: Math.max(0, Math.round(t)), order, bytes });
     add(0, 0, meta(0x03, text(doc.meta.title || 'Tactus')));
 
-    let t0 = 0, tempo = null, ts = null;
-    for (let bi = 0; bi < doc.bars.length; bi++) {
+    let t0 = 0, tempo = null, ts = null, prev = -1;
+    // repeats and endings written out, bar after bar as played (model.js playOrder); a marker where a
+    // repeat begins again ("Bar 5 – 2nd time"), so the bars in Cubase can be told apart
+    for (const o of TC.score.playOrder(doc)) {
+      const bi = o.bar;
       const h = doc.bars[bi], L = TC.barTicks(h.ts), bpm = T.tempoAt(doc, bi);
+      if (o.pass > 1 && bi <= prev) add(t0, 0, meta(0x06, text(tr('Bar {n} – {p}. time', { n: bi + 1, p: o.pass }))));
+      prev = bi;
       if (bpm !== tempo) {
         tempo = bpm;
         add(t0, 0, meta(0x51, u32(Math.round(60000000 / bpm)).slice(1)));

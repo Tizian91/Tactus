@@ -327,6 +327,23 @@
     '"{name}" was changed in Dropbox meanwhile (on another device?).\n\nOK: overwrite it with this version\nCancel: save this version under a new name':
       '„{name}“ wurde inzwischen in der Dropbox geändert (auf einem anderen Gerät?).\n\nOK: mit dieser Version überschreiben\nAbbrechen: diese Version unter neuem Namen speichern',
     'In Dropbox: {path}': 'In der Dropbox: {path}',
+    // repeats
+    Repeat: 'Wiederholung',
+    'Repeat starts here |:': 'Wiederholung beginnt hier |:',
+    'Repeat ends here :|': 'Wiederholung endet hier :|',
+    'Ending (1st / 2nd time bar)': 'Klammer (1. / 2. Ende)',
+    '{n} times': '{n}×',
+    none: 'keine',
+    'Repeat bars {a}–{b}': 'Takte {a}–{b} wiederholen',
+    'Bars {a}–{b} are repeated': 'Takte {a}–{b} werden wiederholt',
+    'Select bars first': 'Erst Takte auswählen',
+    'Write the repeats out (bar numbers as in Cubase)…': 'Wiederholungen ausschreiben (Taktnummern wie in Cubase)…',
+    'The score has no repeats': 'Das Stück hat keine Wiederholungen',
+    'Write the repeats out as bars of their own? The bar numbers will then be those of Cubase. (Undo is possible.)':
+      'Wiederholungen als eigene Takte ausschreiben? Die Taktnummern sind dann die von Cubase. (Rückgängig ist möglich.)',
+    'Repeats written out: {n} bars': 'Wiederholungen ausgeschrieben: {n} Takte',
+    'Bar {n} – {p}. time': 'Takt {n} – {p}. Mal',
+    'played bar {n}': 'gespielt Takt {n}',
     // several bars
     Bars: 'Takte',
     'to bar': 'bis Takt',

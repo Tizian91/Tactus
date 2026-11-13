@@ -67,7 +67,9 @@
       t += L * spt;
     }
     const start = t;
-    for (let bi = from; bi <= to; bi++) {
+    // repeats and endings written out (model.js playOrder): the same order as the MIDI export
+    for (const o of TC.score.playBars(doc, from, to)) {
+      const bi = o.bar;
       const h = doc.bars[bi], spt = tick(h, T.tempoAt(doc, bi)), L = TC.barTicks(h.ts);
       const src = TC.score.sourceBar(doc, bi);
       for (const voice of track.bars[src].voices) {
@@ -97,7 +99,7 @@
         }
       }
       if (opts.metronome) T.clickTicks(h).forEach((k, i) => hits.push({ t: t + k * spt, click: i === 0 ? 2 : 1, vel: 0.8 }));
-      bars.push({ bar: bi, t0: t, t1: t + L * spt, spt, ts: h.ts });
+      bars.push({ bar: bi, pass: o.pass, n: o.n, t0: t, t1: t + L * spt, spt, ts: h.ts });
       t += L * spt;
     }
     hits.forEach((x) => { x.t = Math.max(0, x.t); });
@@ -105,10 +107,15 @@
     return { hits, bars, start, end: t };
   };
 
-  /** Where the music is at time `sec` of a timeline: { bar, tick } (null after the end). */
+  /**
+   * Where the music is at time `sec` of a timeline: { bar, tick, pass, n } (null after the end);
+   * pass: time through a repeat, n: played bar number (as counted in Cubase).
+   */
   T.position = function (tl, sec) {
     const b = tl.bars.find((x) => sec >= x.t0 && sec < x.t1);
     if (!b) return null;
-    return { bar: b.bar, tick: (sec - b.t0) / b.spt };
+    const pos = { bar: b.bar, tick: (sec - b.t0) / b.spt };
+    if (b.n) Object.assign(pos, { pass: b.pass, n: b.n });
+    return pos;
   };
 })(window.TC);

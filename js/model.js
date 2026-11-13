@@ -13,7 +13,10 @@
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
- *   BarHeader: { ts: [4, 4], tempo: null | bpm, repeatStart, repeatEnd,
+ *   BarHeader: { ts: [4, 4], tempo: null | bpm,
+ *                repeatStart: false      a repeat begins here (|:)
+ *                repeatEnd: 0            a repeat ends here (:|), the number is how often it is played (2 = twice)
+ *                volta: null | [1]       ending (1st / 2nd time bar): played only in these passes, e.g. [1], [2], [1, 2]
  *                marker: ''               text above the bar (Verse, Chorus …)
  *                lineBreak: false        page view: this bar starts a new line
  *                beam: null | [2, 2, 3]  beam groups in units of the lower number (7/8: eighths), null = default
@@ -62,9 +65,16 @@
     kit: '', kitName: '', // kit profile for MIDI export / import (js/kits.js): id, and the name to find it on another computer
   });
 
-  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, marker: '', beam: null, simile: false, lineBreak: false });
+  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false });
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system' });
   TC.BAR_NUMBERS = ['system', 'every', 'off'];
+
+  /** Endings of a bar: sorted passes 1 … 8, or null. */
+  TC.cleanVolta = function (v) {
+    if (!Array.isArray(v)) return null;
+    const out = [...new Set(v.filter((x) => Number.isInteger(x) && x >= 1 && x <= 8))].sort((a, b) => a - b);
+    return out.length ? out : null;
+  };
 
   /** Is the time signature compound (6/8, 9/8, 12/8: counted in dotted quarters)? */
   TC.isCompound = (ts) => ts[1] === 8 && ts[0] % 3 === 0 && ts[0] > 3;
@@ -165,6 +175,8 @@
         h.tempo = typeof b.tempo === 'number' ? TC.clamp(b.tempo, 20, 400) : null;
         h.repeatStart = !!b.repeatStart;
         h.repeatEnd = TC.clamp(Math.round(num(b.repeatEnd, 0)), 0, 99);
+        if (h.repeatEnd === 1) h.repeatEnd = 0;
+        h.volta = TC.cleanVolta(b.volta);
         h.marker = str(b.marker);
         if (Array.isArray(b.beam) && b.beam.every((x) => Number.isInteger(x) && x > 0) && b.beam.reduce((a, c) => a + c, 0) === h.ts[0]) h.beam = b.beam.slice();
         h.simile = !!b.simile && i > 0;
@@ -302,6 +314,100 @@
       i++;
     } while (i < doc.bars.length && key(doc.bars[i]) === old);
     return true;
+  };
+
+  /**
+   * The order in which the bars are played - repeats and endings written out, as a MIDI file has them:
+   * [{ bar, pass, n }]  bar: index of the written bar, pass: 1st, 2nd … time through its repeat,
+   * n: number of the played bar (1, 2, …; what Cubase counts).
+   *   |: … :|        repeatStart … repeatEnd (n times); a repeat end without a start goes back to
+   *                  the bar after the previous repeat end (or to bar 1)
+   *   endings        a bar with volta [1] is played in pass 1 only, [2] in pass 2 … (also bars before
+   *                  the repeat end, e.g. a two-bar first ending)
+   */
+  SC.playOrder = function (doc) {
+    const bars = doc.bars, out = [], jumps = new Map();
+    let i = 0, start = 0, pass = 1, back = false, lastVolta = false;
+    while (i < bars.length && out.length < 20000) {
+      const h = bars[i], volta = h.volta && h.volta.length ? h.volta : null;
+      if (!back) {
+        if (h.repeatStart) {
+          start = i;
+          pass = 1;
+        } else if (!volta && lastVolta && pass > 1) {
+          start = i; // after the last ending: a new section
+          pass = 1;
+        }
+      }
+      back = false;
+      if (volta && !volta.includes(pass)) {
+        i++;
+        continue;
+      }
+      out.push({ bar: i, pass, n: out.length + 1 });
+      lastVolta = !!volta;
+      if (h.repeatEnd > 1) {
+        const done = jumps.get(i) || 0;
+        if (done + 1 < h.repeatEnd) {
+          jumps.set(i, done + 1);
+          pass = done + 2;
+          i = start;
+          back = true;
+          continue;
+        }
+        jumps.delete(i);
+        start = i + 1;
+        pass = 1;
+      }
+      i++;
+    }
+    return out;
+  };
+
+  /**
+   * The played bars from bar `from` up to bar `to` (written bars, e.g. a selection): the play order
+   * from the first time `from` is played; bars before `from` that a repeat goes back to are left
+   * out, it ends at the first bar after `to`.
+   */
+  SC.playBars = function (doc, from = 0, to = doc.bars.length - 1) {
+    const order = SC.playOrder(doc);
+    let k = order.findIndex((o) => o.bar >= from);
+    const out = [];
+    if (k < 0) return out;
+    for (; k < order.length; k++) {
+      const o = order[k];
+      if (o.bar > to) break;
+      if (o.bar >= from) out.push(o);
+    }
+    return out;
+  };
+
+  /** Does the score have repeats or endings? */
+  SC.hasRepeats = (doc) => doc.bars.some((h) => h.repeatStart || h.repeatEnd > 1 || (h.volta && h.volta.length));
+
+  /**
+   * Write the repeats out in the score itself: every played bar becomes a bar of its own, so the
+   * bar numbers are those of Cubase. %-bars are written out too (what they repeat may change).
+   */
+  SC.unfold = function (doc) {
+    const order = SC.playOrder(doc);
+    const headers = [], tracks = doc.tracks.map(() => []);
+    for (const o of order) {
+      const h = TC.clone(doc.bars[o.bar]);
+      Object.assign(h, { repeatStart: false, repeatEnd: 0, volta: null, simile: false, lineBreak: false });
+      headers.push(h);
+      doc.tracks.forEach((t, k) => {
+        const bar = TC.clone(t.bars[SC.sourceBar(doc, o.bar)]);
+        bar.voices.forEach((v) => v.forEach((ev) => {
+          ev.id = TC.uid('e');
+          ev.notes.forEach((n) => { n.id = TC.uid('n'); });
+        }));
+        tracks[k].push(bar);
+      });
+    }
+    doc.bars = headers;
+    doc.tracks.forEach((t, k) => { t.bars = tracks[k]; });
+    return headers.length;
   };
 
   /** The bar whose notes bar `bi` plays: a simile bar ("%") plays the bar before it. */

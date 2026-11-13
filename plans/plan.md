@@ -79,7 +79,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
   Auswahl; im Druckdialog „Als PDF speichern“.
 - Bearbeiten geht in beiden Ansichten gleich (Klick, Ziehen, Finger). Technisch: jeder Takt hat ein x in
   „Notenzeilen-Koordinaten“, die Zeilen werden nur verschoben gezeichnet (`TC.render.toLocal`).
-- Offen: Velocity, Wiederholungszeichen / Volta, Kopf auf Folgeseiten, Seitenränder einstellbar.
+- Offen: Kopf auf Folgeseiten, Seitenränder einstellbar.
 
 ## Phase 4a – Drummaps und Darstellung (begonnen)
 
@@ -129,6 +129,16 @@ Eine Regel für Maus, Stift und Finger:
 - Zwei Finger: scrollen + zoomen; Einstellung „Finger setzt Noten“ (aus: Finger wählt nur aus und scrollt)
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
+
+## Wiederholungen ✅ (zum Ausprobieren)
+
+- Taktmenü → Wiederholung bzw. Takt-Panel: |: Anfang, :| Ende (2×, 3× …), Klammern 1. / 2. (auch über mehrere Takte);
+  mehrere Takte ausgewählt: „Takte a–b wiederholen“
+- Abspielen, Cursor und **MIDI-Export schreiben sie aus** (eine MIDI-Datei kennt keine Wiederholungen): Cubase bekommt
+  jeden Takt so, wie er gespielt wird, mit einem Marker, wo eine Wiederholung neu beginnt („Takt 5 – 2. Mal“)
+- Taktzählung: Tactus zählt geschriebene Takte; beim Abspielen zeigt die Statusleiste zusätzlich den gespielten Takt
+  (= Cubase). „Wiederholungen ausschreiben“ macht daraus eigene Takte, dann stimmen die Nummern 1:1
+- Später: D.S. / D.C. / Coda
 
 ## Dropbox ✅ (zum Ausprobieren)
 

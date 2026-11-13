@@ -22,7 +22,7 @@ module.exports = function (T) {
     [[0, 'click2', 0.8], [0.5, 'click1', 0.8], [1, 'click1', 0.8], [1.5, 'click1', 0.8]]);
   tl = TL.build(doc, { from: 0, to: 0, countIn: true });
   T.eq('count-in: one bar of clicks, then the music', [tl.hits.filter((h) => h.click).length, r3(tl.start - LEAD), r3(tl.hits.find((h) => !h.click).t - LEAD)], [4, 2, 2]);
-  T.eq('position: bar and tick at a time', [TL.position(tl, LEAD + 1), TL.position(tl, LEAD + 2.25)], [{ bar: -1, tick: 1920 }, { bar: 0, tick: 480 }]);
+  T.eq('position: bar and tick at a time', [TL.position(tl, LEAD + 1), TL.position(tl, LEAD + 2.25)], [{ bar: -1, tick: 1920 }, { bar: 0, tick: 480, pass: 1, n: 1 }]);
 
   // grace notes and rolls
   put(1, 0, 960, 38, { orn: 'flam' });

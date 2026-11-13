@@ -194,6 +194,19 @@ setTimeout(() => {
   ok('bar menu offers bars 2-5', /Takte 2–5 auswählen/.test(bm));
   TC.actions.selectBarsTo(4, 1);
   ok('bar menu: bars 2-5 selected', JSON.stringify(TC.barRange()) === '[1,4]');
+  // repeats: the selection as a repeat, an ending, the play order, the bar menu
+  TC.actions.repeatSelection(2);
+  ok('repeat bars 2-5: |: and :| drawn', S.doc.bars[1].repeatStart && S.doc.bars[4].repeatEnd === 2 && document.querySelectorAll('#score .repeat-dot').length === 4);
+  TC.actions.setVolta('1', 4);
+  ok('ending "1." drawn', !!document.querySelector('#score .volta') && document.querySelector('#score .volta-text').textContent === '1.');
+  ok('played: 2 3 4 5 2 3 4 (bar 5 only the first time) ' + TC.timeline.build(S.doc, { from: 1, to: 4 }).bars.map((b) => b.bar + 1).join(' '),
+    TC.timeline.build(S.doc, { from: 1, to: 4 }).bars.map((b) => b.bar + 1).join(' ') === '2 3 4 5 2 3 4');
+  TC.actions.barMenu(1, 300, 300);
+  ok('bar menu: Repeat submenu', /Wiederholung beginnt hier/.test(document.getElementById('context-menu').textContent));
+  TC.menu.close();
+  ok('panel: repeat controls', !!document.querySelector('#panel-settings select[data-action="setRepeatEnd"]') && !!document.querySelector('#panel-settings select[data-action="setVolta"]'));
+  TC.actions.undo(); TC.actions.undo();
+  ok('undo: no repeats left', !TC.score.hasRepeats(S.doc));
   TC.actions.selectNone();
   // file menu: Dropbox entry (as a file page: only the hint that it needs the online version)
   TC.actions.fileMenu();

@@ -238,6 +238,10 @@ details > summary { list-style-position: outside; }
 .score .stem { stroke: var(--ink); stroke-width: 1.2; }
 .score .beam { fill: var(--ink); }
 .score .tie, .score .bracket { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.score .repeat-dot { fill: var(--ink); }
+.score .volta { fill: none; stroke: var(--ink); stroke-width: 1.1; }
+.score .volta-text { font-size: 11px; font-weight: 600; fill: var(--ink); }
+.score .repeat-count { font-size: 11px; font-weight: 600; fill: var(--ink); text-anchor: end; }
 .score .rest { fill: var(--ink); }
 .score .grid { stroke: var(--grid); stroke-width: 1; }
 .score .grid.beat { stroke: var(--grid-beat); }

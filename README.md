@@ -51,6 +51,11 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   General MIDI) and the grid (1/16 + triplets …); velocity becomes ghost / accent, soft hits just before become
   flams. Replaces the open score.
 - **Kit profile of the score** (status bar "Kit: …", click to change): saved with the score.
+- **Repeats** (bar menu → Repeat, or the bar panel): `|:` start, `:|` end (2×, 3× …), endings 1. / 2. (also over
+  several bars); several bars selected: "Repeat bars a–b". Playback, cursor and **MIDI export play them written
+  out** – a MIDI file knows no repeats, so Cubase gets every bar as played, with a marker where a repeat starts
+  again ("Bar 5 – 2. time"). While playing, the status bar shows the written bar and the played bar number (as in
+  Cubase). "Write the repeats out" turns them into bars of their own (bar numbers as in Cubase).
 - **MIDI export** (File → Export MIDI, `Ctrl+E`, with the kit profile of the score; "Export MIDI for" picks another):
   General MIDI (also for Guitar Pro) or a kit profile – tempo, time signature,
   bar texts as markers, velocity (ghost / accent), flam / drag / rolls and %-bars written out.

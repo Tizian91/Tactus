@@ -29,6 +29,8 @@
   RD.LINE_MAX = 15;
   const CLEF_W = 4.2 * SP;
   const TS_W = 3.4 * SP;
+  const REP_W = 1.5 * SP;        // room of a repeat sign (|: at the bar start, :| at its end)
+  const VOLTA_Y = -6.2 * SP;     // line of the ending brackets (1. / 2.)
   const TREM_GAP = 0.6 * SP;     // distance of roll strokes
   const GRACE = 0.6;             // size of grace notes (flam, drag)
   const STICK_Y = 9.6 * SP;      // sticking row under the staff
@@ -133,9 +135,11 @@
       voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); }));
       // endless: a finer click grid widens the bar; page: the notes alone decide (as printed)
       const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
-      return { i, L, ts: h.ts, beam: h.beam, simile, scale, showTs, tsW: showTs ? TS_W : 0, voices, marker: h.marker || '' };
+      const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : 0;
+      return { i, L, ts: h.ts, beam: h.beam, simile, scale, showTs, rs, re, volta: h.volta || null,
+        tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices, marker: h.marker || '' };
     });
-    const fixed = (b) => b.tsW + HEAD_OFF + 0.2 * SP;
+    const fixed = (b) => b.tsW + HEAD_OFF + 0.2 * SP + (b.re ? REP_W : 0);
     const width = (b) => fixed(b) + b.L * b.scale;
 
     // line breaks: as many bars as fit (or the chosen number), a bar may start a new line
@@ -358,7 +362,7 @@
         const num = String(b.ts[0]), den = String(b.ts[1]);
         const put = (str, y) => {
           const w = str.length * 1.9 * SP;
-          let x = b.x + TS_W / 2 - w / 2 + 0.05 * SP;
+          let x = b.x + (b.rs ? REP_W : 0) + TS_W / 2 - w / 2 + 0.05 * SP;
           for (const d of str) {
             o.push(glyph(TS_DIGIT(+d), x, y));
             x += 1.9 * SP;
@@ -368,7 +372,16 @@
         put(den, 3 * SP);
       }
       const end = b.x + b.w;
-      if (i === L.bars.length - 1) {
+      const dots = (x) => [1.5, 2.5].map((y) => `<circle class="repeat-dot" cx="${f(x)}" cy="${f(y * SP)}" r="${f(0.22 * SP)}"/>`).join('');
+      if (b.rs) {
+        // |: thick line, thin line, two dots
+        o.push(rect(b.x, 0, 0.5 * SP, 4 * SP, 'barline-thick'), line(b.x + 0.85 * SP, 0, b.x + 0.85 * SP, 4 * SP, 'barline'), dots(b.x + 1.25 * SP));
+      }
+      if (b.re) {
+        // :| two dots, thin line, thick line; played more than twice: "3×" above
+        o.push(dots(end - 1.25 * SP), line(end - 0.85 * SP, 0, end - 0.85 * SP, 4 * SP, 'barline'), rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
+        if (b.re > 2) o.push(`<text class="repeat-count" x="${f(end - 0.2 * SP)}" y="${f(-0.8 * SP)}">${b.re}×</text>`);
+      } else if (i === L.bars.length - 1) {
         o.push(line(end - 0.75 * SP, 0, end - 0.75 * SP, 4 * SP, 'barline'));
         o.push(rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
       } else {
@@ -390,6 +403,22 @@
         o.push(`<g class="marker">${rect(x, TEXT_Y - 1.4 * SP, w, 1.95 * SP, 'marker-box')}` +
           `<text class="marker-text" x="${f(x + 0.5 * SP)}" y="${f(TEXT_Y)}">${esc(b.marker)}</text></g>`);
       }
+    });
+
+    // endings (1. / 2.): a bracket over the bars of one ending, per line; open at the right after the last one
+    const vkey = (b) => (b && b.volta ? b.volta.join(',') : '');
+    L.bars.forEach((b, i) => {
+      if (!b.volta || (i > 0 && vkey(L.bars[i - 1]) === vkey(b) && L.bars[i - 1].sys === b.sys)) return;
+      let j = i;
+      while (j + 1 < L.bars.length && vkey(L.bars[j + 1]) === vkey(b) && L.bars[j + 1].sys === b.sys) j++;
+      const last = L.bars[j], x1 = b.x + 0.3 * SP, x2 = last.x + last.w - 0.4 * SP;
+      const more = L.bars[j + 1] && L.bars[j + 1].volta && L.bars[j + 1].sys === b.sys; // another ending follows: closed
+      const hook = 1.4 * SP;
+      const startsHere = i === 0 || vkey(L.bars[i - 1]) !== vkey(b); // (not a continuation on a new line)
+      let d = `M${f(x1)},${f(VOLTA_Y + (startsHere ? hook : 0))} L${f(x1)},${f(VOLTA_Y)} L${f(x2)},${f(VOLTA_Y)}`;
+      if (more || last.re) d += ` L${f(x2)},${f(VOLTA_Y + hook)}`;
+      O(b).push(`<path class="volta" d="${d}"/>`);
+      if (startsHere) O(b).push(`<text class="volta-text" x="${f(x1 + 0.4 * SP)}" y="${f(VOLTA_Y + 1.15 * SP)}">${b.volta.join('., ')}.</text>`);
     });
 
     // notes

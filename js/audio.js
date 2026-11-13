@@ -238,7 +238,7 @@
 
   const P = (TC.player = { playing: false });
   const AHEAD = 0.15;
-  let tl = null, idx = 0, t0 = 0, timer = 0, raf = 0, rev = -1, tempo = 0, range = null, loopLen = 0, lap = 0, until = -1, bus = null;
+  let shownN = 0, tl = null, idx = 0, t0 = 0, timer = 0, raf = 0, rev = -1, tempo = 0, range = null, loopLen = 0, lap = 0, until = -1, bus = null;
 
   function build() {
     tl = TC.timeline.build(S.doc, { from: range[0], to: range[1], metronome: S.settings.metronome, countIn: S.settings.countIn && lap === 0 });
@@ -303,6 +303,12 @@
       return;
     }
     const c = TC.render.drawCursor(pos.bar, pos.tick, S.settings.loop ? range : null);
+    // status bar: the written bar, its pass through a repeat, and the played bar number (as in Cubase)
+    if (pos.n && pos.n !== shownN) {
+      shownN = pos.n;
+      TC.ui.status(`${TC.tr('Bar')} ${pos.bar + 1}${pos.pass > 1 ? ` (${pos.pass}.)` : ''}` +
+        (TC.score.hasRepeats(S.doc) ? ` · ${TC.tr('played bar {n}', { n: pos.n })}` : ''));
+    }
     if (!c) return;
     // keep the cursor in view: sideways (endless view), its line downwards (page view)
     const vp = document.getElementById('viewport');

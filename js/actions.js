@@ -573,6 +573,59 @@
   };
 
   /** Right-click on a bar. */
+  // ---- Repeats and endings (played / exported written out, model.js playOrder) ----------------
+
+  A.toggleRepeatStart = function (i = curBar()) {
+    S.doc.bars[i].repeatStart = !S.doc.bars[i].repeatStart;
+    TC.commit();
+  };
+  /** Repeat end at bar i: played n times in all (0: none). */
+  A.setRepeatEnd = function (n, i = curBar()) {
+    n = TC.clamp(Math.round(Number(n) || 0), 0, 9);
+    S.doc.bars[i].repeatEnd = n > 1 ? n : 0;
+    TC.commit();
+  };
+  /** Ending of bar i: '' none, '1', '2', '1,2' … */
+  A.setVolta = function (v, i = curBar()) {
+    S.doc.bars[i].volta = TC.cleanVolta(String(v || '').split(',').map(Number));
+    TC.commit();
+  };
+  /** The selected bars as a repeat (|: … :|, twice). */
+  A.repeatSelection = function (times = 2) {
+    const R = TC.barRange();
+    if (!R) return TC.ui.hint(tr('Select bars first'));
+    S.doc.bars[R[0]].repeatStart = true;
+    S.doc.bars[R[1]].repeatEnd = TC.clamp(Number(times) || 2, 2, 9);
+    TC.commit();
+    TC.ui.hint(tr('Bars {a}–{b} are repeated', { a: R[0] + 1, b: R[1] + 1 }));
+  };
+  /** Write the repeats out in the score: bar numbers as in Cubase (one undo step). */
+  A.unfoldRepeats = function () {
+    if (!TC.score.hasRepeats(S.doc)) return TC.ui.hint(tr('The score has no repeats'));
+    if (!confirm(tr('Write the repeats out as bars of their own? The bar numbers will then be those of Cubase. (Undo is possible.)'))) return;
+    const n = TC.score.unfold(S.doc);
+    TC.selectBar(null);
+    S.selection.clear();
+    TC.commit();
+    TC.ui.hint(tr('Repeats written out: {n} bars', { n }));
+  };
+  const VOLTAS = [['', '–'], ['1', '1.'], ['2', '2.'], ['3', '3.'], ['4', '4.'], ['1,2', '1., 2.'], ['1,2,3', '1., 2., 3.']];
+  A.VOLTAS = VOLTAS;
+  /** Submenu "Repeat" of bar i. */
+  function repeatItems(i) {
+    const h = S.doc.bars[i], R = TC.barRange(), vk = (h.volta || []).join(',');
+    const items = [
+      { label: 'Repeat starts here |:', checked: !!h.repeatStart, action: () => A.toggleRepeatStart(i) },
+      { label: 'Repeat ends here :|', submenu: [0, 2, 3, 4, 5, 6].map((n) => ({
+        label: n ? tr('{n} times', { n }) : tr('none'), checked: (h.repeatEnd || 0) === n, action: () => A.setRepeatEnd(n, i),
+      })) },
+      { label: 'Ending (1st / 2nd time bar)', submenu: VOLTAS.map(([v, l]) => ({ label: l, checked: vk === v, action: () => A.setVolta(v, i) })) },
+    ];
+    if (R && R[1] > R[0]) items.unshift({ label: tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }), action: () => A.repeatSelection(2) }, '-');
+    items.push('-', { label: 'Write the repeats out (bar numbers as in Cubase)…', action: A.unfoldRepeats, disabled: !TC.score.hasRepeats(S.doc) });
+    return items;
+  }
+
   /** Select the bars from the selected one (or `from`) up to bar i (e.g. to play / loop them). */
   A.selectBarsTo = function (i, from) {
     i = Number(i);
@@ -609,6 +662,7 @@
     TC.menu.open([
       { label: 'Time signature from here', submenu: sigs.concat(['-', { label: 'Other…', action: () => A.customTimeSig(i) }]) },
       beamItems.length ? { label: 'Beam groups', submenu: beamItems } : null,
+      { label: 'Repeat', submenu: repeatItems(i) },
       '-',
       extend,
       play,

@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!--
-    Local only: the browser blocks every connection to other servers. Everything comes
+    Only connections to Dropbox are allowed (songs and kit profiles, js/dropbox.js); everything else comes
     from this folder / site; the music font is embedded (css/bravura.css, data: URL).
     'unsafe-inline' only for styles (positions set with style attributes).
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; font-src 'self' file: data:; connect-src 'self' file:; worker-src 'self'; manifest-src 'self' file:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; font-src 'self' file: data:; connect-src 'self' file: https://api.dropboxapi.com https://content.dropboxapi.com; worker-src 'self'; manifest-src 'self' file:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Tactus</title>
   <meta name="theme-color" content="#2b6cde">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -96,6 +96,7 @@
   <script src="js/playback.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/dropbox.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

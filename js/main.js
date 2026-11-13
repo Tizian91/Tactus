@@ -33,8 +33,9 @@
     TC.render.draw();
     TC.panel.update();
     const file = document.getElementById('status-file');
-    file.textContent = (S.dirty ? '● ' : '') + S.file.name;
-    file.title = S.dirty ? tr('Unsaved changes (kept in the browser)') : '';
+    file.textContent = (S.dirty ? '● ' : '') + (S.file.dropbox ? '☁ ' : '') + S.file.name;
+    file.title = (S.file.dropbox ? tr('In Dropbox: {path}', { path: S.file.dropbox.path }) + ' · ' : '') +
+      (S.dirty ? tr('Unsaved changes (kept in the browser)') : '');
     document.querySelector('#toolbar [data-action="undo"]').disabled = !TC.history.undoStack.length;
     document.querySelector('#toolbar [data-action="redo"]').disabled = !TC.history.redoStack.length;
     document.querySelector('#toolbar [data-action="toggleDrumMap"]').classList.toggle('active', !!S.settings.showDrumMap);
@@ -99,6 +100,8 @@
     if (back) {
       S.doc = back.doc;
       S.file.name = back.name || S.file.name;
+      S.file.dropbox = back.dropbox;
+      S.file.saved = !!back.dropbox;
       S.dirty = back.dirty;
     } else {
       S.doc = TC.storage.demoDoc(); // first start: an example to look at
@@ -131,6 +134,8 @@
     if (toStart) TC.actions.home();
     TC.refresh();
     UI.hint(tr('Welcome to Tactus'));
+    // back from the Dropbox sign-in / already connected: kit profiles in step
+    if (TC.dropbox) TC.dropbox.start();
     // the music font may arrive a moment later: draw again, so widths fit
     if (document.fonts && document.fonts.load) document.fonts.load('40px Bravura').then(() => TC.refresh());
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

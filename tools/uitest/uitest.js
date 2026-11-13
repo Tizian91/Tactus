@@ -177,6 +177,11 @@ setTimeout(() => {
   ok('playing ' + document.getElementById('play-btn').textContent, TC.player.playing && document.getElementById('play-btn').textContent === '■');
   TC.player.stop();
   ok('stopped', !TC.player.playing && document.getElementById('play-btn').textContent === '▶');
+  // file menu: Dropbox entry (as a file page: only the hint that it needs the online version)
+  TC.actions.fileMenu();
+  const menuText = document.getElementById('context-menu').textContent;
+  TC.menu.close();
+  ok('file menu has the Dropbox entry', /Dropbox/.test(menuText) && /Öffnen/.test(menuText));
   TC.setLang('en');
   ok('English toolbar', document.getElementById('file-btn').textContent === 'File ▾');
   TC.setLang('de');

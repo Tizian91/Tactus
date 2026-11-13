@@ -119,6 +119,14 @@ Formate und MIDI-Werte wie in Guitar Pro.
 - Änderungen während des Abspielens sind sofort zu hören; Klang beim Setzen einer Note
 - Später: echte Samples, Swing / Shuffle, Tempo pro Takt im Panel, Wiederholungszeichen beim Abspielen
 
+## Dropbox ✅ (zum Ausprobieren)
+
+- Datei → „Mit Dropbox verbinden…“ (nur online, https): eigene Dropbox-App, nur der App-Ordner
+- Songs: „Aus Dropbox öffnen…“, „In Dropbox speichern (unter…)“; Strg+S speichert einen Dropbox-Song dorthin zurück,
+  bei Änderung auf einem anderen Gerät wird gefragt (überschreiben oder neuer Name)
+- Kit-Profile: `Kit-Profile/Kits.tactus-kits.json`, jede Änderung wird hochgeladen, beim Start abgeglichen
+- Lokale Dateien (Öffnen / Speichern unter, Export / Import der Kit-Profile) bleiben wie gehabt
+
 ## Offen zum Ausprobieren
 
 - Fühlt sich das Raster richtig an (Breite der Zellen, Einrasten, Vorschau)?

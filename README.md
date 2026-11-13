@@ -9,6 +9,14 @@ Values and MIDI numbers follow Guitar Pro, so scores can later go to Guitar Pro 
 **As a web app:** put the folder on any web server with https (e.g. GitHub Pages) – Chrome / Edge then
 offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 
+**Dropbox (online version):** File → *Connect Dropbox…*. Each user signs in with their own Dropbox (OAuth 2
+with PKCE, no app secret, no server; app key in `js/dropbox.js`). The app sees only its app folder
+`Apps/<app name>/`: songs in `Songs/` (*Open from / Save to Dropbox*; saving again checks for changes made on
+another device), all kit profiles in `Kit-Profile/Kits.tactus-kits.json` (kept in step automatically).
+Opening / saving files on the device and the export / import of kit profiles work as before.
+Redirect URIs in the Dropbox App Console: `https://tizian91.github.io/Tactus/` and `…/Tactus/index.html`.
+Not available when `index.html` is opened as a file (Dropbox needs https).
+
 ## How it works
 
 - Choose a **note value** on the left (keys `1`–`7`, `.` dotted, `T` triplet). It is also the **click grid**:
@@ -79,6 +87,7 @@ offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 | `js/contextmenu.js` | Menus (from MindMapper) |
 | `js/storage.js` | Open / save `*.tactus.json`, autosave in the browser, example groove |
 | `js/i18n.js` | German / English, light / dark theme |
+| `js/dropbox.js` | Dropbox: sign-in, songs (open / save), kit profiles in step |
 | `js/main.js` | Startup, toolbar, status bar |
 | `css/bravura.css` | The music font, embedded (built by `tools/make_font_css.js`) |
 

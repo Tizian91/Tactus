@@ -534,8 +534,8 @@
       shiftDown = true;
       I.refreshHover();
     }
-    if ((TC.kits && TC.kits.isOpen()) || (TC.midiIn && TC.midiIn.isOpen())) {
-      if (e.key === 'Escape') { TC.kits.close(); TC.midiIn.close(); }
+    if ((TC.kits && TC.kits.isOpen()) || (TC.midiIn && TC.midiIn.isOpen()) || (TC.dropbox && TC.dropbox.isOpen())) {
+      if (e.key === 'Escape') { TC.kits.close(); TC.midiIn.close(); TC.dropbox.close(); }
       return;
     }
     if (TC.menu.isOpen()) return;

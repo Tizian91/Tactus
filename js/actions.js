@@ -454,6 +454,32 @@
   A.saveAs = () => TC.storage.save(true);
   A.demo = () => TC.storage.loadDemo();
 
+  // ---- Dropbox (js/dropbox.js) ----------------------------------------------------------------
+  A.dropboxConnect = () => TC.dropbox.login(null);
+  A.dropboxOpen = () => TC.dropbox.openSongs(); // asks about unsaved changes when a song is chosen
+  A.dropboxSave = () => TC.dropbox.saveSong(false);
+  A.dropboxSaveAs = () => TC.dropbox.saveSong(true);
+  A.dropboxDisconnect = async function () {
+    if (!confirm(tr('Disconnect Dropbox in this browser? Your files stay in Dropbox.'))) return;
+    await TC.dropbox.disconnect();
+    if (S.file.dropbox) S.file.dropbox = null;
+    TC.storage.autosave();
+    TC.refresh();
+    TC.ui.hint(tr('Dropbox disconnected'));
+  };
+  function dropboxItems() {
+    const DB = TC.dropbox;
+    if (!DB || !DB.allowed) return [{ label: 'Dropbox (online version only)', disabled: true }];
+    if (!DB.signedIn()) return [{ label: 'Connect Dropbox…', action: A.dropboxConnect }];
+    const acc = DB.account();
+    return [
+      { label: 'Open from Dropbox…', action: A.dropboxOpen },
+      { label: 'Save to Dropbox', action: A.dropboxSave, shortcut: S.file.dropbox ? 'Ctrl+S' : '' },
+      { label: 'Save to Dropbox as…', action: A.dropboxSaveAs },
+      { label: TC.tr('Disconnect Dropbox') + (acc ? ' (' + acc + ')' : ''), action: A.dropboxDisconnect },
+    ];
+  }
+
   A.fileMenu = function () {
     const r = document.getElementById('file-btn').getBoundingClientRect();
     TC.menu.open([
@@ -462,6 +488,8 @@
       '-',
       { label: 'Save', action: A.save, shortcut: 'Ctrl+S' },
       { label: 'Save as…', action: A.saveAs, shortcut: 'Ctrl+Shift+S' },
+      '-',
+      ...dropboxItems(),
       '-',
       { label: 'Load example groove', action: A.demo },
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },

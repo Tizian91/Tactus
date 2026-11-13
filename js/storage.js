@@ -64,7 +64,7 @@
   };
   ST.autosave = function () {
     clearTimeout(timer);
-    safeSet(AUTOSAVE_KEY, JSON.stringify({ doc: S.doc, file: { name: S.file.name, saved: S.file.saved }, dirty: S.dirty }));
+    safeSet(AUTOSAVE_KEY, JSON.stringify({ doc: S.doc, file: { name: S.file.name, saved: S.file.saved, dropbox: S.file.dropbox || null }, dirty: S.dirty }));
     TC.saveSettings();
   };
   /** The score of the last session, or null. */
@@ -72,7 +72,11 @@
     try {
       const data = JSON.parse(safeGet(AUTOSAVE_KEY) || 'null');
       if (!data || !data.doc) return null;
-      return { doc: TC.normalizeDoc(data.doc), name: data.file && String(data.file.name || '').replace(/\.notewriter\.json$/, '.tactus.json'), dirty: !!data.dirty };
+      const db = data.file && data.file.dropbox;
+      return {
+        doc: TC.normalizeDoc(data.doc), name: data.file && String(data.file.name || '').replace(/\.notewriter\.json$/, '.tactus.json'), dirty: !!data.dirty,
+        dropbox: db && typeof db.path === 'string' ? { path: db.path, rev: db.rev || null } : null,
+      };
     } catch (e) {
       return null;
     }
@@ -87,12 +91,13 @@
 
   // ---- Files ------------------------------------------------------------------------------
 
-  function setDoc(doc, name, handle) {
+  /** Show a score. handle: local file (File System Access API); dropbox: { path, rev } of a Dropbox file. */
+  function setDoc(doc, name, handle, dropbox) {
     S.doc = doc;
     S.selection.clear();
     S.selBar = null;
     S.hover = null;
-    S.file = { handle: handle || null, name: name || 'Untitled.tactus.json', saved: !!handle };
+    S.file = { handle: handle || null, name: name || 'Untitled.tactus.json', saved: !!(handle || dropbox), dropbox: dropbox || null };
     S.dirty = false;
     TC.history.reset();
     S.rev++;
@@ -124,6 +129,8 @@
   };
 
   ST.save = async function (saveAs) {
+    // a song from Dropbox goes back there ("Save as…" saves a copy on this device)
+    if (!saveAs && S.file.dropbox && TC.dropbox && TC.dropbox.allowed) return TC.dropbox.saveSong(false);
     const text = toText();
     try {
       if (window.showSaveFilePicker) {

@@ -214,13 +214,15 @@
       K.list = [];
     }
   };
-  K.save = function () {
+  /** Keep the profiles in the browser; when connected also in Dropbox (fromSync: they came from there). */
+  K.save = function (fromSync) {
     try {
       localStorage.setItem(KEY, JSON.stringify({ version: 1, profiles: K.list }));
-      return true;
     } catch (e) {
       return false;
     }
+    if (!fromSync && TC.dropbox) TC.dropbox.kitsChanged();
+    return true;
   };
   K.byId = (id) => K.list.find((p) => p.id === id) || null;
 

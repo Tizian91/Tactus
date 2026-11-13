@@ -361,6 +361,16 @@ details > summary { list-style-position: outside; }
 .kit-table select { width: 100%; max-width: 280px; }
 .kit-table input { width: 100%; max-width: 140px; }
 .kit-body .hint.warn { color: var(--danger); }
+/* ---- Dropbox songs (js/dropbox.js) ---- */
+.db-dialog { width: min(560px, 100%); }
+.db-row { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--border); }
+.db-row:first-child { border-top: none; }
+.db-song { flex: 1; display: flex; align-items: baseline; gap: 10px; border: none; background: none; text-align: left; padding: 9px 6px; min-width: 0; }
+.db-song .db-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-song .muted { font-size: 12px; white-space: nowrap; }
+.db-row button.icon { border: none; background: none; opacity: 0.6; }
+.db-row button.icon:hover { opacity: 1; }
+.db-list .hint.warn { color: var(--danger); }
 .status-btn { border: none; background: none; padding: 0 4px; font-size: 12px; color: var(--label); border-radius: 4px; }
 .status-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .status-btn.missing { color: var(--danger); }

@@ -346,7 +346,14 @@ setTimeout(() => {
     ok('notation tactus: kick on the bottom line, floor tom on G4, crash 2 above', TC.drums.byId(36).line === 8 && TC.drums.byId(45).line === 6 && TC.drums.byId(57).line === -3);
     ok('notation tactus: a click on the bottom line writes the kick (not the pedal)', TC.drums.resolve(8, 42, TC.drums.kit()).id === 36);
     ok('notation tactus: a click on the top line writes the ride (not tom 1)', TC.drums.resolve(0, 42, TC.drums.kit()).id === 51);
-    ok('notation: panel offers it', !!document.querySelector('select[data-action="setNotation"] option[value="tactus"][selected]'));
+    ok('right panel is short: no drum kit, page, view there', !document.querySelector('#panel-settings select[data-action="setNotation"]') && !document.querySelector('#panel-settings select[data-action="setKit"]') && !!document.querySelector('#panel-settings [data-action="openSettings"]'));
+    TC.actions.openSettings();
+    ok('notation: the settings window offers it', !!document.querySelector('.settings-dialog select[data-action="setNotation"] option[value="tactus"][selected]') && document.getElementById('settings-btn').classList.contains('active'));
+    TC.actions.setKit('all');
+    ok('settings window: changes apply and it stays open', TC.panel.isSettingsOpen() && document.querySelector('.settings-dialog select[data-action="setKit"]').value === 'all');
+    TC.actions.setKit('standard');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    ok('settings window: Escape closes it', !TC.panel.isSettingsOpen() && !document.querySelector('.settings-dialog'));
     const sk = document.getElementById('status-kit');
     ok('status bar: kit General MIDI for a new score (' + sk.textContent + ')', /General MIDI/.test(sk.textContent));
     const saveKits = TC.kits.save; TC.kits.save = () => true;

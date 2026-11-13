@@ -83,7 +83,7 @@
       ${btn('toggleLock', undefined, `🔒 ${tr('Lock instrument')}`, lock, tr('A click anywhere in the column writes the selected instrument (L, or hold Shift)'), 'lock-btn')}
       <p class="hint tight">${lock ? tr('On: the height no longer matters.') : tr('Hold Shift: lock while held · L: switch')}</p>
       ${groups}
-      <p class="hint">${tr('Other instruments: drum kit in the settings panel.')}</p></section>`;
+      <p class="hint">${tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
   }
 
   function noteSection(hit) {
@@ -261,7 +261,7 @@
       [tr('Del'), tr('Delete selected notes')], ['Ctrl+Z / Y', tr('Undo / redo')],
       [tr('Wheel'), tr('Scroll (Ctrl: zoom, Shift: up/down)')], [tr('Space+drag'), tr('Move the view')],
     ];
-    return `<section><details><summary><h3 class="inline">${tr('Keyboard shortcuts')}</h3></summary>
+    return `<section><details class="keys-list"><summary><h3 class="inline">${tr('Keyboard shortcuts')}</h3></summary>
       <dl class="keys">${k.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('')}</dl></details></section>`;
   }
 
@@ -283,16 +283,59 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
-    const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, S.doc.tracks[0].fill, S.doc.page, lang,
+    const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
       S.settings, !!S.clipboard, S.doc.bars.length]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
-      const open = setRoot.querySelector('details.kit-list[open]') !== null;
-      setRoot.innerHTML = head(tr('Settings'), 'right') + barSection() + playSection() + scoreSection() + pageSection() + kitSection() + viewSection() + keysSection();
-      if (open) setRoot.querySelector('details.kit-list').open = true;
+      // what is needed while writing; the rest is in the settings window (⚙)
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + barSection() + playSection() + scoreSection() +
+        `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       setRoot.scrollTop = scroll;
     }
+    if (dlg) {
+      const body = dlg.querySelector('.settings-body');
+      const keyD = JSON.stringify([S.settings, S.doc.page, S.doc.tracks[0].fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length]);
+      if ((force || keyD !== lastDlg) && !(!force && typing(body))) {
+        lastDlg = keyD;
+        const scroll = body.scrollTop;
+        const open = body.querySelector('details.kit-list[open]') !== null;
+        const keys = body.querySelector('details.keys-list[open]') !== null;
+        body.innerHTML = kitSection() + pageSection() + viewSection() + keysSection();
+        if (open) body.querySelector('details.kit-list').open = true;
+        if (keys) body.querySelector('details.keys-list').open = true;
+        body.scrollTop = scroll;
+      }
+    }
+  };
+
+  // ---- Settings window (⚙ in the toolbar): drum kit, notation, page, view, keys ----------------
+  // set once and then rarely touched - kept out of the panel, so the panel stays short
+
+  let dlg = null, lastDlg = '';
+  P.isSettingsOpen = () => !!dlg;
+  P.openSettings = function () {
+    if (dlg) return P.closeSettings();
+    dlg = document.createElement('div');
+    dlg.className = 'dialog-backdrop';
+    dlg.innerHTML = `<div class="dialog settings-dialog" role="dialog" aria-modal="true">
+      <header><h2>⚙ ${esc(tr('Settings'))}</h2><button type="button" class="icon" data-close title="${esc(tr('Close'))}">✕</button></header>
+      <div class="settings-body"></div></div>`;
+    dlg.addEventListener('pointerdown', (e) => { if (e.target === dlg) P.closeSettings(); });
+    dlg.addEventListener('click', (e) => {
+      if (e.target.closest('[data-close]')) return P.closeSettings();
+      onClick(e);
+    });
+    dlg.addEventListener('change', onChange);
+    document.body.appendChild(dlg);
+    lastDlg = '';
+    P.update(true);
+    document.getElementById('settings-btn').classList.add('active');
+  };
+  P.closeSettings = function () {
+    if (dlg) dlg.remove();
+    dlg = null;
+    document.getElementById('settings-btn').classList.remove('active');
   };
 
   P.rebuild = () => P.update(true);

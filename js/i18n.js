@@ -39,7 +39,7 @@
     'Instrument lock on: the height no longer matters': 'Instrument-Sperre an: Die Höhe spielt keine Rolle mehr',
     'Instrument lock off': 'Instrument-Sperre aus',
     'instrument lock': 'Instrument-Sperre',
-    'Other instruments: drum kit in the settings panel.': 'Weitere Instrumente: Drum-Kit im Einstellungs-Panel.',
+    'Other instruments: drum kit in the settings (⚙).': 'Weitere Instrumente: Drum-Kit in den Einstellungen (⚙).',
     'Drum kit': 'Drum-Kit',
     Kit: 'Kit',
     Notation: 'Darstellung',
@@ -348,6 +348,13 @@
     'Repeats written out: {n} bars': 'Wiederholungen ausgeschrieben: {n} Takte',
     'Bar {n} – {p}. time': 'Takt {n} – {p}. Mal',
     'played bar {n}': 'gespielt Takt {n}',
+    // settings window
+    'Bar · score': 'Takt · Stück',
+    'Show / hide the panel for bar, playback and score': 'Panel für Takt, Wiedergabe und Stück ein-/ausblenden',
+    'Show the panel for bar, playback and score': 'Panel für Takt, Wiedergabe und Stück zeigen',
+    'More settings…': 'Weitere Einstellungen…',
+    'Drum kit, notation, page, view, keyboard shortcuts': 'Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
+    'Settings: drum kit, notation, page, view, keyboard shortcuts': 'Einstellungen: Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
     // several bars
     Bars: 'Takte',
     'to bar': 'bis Takt',

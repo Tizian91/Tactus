@@ -168,11 +168,11 @@ input[type="number"] { width: 70px; }
 /* ---- Panels ---------------------------------------------------------------- */
 
 .panel { background: var(--panel); overflow-y: auto; overflow-x: hidden; padding: 0 0 20px; min-width: 0; }
-.panel section { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.panel section, .settings-body section { padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .panel section.has-sel { background: var(--accent-soft); }
-.panel h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.panel h3.inline { display: inline; margin: 0; }
-.panel h3.sub { margin-top: 14px; }
+.panel h3, .settings-body h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.panel h3.inline, .settings-body h3.inline { display: inline; margin: 0; }
+.panel h3.sub, .settings-body h3.sub { margin-top: 14px; }
 .hint.tight { margin: 4px 0 8px; }
 .btn-row.two button { flex: 1; justify-content: center; min-height: 34px; }
 .lock-btn { width: 100%; min-height: 38px; font-weight: 600; }
@@ -376,6 +376,10 @@ details > summary { list-style-position: outside; }
 .db-row button.icon { border: none; background: none; opacity: 0.6; }
 .db-row button.icon:hover { opacity: 1; }
 .db-list .hint.warn { color: var(--danger); }
+.settings-dialog { width: min(560px, 100%); }
+.settings-body { overflow-y: auto; flex: 1; }
+.settings-body section:last-child { border-bottom: none; }
+button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .status-btn { border: none; background: none; padding: 0 4px; font-size: 12px; color: var(--label); border-radius: 4px; }
 .status-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .status-btn.missing { color: var(--danger); }

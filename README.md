@@ -39,8 +39,9 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
 - With notes selected the note panel changes them (accent, ghost note, notehead, instrument, value).
 - **Right-click a bar**: time signature (from this bar on), insert / clear / delete bars.
 - **Two panels:** the note panel (left) holds what every note needs, for the hand that does not hold the pen /
-  mouse; the settings panel (right) holds score, bar, drum kit and view. **Left-handed mode** swaps them.
-- **Drum kit** (settings panel): standard 5-piece, large, all, or a custom choice – only these instruments appear
+  mouse; the panel "Bar · score" (right) holds bar, playback and score. **Left-handed mode** swaps them. Set once
+  and rarely changed: the **settings window** (⚙ in the toolbar) – drum kit, notation, page, view, keyboard shortcuts.
+- **Drum kit** (settings ⚙): standard 5-piece, large, all, or a custom choice – only these instruments appear
   in the note panel and the drum map.
 - **Notation** (settings panel → drum kit): "Tactus" (default; kick and pedal hi-hat on the bottom line, toms from
   the top line down, crash 2 / china / splash above the hi-hat) or "Guitar Pro". Only the drawing changes.

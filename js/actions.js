@@ -332,6 +332,8 @@
     TC.panel.applyLayout();
   };
   A.togglePanelRight = () => A.togglePanel('right');
+  /** Settings window (drum kit, notation, page, view, keys): open / close. */
+  A.openSettings = () => TC.panel.openSettings();
   /** Left-handed: the note panel goes to the right, the settings to the left. */
   /** Fingers write notes on the lines (off: pen / mouse only, a finger selects and scrolls). */
   A.toggleFingerWrites = function () {

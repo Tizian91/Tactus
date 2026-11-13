@@ -131,6 +131,12 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## Aufgeräumt: Panel und Einstellungsfenster ✅
+
+- Rechtes Panel „Takt · Stück“: nur noch Takt, Wiedergabe, Stück
+- **Einstellungsfenster** (⚙ in der Werkzeugleiste, oder „Weitere Einstellungen…“ unten im Panel): Drum-Kit,
+  Darstellung, Kit-Profile, Drum-Map, Seite, Ansicht, Tastenkürzel; Esc / ✕ / Klick daneben schließt es
+
 ## Wiederholungen ✅ (zum Ausprobieren)
 
 - Taktmenü → Wiederholung bzw. Takt-Panel: |: Anfang, :| Ende (2×, 3× …), Klammern 1. / 2. (auch über mehrere Takte);

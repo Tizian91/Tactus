@@ -628,8 +628,16 @@
       shiftDown = true;
       I.refreshHover();
     }
-    if ((TC.kits && TC.kits.isOpen()) || (TC.midiIn && TC.midiIn.isOpen()) || (TC.dropbox && TC.dropbox.isOpen())) {
-      if (e.key === 'Escape') { TC.kits.close(); TC.midiIn.close(); TC.dropbox.close(); }
+    // a window is open: Esc closes the top one (kit profiles may be open above the settings)
+    const kitsOpen = TC.kits && TC.kits.isOpen(), midiOpen = TC.midiIn && TC.midiIn.isOpen();
+    const dbOpen = TC.dropbox && TC.dropbox.isOpen(), setOpen = TC.panel.isSettingsOpen();
+    if (kitsOpen || midiOpen || dbOpen || setOpen) {
+      if (e.key === 'Escape') {
+        if (kitsOpen) TC.kits.close();
+        else if (midiOpen) TC.midiIn.close();
+        else if (dbOpen) TC.dropbox.close();
+        else TC.panel.closeSettings();
+      }
       return;
     }
     if (TC.menu.isOpen()) return;

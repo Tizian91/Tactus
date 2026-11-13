@@ -311,7 +311,7 @@
         <table class="kit-table"><thead><tr><th>${tr('Line')}</th><th>${tr('Instrument')}</th><th>${tr('Key in the drum map')}</th><th>${tr('More keys')}</th></tr></thead><tbody>${rows}</tbody></table>
         ${alike.length ? `<p class="hint warn"><b>${tr('Look the same in Cubase (same line and notehead):')}</b> ${alike.map((g) => g.map((a) => esc(TC.drums.label(a))).join(' / ') + ' (' + K.lineName(K.place(g[0]).line) + ')').join(' · ')}</p>` : ''}
         ${odd.length ? `<p class="hint warn"><b>${tr('Please check (same output note as another instrument):')}</b> ${odd.map((e) => esc(keyLabel(e)) + ' = ' + esc(TC.drums.label(TC.drums.byId(e.art)))).join(' · ')}</p>` : ''}
-        ${free.length ? `<p class="hint"><b>${tr('Drum keys without a Tactus instrument:')}</b> ${free.map((e) => esc(keyLabel(e))).join(' · ')}</p>` : ''}`;
+        ${free.length ? `<details class="hint kit-free"><summary>${tr('{n} more keys of the drum map have no Tactus instrument (info)', { n: free.length })}</summary>${free.map((e) => esc(keyLabel(e))).join(' · ')}</details>` : ''}`;
     }
     box.innerHTML = `<header><h2>${tr('Kit profiles')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
       <div class="kit-bar">

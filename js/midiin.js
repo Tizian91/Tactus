@@ -268,13 +268,19 @@
       const g = GRIDS.find((x) => x.key === st.grid) || GRIDS[0];
       return MI.toScore(midi, { profile: st.source ? TC.kits.byId(st.source) : null, grid: g.grid, triplets: g.triplets });
     };
+    /** Name of a key in the chosen drum map ("73 Floortom 2 Rimshot"), or just the number. */
+    const keyName = (note) => {
+      const p = st.source ? TC.kits.byId(st.source) : null;
+      const e = p && TC.kits.map(p).entries.find((x) => x.inote === note);
+      return e && !TC.kits.noName(e) ? note + ' ' + e.name : String(note);
+    };
     const draw = () => {
       const res = result();
       const sources = [`<option value="">General MIDI (Guitar Pro …)</option>`]
         .concat(TC.kits.list.map((p) => `<option value="${p.id}"${p.id === st.source ? ' selected' : ''}>${esc(tr('Kit profile: {name}', { name: p.name }))}</option>`)).join('');
       const grids = GRIDS.map((g) => `<option value="${g.key}"${g.key === st.grid ? ' selected' : ''}>${esc(tr(g.label))}</option>`).join('');
       const unk = res.unknown.length
-        ? `<p class="hint warn"><b>${tr('Keys without an instrument (left out):')}</b> ${res.unknown.map((u) => `${u.note} (${u.count}×)`).join(', ')}</p>` : '';
+        ? `<p class="hint warn"><b>${tr('Keys without an instrument (left out):')}</b> ${res.unknown.map((u) => esc(keyName(u.note)) + ` (${u.count}×)`).join(', ')}</p>` : '';
       root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Import MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
           <p><b>${esc(fileName)}</b></p>

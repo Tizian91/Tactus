@@ -58,6 +58,7 @@
     'more keys': 'weitere',
     'Line and notehead are fixed per instrument (Tactus notation, also in the Cubase drum map). Choose the key of your drum map for each one; more keys (e.g. 11, 61) are recognised on import.': 'Linie und Notenkopf sind pro Instrument fest (Tactus-Darstellung, auch in der Cubase-Drummap). Wähle für jedes die Taste aus deiner Drummap; weitere Tasten (z. B. 11, 61) werden beim Import erkannt. ◦ = gehört gerade zu einem anderen Instrument.',
     'Drum keys without a Tactus instrument:': 'Schlagzeug-Tasten ohne Instrument in Tactus:',
+    '{n} more keys of the drum map have no Tactus instrument (info)': '{n} weitere Tasten der Drummap haben kein Instrument in Tactus (nur zur Info)',
     'Please check (same output note as another instrument):': 'Bitte prüfen (gleiche Ausgangsnote wie ein anderes Instrument):',
     '(no name)': '(ohne Name)',
     'Export MIDI': 'MIDI exportieren',

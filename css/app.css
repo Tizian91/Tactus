@@ -364,3 +364,4 @@ details > summary { list-style-position: outside; }
 .status-btn { border: none; background: none; padding: 0 4px; font-size: 12px; color: var(--label); border-radius: 4px; }
 .status-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .status-btn.missing { color: var(--danger); }
+.kit-body details.kit-free { color: var(--muted); margin: 8px 0; } .kit-body details.kit-free summary { cursor: pointer; }

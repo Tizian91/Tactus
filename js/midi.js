@@ -29,6 +29,7 @@
     93: [51], 94: [51], 53: [51], 126: [51], 59: [93, 51], 127: [53, 51],
     97: [49], 57: [49], 98: [57, 97, 49], 55: [49], 95: [55, 49], 52: [49], 96: [52, 49], 30: [49],
     101: [56], 99: [56], 100: [56], 102: [56], 103: [56], 54: [56],
+    244: [46, 44], 82: [54], 75: [37, 31],
   };
 
   /** MIDI note (and channel) of an instrument for a target; records fallbacks. */
@@ -41,7 +42,7 @@
     };
     let k = pick(art.id);
     if (k) return k;
-    for (const id of FALLBACK[art.id] || []) {
+    for (const id of (FALLBACK[art.id] || []).concat(art.tom ? [art.tom] : [])) { // tom rim shot / rim -> the tom
       k = pick(id);
       if (k) {
         report.replaced.set(art.id, id);

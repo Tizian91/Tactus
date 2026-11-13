@@ -25,7 +25,7 @@ module.exports = function (T) {
   const byT = (a, b) => a[0] - b[0] || a[1] - b[1];
   const bar1 = gm.notes.filter((n) => n.t < 3840).map((n) => [n.t, n.note, n.vel, n.ch]).sort(byT);
   T.eq('bar 1 in General MIDI: kick + hi-hat, half-open hi-hat (46), accent loud, ghost soft, channel 10',
-    bar1, [[0, 36, 91, 9], [0, 42, 91, 9], [480, 46, 91, 9], [960, 38, 127, 9], [1440, 38, 38, 9]]);
+    bar1, [[0, 36, 91, 9], [0, 42, 91, 9], [480, 46, 91, 9], [960, 38, 127, 9], [1440, 38, 28, 9]]);
   T.eq('%-bar written out', gm.notes.filter((n) => n.t >= 3840 && n.note !== 49).map((n) => [n.t - 3840, n.note]).sort(byT), bar1.map((n) => [n[0], n[1]]));
   const crash = gm.notes.filter((n) => n.note === 49);
   T.eq('flam: soft grace note 30 ms before (90 BPM = 43 ticks)', crash.map((n) => [n.t - 7680, n.vel]), [[-43, 44], [0, 91]]);

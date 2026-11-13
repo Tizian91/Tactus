@@ -9,7 +9,7 @@
  *       start, end }                                  where the music starts (after the count-in) and ends
  *
  * How notes sound:
- *   velocity   ghost 0.3 · normal 0.72 · accent 1.0 · marcato 1.0 (and a bit longer) · note.vel wins
+ *   velocity   five steps (TC.STRENGTHS): ghost 0.22 · soft / strong note.vel · normal 0.72 · accent 1.15
  *   flam       one soft grace stroke 30 ms before · drag: two, 60 / 30 ms before
  *   roll       strokes fill the note: 1 stroke = eighths on a quarter, each further stroke halves
  *              (stroke count + flags of the note), 3 strokes are a closed (buzz) roll
@@ -29,9 +29,9 @@
   };
 
   T.velocity = function (n) {
-    if (typeof n.vel === 'number') return n.vel / 127;
-    if (n.ghost) return 0.3;
-    if (n.accent) return 1;
+    if (n.ghost) return 0.22;
+    if (n.accent) return 1.15; // a little louder than the loudest plain note (MIDI: 127)
+    if (typeof n.vel === 'number') return n.vel / 127; // soft / strong (TC.STRENGTHS)
     return 0.72;
   };
 

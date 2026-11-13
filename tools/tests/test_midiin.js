@@ -85,4 +85,11 @@ module.exports = function (T) {
   T.eq('… bar 1 untouched, bars 3-4 replaced, 4 bars', [art0(open, 0), art0(open, 1), art0(open, 2), art0(open, 3), open.bars.length], [51, '-', 42, 49, 4]);
   T.eq('… with the time signature of the file', open.bars[3].ts.join('/'), '3/4');
   T.eq('the whole file from bar 4 on: bars are added', [MI.insertInto(open, file, 3), open.bars.length, art0(open, 5)], [3, 6, 49]);
+
+  // five strength steps: ghost · soft · normal · strong · accent
+  T.eq('velocity -> step', [20, 60, 90, 110, 125].map((v) => TC.levelOfVelocity(v)), [0, 1, 2, 3, 4]);
+  const nn = TC.newDrumNote(38, {});
+  T.eq('steps: only ghost / accent marked, soft / strong as velocity', [0, 1, 2, 3, 4].map((lv) => { TC.setLevel(nn, lv); return [nn.ghost, nn.accent, nn.vel, TC.levelOf(nn)]; }),
+    [[true, 0, null, 0], [false, 0, 70, 1], [false, 0, null, 2], [false, 0, 110, 3], [false, 1, null, 4]]);
+  T.eq('played back: ghost softer, accent louder than strong', [0, 1, 2, 3, 4].map((lv) => { TC.setLevel(nn, lv); return Math.round(TC.timeline.velocity(nn) * 100) / 100; }), [0.22, 0.55, 0.72, 0.87, 1.15]);
 };

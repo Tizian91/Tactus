@@ -99,7 +99,17 @@
     A(31, 'perc', 3, 40, 'slashed', 'STK', 'Sticks', 'Sticks'),
     A(54, 'perc', 3, 54, 'triangle', 'TB', 'Tambourine', 'Tamburin'),
     A(30, 'perc', -3, 49, 'x', 'REV', 'Reverse cymbal', 'Reverse-Becken'),
+
+    // not in Guitar Pro's list (own ids; General MIDI note where there is one), for the drum VSTs
+    A(244, 'hihat', 9, 44, 'circleX', 'HH-P', 'Pedal hi-hat (open, splash)', 'Pedal offen (Splash)', { voice: 1, tech: 'open' }),
+    A(82, 'perc', 4, 82, 'triangle', 'SHK', 'Shaker', 'Shaker'),
+    A(75, 'perc', 5, 75, 'x', 'CLV', 'Claves / click', 'Claves / Klick'),
   ];
+  // every tom also as rim shot (diamond head) and rim only (cross): ids 200 + / 300 + the tom
+  for (const t of TC.DRUM_ARTS.filter((a) => a.el === 'tom').slice()) {
+    TC.DRUM_ARTS.push(A(200 + t.id, 'tom', t.line, t.midi, 'diamond', t.ab, t.en + ' (rim shot)', t.de + ' Rimshot', { tom: t.id, tech: 'rimshot' }));
+    TC.DRUM_ARTS.push(A(300 + t.id, 'tom', t.line, t.midi, 'x', t.ab, t.en + ' (rim)', t.de + ' Rand', { tom: t.id, tech: 'rim' }));
+  }
 
   const byId = new Map(TC.DRUM_ARTS.map((a) => [a.id, a]));
 
@@ -125,6 +135,12 @@
     },
     gp: { en: 'Guitar Pro', de: 'Guitar Pro', set: {} },
   };
+  // rim shots / rim only sit with their tom, the open pedal hi-hat with the pedal
+  for (const a of TC.DRUM_ARTS) {
+    const set = TC.NOTATIONS.tactus.set;
+    if (a.tom && set[a.tom]) set[a.id] = { line: set[a.tom].line, def: false };
+  }
+  TC.NOTATIONS.tactus.set[244] = { line: 8, def: false };
 
   /**
    * Drum kits: which instruments the panel and the drum map offer (notes of other
@@ -162,7 +178,7 @@
   D.setStems = function (mode, low) {
     if (!D.STEM_MODES.includes(mode)) mode = 'low';
     const lows = new Set(Array.isArray(low) ? low : D.DEFAULT_LOW);
-    for (const a of TC.DRUM_ARTS) a.voice = mode === 'up' ? 0 : FEET.has(a.id) || (mode === 'low' && lows.has(a.id)) ? 1 : 0;
+    for (const a of TC.DRUM_ARTS) a.voice = mode === 'up' ? 0 : FEET.has(a.id) || (mode === 'low' && lows.has(a.tom || a.id)) ? 1 : 0;
     D.stems = mode;
   };
   /** Voice of an instrument id in the current stem mode. */

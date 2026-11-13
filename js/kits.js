@@ -29,10 +29,13 @@
     51: 'ride', 93: 'rideEdge', 53: 'rideBell', 94: 'ride:muted', 126: 'ride2', 59: 'ride2Edge', 127: 'ride2Bell',
     49: 'crash1', 97: 'crash1:muted', 57: 'crash2', 98: 'crash2:muted',
     52: 'china', 96: 'china:muted', 55: 'splash', 95: 'splash:muted', 56: 'cowbell',
+    244: 'hhPedalOpen', 82: 'shaker', 75: 'accent',
+    250: 'tomHigh:rimshot', 248: 'tomMid:rimshot', 247: 'tomMidLow:rimshot', 245: 'tomLow:rimshot', 243: 'tomFloor:rimshot', 241: 'tomFloor2:rimshot',
+    350: 'tomHigh:rim', 348: 'tomMid:rim', 347: 'tomMidLow:rim', 345: 'tomLow:rim', 343: 'tomFloor:rim', 341: 'tomFloor2:rim',
   };
   /** Role -> Tactus instrument for the automatic assignment (variants join their instrument). */
   K.ROLE_ART = Object.assign({}, ...Object.entries(K.ART_ROLE).map(([id, r]) => ({ [r]: +id })), {
-    snareEdge: 38, snare2: 40,
+    snareEdge: 38, snare2: 40, snareRim: 37, clapPerc: 39, // rim only ~ side stick; BeatMaker's clap-like FX 1
     // more crashes join the two crash lines (high / low, like crash L / R), so the score stays
     // readable; the keys still sound different in the VST
     crash3: 49, crash4: 57, 'crash3:muted': 97, 'crash4:muted': 98,

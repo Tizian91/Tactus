@@ -13,7 +13,7 @@
  *
  * How the notes are read:
  *   time         per beat: snapped to the straight grid, or to the triplet grid when that fits clearly better
- *   velocity     below 64: ghost note, above 108: accent (as played back: ghost 38, normal 91, accent 127)
+ *   velocity     five steps (TC.STRENGTHS): below 49 ghost, below 81 soft, below 101 normal, below 119 strong, else accent
  *   flam / drag  one / two softer hits of the same instrument shortly before (< 70 ms): grace notes
  *   two hits of one instrument on the same position after snapping: the louder one stays
  *   tempo, time signatures and markers (bar texts) are taken over; the title comes from the file name
@@ -205,8 +205,7 @@
       const beatEnd = Math.min(b.L, (Math.floor(q.tick / beat) + 1) * beat);
       const dur = Math.max(1, Math.min(next ? next.tick : b.L, beatEnd) - q.tick);
       const note = TC.newDrumNote(q.art, {});
-      if (q.vel < 64) note.ghost = true;
-      else if (q.vel > 108) note.accent = 1;
+      TC.setLevel(note, TC.levelOfVelocity(q.vel)); // five steps: ghost · soft · normal · strong · accent
       if (q.orn) note.orn = q.orn;
       TC.score.place(doc, track, q.bar, art.voice, q.tick, dur, note);
     }

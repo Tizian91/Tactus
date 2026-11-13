@@ -15,7 +15,7 @@ module.exports = function (T) {
   put(0, 960, 960, 38, { accent: 1 });
   put(0, 1920, 960, 38, { ghost: true });
   let tl = TL.build(doc, { from: 0, to: 0 });
-  T.eq('kick, accented snare, ghost snare at 120 bpm', hits(tl), [[0, 36, 0.72], [0.5, 38, 1], [1, 38, 0.3]]);
+  T.eq('kick, accented snare, ghost snare at 120 bpm', hits(tl), [[0, 36, 0.72], [0.5, 38, 1.15], [1, 38, 0.22]]);
   T.eq('bar 1 lasts 2 s', [r3(tl.bars[0].t0 - LEAD), r3(tl.bars[0].t1 - LEAD), r3(tl.end - LEAD)], [0, 2, 2]);
 
   T.eq('metronome: 4 clicks, the first one strong', hits(TL.build(doc, { from: 1, to: 1, metronome: true })),

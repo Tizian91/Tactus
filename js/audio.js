@@ -185,12 +185,28 @@
         [0, 0.012, 0.03].forEach((dt, k) => metal(out, t + dt, 110, 9500, (0.3 - k * 0.07) * v, 0.12));
         hiss(out, t, 'highpass', 8000, 0.7, 0.3 * v, 0.18);
         break;
+      case 244: // pedal hi-hat open (foot splash)
+        metal(out, t, 40, 9500, 0.3 * v, 0.28, 0.004);
+        hiss(out, t, 'highpass', 6500, 0.7, 0.3 * v, 0.26, 0.004);
+        break;
+      case 82: // shaker
+        hiss(out, t, 'highpass', 5500, 0.8, 0.35 * v, 0.07, 0.015);
+        break;
+      case 75: // claves / click
+        tone(out, t, 'sine', 2500, 2450, 0.005, 0.5 * v, 0.06);
+        break;
       default:
-        if (a.el === 'tom') {
-          const f = TOM_HZ[a.id] || 120;
+        if (a.el === 'tom' && a.tech === 'rim') { // rim only: a click with a little of the tom
+          const f = TOM_HZ[a.tom] || 120;
+          tone(out, t, 'square', 1100, 850, 0.01, 0.2 * v, 0.03);
+          hiss(out, t, 'bandpass', 2000, 3, 0.6 * v, 0.04);
+          tone(out, t, 'sine', f * 1.6, f, 0.04, 0.2 * v, 0.15);
+        } else if (a.el === 'tom') {
+          const f = TOM_HZ[a.tom || a.id] || 120;
           tone(out, t, 'sine', f * 1.6, f, 0.06, 0.9 * v, 0.45);
           tone(out, t, 'triangle', f * 2.2, f * 1.5, 0.05, 0.12 * v, 0.12);
           hiss(out, t, 'lowpass', 3000, 0.7, 0.18 * v, 0.05);
+          if (a.tech === 'rimshot') hiss(out, t, 'bandpass', 2800, 4, 0.55 * v, 0.03); // the crack of the rim
         } else if (a.el === 'cowbell') {
           const gl = TC.drums.base(a).line, f = gl === 1 ? 480 : gl === -1 ? 640 : 560;
           const bp = filter('bandpass', f * 1.5, 2);

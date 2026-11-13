@@ -557,21 +557,16 @@
       label: `${TC.drums.label(art, true)} – ${tr('sideways: row · up / down: strength · release: instrument')}` };
     I.hoverKey = null;
     TC.render.drawHover();
-    TC.ui.status(`${where(d.t)} · ${TC.drums.label(art)} · ${tr('sideways: row of notes · up / down: ghost / normal / accent · release: choose the instrument of the line')}`);
+    TC.ui.status(`${where(d.t)} · ${TC.drums.label(art)} · ${tr('sideways: row of notes · up / down: strength (ghost … accent) · release: choose the instrument of the line')}`);
   }
 
-  // ---- Strength: hold a note, then up / down (ghost · normal · accent) ---------------------------
+  // ---- Strength: hold a note, then up / down (ghost · soft · normal · strong · accent) ------------------------
   // the held note - or all selected notes, if it is one of them; one undo step on release
 
-  const VEL_STEP = 28; // px per step
-  const LEVELS = ['Ghost', 'normal', 'Accent'];
-  const levelOf = (n) => (n.ghost ? 0 : n.accent ? 2 : 1);
-  function setLevel(n, lv) {
-    n.ghost = lv === 0;
-    if (lv === 2) n.accent = n.accent || 1; // a marcato stays a marcato
-    else n.accent = 0;
-    n.vel = null;
-  }
+  const VEL_STEP = 22; // px per step
+  const LEVELS = TC.STRENGTHS.map((s) => s.label); // ghost · soft · normal · strong · accent (model.js)
+  const levelOf = TC.levelOf;
+  const setLevel = TC.setLevel;
 
   function beginVel(e) {
     const d = S.drag, held = d.hit.note;
@@ -584,7 +579,7 @@
 
   function velMove(e, first) {
     const d = S.drag;
-    const lv = TC.clamp(d.level0 + Math.round((d.sy - e.clientY) / VEL_STEP), 0, 2); // up: stronger
+    const lv = TC.clamp(d.level0 + Math.round((d.sy - e.clientY) / VEL_STEP), 0, LEVELS.length - 1); // up: stronger
     if (lv !== d.level || first) {
       d.level = lv;
       d.notes.forEach((n) => setLevel(n, lv));

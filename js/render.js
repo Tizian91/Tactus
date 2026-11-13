@@ -782,14 +782,14 @@
       out.push(`<circle class="hover-ring" cx="${f(h.ring.x)}" cy="${f(h.ring.y)}" r="${f(0.95 * SP)}"/>`);
     }
     if (h && h.vel) {
-      // strength of a held note: three steps (ghost · normal · accent) next to it, the current one named
-      const x = h.hx + 1.3 * SP, seg = 0.85 * SP, gap = 0.2 * SP, w = 0.75 * SP, base = h.hy + 1.4 * SP;
+      // strength of a held note: the steps (ghost · soft · normal · strong · accent) next to it, the current one named
+      const n = h.vel.names.length, x = h.hx + 1.3 * SP, seg = 0.6 * SP, gap = 0.15 * SP, w = 0.75 * SP, base = h.hy + 1.8 * SP;
       out.push(`<circle class="hover-ring" cx="${f(h.hx)}" cy="${f(h.hy)}" r="${f(0.95 * SP)}"/>`);
-      out.push(rect(x - 0.2 * SP, base - 3 * seg - 2 * gap - 0.2 * SP, w + 0.4 * SP, 3 * seg + 2 * gap + 0.4 * SP, 'vel-box'));
-      for (let k = 0; k < 3; k++) {
+      out.push(rect(x - 0.2 * SP, base - n * seg - (n - 1) * gap - 0.2 * SP, w + 0.4 * SP, n * seg + (n - 1) * gap + 0.4 * SP, 'vel-box'));
+      for (let k = 0; k < n; k++) {
         out.push(rect(x, base - (k + 1) * seg - k * gap, w, seg, k <= h.vel.level ? 'vel-seg on' : 'vel-seg'));
       }
-      const text = h.vel.names[h.vel.level], tw = textW(text) + 4, ly = base - 1.5 * seg - gap;
+      const text = h.vel.names[h.vel.level], tw = textW(text) + 4, ly = base - (h.vel.level + 0.5) * seg - h.vel.level * gap;
       out.push(`<rect class="hover-label-bg" x="${f(x + w + 0.5 * SP - 3)}" y="${f(ly - 7.5)}" width="${f(tw)}" height="15" rx="3"/>`);
       out.push(`<text class="hover-label" x="${f(x + w + 0.5 * SP)}" y="${f(ly + 3.6)}">${esc(text)}</text>`);
     }

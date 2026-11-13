@@ -658,6 +658,32 @@
     return evs.size;
   };
 
+  /**
+   * Strength of a drum note in five steps. Only the outer ones are marked: ghost (head in brackets)
+   * and accent (>); soft / normal / strong are plain notes for fine tuning, soft and strong are
+   * stored as note.vel. vel: MIDI velocity (played back the same; accent plays a little louder).
+   */
+  TC.STRENGTHS = [
+    { key: 'ghost', label: 'Ghost', vel: 28 },
+    { key: 'soft', label: 'soft', vel: 70 },
+    { key: 'normal', label: 'normal', vel: 91 },
+    { key: 'strong', label: 'strong', vel: 110 },
+    { key: 'accent', label: 'Accent', vel: 127 },
+  ];
+  /** Step 0 … 4 of a note. */
+  TC.levelOf = (n) => (n.ghost ? 0 : n.accent ? 4 : typeof n.vel === 'number' ? TC.levelOfVelocity(n.vel, true) : 2);
+  /** Sets step 0 … 4 (a marcato stays a marcato). */
+  TC.setLevel = function (n, lv) {
+    n.ghost = lv === 0;
+    n.accent = lv === 4 ? n.accent || 1 : 0;
+    n.vel = lv === 1 || lv === 3 ? TC.STRENGTHS[lv].vel : null;
+  };
+  /** Step of a MIDI velocity: the middle between two steps divides (middle = only soft / normal / strong). */
+  TC.levelOfVelocity = function (v, middle) {
+    const lv = v < 49 ? 0 : v < 81 ? 1 : v < 101 ? 2 : v < 119 ? 3 : 4;
+    return middle ? TC.clamp(lv, 1, 3) : lv;
+  };
+
   /** A new drum note from the input settings. */
   TC.newDrumNote = (art, inp) => ({
     id: TC.uid('n'), art, accent: inp.accent || 0, ghost: !!inp.ghost, head: inp.head || 'auto', vel: null,

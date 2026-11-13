@@ -301,9 +301,9 @@ setTimeout(() => {
   ok('up: accent ' + JSON.stringify([vn().accent, vn().ghost]), vn().accent === 1 && !vn().ghost && voice(nb2, 0).join() === '1440:480:38');
   mouse('pointerdown', [vx, vy], cK);
   mouse('pointermove', [vx, vy + 30], cK);
-  mouse('pointermove', [vx, vy + 70], cK);
-  mouse('pointerup', [vx, vy + 70], cK);
-  ok('down (two steps): ghost', vn().ghost && !vn().accent);
+  mouse('pointermove', [vx, vy + 95], cK);
+  mouse('pointerup', [vx, vy + 95], cK);
+  ok('down (four steps): ghost', vn().ghost && !vn().accent);
   TC.actions.undo();
   ok('strength: one undo step per drag (accent again)', vn().accent === 1 && !vn().ghost);
   TC.actions.undo();

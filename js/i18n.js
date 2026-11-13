@@ -350,14 +350,16 @@
     'played bar {n}': 'gespielt Takt {n}',
     // strength (hold a note, up / down)
     'sideways: row · up / down: strength · release: instrument': 'seitlich: Reihe · hoch / runter: Anschlag · loslassen: Instrument',
-    'sideways: row of notes · up / down: ghost / normal / accent · release: choose the instrument of the line': 'seitlich: Notenreihe · hoch / runter: Ghost / normal / Akzent · loslassen: Instrument der Linie wählen',
+    'sideways: row of notes · up / down: strength (ghost … accent) · release: choose the instrument of the line': 'seitlich: Notenreihe · hoch / runter: Anschlag (Ghost … Akzent) · loslassen: Instrument der Linie wählen',
     'Hold a note, release': 'Note halten, loslassen',
     'Menu: instruments of the line (hi-hat closed / open …), ghost / accent': 'Menü: Instrumente der Linie (Hi-Hat zu / offen …), Ghost / Akzent',
     Strength: 'Anschlag',
     Ghost: 'Ghost',
+    soft: 'leise',
+    strong: 'kräftig',
     '{n} notes': '{n} Noten',
     'Hold a note, up / down': 'Note halten, hoch / runter',
-    'Strength: ghost · normal · accent': 'Anschlag: Ghost · normal · Akzent',
+    'Strength: ghost · soft · normal · strong · accent': 'Anschlag: Ghost · leise · normal · kräftig · Akzent',
     // tools
     Write: 'Schreiben',
     Select: 'Auswählen',

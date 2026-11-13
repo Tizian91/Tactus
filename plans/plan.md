@@ -105,7 +105,12 @@ Formate und MIDI-Werte wie in Guitar Pro.
   Triole, je nachdem was besser passt), Vorschau mit Anzahl und unbekannten Tasten. Anschlag → Ghost / Akzent,
   leise Schläge kurz davor → Flam / Drag, Tempo, Taktarten und Marker werden übernommen. Ersetzt das offene Stück.
   Bei einem ganzen Projekt wird die Schlagzeugspur vorgeschlagen (Name / Kanal 10), Tempo im Dialog änderbar.
-- Später: fehlende Instrumente (Tom-Rimshots, Accent, Hi-Hat-Pedal offen …), Wirbel beim Import erkennen,
+- **Neue Instrumente** für die Drum-VSTs: Rimshot und Rand (Rim Only) für jedes Tom (Raute / Kreuz auf der Tom-Linie),
+  Hi-Hat-Pedal offen (Splash), Shaker, Claves / Klick (BeatMaker-Accent); Snare Rim Only = Sidestick. Damit bleibt in
+  den eigenen Drummaps keine Schlagzeug-Taste mehr ohne Instrument.
+- **Anschlag in fünf Stufen**: Ghost · leise · normal · kräftig · Akzent (nur Ghost und Akzent bekommen ein Zeichen; Ghost
+  leiser als bisher, Akzent etwas lauter). Halten + hoch / runter, Notenmenü, MIDI-Export und -Import nutzen alle fünf.
+- Später: Wirbel beim Import erkennen (nur was feiner als das Raster ist),
   Import in das offene Stück (ab einem Takt), `.gp`-Export (ZIP + eigenes XML, größerer Aufwand; Guitar Pro
   liest MIDI ohne Triolen).
 

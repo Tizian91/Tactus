@@ -33,7 +33,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   const p = K.fromDrm(ez);
   T.eq('profile name from the map', p.name, 'EZDrummer3');
   T.eq('auto: kick, snare, hi-hat with two keys (order of the map), floor tom', [p.assign[36], p.assign[38], p.assign[42], p.assign[43]], [[36], [38], [61, 22], [44]]);
-  T.eq('auto: crash 3 joins crash 1 (high); drum key without instrument: tom rim shot', [p.assign[49], K.unassigned(p).map((e) => e.inote)], [[57], [73]]);
+  T.eq('auto: crash 3 joins crash 1 (high); floor tom rim shot has its own instrument; nothing left over', [p.assign[49], p.assign[243], K.unassigned(p).map((e) => e.inote)], [[57], [73], []]);
   T.eq('unnamed keys that were set up can be chosen', K.keys(K.fromDrm(drm('U', [item(30, 30, '').replace('name="DisplayNote" value="30"', 'name="DisplayNote" value="79"'), item(31, 31, 'Sound 32')], [30, 31]))).map((e) => e.inote), [30]);
   T.eq('keys list: named only, map order first', K.keys(p).map((e) => e.inote), [38, 36, 61, 22, 44, 73, 57, 20]);
 
@@ -42,6 +42,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   K.setKeys(p, 46, []);
   T.eq('empty: instrument without key', p.assign[46], undefined);
 
+  K.setKeys(p, 243, []); // a drum key left without instrument
   const out = C.parse(K.toDrm(p));
   const at = (n) => out.entries.find((e) => e.inote === n);
   T.eq('drum map: name', out.name, 'EZDrummer3 (Tactus)');
@@ -52,7 +53,7 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   T.eq('drum map: no collisions', C.collisions(out), []);
 
   const bm = K.fromDrm(drm('BeatMaker', [item(36, 36, 'Kick 1'), item(38, 38, 'Kick 2'), item(57, 57, 'FX 2, Perc')], [36, 38, 57]));
-  T.eq('BeatMaker: "Kick 2" is the accent (no Tactus instrument), FX 2 the tambourine', [bm.assign[36], bm.assign[35], bm.assign[54], K.unassigned(bm).map((e) => e.inote)], [[36], undefined, [57], [38]]);
+  T.eq('BeatMaker: "Kick 2" is the accent (claves / click), FX 2 the tambourine', [bm.assign[36], bm.assign[35], bm.assign[54], bm.assign[75], K.unassigned(bm).map((e) => e.inote)], [[36], undefined, [57], [38], []]);
 
   const u = K.fromDrm(drm('U', [item(42, 42, 'Hihat.Closed'), item(30, 30, '-')], [42, 30]));
   K.setKeys(u, 49, [30]);

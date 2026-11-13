@@ -97,6 +97,7 @@
       r.readAsArrayBuffer(f);
     });
     TC.drums.setNotation(S.settings.notation);
+    TC.drums.setStems(S.settings.stems, S.settings.stemsLow);
     const back = TC.storage.restore();
     if (back) {
       S.doc = back.doc;
@@ -124,6 +125,7 @@
       toStart = true;
       TC.saveSettings();
     }
+    TC.score.revoice(S.doc);
     TC.history.reset();
     TC.applyTheme();
     TC.updateUIStrings();

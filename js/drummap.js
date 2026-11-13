@@ -148,6 +148,26 @@
     for (const a of TC.DRUM_ARTS) Object.assign(a, BASE.get(a.id), TC.NOTATIONS[key].set[a.id] || {});
     D.notation = key;
   };
+  /**
+   * Stems: which instruments form the lower voice (stems down, rests of their own).
+   *   'up'    everything in one voice, stems up
+   *   'feet'  kick and pedal hi-hat down
+   *   'low'   feet and the toms in `low` (e.g. floor toms) down
+   * Sets a.voice of every instrument; TC.score.revoice brings a score in line with it.
+   */
+  const FEET = new Set(TC.DRUM_ARTS.filter((a) => a.voice === 1).map((a) => a.id));
+  D.STEM_MODES = ['up', 'feet', 'low'];
+  D.DEFAULT_LOW = [43, 41];
+  D.stems = 'feet';
+  D.setStems = function (mode, low) {
+    if (!D.STEM_MODES.includes(mode)) mode = 'low';
+    const lows = new Set(Array.isArray(low) ? low : D.DEFAULT_LOW);
+    for (const a of TC.DRUM_ARTS) a.voice = mode === 'up' ? 0 : FEET.has(a.id) || (mode === 'low' && lows.has(a.id)) ? 1 : 0;
+    D.stems = mode;
+  };
+  /** Voice of an instrument id in the current stem mode. */
+  D.voiceOf = (id) => (byId.get(id) || { voice: 0 }).voice;
+
   /** Guitar Pro line / head of an instrument, whatever layout is shown (sound, exports). */
   D.base = (a) => BASE.get(a.id) || a;
   /** Line / head / def of an instrument in a layout, whatever layout is shown (Cubase drum maps use 'tactus'). */

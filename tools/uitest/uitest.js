@@ -370,6 +370,10 @@ setTimeout(() => {
     TC.actions.setKit('all');
     ok('settings window: changes apply and it stays open', TC.panel.isSettingsOpen() && document.querySelector('.settings-dialog select[data-action="setKit"]').value === 'all');
     TC.actions.setKit('standard');
+    TC.actions.setStems('up');
+    ok('stems all up: the kick of bar 1 joins the upper voice', voice(0, 1).length === 0 && voice(0, 0)[0].includes('36'));
+    TC.actions.setStems('low');
+    ok('stems low: kick down again, choice of toms shown', voice(0, 1).join() === '0:480:36' && !!document.querySelector('.settings-dialog .stem-toms'));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     ok('settings window: Escape closes it', !TC.panel.isSettingsOpen() && !document.querySelector('.settings-dialog'));
     const sk = document.getElementById('status-kit');

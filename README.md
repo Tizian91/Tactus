@@ -43,6 +43,8 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   and rarely changed: the **settings window** (⚙ in the toolbar) – drum kit, notation, page, view, keyboard shortcuts.
 - **Drum kit** (settings ⚙): standard 5-piece, large, all, or a custom choice – only these instruments appear
   in the note panel and the drum map.
+- **Stems** (settings ⚙ → drum kit): all up (one voice), feet down, or feet and low toms down (default; the toms
+  are chosen) – the notes move into the matching voice, only the notation changes.
 - **Notation** (settings panel → drum kit): "Tactus" (default; kick and pedal hi-hat on the bottom line, toms from
   the top line down, crash 2 / china / splash above the hi-hat) or "Guitar Pro". Only the drawing changes.
 - **Kit profiles** (settings → drum kit → "Kit profiles (Cubase)…"): load the Cubase drum map of a drum VST, Tactus

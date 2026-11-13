@@ -410,6 +410,47 @@
     return headers.length;
   };
 
+  /**
+   * Put every drum note into the voice its instrument has now (TC.drums.setStems: all up, feet
+   * down, feet + low toms down). Notes at the same time in the same voice become one chord (the
+   * shorter length wins), the lengths are then cut as usual. Only the notation changes - sound
+   * and MIDI do not depend on voices. Returns true if something moved.
+   */
+  SC.revoice = function (doc) {
+    let changed = false;
+    const vo = (n) => TC.drums.voiceOf(n.art);
+    for (const t of doc.tracks) {
+      if (t.kind !== 'drums') continue;
+      t.bars.forEach((bar, bi) => {
+        if (bar.voices.every((v, vi) => v.every((ev) => ev.notes.every((n) => vo(n) === vi)))) return;
+        changed = true;
+        const out = [[], []];
+        for (const v of bar.voices) {
+          for (const ev of v) {
+            const groups = new Map();
+            ev.notes.forEach((n) => {
+              if (!groups.has(vo(n))) groups.set(vo(n), []);
+              groups.get(vo(n)).push(n);
+            });
+            for (const [vi, notes] of groups) {
+              while (out.length <= vi) out.push([]);
+              const at = out[vi].find((e) => e.tick === ev.tick);
+              if (at) {
+                at.notes.push(...notes);
+                at.dur = Math.min(at.dur, ev.dur);
+              } else {
+                out[vi].push({ id: notes.length === ev.notes.length ? ev.id : TC.uid('e'), tick: ev.tick, dur: ev.dur, notes });
+              }
+            }
+          }
+        }
+        bar.voices = out;
+        SC.fitBar(doc, t, bi);
+      });
+    }
+    return changed;
+  };
+
   /** The bar whose notes bar `bi` plays: a simile bar ("%") plays the bar before it. */
   SC.sourceBar = function (doc, bi) {
     while (bi > 0 && doc.bars[bi].simile) bi--;

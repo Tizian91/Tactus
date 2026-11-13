@@ -194,12 +194,26 @@
       <details class="kit-list"><summary>${tr('Choose instruments')}</summary>${list}</details>
       <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
       <p class="hint tight">${tr('Where the instruments sit on the staff. Only the display changes.')}</p>
+      ${stemsRows()}
       <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>
       <h3 class="sub">${tr('Drum map')}</h3>
       ${check('toggleDrumMap', S.settings.showDrumMap, tr('Show next to the staff'))}
       ${check('toggleMapUsed', S.settings.mapUsedOnly, tr('Only instruments used in the score'))}
       <p class="hint">${tr('Pointer on a short name: its line lights up. Click: choose the instrument.')}</p>
     </section>`;
+  }
+
+  /** Stems: all up / feet down / feet + low toms down (with the toms to choose). */
+  function stemsRows() {
+    const mode = TC.drums.stems;
+    const modes = [['up', 'All up (one voice)'], ['feet', 'Feet down (kick, pedal)'], ['low', 'Feet and low toms down']]
+      .map(([k, label]) => `<option value="${k}"${k === mode ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
+    const low = new Set(Array.isArray(S.settings.stemsLow) ? S.settings.stemsLow : TC.drums.DEFAULT_LOW);
+    const toms = mode === 'low' ? `<div class="stem-toms">${TC.DRUM_ARTS.filter((a) => a.el === 'tom')
+      .map((a) => check('toggleStemLow', low.has(a.id), esc(de() ? a.de : a.en), a.id)).join('')}</div>` : '';
+    return `<div class="row"><label>${tr('Stems')}</label><select data-action="setStems">${modes}</select></div>
+      ${toms}
+      <p class="hint tight">${tr('Lower voice: stems down, rests of its own. Only the notation changes, not the sound or the MIDI.')}</p>`;
   }
 
   function playSection() {

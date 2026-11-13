@@ -133,6 +133,13 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## Notenhälse ✅
+
+- Einstellungen (⚙) → Drum-Kit → **Notenhälse**: „Alle nach oben (eine Stimme)“, „Füße nach unten“ oder
+  „Füße und tiefe Toms nach unten“ (Standard; welche Toms: Häkchen, voreingestellt Standtom und Standtom 2)
+- Beim Umschalten (und beim Laden) wandern die Noten in die passende Stimme; gleichzeitige Schläge werden ein Akkord.
+  Nur das Notenbild ändert sich, Klang und MIDI nicht
+
 ## Aufgeräumt: Panel und Einstellungsfenster ✅
 
 - Rechtes Panel „Takt · Stück“: nur noch Takt, Wiedergabe, Stück

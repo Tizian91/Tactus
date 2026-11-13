@@ -159,6 +159,33 @@
     TC.saveSettings();
     TC.refresh();
   };
+  /** Stems: 'up' (all up, one voice), 'feet' (feet down), 'low' (feet + chosen low toms down). */
+  A.setStems = function (mode) {
+    if (!TC.drums.STEM_MODES.includes(mode)) return;
+    S.settings.stems = mode;
+    applyStems();
+  };
+  /** A tom goes down with the feet ('low' mode) - or not. */
+  A.toggleStemLow = function (id) {
+    id = Number(id);
+    const low = new Set(Array.isArray(S.settings.stemsLow) ? S.settings.stemsLow : TC.drums.DEFAULT_LOW);
+    if (low.has(id)) low.delete(id);
+    else low.add(id);
+    S.settings.stemsLow = [...low];
+    applyStems();
+  };
+  function applyStems() {
+    TC.drums.setStems(S.settings.stems, S.settings.stemsLow);
+    // the notes move into the voices of the new setting; no undo step (only the notation changes)
+    if (TC.score.revoice(S.doc)) {
+      TC.history.rebase();
+      S.rev++;
+      TC.storage.scheduleAutosave();
+    }
+    TC.saveSettings();
+    TC.refresh();
+  }
+
   /** Rest cleanup of the drum track (rhythm.js R.ends): part of the score, so undoable. */
   A.setFill = function (fill) {
     const t = S.doc.tracks[0];

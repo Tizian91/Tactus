@@ -48,6 +48,8 @@ window.TC = window.TC || {};
       mapUsedOnly: false,   // drum map: only instruments used in the score (+ the selected one)
       kit: 'standard',      // drum kit (drummap.js TC.KITS)
       notation: 'tactus',   // where instruments sit on the staff (drummap.js TC.NOTATIONS)
+      stems: 'low',         // stems: 'up' all up (one voice), 'feet' feet down, 'low' feet + low toms down
+      stemsLow: [43, 41],   // the toms that go down with 'low' (floor toms)
       importKit: '',        // MIDI import: kit profile the last file came from ('' = General MIDI)
       importGrid: '16t',    // MIDI import: grid (js/midiin.js)
       kitCustom: null,      // ids of the custom kit
@@ -102,8 +104,14 @@ window.TC = window.TC || {};
       const data = JSON.parse(s);
       Object.assign(TC.state.doc, data);
       this.last = s;
+      if (TC.score && TC.score.revoice(TC.state.doc)) this.last = snapshot(); // stems may have been switched since
       TC.pruneSelection();
       TC.state.rev++;
+    },
+
+    /** The doc changed without an undo step of its own (e.g. stems switched): the next step starts from here. */
+    rebase() {
+      this.last = snapshot();
     },
 
     undo() {
@@ -153,6 +161,7 @@ window.TC = window.TC || {};
    */
   TC.commit = function (opts) {
     TC.state.rev++;
+    if (TC.score && TC.score.revoice) TC.score.revoice(TC.state.doc); // e.g. a note changed to a kick: into the lower voice
     if (TC.history.commit()) {
       if (opts && opts.merge && TC.history.undoStack.length > 1) TC.history.undoStack.pop();
       TC.state.dirty = true;

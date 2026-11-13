@@ -380,6 +380,7 @@ details > summary { list-style-position: outside; }
 .db-row button.icon:hover { opacity: 1; }
 .db-list .hint.warn { color: var(--danger); }
 .settings-dialog { width: min(560px, 100%); }
+.stem-toms { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin: 4px 0 4px 84px; font-size: 12px; }
 .settings-body { overflow-y: auto; flex: 1; }
 .settings-body section:last-child { border-bottom: none; }
 button.wide { width: 100%; justify-content: center; min-height: 34px; }

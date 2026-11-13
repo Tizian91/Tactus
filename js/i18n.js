@@ -356,6 +356,13 @@
     '{n} notes': '{n} Noten',
     'Hold a note, up / down': 'Note halten, hoch / runter',
     'Strength: ghost · normal · accent': 'Anschlag: Ghost · normal · Akzent',
+    // stems
+    Stems: 'Notenhälse',
+    'All up (one voice)': 'Alle nach oben (eine Stimme)',
+    'Feet down (kick, pedal)': 'Füße nach unten (Bassdrum, Pedal)',
+    'Feet and low toms down': 'Füße und tiefe Toms nach unten',
+    'Lower voice: stems down, rests of its own. Only the notation changes, not the sound or the MIDI.':
+      'Untere Stimme: Hälse nach unten, eigene Pausen. Nur das Notenbild ändert sich, nicht Klang oder MIDI.',
     // settings window
     'Bar · score': 'Takt · Stück',
     'Show / hide the panel for bar, playback and score': 'Panel für Takt, Wiedergabe und Stück ein-/ausblenden',

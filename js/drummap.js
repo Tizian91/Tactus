@@ -151,6 +151,7 @@
     standard: { en: 'Standard (5-piece)', de: 'Standard (5-teilig)', ids: STANDARD },
     large: { en: 'Large', de: 'Groß', ids: STANDARD.concat([47, 43, 41, 35, 57, 98, 55, 95, 52, 96, 126, 59, 127, 40]) },
     all: { en: 'All instruments', de: 'Alle Instrumente', ids: TC.DRUM_ARTS.map((a) => a.id) },
+    profile: { en: 'Like the kit profile', de: 'Wie das Kit-Profil', ids: null }, // the instruments of the score's kit profile
     custom: { en: 'Custom', de: 'Eigene Auswahl', ids: null },
   };
 
@@ -245,7 +246,15 @@
   // ---- With the app state (settings, open score) ---------------------------------------
 
   /** Instruments of the chosen kit. */
-  D.kit = () => D.kitIds(TC.state.settings.kit, TC.state.settings.kitCustom);
+  D.kit = function () {
+    const st = TC.state.settings;
+    if (st.kit === 'profile') {
+      // the instruments the drum VST has (kit profile of the score); without a profile: the standard kit
+      const p = TC.kits && TC.kits.current(TC.state.doc);
+      return new Set(p ? Object.keys(p.assign).map(Number).filter((id) => byId.has(id)) : STANDARD);
+    }
+    return D.kitIds(st.kit, st.kitCustom);
+  };
 
   /** Instruments a click may write: the kit, plus the selected one. */
   D.clickable = function () {

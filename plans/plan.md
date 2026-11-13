@@ -231,3 +231,5 @@ Eine Regel für Maus, Stift und Finger:
   ohne MIDI-Ausgang den Tactus-Klang des Instruments
 - „Drummap für Cubase speichern“ schreibt daraus die komplette `.drm` (Namen = Tactus-Instrumente, Anzeige wie in Tactus):
   in Cubase muss nichts mehr abgetippt werden
+- Drum-Kit **„Wie das Kit-Profil“** (⚙ → Drum-Kit): Panel und Linien bieten genau die Instrumente des Kit-Profils des Stücks an
+  (z. B. China, Tom-Rimshots bei EZDrummer); ohne Profil das Standard-Kit

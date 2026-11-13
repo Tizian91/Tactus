@@ -333,7 +333,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join()]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

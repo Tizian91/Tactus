@@ -86,6 +86,16 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   T.eq('own profile -> Cubase drum map: unnamed key named after its instrument, Tactus line', [ownDrm.name, k47.name, k47.display, k47.onote], ['Superior Rock (Tactus)', 'Tom 2 (high)', 74, 47]);
   T.eq('note names as in Cubase', [36, 60, 42].map(C.noteName), ['C1', 'C3', 'F#1']);
 
+  // drum kit 'like the kit profile': the instruments the VST has
+  K.list = [p];
+  TC.state.doc = TC.emptyScore(1);
+  TC.state.doc.meta.kit = p.id;
+  TC.state.settings.kit = 'profile';
+  T.eq('drum kit like the kit profile: exactly its instruments', [...TC.drums.kit()].sort((a, b) => a - b), Object.keys(p.assign).map(Number).sort((a, b) => a - b));
+  TC.state.doc.meta.kit = '';
+  T.eq('drum kit like the kit profile, score without profile: standard kit', TC.drums.kit().size, TC.drums.kitIds('standard').size);
+  TC.state.settings.kit = 'standard';
+
   K.list = [p, bm];
   const sd = TC.emptyScore(1);
   T.eq('score without kit profile: General MIDI', K.current(sd), null);

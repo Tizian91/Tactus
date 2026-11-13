@@ -210,6 +210,29 @@
     TC.refresh();
   };
 
+  /** Tool of the score: 'write', 'select' (frame, move several), 'erase'. */
+  A.setTool = function (t) {
+    if (!['write', 'select', 'erase'].includes(t)) return;
+    S.tool = t;
+    TC.ui.hint(tr({ write: 'Write notes', select: 'Select: frame, Shift + click, drag to move', erase: 'Eraser: tap or wipe over notes' }[t]));
+    TC.refresh();
+    TC.interaction.refreshHover();
+  };
+  /** All notes - or those of the selected bars, if several are selected. */
+  A.selectAll = function () {
+    const R = TC.barRange(), part = R && R[1] > R[0];
+    S.selection = new Set();
+    TC.score.eachNote(S.doc, (n, ev, vi, bi) => { if (!part || (bi >= R[0] && bi <= R[1])) S.selection.add(n.id); });
+    TC.refresh();
+    TC.ui.hint(tr('{n} note(s) selected', { n: S.selection.size }));
+  };
+  /** Selected notes one grid step earlier (-1) or later (1), across bars. */
+  A.shiftSelection = function (dir) {
+    if (!S.selection.size) return;
+    if (TC.score.moveNotes(S.doc, [...S.selection], TC.gridTicks(S.input) * (dir < 0 ? -1 : 1))) TC.commit();
+    else TC.ui.hint(tr('Cannot move there (a note of the same instrument, or the end of the score)'));
+  };
+
   A.deleteSelection = function () {
     if (!S.selection.size) return;
     const n = TC.score.removeNotes(S.doc, selectedIds());

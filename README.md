@@ -36,6 +36,9 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   Setting "fingers write notes" (settings → view) off: a finger only selects and scrolls.
 - **Instrument lock** (panel switch for tablets, key `L`, or hold `Shift`): the height on the lines no longer
   matters – the selected instrument is written; beside the lines a tap still selects the bar.
+- **Tools** (top of the note panel, keys `W` / `V` / `E`): ✏ write, ⬚ **select** (drag a frame; `Shift` / `Ctrl` + click
+  adds; drag a selected note: the whole selection moves, sideways in time and – one instrument only – up / down;
+  `Ctrl+A` all, `←` `→` one grid step), ⌫ **eraser** (tap or wipe over notes; a pen's eraser end always erases).
 - With notes selected the note panel changes them (accent, ghost note, notehead, instrument, value).
 - **Right-click a bar**: time signature (from this bar on), insert / clear / delete bars.
 - **Two panels:** the note panel (left) holds what every note needs, for the hand that does not hold the pen /

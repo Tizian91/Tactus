@@ -19,6 +19,7 @@ window.TC = window.TC || {};
     selection: new Set(),   // ids of selected notes
     selBar: null,           // index of the bar shown in the panel's "Bar" section
     selBarEnd: null,        // other end of a range of selected bars (null: only selBar), see TC.barRange
+    tool: 'write',          // 'write' | 'select' (frame, move several) | 'erase' (note panel, keys W / V / E)
     hover: null,            // where the pointer is: { bar, tick, line, art } (render.js draws a preview)
     drag: null,             // pan with the middle mouse / space (interaction.js)
     // what the next click writes (left panel)

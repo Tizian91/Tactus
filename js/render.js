@@ -20,6 +20,7 @@
   const S = TC.state;
   const RD = (TC.render = {});
   const SP = (RD.SP = 10);
+  RD.ERASE_R = 1.1 * SP;         // reach of the eraser
   const STEM = 3.5 * SP;
   const MIN_CELL = 2.6 * SP;     // narrowest grid cell
   const QUARTER = 7 * SP;        // width of a quarter when the grid allows
@@ -50,7 +51,7 @@
   const FLAG_DOWN = (n) => String.fromCharCode(0xe241 + 2 * (n - 1));
   const ACCENT = { 1: ['', '', 1.356], 2: ['', '', 0.94] };
 
-  let svg, world, stat, hov, play;
+  let svg, world, stat, hov, play, selg;
 
   RD.init = function () {
     svg = document.getElementById('score');
@@ -63,6 +64,26 @@
       play.setAttribute('class', 'play');
       world.appendChild(play);
     }
+    selg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    selg.setAttribute('class', 'selrect');
+    world.appendChild(selg);
+  };
+
+  /** Selection frame (select tool) in view coordinates { x1, y1, x2, y2 }; null removes it. */
+  RD.drawRect = function (r) {
+    if (!r) return void (selg.innerHTML = '');
+    const x = Math.min(r.x1, r.x2), y = Math.min(r.y1, r.y2);
+    selg.innerHTML = rect(x, y, Math.abs(r.x2 - r.x1), Math.abs(r.y2 - r.y1), 'sel-frame');
+  };
+
+  /** The drawn noteheads with their position in view coordinates (all lines of the page view). */
+  RD.headsInView = function () {
+    const L = RD.layout;
+    if (!L) return [];
+    return L.heads.map((h) => {
+      const s = L.systems[L.bars[h.bar].sys];
+      return Object.assign({}, h, { wx: h.x + s.tx, wy: h.y + s.ty });
+    });
   };
 
   /** Group drawn on line s (staff coordinates -> view). */
@@ -739,6 +760,13 @@
     L.map = [];
     L.mapSys = s.i; // the drum map stands next to this line
     if (S.settings.showDrumMap) drawDrumMap(out, hl, s.ox);
+    if (h && h.erase) {
+      // eraser: a circle; notes under it are deleted while pressed
+      out.push(`<circle class="erase-ring${h.erase.on ? ' on' : ''}" cx="${f(h.erase.x)}" cy="${f(h.erase.y)}" r="${f(RD.ERASE_R)}"/>`);
+    }
+    if (h && h.ring) {
+      out.push(`<circle class="hover-ring" cx="${f(h.ring.x)}" cy="${f(h.ring.y)}" r="${f(0.95 * SP)}"/>`);
+    }
     if (h && h.vel) {
       // strength of a held note: three steps (ghost · normal · accent) next to it, the current one named
       const x = h.hx + 1.3 * SP, seg = 0.85 * SP, gap = 0.2 * SP, w = 0.75 * SP, base = h.hy + 1.4 * SP;

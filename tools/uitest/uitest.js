@@ -286,6 +286,47 @@ setTimeout(() => {
   ok('strength: one undo step per drag (accent again)', vn().accent === 1 && !vn().ghost);
   TC.actions.undo();
   ok('… and normal again', !vn().accent && !vn().ghost);
+  // tools: select (frame, Shift + click, move several, arrow keys), eraser (wipe)
+  TC.actions.selectNone(); // (a selected note would take the instrument chosen next)
+  const nb3 = S.doc.bars.length;
+  TC.actions.addBar();
+  TC.actions.setValue(8); TC.actions.setArt(42);
+  [0, 480, 960, 1440].forEach((t) => click(nb3, t, -1));
+  click(nb3, 960, 3);
+  TC.actions.setTool('select');
+  ok('select tool active', S.tool === 'select' && document.querySelector('#panel-notes [data-action="setTool"][data-value="select"]').classList.contains('active'));
+  mouse('pointerdown', at(nb3, -150, -5));
+  mouse('pointermove', at(nb3, 300, 1));
+  mouse('pointermove', at(nb3, 600, 1));
+  ok('frame drawn while dragging', !!document.querySelector('#score .sel-frame'));
+  mouse('pointerup', at(nb3, 600, 1));
+  ok('frame selects the hi-hats at 1 and 1+ ' + S.selection.size, S.selection.size === 2 && !document.querySelector('#score .sel-frame'));
+  mouse('pointerdown', at(nb3, 0, -1));
+  mouse('pointermove', at(nb3, 960, -1));
+  mouse('pointermove', at(nb3, 1920, -1));
+  mouse('pointerup', at(nb3, 1920, -1));
+  ok('drag a selected note: both move by two beats ' + voice(nb3, 0).join(' '), voice(nb3, 0).join() === '960:480:42+38,1440:480:42,1920:480:42,2400:480:42');
+  click(nb3, 1440, -1, { shift: true });
+  ok('Shift + click adds a note', S.selection.size === 3);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  ok('→ blocked at the end of the score (3/4, last bar): nothing moves', voice(nb3, 0).join() === '960:480:42+38,1440:480:42,1920:480:42,2400:480:42');
+  click(nb3, 960, 3);
+  ok('a click selects the snare alone', S.selection.size === 1);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  ok('→ moves the snare one step later ' + voice(nb3, 0).join(' '), voice(nb3, 0).join() === '960:480:42,1440:480:42+38,1920:480:42,2400:480:42');
+  TC.actions.undo(); TC.actions.undo();
+  ok('undo: back where they were', voice(nb3, 0).join() === '0:480:42,480:480:42,960:480:42+38,1440:480:42');
+  TC.actions.setTool('erase');
+  mouse('pointerdown', at(nb3, 0, -1));
+  [480, 960, 1440, 1920].forEach((t) => mouse('pointermove', at(nb3, t, -1)));
+  mouse('pointerup', at(nb3, 1920, -1));
+  ok('eraser wiped the hi-hats, the snare stays ' + voice(nb3, 0).join(' '), voice(nb3, 0).join() === '960:480:38');
+  TC.actions.undo();
+  ok('eraser: one undo step', voice(nb3, 0).length === 4);
+  TC.actions.setTool('write');
+  S.selection.clear();
+  TC.actions.deleteBar(nb3); // the bar of these tests goes again
+  TC.actions.setArt(38); // as before these tests
   S.selBar = 0; TC.refresh();
   click(nb2, 480, 11.5);
   ok('tap below the lines: the bar is selected, no note', S.selBar === nb2 && voice(nb2, 0).length === 1 && voice(nb2, 1).length === 0);

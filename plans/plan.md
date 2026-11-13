@@ -135,6 +135,15 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## Werkzeuge ✅
+
+- Oben im Noten-Panel (Tasten W / V / E): **✏ Schreiben** (wie bisher), **⬚ Auswählen**, **⌫ Radieren**
+- Auswählen: Rahmen auf leerer Fläche ziehen, Shift / Strg + Klick fügt hinzu, eine ausgewählte Note ziehen verschiebt
+  **alle** ausgewählten (seitlich in der Zeit, auch über Taktgrenzen; hoch / runter, wenn alle dasselbe Instrument sind),
+  halten + loslassen: Menü Instrument / Anschlag für die Auswahl; blockiert, wenn dort schon dieselbe Note liegt
+- Radieren: antippen oder über Noten wischen, ein Rückgängig-Schritt; das Radierer-Ende eines Stifts radiert immer
+- Strg+A: alle Noten (bzw. die der ausgewählten Takte), ← →: Auswahl ein Raster früher / später; zwei Finger scrollen
+
 ## Notenhälse ✅
 
 - Einstellungen (⚙) → Drum-Kit → **Notenhälse**: „Alle nach oben (eine Stimme)“, „Füße nach unten“ oder

@@ -174,6 +174,8 @@ input[type="number"] { width: 70px; }
 .panel h3.inline, .settings-body h3.inline { display: inline; margin: 0; }
 .panel h3.sub, .settings-body h3.sub { margin-top: 14px; }
 .hint.tight { margin: 4px 0 8px; }
+.tool-seg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
+.tool-seg button { min-height: 38px; justify-content: center; font-weight: 600; }
 .btn-row.two button { flex: 1; justify-content: center; min-height: 34px; }
 .lock-btn { width: 100%; min-height: 38px; font-weight: 600; }
 .el-name { font-weight: 600; color: var(--label); margin: 8px 0 3px; }
@@ -271,6 +273,9 @@ details > summary { list-style-position: outside; }
 .score .vel-box { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; opacity: 0.95; }
 .score .vel-seg { fill: var(--grid-beat); }
 .score .vel-seg.on { fill: var(--accent); }
+.score .erase-ring { fill: var(--danger); fill-opacity: 0.08; stroke: var(--danger); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.score .erase-ring.on { fill-opacity: 0.22; stroke-dasharray: none; }
+.score .sel-frame { fill: var(--accent); fill-opacity: 0.08; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; }
 .score .hover-bar { fill: var(--accent); opacity: 0.05; stroke: var(--accent); stroke-width: 1; stroke-opacity: 0.35; }
 .score .hover-label-bg { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; opacity: 0.92; }
 .score .hover-label { font-size: 9px; font-weight: 600; fill: var(--accent); }

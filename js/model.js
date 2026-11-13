@@ -451,6 +451,55 @@
     return changed;
   };
 
+  /** Ticks from the start of the score to `tick` in bar `bi` (written bars). */
+  SC.absTick = function (doc, bi, tick) {
+    let t = 0;
+    for (let i = 0; i < bi; i++) t += TC.barTicks(doc.bars[i].ts);
+    return t + tick;
+  };
+  /** The bar and tick of a time counted from the start of the score, or null outside the score. */
+  SC.atAbs = function (doc, abs) {
+    if (abs < 0) return null;
+    let t = 0;
+    for (let i = 0; i < doc.bars.length; i++) {
+      const L = TC.barTicks(doc.bars[i].ts);
+      if (abs < t + L) return { bar: i, tick: abs - t };
+      t += L;
+    }
+    return null;
+  };
+
+  /**
+   * Move notes (ids) by `delta` ticks (across bars), optionally to instrument `art` (all of them).
+   * Each note keeps its length. Nothing happens (false) if a note would leave the score, land in a
+   * %-bar, or on a note of the same instrument that does not move.
+   */
+  SC.moveNotes = function (doc, ids, delta, art) {
+    const track = doc.tracks[0], moving = new Set(ids), items = [], slots = new Set();
+    for (const id of ids) {
+      const h = SC.findNote(doc, id);
+      if (!h) continue;
+      const pos = SC.atAbs(doc, SC.absTick(doc, h.bar, h.ev.tick) + delta);
+      if (!pos || doc.bars[pos.bar].simile) return false;
+      const a = art || h.note.art, key = pos.bar + ':' + pos.tick + ':' + a;
+      if (slots.has(key)) return false; // two of them onto one place
+      slots.add(key);
+      for (const v of track.bars[pos.bar].voices) {
+        for (const ev of v) {
+          if (ev.tick === pos.tick && ev.notes.some((n) => !moving.has(n.id) && sameSlot(n, { art: a }))) return false;
+        }
+      }
+      items.push({ note: h.note, pos, dur: h.ev.dur, art: a });
+    }
+    if (!items.length) return false;
+    SC.removeNotes(doc, ids);
+    for (const it of items) {
+      const n = Object.assign({}, it.note, { art: it.art });
+      SC.place(doc, track, it.pos.bar, TC.drums.voiceOf(it.art), it.pos.tick, it.dur, n);
+    }
+    return true;
+  };
+
   /** The bar whose notes bar `bi` plays: a simile bar ("%") plays the bar before it. */
   SC.sourceBar = function (doc, bi) {
     while (bi > 0 && doc.bars[bi].simile) bi--;

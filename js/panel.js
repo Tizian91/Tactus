@@ -47,6 +47,18 @@
 
   // ---- Note panel ------------------------------------------------------------------------------
 
+  /** Tools: write / select / eraser (keys W / V / E). */
+  function toolSection() {
+    const t = S.tool || 'write';
+    const hint = { select: 'Frame: drag on an empty place · Shift + click: add · drag a note: move the selection',
+      erase: 'Tap or wipe over notes · two fingers: scroll' }[t];
+    return `<section class="tools"><div class="seg tool-seg">
+        ${btn('setTool', 'write', '✏ ' + tr('Write'), t === 'write', tr('Write notes (W)'))}
+        ${btn('setTool', 'select', '⬚ ' + tr('Select'), t === 'select', tr('Select and move several notes (V)'))}
+        ${btn('setTool', 'erase', '⌫ ' + tr('Erase'), t === 'erase', tr('Eraser: tap or wipe over notes (E)'))}
+      </div>${hint ? `<p class="hint tight">${tr(hint)}</p>` : ''}</section>`;
+  }
+
   function valueSection() {
     const inp = S.input;
     const vals = TC.VALUES.map((v, k) => btn('setValue', v, `<span class="mus-btn">${NOTE_GLYPH[v]}</span>`, inp.value === v,
@@ -269,6 +281,8 @@
       [tr('Hold a note, drag'), tr('Row of notes (mouse: Ctrl + drag)')],
       [tr('Hold a note, up / down'), tr('Strength: ghost · normal · accent')],
       [tr('Hold a note, release'), tr('Menu: instruments of the line (hi-hat closed / open …), ghost / accent')],
+      ['W / V / E', tr('Write / select / erase')], [tr('Ctrl+A'), tr('Select all notes (or those of the selected bars)')],
+      ['← →', tr('Selected notes one grid step earlier / later')],
       [tr('Beside the lines'), tr('Tap: select the bar · drag: scroll')],
       [tr('Two fingers'), tr('Scroll and zoom')],
       [tr('Shift + click beside the lines'), tr('Select bars up to there')],
@@ -291,12 +305,12 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;
       const scroll = notesRoot.scrollTop;
-      notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
+      notesRoot.innerHTML = head(tr('Notes'), 'left') + toolSection() + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,

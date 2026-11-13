@@ -116,6 +116,7 @@
     raf = 0;
     const e = lastMove;
     if (!e || S.drag) return;
+    if (toolOf(e) !== 'write') return toolHover(e);
     const t = target(I.toLocal(e.clientX, e.clientY), e);
     let h = null;
     if (t && (t.kind === 'place' || t.kind === 'head')) {
@@ -209,6 +210,10 @@
     if (S.drag) return; // another pointer is busy (pen and finger at once)
     try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
     clearTimeout(holdTimer);
+    // tools (note panel): select / eraser - a pen's eraser end always erases
+    const tool = toolOf(e);
+    if (tool === 'erase') return startErase(e);
+    if (tool === 'select') return startSelect(e);
     let t = target(I.toLocal(e.clientX, e.clientY), e);
     const base = { id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e };
     if (e.pointerType === 'pen') lastTouch = Date.now(); // a pen's own long-press menu is ignored too
@@ -282,6 +287,14 @@
         d.mode = 'move';
         return moveMove(e);
       case 'vel': return velMove(e);
+      case 'erase': return eraseMove(e);
+      case 'rect': return rectMove(e);
+      case 'sel':
+        if (!moved(d, e)) return;
+        clearTimeout(holdTimer);
+        d.mode = 'smove';
+        return selMove(e);
+      case 'smove': return selMove(e);
       case 'tap':
         if (!moved(d, e)) return;
         clearTimeout(holdTimer);
@@ -318,7 +331,12 @@
       else if (d.mode === 'note') d.held ? noteMenu(d, e) : act(d.t, e); // held and released: instruments of the line
       else if (d.mode === 'move') dropMove(d);
       else if (d.mode === 'tap') act(d.t, d.down);
+      else if (d.mode === 'sel') d.held ? noteMenu(d, e) : selTap(d);
+      else if (d.mode === 'rect') rectDone(d);
     }
+    if (d.mode === 'rect') TC.render.drawRect(null);
+    if (d.mode === 'erase') finishErase(d);
+    if (d.mode === 'smove') finishSelMove(d, cancelled);
     if (d.mode === 'write' || d.mode === 'row') {
       S.drag = d;
       finishRow();
@@ -344,6 +362,9 @@
     clearTimeout(holdTimer);
     if (S.drag && (S.drag.mode === 'write' || S.drag.mode === 'row')) finishRow();
     if (S.drag && S.drag.mode === 'vel') finishVel(S.drag);
+    if (S.drag && S.drag.mode === 'erase') finishErase(S.drag);
+    if (S.drag && S.drag.mode === 'smove') finishSelMove(S.drag, true);
+    TC.render.drawRect(null);
     S.drag = null;
     clearHover();
     const [a, b] = [...touches.values()], v = S.doc.view;
@@ -365,8 +386,14 @@
   /** Esc while a note is held: it is not written / moved. */
   I.cancelDrag = function () {
     const d = S.drag;
-    if (!d || !['aim', 'note', 'move', 'vel'].includes(d.mode)) return false;
+    if (!d || !['aim', 'note', 'move', 'vel', 'smove', 'rect', 'sel'].includes(d.mode)) return false;
     clearTimeout(holdTimer);
+    if (d.mode === 'smove') finishSelMove(d, true); // the notes go back
+    if (d.mode === 'rect') {
+      S.selection = new Set(d.keep);
+      TC.render.drawRect(null);
+      TC.render.draw();
+    }
     if (d.mode === 'vel') {
       // the strength goes back to what it was
       d.notes.forEach((n, k) => Object.assign(n, d.before[k]));
@@ -607,6 +634,181 @@
     TC.menu.open(items, e.clientX + 14, e.clientY - 24);
   }
 
+  // ---- Tools: select and eraser (note panel, keys W / V / E) ---------------------------------------
+  //   select   tap a note: select it (Shift / Ctrl: add / remove) · drag on an empty place: frame ·
+  //            drag a note: move the selection (sideways in time; up / down if all are one instrument) ·
+  //            hold a note and release: menu (instrument / strength) for the selection
+  //   eraser   tap or wipe: the notes under the circle are deleted (one undo step)
+  //   two fingers scroll and zoom in every tool; a pen's eraser end always erases
+
+  /** The tool for this pointer: the pen's eraser end erases, otherwise the chosen one. */
+  function toolOf(e) {
+    if (e && e.pointerType === 'pen' && ((e.buttons & 32) || e.button === 5)) return 'erase';
+    return S.tool || 'write';
+  }
+
+  function setHover(h) {
+    const key = JSON.stringify(h);
+    if (key === I.hoverKey) return;
+    I.hoverKey = key;
+    S.hover = h;
+    TC.render.drawHover();
+  }
+
+  /** Hover (mouse / pen above the screen) with the select tool or the eraser. */
+  function toolHover(e) {
+    const p = I.toLocal(e.clientX, e.clientY);
+    if (toolOf(e) === 'erase') {
+      setHover(p ? { sys: p.sys.i, erase: { x: p.x, y: p.y } } : null);
+      TC.ui.status(tr('Eraser: tap or wipe over notes'));
+      vp.style.cursor = 'crosshair';
+      return;
+    }
+    const head = p && TC.render.headAt(p);
+    setHover(head ? { bar: head.bar, ring: { x: head.x, y: head.y } } : null);
+    TC.ui.status(tr(head ? 'click: select (Shift: add) · drag: move the selection · hold: instrument / strength' : 'drag: selection frame · click: deselect, choose the bar'));
+    vp.style.cursor = head ? 'move' : 'crosshair';
+  }
+
+  // eraser
+
+  function startErase(e) {
+    S.drag = { mode: 'erase', id: e.pointerId, n: 0, last: I.toWorld(e.clientX, e.clientY) };
+    eraseMove(e);
+  }
+  function eraseMove(e) {
+    const d = S.drag, w = I.toWorld(e.clientX, e.clientY), R = TC.render.ERASE_R;
+    // the whole way since the last point: a fast wipe misses nothing
+    const steps = Math.max(1, Math.ceil(Math.hypot(w.x - d.last.x, w.y - d.last.y) / (R / 2)));
+    const heads = TC.render.headsInView(), ids = new Set();
+    for (let k = 1; k <= steps; k++) {
+      const x = d.last.x + ((w.x - d.last.x) * k) / steps, y = d.last.y + ((w.y - d.last.y) * k) / steps;
+      heads.forEach((h) => { if (Math.hypot(h.wx - x, h.wy - y) <= R) ids.add(h.id); });
+    }
+    d.last = w;
+    if (ids.size) {
+      d.n += TC.score.removeNotes(S.doc, [...ids]);
+      ids.forEach((id) => S.selection.delete(id));
+      S.rev++;
+      TC.render.draw();
+      TC.ui.status(tr('{n} note(s) deleted', { n: d.n }));
+    }
+    const p = I.toLocal(e.clientX, e.clientY);
+    I.hoverKey = null;
+    setHover(p ? { sys: p.sys.i, erase: { x: p.x, y: p.y, on: true } } : null);
+  }
+  function finishErase(d) {
+    if (d.n) TC.commit();
+    else TC.refresh();
+  }
+
+  // select
+
+  function startSelect(e) {
+    const p = I.toLocal(e.clientX, e.clientY), head = p && TC.render.headAt(p);
+    const add = !!(e.shiftKey || e.ctrlKey || e.metaKey);
+    const base = { id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e, add };
+    if (head) {
+      const hit = TC.score.findNote(S.doc, head.id);
+      if (!hit) return;
+      S.drag = Object.assign(base, { mode: 'sel', hit, head, t: { bar: head.bar, tick: head.tick, line: head.line, head } });
+      holdTimer = setTimeout(() => {
+        const d = S.drag;
+        if (!d || d.mode !== 'sel') return;
+        d.held = true; // released without moving: the menu (instrument / strength) for the selection
+        if (navigator.vibrate) navigator.vibrate(15);
+      }, HOLD_MS);
+      return;
+    }
+    S.drag = Object.assign(base, { mode: 'rect', w0: I.toWorld(e.clientX, e.clientY), keep: add ? new Set(S.selection) : new Set(), p });
+  }
+
+  /** A tap on a note: select it alone, or (Shift / Ctrl) add / remove it. */
+  function selTap(d) {
+    const id = d.head.id;
+    if (d.add) {
+      if (S.selection.has(id)) S.selection.delete(id);
+      else S.selection.add(id);
+    } else S.selection = new Set([id]);
+    TC.selectBar(d.head.bar);
+    TC.refresh();
+  }
+
+  function rectMove(e) {
+    const d = S.drag;
+    if (!d.started && !moved(d, e)) return;
+    d.started = true;
+    const w = I.toWorld(e.clientX, e.clientY);
+    TC.render.drawRect({ x1: d.w0.x, y1: d.w0.y, x2: w.x, y2: w.y });
+    const x1 = Math.min(d.w0.x, w.x), x2 = Math.max(d.w0.x, w.x), y1 = Math.min(d.w0.y, w.y), y2 = Math.max(d.w0.y, w.y);
+    const sel = new Set(d.keep);
+    TC.render.headsInView().forEach((h) => { if (h.wx >= x1 && h.wx <= x2 && h.wy >= y1 && h.wy <= y2) sel.add(h.id); });
+    const key = [...sel].sort().join();
+    if (key === d.key) return;
+    d.key = key;
+    S.selection = sel;
+    TC.render.draw();
+    TC.ui.status(tr('{n} note(s) selected', { n: sel.size }));
+  }
+  function rectDone(d) {
+    if (!d.started) {
+      // a tap on an empty place: the selection goes (Shift / Ctrl: it stays); the bar there is chosen
+      if (!d.add) S.selection.clear();
+      const bar = d.p && TC.render.barAt(d.p.x);
+      TC.selectBar(bar ? bar.i : null);
+    }
+    TC.refresh();
+  }
+
+  /**
+   * Dragging a note with the select tool: the whole selection moves along (the note pressed
+   * joins it). Every step starts again from the notes as they were, so a blocked place
+   * (a note of the same instrument there) just keeps the last good one.
+   */
+  function selMove(e) {
+    const d = S.drag;
+    if (!d.orig) {
+      if (!S.selection.has(d.head.id)) S.selection = d.add ? new Set([...S.selection, d.head.id]) : new Set([d.head.id]);
+      d.ids = [...S.selection];
+      d.orig = JSON.stringify(S.doc.tracks);
+      d.from = TC.score.absTick(S.doc, d.head.bar, d.head.tick);
+      const arts = new Set(d.ids.map((id) => (TC.score.findNote(S.doc, id) || { note: {} }).note.art));
+      d.oneArt = arts.size === 1 ? [...arts][0] : null; // up / down only for one instrument
+      d.good = { delta: 0, art: null };
+    }
+    const p = I.toLocal(e.clientX, e.clientY);
+    const bar = p && TC.render.barAt(p.x);
+    if (!bar || bar.simile || p.x < bar.x0) return;
+    const delta = TC.score.absTick(S.doc, bar.i, TC.render.snapTick(bar, p.x)) - d.from;
+    let art = null;
+    if (d.oneArt && !I.locked(e)) {
+      const a = lineArt(p);
+      if (a && a.id !== d.oneArt) art = a.id;
+    }
+    if (delta === d.good.delta && art === d.good.art) return;
+    const apply = (dl, a) => {
+      S.doc.tracks = JSON.parse(d.orig);
+      return (!dl && !a) || TC.score.moveNotes(S.doc, d.ids, dl, a);
+    };
+    if (apply(delta, art)) d.good = { delta, art };
+    else apply(d.good.delta, d.good.art);
+    S.rev++;
+    TC.render.draw();
+    const pos = TC.score.atAbs(S.doc, d.from + d.good.delta);
+    if (pos) TC.ui.status(`${where(pos)} · ${tr('{n} note(s) selected', { n: d.ids.length })} · ${tr('release: move here')}`);
+  }
+  function finishSelMove(d, cancelled) {
+    if (!d.orig) return;
+    if (cancelled) {
+      S.doc.tracks = JSON.parse(d.orig);
+      S.rev++;
+      TC.refresh();
+      return;
+    }
+    if (d.good.delta || d.good.art) TC.commit();
+    else TC.refresh();
+  }
+
   function finishVel(d) {
     const changed = d.notes.some((n, k) => n.ghost !== d.before[k].ghost || n.accent !== d.before[k].accent || n.vel !== d.before[k].vel);
     if (changed) TC.commit();
@@ -746,6 +948,7 @@
       else if (lk === 'c' && !isTyping(e)) A().copyBar();
       else if (lk === 'v' && !isTyping(e)) A().pasteBar();
       else if (lk === 'd') A().duplicateBar();
+      else if (lk === 'a' && !isTyping(e)) A().selectAll();
       else if (k === '+' || k === '=') A().zoomIn();
       else if (k === '-') A().zoomOut();
       else if (k === '0') A().zoomReset();
@@ -778,6 +981,11 @@
     else if (k === 'Home') A().home();
     else if (k === 'ArrowUp' && S.selection.size) A().moveLine(-1);
     else if (k === 'ArrowDown' && S.selection.size) A().moveLine(1);
+    else if (k === 'ArrowLeft' && S.selection.size) A().shiftSelection(-1);
+    else if (k === 'ArrowRight' && S.selection.size) A().shiftSelection(1);
+    else if (k === 'w' || k === 'W') A().setTool('write');
+    else if (k === 'v' || k === 'V') A().setTool('select');
+    else if (k === 'e' || k === 'E') A().setTool('erase');
     else if (k === 'l' || k === 'L') A().toggleLock();
     else if (ART_KEYS[k.toLowerCase()] && !e.altKey) {
       const id = ART_KEYS[k.toLowerCase()];

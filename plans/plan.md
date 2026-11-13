@@ -104,6 +104,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
   vorgeschlagen, alle Tasten eines Instruments zählen) und Raster wählen (1/16 + Triolen …; pro Schlag gerade oder
   Triole, je nachdem was besser passt), Vorschau mit Anzahl und unbekannten Tasten. Anschlag → Ghost / Akzent,
   leise Schläge kurz davor → Flam / Drag, Tempo, Taktarten und Marker werden übernommen. Ersetzt das offene Stück.
+  Bei einem ganzen Projekt wird die Schlagzeugspur vorgeschlagen (Name / Kanal 10), Tempo im Dialog änderbar.
 - Später: fehlende Instrumente (Tom-Rimshots, Accent, Hi-Hat-Pedal offen …), Wirbel beim Import erkennen,
   Import in das offene Stück (ab einem Takt), `.gp`-Export (ZIP + eigenes XML, größerer Aufwand; Guitar Pro
   liest MIDI ohne Triolen).

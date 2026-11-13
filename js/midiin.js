@@ -30,7 +30,7 @@
     const u32 = (p) => ((bytes[p] << 24) | (bytes[p + 1] << 16) | (bytes[p + 2] << 8) | bytes[p + 3]) >>> 0;
     const ntr = u16(10), div = u16(12);
     if (div & 0x8000) throw new Error('SMPTE time is not supported');
-    const out = { tpq: div, notes: [], tempos: [], sigs: [], markers: [], names: [] };
+    const out = { tpq: div, notes: [], tempos: [], sigs: [], markers: [], names: [], tracks: [] }; // tracks: { name, notes, channels }
     const utf8 = (arr) => {
       try { return decodeURIComponent(escape(String.fromCharCode(...arr))); } catch (e) { return String.fromCharCode(...arr); }
     };
@@ -39,6 +39,8 @@
       if (str(p, 4) !== 'MTrk') { p += 8 + u32(p + 4); k--; continue; } // skip unknown chunks
       const end = p + 8 + u32(p + 4);
       p += 8;
+      const trk = { name: '', notes: 0, channels: new Set() };
+      out.tracks.push(trk);
       let t = 0, status = 0;
       const vl = () => {
         let n = 0, b;
@@ -56,7 +58,7 @@
           if (type === 0x51 && len === 3) out.tempos.push({ t, bpm: 60000000 / ((data[0] << 16) | (data[1] << 8) | data[2]) });
           else if (type === 0x58 && len >= 2) out.sigs.push({ t, ts: [data[0], Math.pow(2, data[1])] });
           else if (type === 0x06 || type === 0x07) out.markers.push({ t, text: utf8(data).trim() });
-          else if (type === 0x03) out.names.push(utf8(data).trim());
+          else if (type === 0x03) { out.names.push(utf8(data).trim()); if (!trk.name) trk.name = utf8(data).trim(); }
           else if (type === 0x2f) break;
           continue;
         }
@@ -64,7 +66,11 @@
         if (b & 0x80) { status = b; p++; }
         const hi = status & 0xf0;
         const d1 = bytes[p++], d2 = hi === 0xc0 || hi === 0xd0 ? 0 : bytes[p++];
-        if (hi === 0x90 && d2 > 0) out.notes.push({ t, note: d1, vel: d2, ch: status & 15 });
+        if (hi === 0x90 && d2 > 0) {
+          out.notes.push({ t, note: d1, vel: d2, ch: status & 15, trk: out.tracks.length - 1 });
+          trk.notes++;
+          trk.channels.add(status & 15);
+        }
       }
       p = end;
     }
@@ -91,13 +97,14 @@
   MI.toScore = function (midi, opts = {}) {
     const TPQ = TC.TPQ, scale = TPQ / midi.tpq;
     const grid = opts.grid || 240, tgrid = (grid * 2) / 3, useT = opts.triplets !== false;
-    const bpm0 = midi.tempos.length ? midi.tempos[0].bpm : 120;
+    const bpm0 = opts.tempo || (midi.tempos.length ? midi.tempos[0].bpm : 120);
     const msTicks = (ms) => (ms / 1000) * (bpm0 / 60) * TPQ;
 
     // instruments, times in Tactus ticks
     const unknown = new Map();
     let hits = [];
     for (const n of midi.notes) {
+      if (opts.track !== undefined && opts.track !== null && n.trk !== opts.track) continue;
       const art = artOf(n.note, opts.profile);
       if (art === null || !TC.drums.byId(art)) {
         unknown.set(n.note, (unknown.get(n.note) || 0) + 1);
@@ -245,6 +252,16 @@
     inp.click();
   };
 
+  /** The drum track of a file: by its name (Drum, EZdrummer, Groove Agent, UJAM …), by channel 10, else the fullest. */
+  MI.drumTrack = function (midi) {
+    const list = midi.tracks.map((t, i) => Object.assign({ i }, t)).filter((t) => t.notes);
+    if (list.length <= 1) return list.length ? list[0].i : null;
+    const named = list.filter((t) => /drum|schlag|ezd|groove ?agent|ujam|beat ?maker|superior|addictive|bfd|perc/i.test(t.name));
+    const ch10 = list.filter((t) => t.channels.has(9));
+    const pool = named.length ? named : ch10.length ? ch10 : list;
+    return pool.reduce((a, b) => (b.notes > a.notes ? b : a)).i;
+  };
+
   MI.open = function (bytes, fileName) {
     let midi;
     try {
@@ -255,8 +272,17 @@
     }
     TC.kits.load();
     const S = TC.state;
+    const track = MI.drumTrack(midi);
+    // where it comes from: the kit profile of the open score, else the last import (track names say little:
+    // a track called "EZdrummer" may play Groove Agent)
     const cur = TC.kits.current(S.doc);
-    const st = { source: cur ? cur.id : S.settings.importKit && TC.kits.byId(S.settings.importKit) ? S.settings.importKit : '', grid: S.settings.importGrid || '16t' };
+    const fileBpm = midi.tempos.length ? Math.round(midi.tempos[0].bpm) : 120;
+    const st = {
+      source: cur ? cur.id : S.settings.importKit && TC.kits.byId(S.settings.importKit) ? S.settings.importKit : '',
+      grid: S.settings.importGrid || '16t',
+      track: track === null ? 'all' : String(track),
+      tempo: fileBpm,
+    };
     MI.close();
     root = document.createElement('div');
     root.className = 'dialog-backdrop';
@@ -266,7 +292,8 @@
 
     const result = () => {
       const g = GRIDS.find((x) => x.key === st.grid) || GRIDS[0];
-      return MI.toScore(midi, { profile: st.source ? TC.kits.byId(st.source) : null, grid: g.grid, triplets: g.triplets });
+      return MI.toScore(midi, { profile: st.source ? TC.kits.byId(st.source) : null, grid: g.grid, triplets: g.triplets,
+        track: st.track === 'all' ? null : +st.track, tempo: st.tempo });
     };
     /** Name of a key in the chosen drum map ("73 Floortom 2 Rimshot"), or just the number. */
     const keyName = (note) => {
@@ -279,14 +306,19 @@
       const sources = [`<option value="">General MIDI (Guitar Pro …)</option>`]
         .concat(TC.kits.list.map((p) => `<option value="${p.id}"${p.id === st.source ? ' selected' : ''}>${esc(tr('Kit profile: {name}', { name: p.name }))}</option>`)).join('');
       const grids = GRIDS.map((g) => `<option value="${g.key}"${g.key === st.grid ? ' selected' : ''}>${esc(tr(g.label))}</option>`).join('');
+      const withNotes = midi.tracks.map((t, i) => Object.assign({ i }, t)).filter((t) => t.notes);
+      const tracks = (withNotes.length > 1 ? [`<option value="all"${st.track === 'all' ? ' selected' : ''}>${tr('All tracks')}</option>`] : [])
+        .concat(withNotes.map((t) => `<option value="${t.i}"${String(t.i) === st.track ? ' selected' : ''}>${esc(t.name || tr('Track {n}', { n: t.i + 1 }))} (${tr('{n} notes', { n: t.notes })})</option>`)).join('');
       const unk = res.unknown.length
         ? `<p class="hint warn"><b>${tr('Keys without an instrument (left out):')}</b> ${res.unknown.map((u) => esc(keyName(u.note)) + ` (${u.count}×)`).join(', ')}</p>` : '';
       root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Import MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
           <p><b>${esc(fileName)}</b></p>
+          ${withNotes.length > 1 ? `<div class="row"><label>${tr('Track')}</label><select data-k="track">${tracks}</select></div>` : ''}
           <div class="row"><label>${tr('Comes from')}</label><select data-k="source">${sources}</select></div>
           <div class="row"><label>${tr('Grid')}</label><select data-k="grid">${grids}</select></div>
-          <p class="hint">${tr('{n} notes in {b} bars, tempo {t}.', { n: res.notes, b: res.doc.bars.length, t: res.doc.meta.tempo })}
+          <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-k="tempo" value="${st.tempo}"> <span class="muted">BPM${st.tempo !== fileBpm ? ' · ' + tr('in the file: {t}', { t: fileBpm }) : ''}</span></div>
+          <p class="hint">${tr('{n} notes in {b} bars.', { n: res.notes, b: res.doc.bars.length })}
             ${res.merged ? tr('{m} hits merged (flam / drag or the same position).', { m: res.merged }) : ''}</p>
           ${unk}
           <p class="hint">${tr('The import replaces the open score. Velocity: soft = ghost note, loud = accent.')}</p>
@@ -296,7 +328,8 @@
     };
     root.addEventListener('change', (e) => {
       const k = e.target.dataset.k;
-      if (k === 'source' || k === 'grid') { st[k] = e.target.value; draw(); }
+      if (k === 'source' || k === 'grid' || k === 'track') { st[k] = e.target.value; draw(); }
+      if (k === 'tempo') { st.tempo = TC.clamp(Math.round(Number(e.target.value) || fileBpm), 20, 400); draw(); }
     });
     root.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-k]');

@@ -56,6 +56,15 @@ module.exports = function (T) {
   T.eq('marker becomes the bar text', hr.doc.bars[0].marker, 'Verse');
   T.eq('no triplets wanted: the triplet beat snaps to 16ths', MI.toScore(hm, { grid: 240, triplets: false }).doc.tracks[0].bars[0].voices[0].map((e) => e.tick).filter((t) => t > 1920 && t < 3000), [2160, 2640, 2880]);
 
+  // a whole project exported: the drum track is found and read alone
+  T.eq('tracks: names and note counts', hm.tracks.map((t) => [t.name, t.notes]), [['', 0], ['', 11]]);
+  T.eq('drum track: the one with notes', MI.drumTrack(hm), 1);
+  const proj = { tracks: [{ name: 'Drums U5', notes: 0, channels: new Set() }, { name: 'EZdrummer 01', notes: 3, channels: new Set([0]) }, { name: 'Piano', notes: 40, channels: new Set([0]) }] };
+  T.eq('drum track found by name, even with fewer notes than the piano', MI.drumTrack(proj), 1);
+  const two = { tpq: 960, notes: [{ t: 0, note: 36, vel: 90, trk: 1 }, { t: 0, note: 60, vel: 90, trk: 2 }], tempos: [{ t: 0, bpm: 102 }], sigs: [], markers: [], names: [], tracks: proj.tracks };
+  const tr1 = MI.toScore(two, { track: 1, tempo: 120 });
+  T.eq('only the chosen track; tempo set in the dialog wins over the file', [tr1.notes, tr1.unknown, tr1.doc.meta.tempo], [1, [], 120]);
+
   // kit profile: every key of an instrument counts (also the extra ones)
   const item = (i, name) => `<item><int name="INote" value="${i}"/><int name="ONote" value="${i}"/><int name="DisplayNote" value="${i}"/><string name="Name" value="${name}"/></item>`;
   const p = TC.kits.fromDrm(`<DrumMap><string name="Name" value="EZ"/><list name="Map" type="list">${[item(61, 'Hi-Hat Closed Tip'), item(22, 'Hi-Hat Closed Edge'), item(34, 'Kick')].join('')}</list></DrumMap>`);

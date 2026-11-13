@@ -56,6 +56,7 @@ window.TC = window.TC || {};
       showCounts: false,    // counting (1 e + a) under the staff
       sound: true,          // play a note when it is written
       metronome: false,     // click while playing
+      followPlay: true,     // the view follows the playback cursor (off: it stays where it is)
       countIn: false,       // one bar of clicks before playing
       loop: false,          // playback repeats (the selected bar, or everything)
       volume: 0.8,

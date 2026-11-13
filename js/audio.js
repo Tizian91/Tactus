@@ -309,7 +309,8 @@
       TC.ui.status(`${TC.tr('Bar')} ${pos.bar + 1}${pos.pass > 1 ? ` (${pos.pass}.)` : ''}` +
         (TC.score.hasRepeats(S.doc) ? ` · ${TC.tr('played bar {n}', { n: pos.n })}` : ''));
     }
-    if (!c) return;
+    // "Follow" off: the view stays where it is (to change notes while listening)
+    if (!c || S.settings.followPlay === false) return;
     // keep the cursor in view: sideways (endless view), its line downwards (page view)
     const vp = document.getElementById('viewport');
     const v = S.doc.view;

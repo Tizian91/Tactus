@@ -353,6 +353,13 @@
   A.toggleCounts = () => toggleSetting('showCounts');
   A.toggleSound = () => toggleSetting('sound');
   A.toggleMetronome = () => toggleSetting('metronome');
+  /** The view follows the playback cursor (off: it stays, to change notes while listening). */
+  A.toggleFollowPlay = function () {
+    S.settings.followPlay = S.settings.followPlay === false;
+    TC.saveSettings();
+    TC.refresh();
+    TC.ui.hint(tr(S.settings.followPlay ? 'The view follows the playback' : 'The view stays where it is while playing'));
+  };
   A.toggleCountIn = () => toggleSetting('countIn');
   A.toggleLoop = function () {
     toggleSetting('loop');

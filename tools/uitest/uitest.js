@@ -174,6 +174,17 @@ setTimeout(() => {
   ok('playing ' + document.getElementById('play-btn').textContent, TC.player.playing && document.getElementById('play-btn').textContent === '■');
   TC.player.stop();
   ok('stopped', !TC.player.playing && document.getElementById('play-btn').textContent === '▶');
+  // "Follow" off: the view stays while the cursor runs
+  TC.actions.toggleFollowPlay();
+  ok('follow off: button not active', S.settings.followPlay === false && !document.getElementById('follow-btn').classList.contains('active'));
+  const fv = S.doc.view.x;
+  S.doc.view.x = 5000; TC.render.applyView(); // the cursor of bar 1 is far out of view
+  TC.player.play(0); // places the cursor at once (with "follow" it would scroll there)
+  TC.player.stop();
+  ok('follow off: the view did not jump to the cursor', S.doc.view.x === 5000);
+  S.doc.view.x = fv; TC.render.applyView();
+  TC.actions.toggleFollowPlay();
+  ok('follow on again', S.settings.followPlay === true && document.getElementById('follow-btn').classList.contains('active'));
   // several bars: Shift + click beside the lines, the panel field, the bar menu; playback plays them
   click(1, 480, 11.5);
   click(3, 480, 11.5, { shift: true });

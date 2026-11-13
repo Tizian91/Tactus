@@ -286,6 +286,10 @@
     // playback
     Playback: 'Wiedergabe',
     Metronome: 'Metronom',
+    Follow: 'Folgen',
+    'The view follows the playback (off: it stays where it is, e.g. to change notes while listening)': 'Die Ansicht folgt dem Abspielen (aus: sie bleibt stehen, z. B. um beim Hören Noten zu ändern)',
+    'The view follows the playback': 'Ansicht folgt dem Abspielen',
+    'The view stays where it is while playing': 'Die Ansicht bleibt beim Abspielen stehen',
     Click: 'Klick',
     'Count-in (one bar)': 'Einzähler (ein Takt)',
     'Loop (the selected bar, otherwise everything)': 'Schleife (der ausgewählte Takt, sonst alles)',

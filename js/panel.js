@@ -206,6 +206,7 @@
     const st = S.settings;
     return `<section><h3>${tr('Playback')}</h3>
       ${check('toggleMetronome', st.metronome, tr('Metronome'))}
+      ${check('toggleFollowPlay', st.followPlay !== false, tr('The view follows the playback'))}
       ${check('toggleCountIn', st.countIn, tr('Count-in (one bar)'))}
       ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}

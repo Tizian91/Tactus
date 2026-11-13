@@ -45,6 +45,7 @@
     play.classList.toggle('active', TC.player.playing);
     document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
     document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
+    document.getElementById('follow-btn').classList.toggle('active', S.settings.followPlay !== false);
     const tempo = document.getElementById('tempo-input');
     if (document.activeElement !== tempo) tempo.value = S.doc.meta.tempo;
     UI.updateZoom();

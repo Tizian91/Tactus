@@ -117,7 +117,8 @@ Formate und MIDI-Werte wie in Guitar Pro.
 - Abspielen ab dem ausgewählten Takt (Leertaste / ▶), mitlaufender Cursor, Ansicht folgt
 - Metronom, Einzähler, Schleife (ausgewählter Takt, sonst alles), Tempo in der Werkzeugleiste, Lautstärke
 - Änderungen während des Abspielens sind sofort zu hören; Klang beim Setzen einer Note
-- Später: echte Samples, Swing / Shuffle, Tempo pro Takt im Panel, Wiederholungszeichen beim Abspielen
+- **„Folgen“** (Werkzeugleiste / Panel): aus = die Ansicht bleibt beim Abspielen stehen, um beim Hören Noten zu ändern
+- Später: echte Samples, Swing / Shuffle, Tempo pro Takt im Panel
 
 ## Bedienung: setzen, verschieben, Reihen, Takte ✅ (zum Ausprobieren)
 

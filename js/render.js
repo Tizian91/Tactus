@@ -147,6 +147,28 @@
     return h ? h + 1.5 * SP : 0;
   }
 
+  const MULTI_W = 13 * SP; // width of a multi-bar rest (before the line is justified)
+
+  /**
+   * Multi-bar rests: runs of at least two bars without a note in any track, as [first bar, count].
+   * The first bar may start with a time signature, tempo, text, |: or a new line; a bar with any of
+   * those (or an ending, :|, %) inside the run ends it, as in printed parts.
+   */
+  RD.multiRests = function (doc, bars) {
+    const empty = (i) => !doc.bars[i].simile && !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) &&
+      doc.tracks.every((t) => t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
+    const opens = (i) => bars[i].showTs || bars[i].tempo || doc.bars[i].marker || doc.bars[i].repeatStart || doc.bars[i].lineBreak;
+    const out = [];
+    for (let i = 0; i < doc.bars.length;) {
+      if (!empty(i)) { i++; continue; }
+      let j = i + 1;
+      while (j < doc.bars.length && empty(j) && !opens(j)) j++;
+      if (j - i >= 2) out.push([i, j - i]);
+      i = j;
+    }
+    return out;
+  };
+
   /** Positions of all bars and lines, the notation items of every voice. */
   RD.computeLayout = function () {
     const doc = S.doc, track = doc.tracks[0], page = RD.isPage(), MARGIN = margin();
@@ -174,13 +196,21 @@
     const fixed = (b) => b.tsW + HEAD_OFF + 0.2 * SP + (b.re ? REP_W : 0);
     const width = (b) => fixed(b) + b.L * b.scale;
 
+    // page view: empty bars in a row become one multi-bar rest (▬ with the number above)
+    if (page && doc.page.multiRest) RD.multiRests(doc, bars).forEach(([a, n]) => {
+      bars[a].multi = n;
+      bars[a].scale = MULTI_W / bars[a].L;
+      for (let k = a + 1; k < a + n; k++) bars[k].hidden = a;
+    });
+    const shown = bars.filter((b) => b.hidden === undefined);
+
     // line breaks: as many bars as fit (or the chosen number), a bar may start a new line
     const lines = [];
     if (!page) lines.push(bars);
     else {
       const avail = PAGE_W - 2 * MARGIN - CLEF_W, per = doc.page.barsPerLine;
       let cur = [], used = 0;
-      for (const b of bars) {
+      for (const b of shown) {
         const w = width(b);
         if (cur.length && (doc.bars[b.i].lineBreak || (per ? cur.length >= per : used + w > avail))) {
           lines.push(cur);
@@ -240,6 +270,12 @@
       systems.push(s);
       ux += SYS_GAP;
     });
+    // the bars inside a multi-bar rest share its place (clicks, cursor: the rest stands for each of them)
+    for (const b of bars) {
+      if (b.hidden === undefined) continue;
+      const h = bars[b.hidden];
+      Object.assign(b, { sys: h.sys, x: h.x, x0: h.x0, w: h.w, scale: (h.L * h.scale) / b.L });
+    }
     const last = systems[systems.length - 1];
     RD.layout = {
       bars, systems, pages, page, grid, margin: MARGIN, heads: [], map: [], mapSys: 0,
@@ -386,7 +422,7 @@
 
     // grid
     for (const b of print ? [] : L.bars) {
-      if (b.simile) continue;
+      if (b.simile || b.hidden !== undefined) continue;
       const beat = TC.rhythm.beatTicks(b.ts);
       const G = TC.rhythm.groupSpans(b.ts, b.beam);
       const starts = G && new Set(G.map((g) => g[0])); // odd meters: the beam groups are the strong lines
@@ -404,7 +440,8 @@
     // bar numbers: endless view every bar (to find your way); page view as chosen
     const numbers = page ? doc.page.barNumbers : 'every';
     L.bars.forEach((b, i) => {
-      const o = O(b), s = L.systems[b.sys];
+      if (b.hidden !== undefined) return; // inside a multi-bar rest
+      const o = O(b), s = L.systems[b.sys], lastOf = b.multi ? i + b.multi - 1 : i;
       if (b.showTs) {
         const num = String(b.ts[0]), den = String(b.ts[1]);
         const put = (str, y) => {
@@ -428,14 +465,14 @@
         // :| two dots, thin line, thick line; played more than twice: "3×" above
         o.push(dots(end - 1.25 * SP), line(end - 0.85 * SP, 0, end - 0.85 * SP, 4 * SP, 'barline'), rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
         if (b.re > 2) o.push(`<text class="repeat-count" x="${f(end - 0.2 * SP)}" y="${f(-0.8 * SP)}">${b.re}×</text>`);
-      } else if (i === L.bars.length - 1) {
+      } else if (lastOf === L.bars.length - 1) {
         o.push(line(end - 0.75 * SP, 0, end - 0.75 * SP, 4 * SP, 'barline'));
         o.push(rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
       } else {
         o.push(line(end, 0, end, 4 * SP, 'barline'));
       }
       // page view (not printed): a manual line break after this bar
-      if (page && !print && doc.bars[i + 1] && doc.bars[i + 1].lineBreak) {
+      if (page && !print && doc.bars[lastOf + 1] && doc.bars[lastOf + 1].lineBreak) {
         o.push(`<text class="break-mark" x="${f(end + 0.5 * SP)}" y="${f(2.6 * SP)}"><title>${esc(TC.tr('manual line break'))}</title>↵</text>`);
       }
       const lineStart = i === s.first;
@@ -473,6 +510,15 @@
     L.heads = [];
     const track = doc.tracks[0];
     for (const b of L.bars) {
+      if (b.hidden !== undefined) continue;
+      if (b.multi) {
+        // multi-bar rest: thick bar on the middle line with serifs, the number of bars above
+        const x1 = b.x0 + 0.8 * SP, x2 = b.x + b.w - 1.2 * SP, cx = (x1 + x2) / 2;
+        O(b).push(`<g class="multirest">${rect(x1, 1.55 * SP, x2 - x1, 0.9 * SP, 'multirest-bar')}` +
+          line(x1, SP, x1, 3 * SP, 'multirest-end') + line(x2, SP, x2, 3 * SP, 'multirest-end') +
+          `<text class="multirest-n" x="${f(cx)}" y="${f(-1.0 * SP)}">${b.multi}</text></g>`);
+        continue;
+      }
       if (b.simile) {
         O(b).push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
         continue;

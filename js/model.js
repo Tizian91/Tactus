@@ -10,7 +10,8 @@
  *     bars:   [ BarHeader ],            // one per bar, for all tracks
  *     tracks: [ Track ],
  *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off',
- *               margin: 10 … 30 (mm), header: true (title and page number on the pages after the first) }   page view / PDF
+ *               margin: 10 … 30 (mm), header: true (title and page number on the pages after the first),
+ *               multiRest: true (empty bars in a row as one multi-bar rest) }   page view / PDF
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
@@ -85,7 +86,7 @@
   };
 
   TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false });
-  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true });
   TC.MARGINS = [10, 12, 15, 20, 25, 30];
   TC.BAR_NUMBERS = ['system', 'every', 'off'];
 
@@ -214,6 +215,7 @@
     if (TC.BAR_NUMBERS.includes(pg.barNumbers)) doc.page.barNumbers = pg.barNumbers;
     if (TC.MARGINS.includes(pg.margin)) doc.page.margin = pg.margin;
     if (pg.header === false) doc.page.header = false;
+    if (pg.multiRest === false) doc.page.multiRest = false;
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];
     doc.tracks = tracks.map((t) => {
       const kind = ['drums', 'pitched', 'tab'].includes(t.kind) ? t.kind : 'drums';

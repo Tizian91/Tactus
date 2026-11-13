@@ -280,6 +280,7 @@
       <div class="row"><label>${tr('Bar numbers')}</label><select data-action="setBarNumbers">${nums}</select></div>
       <div class="row"><label>${tr('Margins')}</label><select data-action="setMargin">${margins}</select></div>
       ${check('togglePageHeader', pg.header, tr('Title and page number on the following pages'))}
+      ${check('toggleMultiRest', pg.multiRest, tr('Combine empty bars (multi-bar rest)'))}
       <div class="btn-row">
         ${btn('toggleLayout', undefined, tr(S.settings.layout === 'page' ? 'Endless view' : 'Page view'), false)}
         ${btn('print', undefined, tr('PDF / print…'), false, 'Ctrl+P')}

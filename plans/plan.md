@@ -80,6 +80,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
 - Bearbeiten geht in beiden Ansichten gleich (Klick, Ziehen, Finger). Technisch: jeder Takt hat ein x in
   „Notenzeilen-Koordinaten“, die Zeilen werden nur verschoben gezeichnet (`TC.render.toLocal`).
 - ⚙ → Seite: **Seitenränder** (10–30 mm, Standard 15) und **Kopf auf Folgeseiten** (Titel · Interpret links, „Seite 2 / 3“ rechts; aus = nur die Seitenzahl unten), mit dem Stück gespeichert.
+- **Mehrtaktpausen** (⚙ → Seite, Standard an): mindestens zwei leere Takte hintereinander werden ein ▬ mit der Anzahl darüber – nur Seitenansicht / PDF. Unterbrochen von Taktart, Tempo, Text, Wiederholung, Klammer, %, neuer Zeile. Leer heißt: in **allen** Spuren keine Note (später mehrere Spuren). Hineinklicken schreibt in den ersten Takt.
 
 ## Phase 4a – Drummaps und Darstellung (begonnen)
 
@@ -205,6 +206,13 @@ Eine Regel für Maus, Stift und Finger:
   bei Änderung auf einem anderen Gerät wird gefragt (überschreiben oder neuer Name)
 - Kit-Profile: `Kit-Profile/Kits.tactus-kits.json`, jede Änderung wird hochgeladen, beim Start abgeglichen
 - Lokale Dateien (Öffnen / Speichern unter, Export / Import der Kit-Profile) bleiben wie gehabt
+
+## Als Nächstes (Reihenfolge)
+
+1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. Tempo-Übersicht im Panel, Klang-Umschalter in der Werkzeugleiste
+4. Rubrik „Wiederholungen & Sprünge“ im Takt-Panel mit D.S. / D.C. / Coda / Fine (nach dem Sprung Wiederholungen einmal, letzte Klammer; Häkchen „mit Wiederholungen“), Erklärung in der Hilfe
+5. Samples aus freien Bibliotheken (Lizenz prüfen), umschaltbar  6. Vorlagen für kostenlose VSTs (MT Power Drum Kit 2, SSD 5.5 Free; Groove Agent SE = GM)
+7. Drummap-Export für weitere DAWs (Reaper-Notennamen, Studio-One-Pitchlist – Formate erst prüfen)  8. Handbuch / Hilfeseite mit ⓘ-Links
 
 ## Offen zum Ausprobieren
 

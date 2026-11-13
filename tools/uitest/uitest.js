@@ -409,6 +409,19 @@ setTimeout(() => {
   ok('margin 25 mm: lines start further in ' + m15 + ' → ' + m25, S.doc.page.margin === 25 && m25 === Math.round(25 * 1200 / 210) && m25 > m15);
   TC.actions.undo();
   while (S.doc.bars.length < 40) TC.actions.addBar();
+  // multi-bar rest: the empty bars at the end become one ▬ with their number
+  const mr = PL().bars.filter((b) => b.multi);
+  const mrLast = mr[mr.length - 1];
+  ok('multi-bar rest over the empty bars at the end: ' + mr.map((b) => (b.i + 1) + '+' + b.multi).join(' '),
+    mrLast && mrLast.i + mrLast.multi === 40 && [...document.querySelectorAll('#score .multirest-n')].some((t) => t.textContent === String(mrLast.multi)));
+  ok('bars inside it share its place', PL().bars[39].x === mrLast.x && PL().bars[39].sys === mrLast.sys);
+  mouse('pointerdown', onPage(mrLast.i, 0, 3));
+  mouse('pointerup', onPage(mrLast.i, 0, 3));
+  ok('writing into the multi-bar rest fills its first bar, the rest stays combined ' + voice(mrLast.i, 0).join(' '),
+    voice(mrLast.i, 0).length > 0 && PL().bars[mrLast.i].multi === undefined && PL().bars[mrLast.i + 1].multi === mrLast.multi - 1);
+  TC.actions.undo();
+  TC.actions.toggleMultiRest();
+  ok('combining switched off: every bar of its own', !PL().bars.some((b) => b.multi) && !document.querySelector('#score .multirest'));
   TC.actions.setBarsPerLine(2);
   const heads = [...document.querySelectorAll('#score .runhead.right')].map((t) => t.textContent);
   ok('running header on every page after the first: ' + heads.join(', '), PL().pages.length > 1 && heads.length === PL().pages.length - 1 && heads[0] === 'Seite 2 / ' + PL().pages.length);

@@ -159,6 +159,7 @@
     standard: 'Standard',
     'Title and page number on the following pages': 'Titel und Seitenzahl auf den Folgeseiten',
     'Page {k} / {n}': 'Seite {k} / {n}',
+    'Combine empty bars (multi-bar rest)': 'Leere Takte zusammenfassen (Mehrtaktpause)',
     Automatic: 'Automatisch',
     'Bar numbers': 'Taktnummern',
     'At the start of each line': 'Am Zeilenanfang',

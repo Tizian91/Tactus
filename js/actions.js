@@ -579,6 +579,11 @@
     S.doc.page.header = !S.doc.page.header;
     TC.commit();
   };
+  /** Page view / PDF: empty bars in a row as one multi-bar rest. */
+  A.toggleMultiRest = function () {
+    S.doc.page.multiRest = !S.doc.page.multiRest;
+    TC.commit();
+  };
   A.setBarNumbers = function (mode) {
     if (!TC.BAR_NUMBERS.includes(mode) || S.doc.page.barNumbers === mode) return;
     S.doc.page.barNumbers = mode;

@@ -80,6 +80,7 @@
   function init() {
     TC.storage.loadSettings();
     TC.kits.load();
+    if (S.settings.midiOut && TC.midiOut.supported()) TC.midiOut.init(); // the chosen MIDI output again (permission is remembered)
     // a MIDI file dropped on the window: import it
     window.addEventListener('dragover', (e) => {
       if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault();

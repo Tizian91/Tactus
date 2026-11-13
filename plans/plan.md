@@ -210,3 +210,12 @@ Eine Regel für Maus, Stift und Finger:
 
 - Fühlt sich das Raster richtig an (Breite der Zellen, Einrasten, Vorschau)?
 - Klingen die synthetischen Sounds brauchbar, oder lohnen sich bald echte Samples?
+
+## Wiedergabe über Cubase (Web MIDI) ✅ (zum Ausprobieren)
+
+- Panel → Wiedergabe → **Klang**: „Tactus-Klänge“ oder **„MIDI: <Ausgang>“** (Chrome / Edge; beim ersten Mal fragt der
+  Browser). Die Schläge gehen mit den Tasten aus dem **Kit-Profil des Stücks** (ohne Profil: General MIDI, Kanal 10)
+  an den Ausgang, mit genauem Zeitpunkt; Cursor und Metronom bleiben in Tactus. „Tactus-Klänge zusätzlich“ wahlweise.
+- Einrichtung (Windows): virtuelles MIDI-Kabel, z. B. **loopMIDI** (kostenlos), Port anlegen; in Cubase die
+  Drum-Spur (Groove Agent …) auf diesen MIDI-Eingang stellen und Monitor einschalten (oder Aufnahme aktivieren).
+- Auch beim Setzen einer Note klingt sie über Cubase. Später: Latenz-Ausgleich einstellbar, MIDI-Eingang (Aufnahme).

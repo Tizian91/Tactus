@@ -395,3 +395,4 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .status-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .status-btn.missing { color: var(--danger); }
 .kit-body details.kit-free { color: var(--muted); margin: 8px 0; } .kit-body details.kit-free summary { cursor: pointer; }
+.panel .hint.warn { color: var(--danger); }

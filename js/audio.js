@@ -110,6 +110,11 @@
     if (!ensure()) return;
     const a = TC.drums.byId(art);
     if (!a) return;
+    // playback through a MIDI output (Cubase …): the stroke goes there; Tactus' sounds only if wanted
+    if (TC.midiOut && TC.midiOut.active()) {
+      TC.midiOut.hit(art, t, vel, ctx);
+      if (!S.settings.midiOutSynth) return;
+    }
     const out = dest || master, v = Math.max(0.05, Math.min(1.2, vel));
     const cut = (d) => (choke ? Math.min(d, 0.12) : d);
     switch (a.id) {
@@ -394,6 +399,7 @@
     if (!P.playing) return;
     P.playing = false;
     clearInterval(timer);
+    if (TC.midiOut) TC.midiOut.stop();
     cancelAnimationFrame(raf);
     TC.render.drawCursor(null);
     if (bus) {

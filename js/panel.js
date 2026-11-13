@@ -242,8 +242,29 @@
       ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
       <div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="1" step="0.05" value="${st.volume}" data-volume></div>
+      ${soundRow()}
       <p class="hint">${tr('Space: play / stop · plays from the selected bar.')}</p>
     </section>`;
+  }
+
+  /** Where the playback sounds: Tactus' own sounds or a MIDI output (Cubase plays them, js/midiout.js). */
+  function soundRow() {
+    const MO = TC.midiOut;
+    if (!MO || !MO.supported()) return '';
+    const st = S.settings, outs = MO.outputs();
+    if (st.midiOut && !outs.includes(st.midiOut)) outs.unshift(st.midiOut);
+    const opts = [`<option value="">${tr('Tactus sounds')}</option>`]
+      .concat(outs.map((n) => `<option value="${esc(n)}"${n === st.midiOut ? ' selected' : ''}>MIDI: ${esc(n)}</option>`))
+      .concat(`<option value="?">${tr(outs.length ? 'Look for MIDI outputs again…' : 'MIDI output (Cubase …)…')}</option>`).join('');
+    const p = TC.kits && TC.kits.current(S.doc);
+    let more = '';
+    if (st.midiOut) {
+      more = MO.missing()
+        ? `<p class="hint warn">${tr('"{name}" is not connected.', { name: st.midiOut })}</p>`
+        : `<p class="hint tight">${tr('Keys of the kit profile: {name}', { name: p ? p.name : 'General MIDI' })}</p>`;
+      more += check('toggleMidiSynth', !!st.midiOutSynth, tr('Tactus sounds as well'));
+    }
+    return `<div class="row"><label>${tr('Sound')}</label><select data-action="setMidiOut">${opts}</select></div>${more}`;
   }
 
   function pageSection() {
@@ -319,7 +340,7 @@
       notesRoot.scrollTop = scroll;
     }
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      S.settings, !!S.clipboard, S.doc.bars.length]);
+      S.settings, !!S.clipboard, S.doc.bars.length, TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;

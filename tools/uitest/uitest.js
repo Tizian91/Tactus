@@ -527,6 +527,20 @@ setTimeout(() => {
           ok('share link opened: same notes and bars, address cleaned', countNotes(S.doc) === before && S.doc.bars.length === bars && !location.hash);
           ok('menu entry', (() => { TC.actions.fileMenu(); const t = document.getElementById('context-menu').textContent; TC.menu.close(); return /Link zum Teilen kopieren/.test(t); })());
         })().catch((e) => ok('share link: ' + e.message, false)).then(() => {
+          // MIDI output (Web MIDI stubbed): the strokes go to the port with the keys of the kit profile
+          const sent = [];
+          const port = { name: 'Test Port', send: (m) => sent.push(Array.from(m)), clear: () => sent.push('clear') };
+          Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: () => Promise.resolve({ outputs: new Map([['p', port]]) }) });
+          return TC.midiOut.init().then(() => {
+            TC.actions.setMidiOut('Test Port');
+            ok('MIDI output: chosen in the panel', [...document.querySelectorAll('select[data-action="setMidiOut"] option')].some((o) => o.value === 'Test Port' && o.selected) && TC.midiOut.active());
+            TC.audio.preview(TC.newDrumNote(38, { accent: 1 }));
+            ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127) ' + JSON.stringify(sent[0]),
+              sent.length === 2 && sent[0].join() === [0x99, 38, 127].join() && sent[1][0] === 0x89);
+            TC.actions.setMidiOut('');
+            ok('MIDI output off: Tactus sounds again', !TC.midiOut.active());
+          }).catch((e) => ok('MIDI output: ' + e.message, false));
+        }).then(() => {
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');
           pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';

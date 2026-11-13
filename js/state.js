@@ -53,6 +53,8 @@ window.TC = window.TC || {};
       stemsLow: [43, 41],   // the toms that go down with 'low' (floor toms)
       importKit: '',        // MIDI import: kit profile the last file came from ('' = General MIDI)
       importGrid: '16t',    // MIDI import: grid (js/midiin.js)
+      midiOut: '',          // playback through this MIDI output (js/midiout.js), '' = Tactus' own sounds
+      midiOutSynth: false,  // with a MIDI output: Tactus' sounds as well
       kitCustom: null,      // ids of the custom kit
       layout: 'endless',    // 'endless' | 'page' (A4 pages as printed)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)

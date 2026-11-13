@@ -33,6 +33,7 @@
   };
 
   /** MIDI note (and channel) of an instrument for a target; records fallbacks. */
+  M.keyFor = keyFor;
   function keyFor(art, target, report) {
     if (!target) return { note: art.midi, ch: 9 };
     const map = TC.kits.map(target), by = new Map(map.entries.map((e) => [e.inote, e]));

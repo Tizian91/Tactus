@@ -455,6 +455,25 @@
   A.toggleCounts = () => toggleSetting('showCounts');
   A.toggleSound = () => toggleSetting('sound');
   A.toggleMetronome = () => toggleSetting('metronome');
+  A.toggleMidiSynth = () => toggleSetting('midiOutSynth');
+  /**
+   * Sound of the playback: '' = Tactus' own sounds, '?' = look for MIDI outputs (the browser asks
+   * once), otherwise the name of a MIDI output (js/midiout.js: Cubase plays the notes).
+   */
+  A.setMidiOut = function (value) {
+    if (value === '?') {
+      TC.midiOut.init().then((ok) => {
+        if (!ok) TC.ui.hint(tr('MIDI is not available (Chrome / Edge, and allow it when the browser asks).'));
+        else if (!TC.midiOut.outputs().length) TC.ui.hint(tr('No MIDI output found - is the virtual MIDI cable (e.g. loopMIDI) running?'));
+        TC.refresh();
+      });
+      return;
+    }
+    if (TC.player.playing) TC.player.stop(true);
+    S.settings.midiOut = value || '';
+    TC.saveSettings();
+    TC.refresh();
+  };
   /** The view follows the playback cursor (off: it stays, to change notes while listening). */
   A.toggleFollowPlay = function () {
     S.settings.followPlay = S.settings.followPlay === false;

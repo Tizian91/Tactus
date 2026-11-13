@@ -6,7 +6,7 @@
  * Network first: online you always get the current files, the cache is only the offline copy.
  * New file in index.html? Add it to FILES, so it is there offline from the start.
  */
-const CACHE = 'tactus-v40';
+const CACHE = 'tactus-v41';
 const FILES = [
   './',
   'index.html',
@@ -34,6 +34,7 @@ const FILES = [
   'js/storage.js',
   'js/dropbox.js',
   'js/share.js',
+  'js/help.js',
   'js/main.js',
 ];
 

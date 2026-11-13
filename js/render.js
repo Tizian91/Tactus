@@ -155,9 +155,9 @@
    * those (or an ending, :|, %) inside the run ends it, as in printed parts.
    */
   RD.multiRests = function (doc, bars) {
-    const empty = (i) => !doc.bars[i].simile && !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) &&
+    const empty = (i) => !doc.bars[i].simile && !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) && !doc.bars[i].end && !doc.bars[i].jump &&
       doc.tracks.every((t) => t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
-    const opens = (i) => bars[i].showTs || bars[i].tempo || doc.bars[i].marker || doc.bars[i].repeatStart || doc.bars[i].lineBreak;
+    const opens = (i) => bars[i].showTs || bars[i].tempo || doc.bars[i].marker || doc.bars[i].repeatStart || doc.bars[i].lineBreak || doc.bars[i].mark;
     const out = [];
     for (let i = 0; i < doc.bars.length;) {
       if (!empty(i)) { i++; continue; }
@@ -184,7 +184,7 @@
       const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
       const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : 0;
       return { i, L, ts: h.ts, beam: h.beam, simile, scale, showTs, rs, re, volta: h.volta || null,
-        tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices, marker: h.marker || '' };
+        tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '' };
     });
     // a tempo change shows "♩ = 140" above its bar
     let run = doc.meta.tempo;
@@ -212,7 +212,7 @@
       let cur = [], used = 0;
       for (const b of shown) {
         const w = width(b);
-        if (cur.length && (doc.bars[b.i].lineBreak || (per ? cur.length >= per : used + w > avail))) {
+        if (cur.length && (doc.bars[b.i].lineBreak || doc.bars[b.i].mark === 'coda' || (per ? cur.length >= per : used + w > avail))) {
           lines.push(cur);
           cur = [];
           used = 0;
@@ -248,7 +248,7 @@
       }
       s.end = ux;
       if (page) {
-        const text = k === 0 || ln.some((b) => b.marker || b.tempo); // the first line carries the tempo
+        const text = k === 0 || ln.some((b) => b.marker || b.tempo || b.mark || b.end || b.jump); // the first line carries the tempo
         const under = S.settings.showCounts || ln.some(hasSticking);
         s.above = (text ? 9.8 : 7.2) * SP;
         s.below = (under ? 12.4 : 8.4) * SP;
@@ -488,6 +488,24 @@
         o.push(`<g class="marker">${rect(x, TEXT_Y - 1.4 * SP, w, 1.95 * SP, 'marker-box')}` +
           `<text class="marker-text" x="${f(x + 0.5 * SP)}" y="${f(TEXT_Y)}">${esc(b.marker)}</text></g>`);
       }
+      // 𝄋 / ⊕ at the start of the bar (after tempo and text)
+      if (b.mark) {
+        const prev = L.bars[i - 1], gap = prev && prev.sys === b.sys && (prev.end || prev.jump) ? 1.2 * SP : 0; // clear of "D.S. al Coda" before it
+        const x = b.x + 0.2 * SP + gap + (i === 0 ? TEMPO_W + swingW : b.tempo ? TEMPO_W : 0) + (b.marker ? markerW(b.marker) + 0.6 * SP : 0);
+        o.push(`<text class="mus-sm jump-sign" x="${f(x)}" y="${f(TEXT_Y + 0.3 * SP)}"><title>${esc(TC.tr(b.mark === 'segno' ? 'Segno' : 'Coda'))}</title>${b.mark === 'segno' ? '' : ''}</text>`);
+      }
+      // at the end of the bar: D.C. / D.S. …, Fine, To Coda ⊕ (right-aligned, the jump rightmost)
+      let ex = end - 0.3 * SP;
+      if (b.jump) {
+        const t = RD.jumpText(b.jump);
+        o.push(`<text class="jump-text" x="${f(ex)}" y="${f(TEXT_Y)}">${esc(t)}</text>`);
+        ex -= jumpW(t) + 0.8 * SP;
+      }
+      if (b.end === 'fine') o.push(`<text class="jump-text" x="${f(ex)}" y="${f(TEXT_Y)}">Fine</text>`);
+      if (b.end === 'toCoda') {
+        o.push(`<text class="mus-sm jump-sign end" x="${f(ex)}" y="${f(TEXT_Y + 0.3 * SP)}">${''}</text>` +
+          `<text class="jump-text" x="${f(ex - 2.3 * SP)}" y="${f(TEXT_Y)}">To Coda</text>`);
+      }
     });
 
     // endings (1. / 2.): a bracket over the bars of one ending, per line; open at the right after the last one
@@ -541,6 +559,10 @@
 
   /** Width of the box of a bar text (12 px bold). */
   const markerW = (s) => s.length * 7.4 + 1.2 * SP;
+  /** Width of a jump text (13 px bold italic). */
+  const jumpW = (s) => s.length * 7.2;
+  /** "D.S. al Coda" … as written above the bar. */
+  RD.jumpText = (j) => ({ dc: 'D.C.', dcFine: 'D.C. al Fine', dcCoda: 'D.C. al Coda', ds: 'D.S.', dsFine: 'D.S. al Fine', dsCoda: 'D.S. al Coda' })[j] || '';
 
   /** One voice of one bar: rests, heads, stems, flags, beams, dots, accents, tuplets. */
   function drawVoice(out, b, items, vi, used, track) {

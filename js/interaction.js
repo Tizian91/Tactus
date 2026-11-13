@@ -917,11 +917,12 @@
       I.refreshHover();
     }
     // a window is open: Esc closes the top one (kit profiles may be open above the settings)
-    const checkOpen = TC.kits && TC.kits.isCheckOpen(), kitsOpen = TC.kits && TC.kits.isOpen(), midiOpen = TC.midiIn && TC.midiIn.isOpen();
+    const helpOpen = TC.help && TC.help.isOpen(), checkOpen = TC.kits && TC.kits.isCheckOpen(), kitsOpen = TC.kits && TC.kits.isOpen(), midiOpen = TC.midiIn && TC.midiIn.isOpen();
     const dbOpen = TC.dropbox && TC.dropbox.isOpen(), setOpen = TC.panel.isSettingsOpen();
-    if (checkOpen || kitsOpen || midiOpen || dbOpen || setOpen) {
+    if (helpOpen || checkOpen || kitsOpen || midiOpen || dbOpen || setOpen) {
       if (e.key === 'Escape') {
-        if (checkOpen) TC.kits.closeCheck();
+        if (helpOpen) TC.help.close();
+        else if (checkOpen) TC.kits.closeCheck();
         else if (kitsOpen) TC.kits.close();
         else if (midiOpen) TC.midiIn.close();
         else if (dbOpen) TC.dropbox.close();

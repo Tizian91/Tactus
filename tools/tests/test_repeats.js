@@ -64,4 +64,32 @@ module.exports = function (T) {
   // saved and loaded
   const back = TC.normalizeDoc(JSON.parse(JSON.stringify(score(3, (b) => { b[1].repeatStart = true; b[1].volta = [2, 1, 1, 9]; b[2].repeatEnd = 1; }))));
   T.eq('loading: endings sorted, bad ones dropped, "1 time" is no repeat', [back.bars[1].volta, back.bars[2].repeatEnd, back.bars[1].repeatStart], [[1, 2], 0, true]);
+
+  // D.C. / D.S. / Fine / Coda
+  T.eq('D.C.: back to the start once', order(score(3, (b) => { b[2].jump = 'dc'; })), '1 2 3 1 2 3');
+  T.eq('D.C. al Fine', order(score(4, (b) => { b[1].end = 'fine'; b[3].jump = 'dcFine'; })), '1 2 3 4 1 2');
+  T.eq('D.S. al Coda (the example of the help)', order(score(10, (b) => {
+    b[2].mark = 'segno'; b[5].end = 'toCoda'; b[7].jump = 'dsCoda'; b[8].mark = 'coda';
+  })), '1 2 3 4 5 6 7 8 3 4 5 6 9 10');
+  T.eq('D.S. al Fine with a repeat and endings: after the jump once, last ending', order(score(6, (b) => {
+    b[1].mark = 'segno'; b[2].repeatStart = true; b[3].volta = [1]; b[3].repeatEnd = 2; b[4].volta = [2]; b[4].end = 'fine'; b[5].jump = 'dsFine';
+  })), "1 2 3 4 3' 5' 6 2 3 5");
+  T.eq('… with "play the repeats after the jump"', order(score(6, (b) => {
+    b[1].mark = 'segno'; b[2].repeatStart = true; b[3].volta = [1]; b[3].repeatEnd = 2; b[4].volta = [2]; b[4].end = 'fine'; b[5].jump = 'dsFine'; b[5].jumpRep = true;
+  })), "1 2 3 4 3' 5' 6 2 3 4 3' 5'");
+  T.eq('a jump at the end of a repeat: after the last time through', order(score(3, (b) => { b[0].repeatStart = true; b[1].repeatEnd = 2; b[1].jump = 'dc'; })),
+    "1 2 1' 2' 1 2 3");
+  T.eq('D.S. without a segno: from the start; al Coda without coda: ends at To Coda', order(score(4, (b) => { b[1].end = 'toCoda'; b[3].jump = 'dsCoda'; })),
+    '1 2 3 4 1 2');
+  const jd = score(10, (b) => { b[2].mark = 'segno'; b[5].end = 'toCoda'; b[7].jump = 'dsCoda'; b[8].mark = 'coda'; });
+  T.eq('the bar after a jump knows it (markers)', SC.playOrder(jd).filter((o) => o.via).map((o) => [o.bar + 1, o.via]), [[3, 'ds'], [9, 'coda']]);
+  T.eq('problems: none', SC.jumpProblems(jd), []);
+  const jp = score(3, (b) => { b[2].jump = 'dsCoda'; });
+  T.eq('problems: no segno, no To Coda, no coda', SC.jumpProblems(jp).map((p) => p.problem), ['noSegno', 'noToCoda', 'noCoda']);
+  const jm = TC.midi.read(TC.midi.build(jd, null).bytes).metas.filter((x) => x.type === 6).map((x) => [x.t / 3840, decodeURIComponent(escape(String.fromCharCode(...x.data)))]);
+  T.eq('MIDI: markers at the jumps', jm, [[8, 'D.S. – bar 3'], [12, 'Coda – bar 9']]);
+  const jl = TC.normalizeDoc(JSON.parse(JSON.stringify(score(3, (b) => { b[0].mark = 'segno'; b[1].end = 'toCoda'; b[2].jump = 'dsCoda'; b[2].jumpRep = true; b[1].mark = 'x'; }))));
+  T.eq('loading: signs and jumps kept, bad ones dropped', jl.bars.map((h) => [h.mark, h.end, h.jump, h.jumpRep]),
+    [['segno', '', '', false], ['', 'toCoda', '', false], ['', '', 'dsCoda', true]]);
+  T.eq('unfold: jumps written out too', [SC.unfold(jd), SC.hasRepeats(jd)], [14, false]);
 };

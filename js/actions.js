@@ -795,6 +795,62 @@
     TC.commit();
     TC.ui.hint(tr('Repeats written out: {n} bars', { n }));
   };
+  /** 𝄋 Segno / ⊕ Coda at the start of bar i ('' none); only one bar has each sign. */
+  A.setMark = function (v, i = curBar()) {
+    v = TC.MARKS.includes(v) ? v : '';
+    if (v) S.doc.bars.forEach((b) => { if (b.mark === v) b.mark = ''; });
+    S.doc.bars[i].mark = v;
+    TC.commit();
+  };
+  /** Fine / To Coda at the end of bar i ('' none). */
+  A.setEnd = function (v, i = curBar()) {
+    S.doc.bars[i].end = TC.ENDS.includes(v) ? v : '';
+    TC.commit();
+  };
+  /** D.C. / D.S. … at the end of bar i ('' none). */
+  A.setJump = function (v, i = curBar()) {
+    const h = S.doc.bars[i];
+    h.jump = TC.JUMPS.includes(v) ? v : '';
+    if (!h.jump) h.jumpRep = false;
+    TC.commit();
+    const p = TC.score.jumpProblems(S.doc).filter((x) => x.bar === i);
+    if (p.length) TC.ui.hint(A.jumpProblemText(p[0]));
+  };
+  A.toggleJumpRep = function (i = curBar()) {
+    S.doc.bars[i].jumpRep = !S.doc.bars[i].jumpRep;
+    TC.commit();
+  };
+  A.jumpProblemText = (p) => tr({ noSegno: 'D.S.: no 𝄋 Segno in the score yet (bar menu or panel)', noFine: 'al Fine: no bar with Fine yet',
+    noToCoda: 'al Coda: no bar with "To Coda" yet', noCoda: 'al Coda: no bar with ⊕ Coda (start of the coda) yet' }[p.problem]);
+  const JUMP_LABELS = [['', '–'], ['dc', 'D.C. (from the start)'], ['dcFine', 'D.C. al Fine'], ['dcCoda', 'D.C. al Coda'],
+    ['ds', 'D.S. (from 𝄋)'], ['dsFine', 'D.S. al Fine'], ['dsCoda', 'D.S. al Coda']];
+  A.JUMP_LABELS = JUMP_LABELS;
+
+  /** How jumps work: a short explanation with an example (until the manual exists). */
+  A.jumpHelp = function () {
+    TC.help.open(tr('How jumps work'), JUMP_HELP());
+  };
+  const JUMP_HELP = () => TC.getLang && TC.getLang() === 'de' ? `
+    <p><b>D.C.</b> (Da Capo) = zurück zum Anfang. <b>D.S.</b> (Dal Segno) = zurück zum Zeichen <b>𝄋 Segno</b>.</p>
+    <p><b>… al Fine</b>: nach dem Sprung bis zum Takt mit <b>Fine</b> spielen – dort ist Schluss.<br>
+       <b>… al Coda</b>: nach dem Sprung bis <b>To Coda</b> spielen, dann weiter beim Takt mit <b>⊕ Coda</b> (dem Schlussteil).</p>
+    <p>Fine und To Coda gelten erst <b>nach</b> dem Sprung; beim ersten Durchlauf spielt man darüber hinweg.</p>
+    <p class="help-ex">Takt&nbsp; 1 2 | 3&nbsp;𝄋 4 | 5 6&nbsp;(To Coda) | 7 8&nbsp;(D.S. al Coda) | 9&nbsp;⊕ 10<br>
+       gespielt: 1 2 3 4 5 6 7 8 → 𝄋 → 3 4 5 6 → ⊕ → 9 10</p>
+    <p><b>Wiederholungen nach dem Sprung</b> werden nur einmal gespielt, bei 1. / 2. Klammer die letzte
+       (so ist es üblich). Steht „con rip.“ in den Noten: Häkchen „Wiederholungen nach dem Sprung mitspielen“.</p>
+    <p class="help-ex">Takt&nbsp; 1 | 2&nbsp;𝄋 |: 3 [1. 4 :| [2. 5 (Fine) | 6 (D.S. al Fine)<br>
+       gespielt: 1 2 3 4 3 5 6 → 𝄋 → 2 3 5 Ende</p>
+    <p>Setzen: Takt-Panel → <b>Wiederholungen &amp; Sprünge</b>, oder Rechtsklick auf den Takt. Abspielen, Cursor und
+       MIDI-Export folgen den Sprüngen (in Cubase mit Markern „D.S. – Takt 3“, „Coda – Takt 9“).</p>` : `
+    <p><b>D.C.</b> (da capo) = back to the start. <b>D.S.</b> (dal segno) = back to the sign <b>𝄋 segno</b>.</p>
+    <p><b>… al Fine</b>: after the jump play up to the bar with <b>Fine</b> – the end.<br>
+       <b>… al Coda</b>: after the jump play up to <b>To Coda</b>, then go on at the bar with <b>⊕ Coda</b>.</p>
+    <p>Fine and To Coda count only <b>after</b> the jump.</p>
+    <p class="help-ex">bars&nbsp; 1 2 | 3&nbsp;𝄋 4 | 5 6&nbsp;(To Coda) | 7 8&nbsp;(D.S. al Coda) | 9&nbsp;⊕ 10<br>
+       played: 1 2 3 4 5 6 7 8 → 𝄋 → 3 4 5 6 → ⊕ → 9 10</p>
+    <p><b>Repeats after the jump</b> are played once, with endings the last one (the usual way). For "con rip.":
+       tick "Play the repeats after the jump".</p>`;
   const VOLTAS = [['', '–'], ['1', '1.'], ['2', '2.'], ['3', '3.'], ['4', '4.'], ['1,2', '1., 2.'], ['1,2,3', '1., 2., 3.']];
   A.VOLTAS = VOLTAS;
   /** Submenu "Repeat" of bar i. */
@@ -806,8 +862,20 @@
         label: n ? tr('{n} times', { n }) : tr('none'), checked: (h.repeatEnd || 0) === n, action: () => A.setRepeatEnd(n, i),
       })) },
       { label: 'Ending (1st / 2nd time bar)', submenu: VOLTAS.map(([v, l]) => ({ label: l, checked: vk === v, action: () => A.setVolta(v, i) })) },
+      '-',
+      { label: 'Sign at the start', submenu: [['', '–'], ['segno', '𝄋 Segno (D.S. jumps here)'], ['coda', '⊕ Coda (the coda starts here)']]
+        .map(([v, l]) => ({ label: l, checked: (h.mark || '') === v, action: () => A.setMark(v, i) })) },
+      { label: 'At the end', submenu: [['', '–'], ['fine', 'Fine'], ['toCoda', 'To Coda ⊕']]
+        .map(([v, l]) => ({ label: l, checked: (h.end || '') === v, action: () => A.setEnd(v, i) })) },
+      { label: 'Jump back at the end', submenu: JUMP_LABELS.map(([v, l]) => ({ label: l, checked: (h.jump || '') === v, action: () => A.setJump(v, i) })) },
+      ...(h.jump ? [{ label: 'Play the repeats after the jump', checked: !!h.jumpRep, action: () => A.toggleJumpRep(i) }] : []),
+      { label: 'How jumps work…', action: A.jumpHelp },
     ];
-    if (R && R[1] > R[0]) items.unshift({ label: tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }), action: () => A.repeatSelection(2) }, '-');
+    if (R && R[1] > R[0]) {
+      items.unshift({ label: tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }), action: () => A.repeatSelection(2) },
+        { label: tr('𝄋 Segno on bar {a}', { a: R[0] + 1 }), action: () => A.setMark('segno', R[0]) },
+        { label: tr('D.S. al Coda after bar {b}', { b: R[1] + 1 }), action: () => A.setJump('dsCoda', R[1]) }, '-');
+    }
     items.push('-', { label: 'Write the repeats out (bar numbers as in Cubase)…', action: A.unfoldRepeats, disabled: !TC.score.hasRepeats(S.doc) });
     return items;
   }
@@ -851,7 +919,7 @@
     TC.menu.open([
       { label: 'Time signature from here', submenu: sigs.concat(['-', { label: 'Other…', action: () => A.customTimeSig(i) }]) },
       beamItems.length ? { label: 'Beam groups', submenu: beamItems } : null,
-      { label: 'Repeat', submenu: repeatItems(i) },
+      { label: 'Repeat & jump', submenu: repeatItems(i) },
       '-',
       extend,
       play,

@@ -157,13 +157,6 @@
       <div class="row"><label>${tr('Time sig.')}</label><select data-ts>${opts}<option value="other">${tr('Other…')}</option></select></div>
       ${beamRow}
       <p class="hint">${tr('Applies from this bar up to the next change.')}</p>
-      <div class="row"><label>${tr('Repeat')}</label>
-        ${btn('toggleRepeatStart', undefined, '|:', !!h.repeatStart, tr('Repeat starts here |:'))}
-        <select data-action="setRepeatEnd" title="${esc(tr('Repeat ends here :|'))}">${[0, 2, 3, 4, 5, 6].map((n) =>
-          `<option value="${n}"${(h.repeatEnd || 0) === n ? ' selected' : ''}>${n ? ':| ' + tr('{n} times', { n }) : ':| –'}</option>`).join('')}</select>
-        <select data-action="setVolta" title="${esc(tr('Ending (1st / 2nd time bar)'))}">${TC.actions.VOLTAS.map(([v, l]) =>
-          `<option value="${v}"${(h.volta || []).join(',') === v ? ' selected' : ''}>${v ? '⌐ ' + l : '⌐ –'}</option>`).join('')}</select></div>
-      ${R && R[1] > R[0] ? `<div class="btn-row">${btn('repeatSelection', 2, tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }))}</div>` : ''}
       <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-bartempo value="${i === 0 ? S.doc.meta.tempo : h.tempo || ''}" placeholder="${TC.timeline.tempoAt(S.doc, i)}"> <span class="muted">${tr(i === 0 ? 'BPM' : 'from here')}</span></div>
       <div class="row"><label>${tr('Text')}</label><input type="text" data-marker maxlength="40" value="${esc(h.marker || '')}" placeholder="${esc(tr('e.g. Verse, Chorus'))}"></div>
       ${i > 0 ? check('toggleLineBreak', !!h.lineBreak, tr('New line from this bar (page view)')) : ''}
@@ -180,6 +173,32 @@
         ${btn('clearBar', undefined, tr('Clear'), false, many ? tr('Clear bars {a}–{b}', ab) : tr('Clear bar'))}
         ${btn('deleteBar', undefined, tr('Delete'), false, many ? tr('Delete bars {a}–{b}', ab) : tr('Delete bar'), 'danger')}
       </div></section>`;
+  }
+
+  /** Repeats and jumps of the selected bar: |: :| endings, 𝄋 / ⊕, Fine / To Coda, D.C. / D.S. */
+  function repeatSection() {
+    const i = S.selBar;
+    if (i === null || !S.doc.bars[i]) return '';
+    const h = S.doc.bars[i], R = TC.barRange();
+    const sel = (action, list, cur) => `<select data-action="${action}">${list.map(([v, l]) =>
+      `<option value="${v}"${(cur || '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select>`;
+    const problems = TC.score.jumpProblems(S.doc);
+    return `<section><h3>${tr('Repeats & jumps')}</h3>
+      <div class="row"><label>${tr('Repeat')}</label>
+        ${btn('toggleRepeatStart', undefined, '|:', !!h.repeatStart, tr('Repeat starts here |:'))}
+        <select data-action="setRepeatEnd" title="${esc(tr('Repeat ends here :|'))}">${[0, 2, 3, 4, 5, 6].map((n) =>
+          `<option value="${n}"${(h.repeatEnd || 0) === n ? ' selected' : ''}>${n ? ':| ' + tr('{n} times', { n }) : ':| –'}</option>`).join('')}</select>
+        <select data-action="setVolta" title="${esc(tr('Ending (1st / 2nd time bar)'))}">${TC.actions.VOLTAS.map(([v, l]) =>
+          `<option value="${v}"${(h.volta || []).join(',') === v ? ' selected' : ''}>${v ? '⌐ ' + l : '⌐ –'}</option>`).join('')}</select></div>
+      ${R && R[1] > R[0] ? `<div class="btn-row">${btn('repeatSelection', 2, tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }))}</div>` : ''}
+      <div class="row"><label>${tr('Sign')}</label>${sel('setMark', [['', '–'], ['segno', '𝄋 Segno (D.S. jumps here)'], ['coda', '⊕ Coda (the coda starts here)']], h.mark)}</div>
+      <div class="row"><label>${tr('At the end')}</label>${sel('setEnd', [['', '–'], ['fine', 'Fine'], ['toCoda', 'To Coda ⊕']], h.end)}</div>
+      <div class="row"><label>${tr('Jump')}</label>${sel('setJump', TC.actions.JUMP_LABELS, h.jump)}</div>
+      ${h.jump ? check('toggleJumpRep', !!h.jumpRep, tr('Play the repeats after the jump (con rip.)')) : ''}
+      ${problems.map((p) => `<p class="hint warn tight">${tr('Bar {n}', { n: p.bar + 1 })}: ${esc(TC.actions.jumpProblemText(p))}</p>`).join('')}
+      <div class="btn-row">${btn('jumpHelp', undefined, 'ⓘ ' + tr('How jumps work'), false, '', 'link')}
+        ${btn('unfoldRepeats', undefined, tr('Write out…'), false, tr('Write the repeats out (bar numbers as in Cubase)…'), TC.score.hasRepeats(S.doc) ? '' : 'off')}</div>
+    </section>`;
   }
 
   /** All tempo changes of the score: click = go to the bar, ✕ = remove the change. */
@@ -361,12 +380,12 @@
       notesRoot.scrollTop = scroll;
     }
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      S.settings, !!S.clipboard, S.doc.bars.length, S.doc.bars.map((b) => b.tempo || 0).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, !!S.clipboard, S.doc.bars.length, S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       // what is needed while writing; the rest is in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + barSection() + playSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + barSection() + repeatSection() + playSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       setRoot.scrollTop = scroll;
     }

@@ -22,7 +22,11 @@
  *                marker: ''               text above the bar (Verse, Chorus …)
  *                lineBreak: false        page view: this bar starts a new line
  *                beam: null | [2, 2, 3]  beam groups in units of the lower number (7/8: eighths), null = default
- *                simile: false           true = "repeat the bar before" (% sign; plays the bar before) }
+ *                simile: false           true = "repeat the bar before" (% sign; plays the bar before)
+ *                mark: '' | 'segno' | 'coda'   sign at the start: 𝄋 (D.S. jumps here), ⊕ (the coda starts here)
+ *                end: '' | 'fine' | 'toCoda'   at the end: Fine (after a jump: the end), To Coda (after a jump: on to ⊕)
+ *                jump: '' | 'dc' | 'dcFine' | 'dcCoda' | 'ds' | 'dsFine' | 'dsCoda'   at the end: back to bar 1 / 𝄋
+ *                jumpRep: false          after the jump the repeats are played again (default: once, last ending) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill,
  *                bars: [ { voices: [ [Event], [Event] ] } ] }   // bars[i] belongs to header bars[i]
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
@@ -85,7 +89,12 @@
     return base + (pos < half ? (pos * split) / half : split + ((pos - half) * (pair - split)) / half);
   };
 
-  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false });
+  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false,
+    mark: '', end: '', jump: '', jumpRep: false });
+  /** Signs at the start of a bar, at its end, and the jumps back (D.C. / D.S.), see SC.playOrder. */
+  TC.MARKS = ['segno', 'coda'];
+  TC.ENDS = ['fine', 'toCoda'];
+  TC.JUMPS = ['dc', 'dcFine', 'dcCoda', 'ds', 'dsFine', 'dsCoda'];
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true });
   TC.MARGINS = [10, 12, 15, 20, 25, 30];
   TC.BAR_NUMBERS = ['system', 'every', 'off'];
@@ -206,6 +215,9 @@
         if (Array.isArray(b.beam) && b.beam.every((x) => Number.isInteger(x) && x > 0) && b.beam.reduce((a, c) => a + c, 0) === h.ts[0]) h.beam = b.beam.slice();
         h.simile = !!b.simile && i > 0;
         h.lineBreak = !!b.lineBreak && i > 0;
+        if (TC.MARKS.includes(b.mark)) h.mark = b.mark;
+        if (TC.ENDS.includes(b.end)) h.end = b.end;
+        if (TC.JUMPS.includes(b.jump)) { h.jump = b.jump; h.jumpRep = !!b.jumpRep; }
       }
       return h;
     });
@@ -345,17 +357,32 @@
   };
 
   /**
-   * The order in which the bars are played - repeats and endings written out, as a MIDI file has them:
-   * [{ bar, pass, n }]  bar: index of the written bar, pass: 1st, 2nd … time through its repeat,
-   * n: number of the played bar (1, 2, …; what Cubase counts).
+   * The order in which the bars are played - repeats, endings and jumps written out, as a MIDI file has them:
+   * [{ bar, pass, n, via }]  bar: index of the written bar, pass: 1st, 2nd … time through its repeat,
+   * n: number of the played bar (1, 2, …; what Cubase counts), via: 'dc' | 'ds' | 'coda' on the first
+   * bar after a jump.
    *   |: … :|        repeatStart … repeatEnd (n times); a repeat end without a start goes back to
    *                  the bar after the previous repeat end (or to bar 1)
    *   endings        a bar with volta [1] is played in pass 1 only, [2] in pass 2 … (also bars before
    *                  the repeat end, e.g. a two-bar first ending)
+   *   D.C. / D.S.    at the end of the bar (after its repeat is done): back to bar 1 / to the 𝄋 bar, once.
+   *                  After it the repeats are played once and the last ending is taken (jumpRep: as at first);
+   *                  "al Fine": it ends after the Fine bar, "al Coda": at To Coda on to the ⊕ bar.
+   *                  Fine and To Coda count only after the jump.
    */
   SC.playOrder = function (doc) {
-    const bars = doc.bars, out = [], jumps = new Map();
+    const bars = doc.bars, out = [], jumps = new Map(), taken = new Set();
     let i = 0, start = 0, pass = 1, back = false, lastVolta = false;
+    let after = null, via = null; // after a jump: { fine, coda, rep }
+    // the highest ending of the endings around bar k (after a jump without repeats: the one played)
+    const lastEnding = (k) => {
+      let a = k, z = k, m = 0;
+      while (a > 0 && bars[a - 1].volta && bars[a - 1].volta.length) a--;
+      while (z + 1 < bars.length && bars[z + 1].volta && bars[z + 1].volta.length) z++;
+      for (let j = a; j <= z; j++) m = Math.max(m, ...bars[j].volta);
+      return m;
+    };
+    const once = () => after && !after.rep;
     while (i < bars.length && out.length < 20000) {
       const h = bars[i], volta = h.volta && h.volta.length ? h.volta : null;
       if (!back) {
@@ -368,13 +395,27 @@
         }
       }
       back = false;
-      if (volta && !volta.includes(pass)) {
+      if (volta && !volta.includes(once() ? lastEnding(i) : pass)) {
         i++;
         continue;
       }
-      out.push({ bar: i, pass, n: out.length + 1 });
+      out.push(via ? { bar: i, pass, n: out.length + 1, via } : { bar: i, pass, n: out.length + 1 });
+      via = null;
       lastVolta = !!volta;
-      if (h.repeatEnd > 1) {
+      // after a jump: Fine ends, To Coda goes on to the coda
+      if (after && after.fine && h.end === 'fine') break;
+      if (after && after.coda && h.end === 'toCoda') {
+        let c = bars.findIndex((b, k) => k > i && b.mark === 'coda');
+        if (c < 0) c = bars.findIndex((b) => b.mark === 'coda');
+        if (c < 0) break; // no coda: the end
+        after.coda = false;
+        i = start = c;
+        pass = 1;
+        jumps.clear();
+        via = 'coda';
+        continue;
+      }
+      if (h.repeatEnd > 1 && !once()) {
         const done = jumps.get(i) || 0;
         if (done + 1 < h.repeatEnd) {
           jumps.set(i, done + 1);
@@ -387,8 +428,35 @@
         start = i + 1;
         pass = 1;
       }
+      // D.C. / D.S. (each one once)
+      if (h.jump && !taken.has(i)) {
+        taken.add(i);
+        const ds = h.jump.startsWith('ds');
+        const segno = bars.findIndex((b) => b.mark === 'segno');
+        after = { fine: /Fine$/.test(h.jump), coda: /Coda$/.test(h.jump), rep: !!h.jumpRep };
+        i = start = ds && segno >= 0 ? segno : 0;
+        pass = 1;
+        jumps.clear();
+        lastVolta = false;
+        via = ds ? 'ds' : 'dc';
+        continue;
+      }
       i++;
     }
+    return out;
+  };
+
+  /** What is missing for the jumps of a score: [{ bar, problem: 'noSegno' | 'noFine' | 'noToCoda' | 'noCoda' }]. */
+  SC.jumpProblems = function (doc) {
+    const has = (k, v) => doc.bars.some((b) => b[k] === v);
+    const out = [];
+    doc.bars.forEach((b, i) => {
+      if (!b.jump) return;
+      if (b.jump.startsWith('ds') && !has('mark', 'segno')) out.push({ bar: i, problem: 'noSegno' });
+      if (/Fine$/.test(b.jump) && !has('end', 'fine')) out.push({ bar: i, problem: 'noFine' });
+      if (/Coda$/.test(b.jump) && !has('end', 'toCoda')) out.push({ bar: i, problem: 'noToCoda' });
+      if (/Coda$/.test(b.jump) && !has('mark', 'coda')) out.push({ bar: i, problem: 'noCoda' });
+    });
     return out;
   };
 
@@ -411,7 +479,7 @@
   };
 
   /** Does the score have repeats or endings? */
-  SC.hasRepeats = (doc) => doc.bars.some((h) => h.repeatStart || h.repeatEnd > 1 || (h.volta && h.volta.length));
+  SC.hasRepeats = (doc) => doc.bars.some((h) => h.repeatStart || h.repeatEnd > 1 || (h.volta && h.volta.length) || h.jump);
 
   /**
    * Write the repeats out in the score itself: every played bar becomes a bar of its own, so the
@@ -422,7 +490,7 @@
     const headers = [], tracks = doc.tracks.map(() => []);
     for (const o of order) {
       const h = TC.clone(doc.bars[o.bar]);
-      Object.assign(h, { repeatStart: false, repeatEnd: 0, volta: null, simile: false, lineBreak: false });
+      Object.assign(h, { repeatStart: false, repeatEnd: 0, volta: null, simile: false, lineBreak: false, mark: '', end: '', jump: '', jumpRep: false });
       headers.push(h);
       doc.tracks.forEach((t, k) => {
         const bar = TC.clone(t.bars[SC.sourceBar(doc, o.bar)]);

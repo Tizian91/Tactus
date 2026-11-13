@@ -88,7 +88,8 @@
     for (const o of TC.score.playOrder(doc)) {
       const bi = o.bar;
       const h = doc.bars[bi], L = TC.barTicks(h.ts), bpm = T.tempoAt(doc, bi);
-      if (o.pass > 1 && bi <= prev) add(t0, 0, meta(0x06, text(tr('Bar {n} – {p}. time', { n: bi + 1, p: o.pass }))));
+      if (o.via) add(t0, 0, meta(0x06, text(tr(o.via === 'coda' ? 'Coda – bar {n}' : o.via === 'ds' ? 'D.S. – bar {n}' : 'D.C. – bar {n}', { n: bi + 1 }))));
+      else if (o.pass > 1 && bi <= prev) add(t0, 0, meta(0x06, text(tr('Bar {n} – {p}. time', { n: bi + 1, p: o.pass }))));
       prev = bi;
       if (bpm !== tempo) {
         tempo = bpm;

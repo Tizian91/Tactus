@@ -218,6 +218,23 @@ setTimeout(() => {
   ok('panel: repeat controls', !!document.querySelector('#panel-settings select[data-action="setRepeatEnd"]') && !!document.querySelector('#panel-settings select[data-action="setVolta"]'));
   TC.actions.undo(); TC.actions.undo();
   ok('undo: no repeats left', !TC.score.hasRepeats(S.doc));
+  // jumps: panel section, signs drawn, warning, the help window
+  TC.selectBar(S.doc.bars.length - 1); TC.refresh();
+  ok('panel: section "Repeats & jumps"', [...document.querySelectorAll('#panel-settings h3')].some((h) => h.textContent === 'Wiederholungen & Sprünge') &&
+    !!document.querySelector('#panel-settings select[data-action="setJump"]'));
+  TC.actions.setJump('dsCoda');
+  ok('D.S. al Coda drawn, missing segno / coda reported in the panel', [...document.querySelectorAll('#score .jump-text')].some((t) => t.textContent === 'D.S. al Coda') &&
+    /Segno/.test(document.querySelector('#panel-settings .hint.warn').textContent));
+  TC.actions.setMark('segno', 1);
+  ok('segno drawn on bar 2', !!document.querySelector('#score .jump-sign') && S.doc.bars[1].mark === 'segno');
+  ok('played: … then from bar 2 again ' + TC.score.playOrder(S.doc).map((o) => o.bar + 1).join(' '),
+    TC.score.playOrder(S.doc).filter((o) => o.via === 'ds').length === 1 && TC.score.playOrder(S.doc).find((o) => o.via).bar === 1);
+  document.querySelector('#panel-settings [data-action="jumpHelp"]').click();
+  ok('help window "How jumps work" opens', TC.help.isOpen() && /Da Capo/.test(document.querySelector('.help-dialog').textContent));
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('help window: Escape closes it', !TC.help.isOpen());
+  TC.actions.undo(); TC.actions.undo();
+  ok('undo: no jumps left', !S.doc.bars.some((b) => b.jump || b.mark));
   // several bars: duplicate / delete the selected bars; tempo from a bar on
   const nBars = S.doc.bars.length;
   TC.selectBar(1); TC.selectBar(2, true); TC.refresh();

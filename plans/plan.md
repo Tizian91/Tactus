@@ -197,7 +197,12 @@ Eine Regel für Maus, Stift und Finger:
   jeden Takt so, wie er gespielt wird, mit einem Marker, wo eine Wiederholung neu beginnt („Takt 5 – 2. Mal“)
 - Taktzählung: Tactus zählt geschriebene Takte; beim Abspielen zeigt die Statusleiste zusätzlich den gespielten Takt
   (= Cubase). „Wiederholungen ausschreiben“ macht daraus eigene Takte, dann stimmen die Nummern 1:1
-- Später: D.S. / D.C. / Coda
+- **Sprünge** ✅: Takt-Panel → Rubrik **„Wiederholungen & Sprünge“** (oder Taktmenü „Wiederholung & Sprung“): Zeichen am Taktanfang
+  (𝄋 Segno, ⊕ Coda), am Taktende (Fine, To Coda), Sprung (D.C. / D.S., al Fine / al Coda). Nach dem Sprung: Wiederholungen einmal,
+  letzte Klammer (Häkchen „mitspielen“ = con rip.); Fine / To Coda gelten erst nach dem Sprung; jeder Sprung einmal.
+  Abspielen, Cursor, MIDI-Export (Marker „D.S. – Takt 3“, „Coda – Takt 9“) und „Ausschreiben“ folgen. Fehlendes (Segno, Fine,
+  To Coda, Coda) wird im Panel gemeldet. ⓘ „Wie funktionieren Sprünge?“ erklärt es mit Beispielen (`js/help.js`).
+  Seitenansicht: die Coda beginnt eine neue Zeile.
 
 ## Dropbox ✅ (zum Ausprobieren)
 
@@ -210,7 +215,7 @@ Eine Regel für Maus, Stift und Finger:
 ## Als Nächstes (Reihenfolge)
 
 1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
-4. Rubrik „Wiederholungen & Sprünge“ im Takt-Panel mit D.S. / D.C. / Coda / Fine (nach dem Sprung Wiederholungen einmal, letzte Klammer; Häkchen „mit Wiederholungen“), Erklärung in der Hilfe
+4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
 5. Samples aus freien Bibliotheken (Lizenz prüfen), umschaltbar  6. Vorlagen für kostenlose VSTs (MT Power Drum Kit 2, SSD 5.5 Free; Groove Agent SE = GM)
 7. Drummap-Export für weitere DAWs (Reaper-Notennamen, Studio-One-Pitchlist – Formate erst prüfen)  8. Handbuch / Hilfeseite mit ⓘ-Links
 

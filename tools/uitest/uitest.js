@@ -346,6 +346,21 @@ setTimeout(() => {
   window.print = realPrint;
   window.dispatchEvent(new Event('afterprint'));
   ok('print: emptied afterwards, page view kept', !document.querySelector('#print-root svg') && TC.render.isPage());
+  // page view, zoomed in: the view follows the cursor sideways and down to its line
+  const pv = S.doc.view, vw = vp.clientWidth, vh = vp.clientHeight;
+  Object.assign(pv, { zoom: 3, x: 0, y: 0 }); TC.render.applyView();
+  const endBar = PL().systems[0].last;
+  let c = TC.render.drawCursor(endBar, 0);
+  ok('(cursor at the end of line 1 is out of view)', pv.x + c.x * pv.zoom > vw);
+  TC.player.keepInView(c);
+  ok('page view zoomed in: follows sideways', pv.x + c.x * pv.zoom > 0 && pv.x + c.x * pv.zoom < vw);
+  const lastLineBar = PL().systems[PL().systems.length - 1].first;
+  c = TC.render.drawCursor(lastLineBar, 0);
+  TC.player.keepInView(c);
+  const cy = pv.y + c.y * pv.zoom, cx = pv.x + c.x * pv.zoom;
+  ok('page view zoomed in: follows down to a later line (' + Math.round(cx) + ', ' + Math.round(cy) + ')', cy > 0 && cy < vh && cx > 0 && cx < vw);
+  TC.render.drawCursor(null);
+  TC.actions.zoomReset();
   TC.actions.layout('endless');
   ok('back to the endless view: one line', PL().systems.length === 1 && !PL().page);
   // finger: hold a note, then drag = a row of its instrument (waits for the hold)

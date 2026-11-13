@@ -62,7 +62,7 @@
     s.start(t, Math.random() * 1.5);
     s.stop(t + len);
     return s;
-  }
+  };
   function filter(type, freq, q = 0.7) {
     const f = ctx.createBiquadFilter();
     f.type = type;
@@ -252,7 +252,7 @@
     const el = ctx.currentTime - t0;
     if (!S.settings.loop || el < tl.start) return el;
     return tl.start + ((el - tl.start) % loopLen);
-  }
+  };
 
   function schedule() {
     if (S.rev !== rev) {
@@ -311,15 +311,29 @@
     }
     // "Follow" off: the view stays where it is (to change notes while listening)
     if (!c || S.settings.followPlay === false) return;
-    // keep the cursor in view: sideways (endless view), its line downwards (page view)
+    P.keepInView(c);
+  }
+
+  /** Scroll so that the playback cursor c ({ x, y } in the view, from drawCursor) is in view. */
+  P.keepInView = function (c) {
+    // sideways (endless view); page view: its line downwards, and sideways when zoomed in
     const vp = document.getElementById('viewport');
     const v = S.doc.view;
     if (TC.render.isPage()) {
-      const sy = v.y + c.y * v.zoom, h = vp.clientHeight;
-      if (sy > h * 0.75 || sy < 60) {
-        v.y = h * 0.3 - c.y * v.zoom;
-        TC.render.applyView();
+      // page view: the whole line in view (down / up), and the cursor too when zoomed in (sideways)
+      const SP = TC.render.SP, h = vp.clientHeight, w = vp.clientWidth;
+      const top = v.y + (c.y - 6 * SP) * v.zoom, bottom = v.y + (c.y + 10 * SP) * v.zoom;
+      let moved = false;
+      if (top < 0 || bottom > h) {
+        v.y = Math.min(h * 0.25, h - (16 * SP) * v.zoom) - (c.y - 6 * SP) * v.zoom;
+        moved = true;
       }
+      const sx = v.x + c.x * v.zoom, wide = TC.render.PAGE_W * v.zoom > w;
+      if (sx < 0 || sx > w || (wide && (sx > w * 0.85 || sx < w * 0.05))) {
+        v.x = w * 0.15 - c.x * v.zoom;
+        moved = true;
+      }
+      if (moved) TC.render.applyView();
     } else {
       const sx = v.x + c.x * v.zoom, w = vp.clientWidth;
       if (sx > w * 0.85 || sx < 0) {
@@ -327,7 +341,7 @@
         TC.render.applyView();
       }
     }
-  }
+  };
 
   /**
    * Play from bar `from` (default: the selected bar, else the start). Several bars selected:

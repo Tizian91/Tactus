@@ -223,6 +223,24 @@
 
   // ---- dialog -----------------------------------------------------------------------------
 
+  /**
+   * Put bars `from` … `to` of an imported score (src) into `doc` from bar `at` on: their notes replace
+   * those bars' notes, bars are added at the end if needed; takeTs: those bars get the time
+   * signature of the file (otherwise notes beyond a shorter bar are cut). Returns how many bars.
+   */
+  MI.insertInto = function (doc, src, at, from = 0, to = src.bars.length - 1, takeTs = true) {
+    from = TC.clamp(from, 0, src.bars.length - 1);
+    to = TC.clamp(to, from, src.bars.length - 1);
+    const clip = TC.score.copyBars(src, from, to);
+    if (takeTs) {
+      clip.bars.forEach((c, k) => {
+        const i = at + k;
+        if (i < doc.bars.length && doc.bars[i].ts.join('/') !== c.ts.join('/')) TC.score.setTimeSig(doc, i, c.ts, true);
+      });
+    }
+    return TC.score.pasteBars(doc, at, clip);
+  };
+
   const tr = (s, v) => TC.tr(s, v);
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const GRIDS = [
@@ -282,6 +300,10 @@
       grid: S.settings.importGrid || '16t',
       track: track === null ? 'all' : String(track),
       tempo: fileBpm,
+      // into the open score (from a bar on) or as a new score
+      target: S.settings.importTarget === 'into' ? 'into' : 'new',
+      at: (S.selBar !== null ? S.selBar : 0) + 1,
+      from: 1, to: 0, takeTs: true,
     };
     MI.close();
     root = document.createElement('div');
@@ -303,6 +325,7 @@
     };
     const draw = () => {
       const res = result();
+      const nb = res.doc.bars.length;
       const sources = [`<option value="">General MIDI (Guitar Pro …)</option>`]
         .concat(TC.kits.list.map((p) => `<option value="${p.id}"${p.id === st.source ? ' selected' : ''}>${esc(tr('Kit profile: {name}', { name: p.name }))}</option>`)).join('');
       const grids = GRIDS.map((g) => `<option value="${g.key}"${g.key === st.grid ? ' selected' : ''}>${esc(tr(g.label))}</option>`).join('');
@@ -321,7 +344,18 @@
           <p class="hint">${tr('{n} notes in {b} bars.', { n: res.notes, b: res.doc.bars.length })}
             ${res.merged ? tr('{m} hits merged (flam / drag or the same position).', { m: res.merged }) : ''}</p>
           ${unk}
-          <p class="hint">${tr('The import replaces the open score. Velocity: soft = ghost note, loud = accent.')}</p>
+          <div class="row"><label>${tr('Target')}</label><select data-k="target">
+            <option value="new"${st.target === 'new' ? ' selected' : ''}>${tr('New score (replaces the open one)')}</option>
+            <option value="into"${st.target === 'into' ? ' selected' : ''}>${tr('Into the open score')}</option></select></div>
+          ${st.target === 'into' ? `
+          <div class="row"><label>${tr('From bar')}</label><input type="number" min="1" max="${S.doc.bars.length + 1}" data-k="at" value="${st.at}">
+            <span class="muted">${tr('of the open score')}</span></div>
+          <div class="row"><label>${tr('From the file')}</label>${tr('bar')} <input type="number" min="1" max="${nb}" data-k="from" value="${st.from}">
+            ${tr('to')} <input type="number" min="1" max="${nb}" data-k="to" value="${st.to || nb}"> <span class="muted">${tr('of {n}', { n: nb })}</span></div>
+          <label class="check"><input type="checkbox" data-k="takeTs"${st.takeTs ? ' checked' : ''}> ${tr('Take the time signatures of the file')}</label>
+          <p class="hint">${tr('The notes of those bars are replaced, bars are added at the end if needed. One undo step.')}</p>`
+          : `<p class="hint">${tr('The import replaces the open score.')}</p>`}
+          <p class="hint">${tr('Velocity: soft = ghost note, loud = accent.')}</p>
         </div>
         <footer><span class="grow"></span><button type="button" data-k="close">${tr('Cancel')}</button>
           <button type="button" class="primary" data-k="ok">${tr('Import')}</button></footer>`;
@@ -330,13 +364,35 @@
       const k = e.target.dataset.k;
       if (k === 'source' || k === 'grid' || k === 'track') { st[k] = e.target.value; draw(); }
       if (k === 'tempo') { st.tempo = TC.clamp(Math.round(Number(e.target.value) || fileBpm), 20, 400); draw(); }
+      if (k === 'target') { st.target = e.target.value; draw(); }
+      if (k === 'at' || k === 'from' || k === 'to') st[k] = Math.max(1, Math.round(Number(e.target.value) || 1));
+      if (k === 'takeTs') st.takeTs = e.target.checked;
     });
     root.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-k]');
       if (!b) return;
       if (b.dataset.k === 'close') MI.close();
+      if (b.dataset.k === 'ok' && st.target === 'into') {
+        // into the open score: those bars' notes are replaced - one undo step
+        const res = result(), nb = res.doc.bars.length;
+        const at = TC.clamp(st.at - 1, 0, S.doc.bars.length);
+        const from = TC.clamp(st.from - 1, 0, nb - 1), to = TC.clamp((st.to || nb) - 1, from, nb - 1);
+        S.settings.importKit = st.source;
+        S.settings.importGrid = st.grid;
+        S.settings.importTarget = 'into';
+        TC.saveSettings();
+        MI.close();
+        const n = MI.insertInto(S.doc, res.doc, at, from, to, st.takeTs);
+        S.selection.clear();
+        TC.selectBar(at);
+        if (n > 1) TC.selectBar(at + n - 1, true);
+        TC.commit();
+        TC.ui.hint(tr('MIDI bars {a}–{b} imported into bars {c}–{d}', { a: from + 1, b: to + 1, c: at + 1, d: at + n }));
+        return;
+      }
       if (b.dataset.k === 'ok') {
         if (S.dirty && !confirm(tr('Discard the changes of the open score?'))) return;
+        S.settings.importTarget = 'new';
         const res = result();
         const title = fileName.replace(/\.midi?$/i, '');
         res.doc.meta.title = title;

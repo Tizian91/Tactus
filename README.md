@@ -58,7 +58,8 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   writes a `.drm` with the Tactus notation. Kept in the browser; export / import as `*.tactus-kits.json`.
 - **MIDI import** (File → Import MIDI, or drop a `.mid` on the window): choose where it comes from (kit profile or
   General MIDI) and the grid (1/16 + triplets …); velocity becomes ghost / accent, soft hits just before become
-  flams. Replaces the open score.
+  flams. Target: a new score (replaces the open one) or **into the open score** from a bar on (a range of bars of the
+  file, its time signatures taken over; those bars are replaced, bars added at the end if needed; one undo step).
 - **Kit profile of the score** (status bar "Kit: …", click to change): saved with the score.
 - **Repeats** (bar menu → Repeat, or the bar panel): `|:` start, `:|` end (2×, 3× …), endings 1. / 2. (also over
   several bars); several bars selected: "Repeat bars a–b". Playback, cursor and **MIDI export play them written

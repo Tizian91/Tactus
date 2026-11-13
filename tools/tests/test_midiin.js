@@ -72,4 +72,17 @@ module.exports = function (T) {
   const pr = MI.toScore(pm, { profile: p, grid: 240 });
   T.eq('kit profile: both hi-hat keys are the closed hi-hat, 34 the kick; the score keeps the profile',
     [pr.doc.tracks[0].bars[0].voices[0].map((e) => e.tick + ':' + e.notes[0].art), pr.doc.tracks[0].bars[0].voices[1].map((e) => e.notes[0].art), pr.doc.meta.kitName], [['0:42', '480:42'], [36], 'EZ']);
+
+  // into the open score (MI.insertInto): bars of the file replace bars from a bar on
+  const open = TC.emptyScore(4), file = TC.emptyScore(3);
+  TC.state.doc = open;
+  SC.setTimeSig(file, 2, [3, 4], true);
+  [0, 1, 2].forEach((bi) => SC.place(file, file.tracks[0], bi, 0, 0, 480, TC.newDrumNote([38, 42, 49][bi], {})));
+  SC.place(open, open.tracks[0], 0, 0, 0, 480, TC.newDrumNote(51, {}));
+  SC.place(open, open.tracks[0], 3, 0, 0, 480, TC.newDrumNote(51, {}));
+  const art0 = (d, bi) => ((d.tracks[0].bars[bi].voices.flat()[0] || { notes: [{}] }).notes[0].art || '-');
+  T.eq('file bars 2-3 into bars 3-4 of the open score', MI.insertInto(open, file, 2, 1, 2, true), 2);
+  T.eq('… bar 1 untouched, bars 3-4 replaced, 4 bars', [art0(open, 0), art0(open, 1), art0(open, 2), art0(open, 3), open.bars.length], [51, '-', 42, 49, 4]);
+  T.eq('… with the time signature of the file', open.bars[3].ts.join('/'), '3/4');
+  T.eq('the whole file from bar 4 on: bars are added', [MI.insertInto(open, file, 3), open.bars.length, art0(open, 5)], [3, 6, 49]);
 };

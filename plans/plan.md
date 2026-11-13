@@ -135,6 +135,12 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## MIDI-Import in das offene Stück ✅
+
+- Im Import-Dialog **Ziel**: „Neues Stück“ (ersetzt das offene, wie bisher) oder **„In das offene Stück“**:
+  ab Takt …, aus der Datei Takt … bis …, Taktarten der Datei übernehmen (Standard); die Noten dieser Takte werden
+  ersetzt, am Ende kommen bei Bedarf Takte dazu; ein Rückgängig-Schritt, die neuen Takte sind danach ausgewählt
+
 ## Teilen per Link ✅
 
 - Datei → **„Link zum Teilen kopieren“** (Tablet / Handy: Teilen-Menü): das ganze Stück steckt komprimiert in der Adresse

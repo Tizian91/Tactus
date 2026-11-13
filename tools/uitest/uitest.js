@@ -471,6 +471,24 @@ setTimeout(() => {
     ok('MIDI import: dialog with source, grid and a preview', !!document.querySelector('.midi-dialog select[data-k="source"]') && /Takten|bars/.test(document.querySelector('.midi-dialog').textContent));
     document.querySelector('.midi-dialog [data-k="close"]').click();
     ok('MIDI import: cancel closes it, score unchanged', !TC.midiIn.isOpen() && voice(nb, 0).join() === '0:480:38');
+    // into the open score: behind its last bar (bars are added), one undo step
+    const barsNow = S.doc.bars.length;
+    TC.midiIn.open(TC.midi.build(S.doc, null).bytes, 'Part.mid');
+    const md = () => document.querySelector('.midi-dialog');
+    const tgt = md().querySelector('select[data-k="target"]');
+    tgt.value = 'into'; tgt.dispatchEvent(new Event('change', { bubbles: true }));
+    const atIn = md().querySelector('input[data-k="at"]'), fromIn = md().querySelector('input[data-k="from"]'), toIn = md().querySelector('input[data-k="to"]');
+    ok('MIDI import: target "into the open score" with from bar / file bars', !!atIn && !!fromIn && !!toIn);
+    atIn.value = String(barsNow + 1); atIn.dispatchEvent(new Event('change', { bubbles: true }));
+    fromIn.value = '1'; fromIn.dispatchEvent(new Event('change', { bubbles: true }));
+    toIn.value = '2'; toIn.dispatchEvent(new Event('change', { bubbles: true }));
+    md().querySelector('[data-k="ok"]').click();
+    ok('MIDI import into: 2 bars added after the last one ' + (S.doc.bars.length - barsNow), S.doc.bars.length === barsNow + 2 && !TC.midiIn.isOpen());
+    const tickArt = (bi) => voice(bi, 0).map((s) => s.split(':')[0] + ':' + s.split(':')[2].split('+').sort().join('+')).join(' ');
+    ok('… with the notes of bar 1 of the file (' + tickArt(barsNow) + ')', tickArt(barsNow) === tickArt(0));
+    TC.actions.undo();
+    ok('… one undo step', S.doc.bars.length === barsNow);
+    S.settings.importTarget = 'new';
     TC.actions.openKits();
     ok('kit profiles: dialog opens', !!document.querySelector('.kit-dialog') && TC.kits.isOpen());
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

@@ -3,7 +3,8 @@
  * Mouse, pen, fingers and keyboard on the score. One rule for every kind of pointer:
  *
  *   where you press             tap                       drag                        hold (½ s), then drag
- *   empty place on the lines    write the note            the preview follows         (same as drag)
+ *   empty place on the lines    write the note            the preview follows         held still (finger / pen):
+ *                                                                                     bar menu, no note
  *                                                         (column and line), release
  *                                                         writes it; off the lines:
  *                                                         nothing
@@ -210,9 +211,12 @@
     clearTimeout(holdTimer);
     let t = target(I.toLocal(e.clientX, e.clientY), e);
     const base = { id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e };
+    if (e.pointerType === 'pen') lastTouch = Date.now(); // a pen's own long-press menu is ignored too
+    const holdMenu = touch || e.pointerType === 'pen'; // finger / pen held still: bar menu (mouse: right-click)
     if (t && t.kind === 'place' && fingerWrites(e)) {
       S.drag = Object.assign(base, { mode: 'aim', t });
       showAim(t, true);
+      if (holdMenu) holdTimer = setTimeout(() => menuOnHold(e.pointerId, 'aim'), HOLD_MS);
       return;
     }
     if (t && t.kind === 'head' && fingerWrites(e)) {
@@ -225,14 +229,20 @@
     // a finger that does not write: a tap chooses the bar (or selects the note), dragging scrolls
     if (t && t.kind === 'place') t = { kind: 'bar', bar: t.bar };
     S.drag = Object.assign(base, { mode: 'tap', t });
-    if (touch) {
-      holdTimer = setTimeout(() => {
-        const d = S.drag;
-        if (!d || d.mode !== 'tap' || d.id !== e.pointerId) return;
-        d.mode = 'done';
-        onContextMenu({ clientX: d.sx, clientY: d.sy, preventDefault() {}, fromHold: true });
-      }, HOLD_MS);
-    }
+    if (holdMenu) holdTimer = setTimeout(() => menuOnHold(e.pointerId, 'tap'), HOLD_MS);
+  }
+
+  /**
+   * Finger / pen held still: the bar menu instead of a note (a new note being aimed at is dropped).
+   * Once the pointer has moved (aiming, scrolling) the timer is cleared and nothing happens here.
+   */
+  function menuOnHold(id, mode) {
+    const d = S.drag;
+    if (!d || d.mode !== mode || d.id !== id) return;
+    d.mode = 'done';
+    clearHover();
+    if (navigator.vibrate) navigator.vibrate(15);
+    onContextMenu({ clientX: d.sx, clientY: d.sy, preventDefault() {}, fromHold: true });
   }
 
   function onPointerMove(e) {
@@ -281,6 +291,7 @@
 
   function onPointerUp(e) {
     const cancelled = e.type === 'pointercancel';
+    if (e.pointerType === 'pen') lastTouch = Date.now();
     if (e.pointerType === 'touch') {
       if (!touches.has(e.pointerId)) return;
       touches.delete(e.pointerId);
@@ -370,6 +381,7 @@
 
   function aimMove(e) {
     const d = S.drag;
+    if (moved(d, e)) clearTimeout(holdTimer); // aiming: no bar menu
     const t = placeAt(I.toLocal(e.clientX, e.clientY), e);
     if (!t) {
       if (d.t) {

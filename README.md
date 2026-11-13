@@ -25,7 +25,7 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
 
   | where you press | tap | drag | hold (½ s), then drag |
   |---|---|---|---|
-  | empty place on the lines | write the note | the preview follows (column and line), **release writes it**; off the lines: nothing | same as drag |
+  | empty place on the lines | write the note | the preview follows (column and line), **release writes it**; off the lines: nothing | held still (finger / pen): **bar menu**, no note |
   | on a note | select (again: delete; `Ctrl`: several) | **move it**: sideways in time, up / down to another instrument | **row** of that instrument (mouse: `Ctrl` + drag) |
   | beside the lines (above, below, bar start) | **select the bar** | **scroll** | finger: bar menu |
   | two fingers | – | scroll + zoom | – |

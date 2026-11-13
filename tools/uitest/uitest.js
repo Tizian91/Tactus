@@ -346,11 +346,20 @@ setTimeout(() => {
     ok('kit profiles: Escape closes it', !document.querySelector('.kit-dialog') && !TC.kits.isOpen());
     TC.actions.setNotation('gp');
     ok('notation gp: kick back on F4, score unchanged', TC.drums.byId(36).line === 7 && voice(nb, 0).join() === '0:480:38');
-    S.doc.view.x = 190; TC.refresh();
-    const pre = document.createElement('pre');
-    pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
-    pre.textContent = out.join('\n');
-    document.body.appendChild(pre);
+    // finger held still on an empty place of the lines: the bar menu, no note
+    const [ex, ey] = screenOf(nb, 1920, 3);
+    finger('pointerdown', 11, ex, ey);
+    setTimeout(() => {
+      ok('finger held on the lines: bar menu opens', TC.menu.isOpen());
+      finger('pointerup', 11, ex, ey);
+      ok('… and no note is written on release ' + voice(nb, 0).join(' '), voice(nb, 0).join() === '0:480:38');
+      TC.menu.close();
+      S.doc.view.x = 190; TC.refresh();
+      const pre = document.createElement('pre');
+      pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
+      pre.textContent = out.join('\n');
+      document.body.appendChild(pre);
+    }, 700);
   }, 700);
 }, 500);
 window.addEventListener('error', (e) => { document.title = 'ERR ' + e.message; const d = document.createElement('pre'); d.style.cssText='position:fixed;top:0;left:0;background:red;color:#fff;z-index:99999'; d.textContent = e.message + ' ' + e.filename + ':' + e.lineno; document.body.appendChild(d); });

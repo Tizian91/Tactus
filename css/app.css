@@ -396,3 +396,7 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .status-btn.missing { color: var(--danger); }
 .kit-body details.kit-free { color: var(--muted); margin: 8px 0; } .kit-body details.kit-free summary { cursor: pointer; }
 .panel .hint.warn { color: var(--danger); }
+.kit-tabs { display: flex; gap: 4px; padding: 6px 14px 0; }
+.kit-tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.kit-table td.key { white-space: nowrap; width: 70px; }
+.kit-table button.play { padding: 0 6px; font-size: 11px; color: var(--accent); }

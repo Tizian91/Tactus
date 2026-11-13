@@ -77,6 +77,15 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   const uj = K.fromDrm(drm('UJAM-Drummer', [item(48, 48, 'Crash 1'), item(49, 49, 'Crash L'), item(57, 57, 'Crash R')], [49, 57, 48]));
   T.eq('UJAM: 49 is crash 1 (high), 57 crash 2, as in the instrument', [uj.assign[49], uj.assign[57]], [[49, 48], [57]]);
 
+  // a profile without the maker's drum map: 128 keys, General MIDI filled in, Cubase map written from it
+  const own = K.blank('Superior Rock', true);
+  T.eq('own profile: all 128 keys to choose, General MIDI filled in', [K.keys(own).length, own.assign[36], own.assign[38], own.assign[42], own.assign[46], own.assign[92]], [128, [36], [38], [42], [46], undefined]);
+  K.setKeys(own, 48, [47]);
+  const ownDrm = C.parse(K.toDrm(own));
+  const k47 = ownDrm.entries.find((e) => e.inote === 47);
+  T.eq('own profile -> Cubase drum map: unnamed key named after its instrument, Tactus line', [ownDrm.name, k47.name, k47.display, k47.onote], ['Superior Rock (Tactus)', 'Tom 2 (high)', 74, 47]);
+  T.eq('note names as in Cubase', [36, 60, 42].map(C.noteName), ['C1', 'C3', 'F#1']);
+
   K.list = [p, bm];
   const sd = TC.emptyScore(1);
   T.eq('score without kit profile: General MIDI', K.current(sd), null);

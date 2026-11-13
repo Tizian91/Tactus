@@ -56,6 +56,8 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
 - **Kit profiles** (settings → drum kit → "Kit profiles (Cubase)…"): load the Cubase drum map of a drum VST, Tactus
   matches the keys by name; per instrument (fixed line and head) only the key is chosen. "Save drum map for Cubase"
   writes a `.drm` with the Tactus notation. Kept in the browser; export / import as `*.tactus-kits.json`.
+  No drum map from the maker: "New without drum map…" (General MIDI filled in), go through the keys with ▶ (plays the
+  key on the drum VST through the MIDI output) and choose the instrument of each.
 - **Playback through Cubase** (panel → playback → sound: a MIDI output, Chrome / Edge): the notes go with the keys of
   the kit profile to e.g. a virtual MIDI cable (loopMIDI) and are played by the drum VST in Cubase.
 - **MIDI import** (File → Import MIDI, or drop a `.mid` on the window): choose where it comes from (kit profile or

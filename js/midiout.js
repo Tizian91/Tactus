@@ -78,6 +78,20 @@
     }
   };
 
+  /** One key right now (kit profile dialog: ▶ to hear which sound a key is). */
+  MO.sendKey = function (note, ch = 9, vel = 100) {
+    const o = port();
+    if (!o) return false;
+    try {
+      o.send([0x90 | ch, note, vel]);
+      o.send([0x80 | ch, note, 0], performance.now() + NOTE_MS);
+      used.add(ch);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   /** Stop: forget what was handed over for later, and silence the channels used. */
   MO.stop = function () {
     const o = port();

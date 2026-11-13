@@ -89,8 +89,26 @@
    */
   K.keys = function (p) {
     const m = K.map(p), by = new Map(m.entries.map((e) => [e.inote, e]));
+    if (p.blank) return m.entries.slice().sort((a, b) => a.inote - b.inote); // own profile: every key
     const order = m.order.concat(m.entries.map((e) => e.inote)).filter((n, i, a) => a.indexOf(n) === i);
     return order.map((n) => by.get(n)).filter((e) => e && (!K.noName(e) || e.instrument || (e.display !== 0 && e.display !== e.inote)));
+  };
+
+  /**
+   * A profile without a maker's drum map (most makers have none): 128 keys, each playing its own
+   * note. gm: start with General MIDI (36 kick, 38 snare, 42 hi-hat …) - many drum VSTs follow it
+   * for the main sounds; every key is then checked by ear (▶) and corrected.
+   */
+  K.blank = function (name, gm = true) {
+    const assign = {};
+    if (gm) {
+      for (let n = 0; n < 128; n++) {
+        const own = TC.drums.byId(n), a = own && own.midi === n ? own : TC.DRUM_ARTS.find((x) => x.midi === n);
+        if (a && !assign[a.id]) assign[a.id] = [n];
+      }
+    }
+    return { id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, mapName: name,
+      drm: C.blank(name), assign, blank: true };
   };
 
   /** Assignment guessed from the key names (and known misleading names of a map). */
@@ -282,7 +300,24 @@
   };
 
   function keyLabel(e) {
-    return `${e.inote} · ${K.noName(e) ? tr('(no name)') : e.name}` + (e.onote !== e.inote ? ` (→ ${e.onote})` : '');
+    return `${e.inote} · ${K.noName(e) ? C.noteName(e.inote) : e.name}` + (e.onote !== e.inote ? ` (→ ${e.onote})` : '');
+  }
+
+  /** ▶: a key through the MIDI output (the drum VST plays it); without one: Tactus' sound of the instrument. */
+  function audition(p, note) {
+    const e = K.map(p).entries.find((x) => x.inote === note);
+    if (TC.midiOut && TC.midiOut.active()) {
+      TC.midiOut.sendKey(note, e ? e.channel : 9);
+      return;
+    }
+    const art = K.artOfKey(p, note);
+    if (art !== null && TC.audio) TC.audio.preview(TC.newDrumNote(art, {}));
+  }
+
+  let view = 'arts'; // 'arts': one row per instrument · 'keys': one row per key (like the maker's key chart)
+
+  function playBtn(note) {
+    return note === undefined || note === null ? '' : `<button type="button" class="icon play" data-k="play" data-note="${note}" title="${tr('Play this key')}">▶</button>`;
   }
 
   function draw() {
@@ -290,10 +325,27 @@
     const p = K.byId(cur);
     const opts = K.list.map((q) => `<option value="${q.id}"${q.id === cur ? ' selected' : ''}>${esc(q.name)}</option>`).join('');
     let body = '';
+    const midiHint = TC.midiOut && TC.midiOut.active() ? ''
+      : `<p class="hint tight">${tr('▶ plays a key through the MIDI output (panel → playback → sound) on your drum VST. None is chosen now: ▶ plays Tactus\' sound of the instrument.')}</p>`;
     if (!p) {
       body = `<div class="kit-empty"><p>${tr('No kit profile yet.')}</p>
         <p class="hint">${tr('Load the Cubase drum map of your drum VST (.drm). Tactus guesses from the key names which key is which instrument; you only correct what does not fit.')}</p>
-        <button type="button" data-k="new">${tr('Load drum map…')}</button></div>`;
+        <p class="hint">${tr('No drum map from the maker? Start without one: General MIDI is filled in, you check each key by ear (▶) and correct it.')}</p>
+        <button type="button" data-k="new">${tr('Load drum map…')}</button> <button type="button" data-k="blank">${tr('New without drum map…')}</button></div>`;
+    } else if (view === 'keys') {
+      // one row per key, in the order of the maker's key chart: key, ▶, which instrument
+      const artOpts = (sel) => `<option value="">—</option>` + K.rows().map((a) =>
+        `<option value="${a.id}"${a.id === sel ? ' selected' : ''}>${esc(TC.drums.label(a))} (${K.lineName(K.place(a).line)})</option>`).join('');
+      const rows = K.keys(p).map((e) => {
+        const art = K.artOfKey(p, e.inote), first = art !== null && p.assign[art][0] === e.inote;
+        return `<tr class="${art === null ? 'none' : ''}">
+          <td class="key">${e.inote} <span class="muted">${C.noteName(e.inote)}</span></td>
+          <td class="name">${K.noName(e) ? '' : esc(e.name)}${e.onote !== e.inote ? ` <span class="muted">→ ${e.onote}</span>` : ''}</td>
+          <td>${playBtn(e.inote)}</td>
+          <td><select data-keyart="${e.inote}">${artOpts(art)}</select>${art !== null && !first ? ` <span class="muted" title="${tr('More key of this instrument (the first one is used for export)')}">+</span>` : ''}</td></tr>`;
+      }).join('');
+      body = `<p class="hint tight">${tr('Go through the key chart of your drum VST: play each key (▶) and choose what it is. A second key of an instrument becomes a "more key" (recognised on import).')}</p>${midiHint}
+        <table class="kit-table"><thead><tr><th>${tr('Key')}</th><th>${tr('Name in the drum map')}</th><th></th><th>${tr('Instrument')}</th></tr></thead><tbody>${rows}</tbody></table>`;
     } else {
       const keys = K.keys(p);
       const rows = K.rows().map((a) => {
@@ -309,11 +361,12 @@
           <td class="pos"><span class="mus-head">${g.g[0]}</span> ${K.lineName(pl.line)}</td>
           <td class="name">${esc(TC.drums.label(a))}</td>
           <td><select data-art="${a.id}">${options}</select></td>
+          <td>${playBtn(first)}</td>
           <td><input type="text" data-extra="${a.id}" value="${notes.slice(1).join(', ')}" placeholder="${tr('more keys')}"></td></tr>`;
       }).join('');
       const free = K.unassigned(p), odd = K.suspicious(p), alike = K.lookalikes(p);
-      body = `<p class="hint tight">${tr('Line and notehead are fixed per instrument (Tactus notation, also in the Cubase drum map). Choose the key of your drum map for each one; more keys (e.g. 11, 61) are recognised on import.')}</p>
-        <table class="kit-table"><thead><tr><th>${tr('Line')}</th><th>${tr('Instrument')}</th><th>${tr('Key in the drum map')}</th><th>${tr('More keys')}</th></tr></thead><tbody>${rows}</tbody></table>
+      body = `<p class="hint tight">${tr('Line and notehead are fixed per instrument (Tactus notation, also in the Cubase drum map). Choose the key of your drum map for each one; more keys (e.g. 11, 61) are recognised on import.')}</p>${midiHint}
+        <table class="kit-table"><thead><tr><th>${tr('Line')}</th><th>${tr('Instrument')}</th><th>${tr('Key in the drum map')}</th><th></th><th>${tr('More keys')}</th></tr></thead><tbody>${rows}</tbody></table>
         ${alike.length ? `<p class="hint warn"><b>${tr('Look the same in Cubase (same line and notehead):')}</b> ${alike.map((g) => g.map((a) => esc(TC.drums.label(a))).join(' / ') + ' (' + K.lineName(K.place(g[0]).line) + ')').join(' · ')}</p>` : ''}
         ${odd.length ? `<p class="hint warn"><b>${tr('Please check (same output note as another instrument):')}</b> ${odd.map((e) => esc(keyLabel(e)) + ' = ' + esc(TC.drums.label(TC.drums.byId(e.art)))).join(' · ')}</p>` : ''}
         ${free.length ? `<details class="hint kit-free"><summary>${tr('{n} more keys of the drum map have no Tactus instrument (info)', { n: free.length })}</summary>${free.map((e) => esc(keyLabel(e))).join(' · ')}</details>` : ''}`;
@@ -322,9 +375,11 @@
       <div class="kit-bar">
         ${K.list.length ? `<select data-k="pick">${opts}</select>` : ''}
         <button type="button" data-k="new">${tr('New from drum map…')}</button>
+        <button type="button" data-k="blank">${tr('New without drum map…')}</button>
         ${p && TC.state.doc && K.current(TC.state.doc) !== p ? `<button type="button" data-k="use" class="primary">${tr('Use for this score')}</button>` : p ? `<span class="muted">✓ ${tr('used by this score')}</span>` : ''}
         ${p ? `<button type="button" data-k="copy">${tr('Copy')}</button><button type="button" data-k="rename">${tr('Rename…')}</button><button type="button" class="danger" data-k="delete">${tr('Delete')}</button>` : ''}
       </div>
+      ${p ? `<div class="kit-tabs"><button type="button" data-k="view" data-v="arts" class="${view === 'arts' ? 'active' : ''}">${tr('By instrument')}</button><button type="button" data-k="view" data-v="keys" class="${view === 'keys' ? 'active' : ''}">${tr('By key (key chart)')}</button></div>` : ''}
       <div class="kit-body">${body}</div>
       <footer>
         ${p ? `<button type="button" data-k="drm" class="primary">${tr('Save drum map for Cubase')}</button>` : ''}
@@ -385,6 +440,24 @@
           }
         });
         break;
+      case 'blank': {
+        const name = prompt(tr('Name of the drum VST / kit (e.g. "Superior Drummer – Rock Kit"):'), '');
+        if (!name || !name.trim()) break;
+        const q = K.blank(name.trim(), true);
+        K.list.push(q);
+        cur = q.id;
+        view = 'keys';
+        changed();
+        break;
+      }
+      case 'play':
+        audition(p, +b.dataset.note);
+        break;
+      case 'view':
+        view = b.dataset.v === 'keys' ? 'keys' : 'arts';
+        draw();
+        root.querySelector('.kit-body').scrollTop = 0;
+        break;
       case 'use':
         TC.actions.setKitProfile(p.id);
         draw();
@@ -440,7 +513,14 @@
     const t = e.target, p = K.byId(cur);
     if (t.dataset.k === 'pick') { cur = t.value; draw(); return; }
     if (!p) return;
-    if (t.dataset.art) {
+    if (t.dataset.keyart !== undefined) {
+      // key view: this key plays that instrument (added after its other keys) - or nothing
+      const n = +t.dataset.keyart, old = K.artOfKey(p, n);
+      if (old !== null) K.setKeys(p, old, p.assign[old].filter((x) => x !== n));
+      if (t.value !== '') K.setKeys(p, +t.value, (p.assign[+t.value] || []).concat(n));
+      changed();
+      if (t.value !== '') audition(p, n);
+    } else if (t.dataset.art) {
       const id = +t.dataset.art, rest = (p.assign[id] || []).slice(1);
       K.setKeys(p, id, t.value === '' ? rest : [+t.value].concat(rest));
       changed();

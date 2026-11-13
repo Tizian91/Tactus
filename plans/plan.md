@@ -221,3 +221,13 @@ Eine Regel für Maus, Stift und Finger:
 - **Vorlauf** (ms, im Panel unter dem Ausgang): die Noten gehen so viel früher los, wie das Drum-VST zu spät klingt (Audio-Puffer);
   mit Metronom einstellen. Ohne ASIO-Treiber hat ein Standalone-VST oft 100–250 ms, Cubase mit ASIO meist nur wenige ms.
 - Auch beim Setzen einer Note klingt sie über Cubase (dort ohne Vorlauf). Später: MIDI-Eingang (Aufnahme).
+
+## Kit-Profile ohne Hersteller-Drummap ✅ (zum Ausprobieren)
+
+- Kit-Profile → **„Neu ohne Drummap…“**: Name eingeben, alle 128 Tasten (spielen ihre eigene Note), General MIDI vorbelegt
+- Ansicht **„Nach Taste (Belegungsplan)“**: Taste für Taste wie im Plan des Herstellers – ▶ abspielen, Instrument wählen;
+  eine zweite Taste eines Instruments wird „weitere Taste“. Ansicht „Nach Instrument“ wie bisher, auch dort mit ▶
+- ▶ spielt die Taste über den MIDI-Ausgang (Panel → Wiedergabe → Klang) auf dem Drum-VST – Fehler fallen beim Einrichten auf;
+  ohne MIDI-Ausgang den Tactus-Klang des Instruments
+- „Drummap für Cubase speichern“ schreibt daraus die komplette `.drm` (Namen = Tactus-Instrumente, Anzeige wie in Tactus):
+  in Cubase muss nichts mehr abgetippt werden

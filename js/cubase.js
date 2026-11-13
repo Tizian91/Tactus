@@ -251,6 +251,56 @@
     return out;
   };
 
+  /**
+   * An empty drum map (no file from the maker): 128 keys, each plays its own note, no names.
+   * channel: MIDI channel 0 … 15 (9 = channel 10, General MIDI drums).
+   */
+  C.blank = function (name, channel = 9) {
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const items = [];
+    for (let n = 0; n < 128; n++) {
+      items.push(`      <item>
+         <int name="INote" value="${n}"/>
+         <int name="ONote" value="${n}"/>
+         <int name="Channel" value="${channel}"/>
+         <float name="Length" value="200"/>
+         <int name="Mute" value="0"/>
+         <int name="DisplayNote" value="${n}"/>
+         <int name="HeadSymbol" value="0"/>
+         <int name="Voice" value="0"/>
+         <int name="PortIndex" value="0"/>
+         <string name="Name" value="" wide="true"/>
+         <int name="QuantizeIndex" value="0"/>
+         <int name="NoteheadSet" value="0"/>
+         <string name="InstrumentEntityID" value=""/>
+         <string name="TechniqueEntityID" value=""/>
+      </item>`);
+    }
+    return `<?xml version="1.0" encoding="utf-8"?>
+<DrumMap>
+   <string name="Name" value="${esc(name)}" wide="true"/>
+   <list name="Quantize" type="list">
+      <item>
+         <int name="Grid" value="4"/>
+         <int name="Type" value="0"/>
+         <float name="Swing" value="0"/>
+         <int name="Legato" value="50"/>
+      </item>
+   </list>
+   <list name="Map" type="list">
+${items.join('\n')}
+   </list>
+   <list name="Order" type="int">
+${Array.from({ length: 128 }, (x, n) => `      <item value="${n}"/>`).join('\n')}
+   </list>
+   <int name="Flags" value="0"/>
+</DrumMap>
+`;
+  };
+
+  /** Note name as Cubase shows it (C3 = 60, so the kick 36 is C1). */
+  C.noteName = (n) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][n % 12] + (Math.floor(n / 12) - 2);
+
   /** Different instruments (by role) that share display note, instrument and technique. */
   C.collisions = function (map, roles = {}) {
     const seen = new Map(), out = [];

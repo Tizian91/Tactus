@@ -540,6 +540,24 @@ setTimeout(() => {
             TC.actions.setMidiLead(200);
             ok('MIDI output: lead 200 ms set in the panel', TC.midiOut.lead() === 0.2 && document.querySelector('input[data-midilead]').value === '200');
             TC.actions.setMidiLead(0);
+            // own kit profile (no drum map from the maker): key view, ▶ plays the key on the MIDI output
+            const realSave = TC.kits.save, realPrompt = window.prompt;
+            TC.kits.save = () => true;
+            window.prompt = () => 'Test-Kit';
+            TC.actions.openKits();
+            document.querySelector('.kit-dialog [data-k="blank"]').click();
+            ok('own kit profile: key view with all 128 keys', document.querySelectorAll('.kit-dialog select[data-keyart]').length === 128);
+            sent.length = 0;
+            document.querySelector('.kit-dialog [data-k="play"][data-note="38"]').click();
+            ok('▶ plays the key on the MIDI output ' + JSON.stringify(sent[0]), sent.length === 2 && sent[0][1] === 38 && sent[0][0] === 0x99);
+            const sel = document.querySelector('.kit-dialog select[data-keyart="47"]');
+            sel.value = '48';
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            ok('key view: key 47 becomes tom 2', TC.kits.list.find((q) => q.name === 'Test-Kit').assign[48].includes(47));
+            TC.kits.close();
+            TC.kits.list = TC.kits.list.filter((q) => q.name !== 'Test-Kit');
+            TC.kits.save = realSave;
+            window.prompt = realPrompt;
             TC.actions.setMidiOut('');
             ok('MIDI output off: Tactus sounds again', !TC.midiOut.active());
           }).catch((e) => ok('MIDI output: ' + e.message, false));

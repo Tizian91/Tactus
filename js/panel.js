@@ -274,9 +274,12 @@
     const per = [0, 2, 3, 4, 5, 6, 8].map((n) => `<option value="${n}"${n === pg.barsPerLine ? ' selected' : ''}>${n ? n : esc(tr('Automatic'))}</option>`).join('');
     const nums = [['system', 'At the start of each line'], ['every', 'Every bar'], ['off', 'None']]
       .map(([k, label]) => `<option value="${k}"${k === pg.barNumbers ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
+    const margins = TC.MARGINS.map((mm) => `<option value="${mm}"${mm === pg.margin ? ' selected' : ''}>${mm} mm${mm === 15 ? ' (' + esc(tr('standard')) + ')' : ''}</option>`).join('');
     return `<section><h3>${tr('Page')}</h3>
       <div class="row"><label>${tr('Bars per line')}</label><select data-action="setBarsPerLine">${per}</select></div>
       <div class="row"><label>${tr('Bar numbers')}</label><select data-action="setBarNumbers">${nums}</select></div>
+      <div class="row"><label>${tr('Margins')}</label><select data-action="setMargin">${margins}</select></div>
+      ${check('togglePageHeader', pg.header, tr('Title and page number on the following pages'))}
       <div class="btn-row">
         ${btn('toggleLayout', undefined, tr(S.settings.layout === 'page' ? 'Endless view' : 'Page view'), false)}
         ${btn('print', undefined, tr('PDF / print…'), false, 'Ctrl+P')}

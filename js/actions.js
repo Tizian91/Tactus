@@ -567,6 +567,18 @@
     S.doc.page.barsPerLine = n;
     TC.commit();
   };
+  /** Page margins in mm (page view / PDF). */
+  A.setMargin = function (mm) {
+    mm = Number(mm);
+    if (!TC.MARGINS.includes(mm) || S.doc.page.margin === mm) return;
+    S.doc.page.margin = mm;
+    TC.commit();
+  };
+  /** Title and "Page 2 / 3" at the top of the pages after the first (else only the number at the bottom). */
+  A.togglePageHeader = function () {
+    S.doc.page.header = !S.doc.page.header;
+    TC.commit();
+  };
   A.setBarNumbers = function (mode) {
     if (!TC.BAR_NUMBERS.includes(mode) || S.doc.page.barNumbers === mode) return;
     S.doc.page.barNumbers = mode;

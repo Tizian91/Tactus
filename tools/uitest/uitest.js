@@ -402,6 +402,20 @@ setTimeout(() => {
   TC.actions.setBarNumbers('every');
   ok('bar numbers on every bar ' + document.querySelectorAll('#score .barno').length, document.querySelectorAll('#score .barno').length === S.doc.bars.length);
   TC.actions.undo(); TC.actions.undo();
+  // margins and the running header on the following pages
+  const m15 = PL().systems[0].tx + PL().systems[0].ox;
+  TC.actions.setMargin(25);
+  const m25 = PL().systems[0].tx + PL().systems[0].ox;
+  ok('margin 25 mm: lines start further in ' + m15 + ' → ' + m25, S.doc.page.margin === 25 && m25 === Math.round(25 * 1200 / 210) && m25 > m15);
+  TC.actions.undo();
+  while (S.doc.bars.length < 40) TC.actions.addBar();
+  TC.actions.setBarsPerLine(2);
+  const heads = [...document.querySelectorAll('#score .runhead.right')].map((t) => t.textContent);
+  ok('running header on every page after the first: ' + heads.join(', '), PL().pages.length > 1 && heads.length === PL().pages.length - 1 && heads[0] === 'Seite 2 / ' + PL().pages.length);
+  TC.actions.togglePageHeader();
+  ok('without running header: only the page number at the bottom', !document.querySelector('#score .runhead') && document.querySelectorAll('#score .pageno').length === PL().pages.length - 1);
+  TC.actions.undo(); TC.actions.undo();
+  while (S.doc.bars.length > lastBar + 1) TC.actions.undo();
   const realPrint = window.print;
   window.print = () => {};
   const np = TC.render.print();

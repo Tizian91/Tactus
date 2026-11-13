@@ -123,7 +123,9 @@
   // line they are on; RD.toLocal() turns a point of the view into staff coordinates.
 
   const PAGE_W = (RD.PAGE_W = 1200), PAGE_H = (RD.PAGE_H = 1697); // A4: one staff space = 1.75 mm
-  const PAGE_GAP = 4 * SP, MARGIN = 85;
+  const PAGE_GAP = 4 * SP;
+  /** Page margin in world units (the page is 210 mm wide). */
+  const margin = (RD.margin = () => Math.round(((S.doc.page && S.doc.page.margin) || 15) * PAGE_W / 210));
   const PAGE_QUARTER = 5.5 * SP;  // page view: width of a quarter at the least
   const PAGE_NOTE = 1.7 * SP;     // … and of the shortest note of a bar
   const TEXT_Y = -7.6 * SP;       // bar text (Verse, Chorus …) and the tempo
@@ -147,7 +149,7 @@
 
   /** Positions of all bars and lines, the notation items of every voice. */
   RD.computeLayout = function () {
-    const doc = S.doc, track = doc.tracks[0], page = RD.isPage();
+    const doc = S.doc, track = doc.tracks[0], page = RD.isPage(), MARGIN = margin();
     const grid = TC.gridTicks(S.input);
     const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
@@ -240,7 +242,7 @@
     });
     const last = systems[systems.length - 1];
     RD.layout = {
-      bars, systems, pages, page, grid, heads: [], map: [], mapSys: 0,
+      bars, systems, pages, page, grid, margin: MARGIN, heads: [], map: [], mapSys: 0,
       width: page ? PAGE_W : last.end,
       add: { x: last.end + 1.5 * SP, y: 0, w: 3 * SP, h: 4 * SP },
     };
@@ -329,10 +331,21 @@
 
     // pages, title, tempo
     const meta = doc.meta;
+    const MARGIN = L.margin;
     if (page) {
+      const n = L.pages.length;
       L.pages.forEach((pg, k) => {
         if (!print) out.push(rect(0, pg.y, PAGE_W, PAGE_H, 'page'));
-        if (k > 0) out.push(`<text class="pageno" x="${f(PAGE_W / 2)}" y="${f(pg.y + PAGE_H - MARGIN / 2)}">${k + 1}</text>`);
+        if (k === 0) return;
+        if (doc.page.header) {
+          // running header in the top margin: title · artist left, "Page 2 / 3" right
+          const y = pg.y + Math.max(2.4 * SP, MARGIN * 0.55);
+          const name = [meta.title, meta.artist].filter(Boolean).join(' · ');
+          if (name) out.push(`<text class="runhead" x="${f(MARGIN)}" y="${f(y)}">${esc(name)}</text>`);
+          out.push(`<text class="runhead right" x="${f(PAGE_W - MARGIN)}" y="${f(y)}">${esc(TC.tr('Page {k} / {n}', { k: k + 1, n }))}</text>`);
+        } else {
+          out.push(`<text class="pageno" x="${f(PAGE_W / 2)}" y="${f(pg.y + PAGE_H - MARGIN / 2)}">${k + 1}</text>`);
+        }
       });
       let y = MARGIN;
       if (meta.title) {

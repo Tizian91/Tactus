@@ -333,6 +333,8 @@ details > summary { list-style-position: outside; }
 .score .title.center, .score .subtitle.center, .score .pageno { text-anchor: middle; }
 .score .subtitle.right { text-anchor: end; }
 .score .pageno { font-size: 11px; fill: var(--muted); }
+.score .runhead { font-size: 11px; font-style: italic; fill: var(--muted); }
+.score .runhead.right { text-anchor: end; font-style: normal; }
 .score .marker-box { fill: none; stroke: var(--ink); stroke-width: 1.1; }
 .score .marker-text { font-size: 12px; font-weight: 700; fill: var(--ink); }
 

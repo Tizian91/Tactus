@@ -79,7 +79,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
   Auswahl; im Druckdialog „Als PDF speichern“.
 - Bearbeiten geht in beiden Ansichten gleich (Klick, Ziehen, Finger). Technisch: jeder Takt hat ein x in
   „Notenzeilen-Koordinaten“, die Zeilen werden nur verschoben gezeichnet (`TC.render.toLocal`).
-- Offen: Kopf auf Folgeseiten, Seitenränder einstellbar.
+- ⚙ → Seite: **Seitenränder** (10–30 mm, Standard 15) und **Kopf auf Folgeseiten** (Titel · Interpret links, „Seite 2 / 3“ rechts; aus = nur die Seitenzahl unten), mit dem Stück gespeichert.
 
 ## Phase 4a – Drummaps und Darstellung (begonnen)
 
@@ -111,7 +111,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
 - **Anschlag in fünf Stufen**: Ghost · leise · normal · kräftig · Akzent (nur Ghost und Akzent bekommen ein Zeichen; Ghost
   leiser als bisher, Akzent etwas lauter). Halten + hoch / runter, Notenmenü, MIDI-Export und -Import nutzen alle fünf.
 - Später: Wirbel beim Import erkennen (nur was feiner als das Raster ist),
-  Import in das offene Stück (ab einem Takt), `.gp`-Export (ZIP + eigenes XML, größerer Aufwand; Guitar Pro
+  `.gp`-Export (ZIP + eigenes XML, größerer Aufwand; Guitar Pro
   liest MIDI ohne Triolen).
 
 ## Phase 3 – Wiedergabe (Grundfunktion) ✅

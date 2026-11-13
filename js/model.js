@@ -9,7 +9,8 @@
  *     meta:   { title, subtitle, artist, album, music, words, transcriber, copyright, notes, tempo, kit, kitName },
  *     bars:   [ BarHeader ],            // one per bar, for all tracks
  *     tracks: [ Track ],
- *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off' }   page view / PDF
+ *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off',
+ *               margin: 10 … 30 (mm), header: true (title and page number on the pages after the first) }   page view / PDF
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
@@ -84,7 +85,8 @@
   };
 
   TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false });
-  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system' });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true });
+  TC.MARGINS = [10, 12, 15, 20, 25, 30];
   TC.BAR_NUMBERS = ['system', 'every', 'off'];
 
   /** Endings of a bar: sorted passes 1 … 8, or null. */
@@ -210,6 +212,8 @@
     const pg = raw.page && typeof raw.page === 'object' ? raw.page : {};
     if (Number.isInteger(pg.barsPerLine) && pg.barsPerLine >= 0 && pg.barsPerLine <= 12) doc.page.barsPerLine = pg.barsPerLine;
     if (TC.BAR_NUMBERS.includes(pg.barNumbers)) doc.page.barNumbers = pg.barNumbers;
+    if (TC.MARGINS.includes(pg.margin)) doc.page.margin = pg.margin;
+    if (pg.header === false) doc.page.header = false;
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];
     doc.tracks = tracks.map((t) => {
       const kind = ['drums', 'pitched', 'tab'].includes(t.kind) ? t.kind : 'drums';

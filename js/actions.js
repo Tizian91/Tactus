@@ -605,6 +605,7 @@
       { label: 'Save as…', action: A.saveAs, shortcut: 'Ctrl+Shift+S' },
       '-',
       ...dropboxItems(),
+      { label: 'Copy a link to share', action: () => TC.share.copyLink() },
       '-',
       { label: 'Load example groove', action: A.demo },
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },

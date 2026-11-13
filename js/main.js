@@ -139,6 +139,8 @@
     UI.hint(tr('Welcome to Tactus'));
     // back from the Dropbox sign-in / already connected: kit profiles in step
     if (TC.dropbox) TC.dropbox.start();
+    // opened with a share link (#s=…): its score
+    if (TC.share) TC.share.openFromHash();
     // the music font may arrive a moment later: draw again, so widths fit
     if (document.fonts && document.fonts.load) document.fonts.load('40px Bravura').then(() => TC.refresh());
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

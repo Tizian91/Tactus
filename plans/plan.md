@@ -135,6 +135,13 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## Teilen per Link ✅
+
+- Datei → **„Link zum Teilen kopieren“** (Tablet / Handy: Teilen-Menü): das ganze Stück steckt komprimiert in der Adresse
+  nach „#“ – kein Server, der Teil nach „#“ geht auch nicht an GitHub; ein Groove-Stück ergibt wenige hundert Zeichen
+- Wer den Link öffnet, bekommt das Stück (bei ungespeicherten Änderungen wird gefragt); es ist danach nur im Browser,
+  speichern wie gewohnt
+
 ## Swing / Shuffle ✅
 
 - Takt · Stück → Stück → **Swing**: gerade, leichter Swing, Swing, Shuffle (triolisch, 2:1), harter Shuffle; Achtel oder Sechzehntel

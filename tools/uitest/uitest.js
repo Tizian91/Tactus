@@ -497,11 +497,24 @@ setTimeout(() => {
         ok('menu: open hi-hat chosen ' + voice(0, 0)[0], voice(0, 0)[0].startsWith('0:') && voice(0, 0)[0].includes('46') && !TC.menu.isOpen());
         TC.actions.undo();
         ok('… one undo step: closed again', voice(0, 0)[0].includes('42'));
-        S.doc.view.x = 190; TC.refresh();
-        const pre = document.createElement('pre');
-        pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
-        pre.textContent = out.join('\n');
-        document.body.appendChild(pre);
+        // share link: packed and compressed, opened again from the address
+        (async () => {
+          const countNotes = (d) => { let n = 0; TC.score.eachNote(d, () => n++); return n; };
+          const before = countNotes(S.doc), bars = S.doc.bars.length;
+          const url = await TC.share.link(S.doc);
+          ok('share link: compressed (' + url.length + ' characters)', /#s=z[A-Za-z0-9_-]+$/.test(url) && url.length < 6000);
+          S.dirty = false;
+          history.replaceState(null, '', location.pathname + '#s=' + url.split('#s=')[1]);
+          await TC.share.openFromHash();
+          ok('share link opened: same notes and bars, address cleaned', countNotes(S.doc) === before && S.doc.bars.length === bars && !location.hash);
+          ok('menu entry', (() => { TC.actions.fileMenu(); const t = document.getElementById('context-menu').textContent; TC.menu.close(); return /Link zum Teilen kopieren/.test(t); })());
+        })().catch((e) => ok('share link: ' + e.message, false)).then(() => {
+          S.doc.view.x = 190; TC.refresh();
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
+          pre.textContent = out.join('\n');
+          document.body.appendChild(pre);
+        });
       }, 700);
     }, 700);
   }, 700);

@@ -9,6 +9,9 @@ Values and MIDI numbers follow Guitar Pro, so scores can later go to Guitar Pro 
 **As a web app:** put the folder on any web server with https (e.g. GitHub Pages) – Chrome / Edge then
 offer "Install app" and it works offline (`manifest.webmanifest`, `sw.js`).
 
+**Share a link:** File → *Copy a link to share*: the whole score, compressed, after the "#" of the address (no server;
+that part is never sent to a server). Opening the link shows the score (`js/share.js`).
+
 **Dropbox (online version):** File → *Connect Dropbox…*. Each user signs in with their own Dropbox (OAuth 2
 with PKCE, no app secret, no server; app key in `js/dropbox.js`). The app sees only its app folder
 `Apps/<app name>/`: songs in `Songs/` (*Open from / Save to Dropbox*; saving again checks for changes made on
@@ -107,6 +110,7 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
 | `js/contextmenu.js` | Menus (from MindMapper) |
 | `js/storage.js` | Open / save `*.tactus.json`, autosave in the browser, example groove |
 | `js/i18n.js` | German / English, light / dark theme |
+| `js/share.js` | Share links: the score compressed in the address (`#s=…`) |
 | `js/dropbox.js` | Dropbox: sign-in, songs (open / save), kit profiles in step |
 | `js/main.js` | Startup, toolbar, status bar |
 | `css/bravura.css` | The music font, embedded (built by `tools/make_font_css.js`) |

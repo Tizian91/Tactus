@@ -397,6 +397,16 @@
     'More settings…': 'Weitere Einstellungen…',
     'Drum kit, notation, page, view, keyboard shortcuts': 'Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
     'Settings: drum kit, notation, page, view, keyboard shortcuts': 'Einstellungen: Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
+    // share link
+    'Copy a link to share': 'Link zum Teilen kopieren',
+    'The link could not be made: {msg}': 'Der Link ließ sich nicht erstellen: {msg}',
+    '(very long - some messengers cut such links)': '(sehr lang – manche Messenger kürzen solche Links)',
+    'Link copied ({n} characters) – paste it into a message or e-mail': 'Link kopiert ({n} Zeichen) – in eine Nachricht oder E-Mail einfügen',
+    'Copy this link:': 'Diesen Link kopieren:',
+    'This link does not contain a readable score.': 'Dieser Link enthält kein lesbares Stück.',
+    'Shared score': 'Geteiltes Stück',
+    'Open the shared score "{t}"? The changes of the open score are not saved.': 'Das geteilte Stück „{t}“ öffnen? Die Änderungen am offenen Stück sind nicht gespeichert.',
+    'Opened from a link: {t}': 'Aus einem Link geöffnet: {t}',
     // swing / shuffle
     Swing: 'Swing',
     Straight: 'Gerade',

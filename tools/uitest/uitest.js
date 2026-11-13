@@ -56,7 +56,8 @@ setTimeout(() => {
   ok('note in 3/4 bar', voice(1, 0).length === 1);
   const n0 = S.doc.bars.length;
   const a = TC.render.layout.add, v = S.doc.view, r = vp.getBoundingClientRect();
-  vp.dispatchEvent(new PointerEvent('pointerdown', { clientX: r.left + v.x + (a.x + 10) * v.zoom, clientY: r.top + v.y + (a.y + 10) * v.zoom, button: 0, bubbles: true }));
+  const plus = { clientX: r.left + v.x + (a.x + 10) * v.zoom, clientY: r.top + v.y + (a.y + 10) * v.zoom, button: 0, bubbles: true };
+  vp.dispatchEvent(new PointerEvent('pointerdown', plus)); vp.dispatchEvent(new PointerEvent('pointerup', plus));
   ok('+ adds a bar ' + S.doc.bars.length, S.doc.bars.length === n0 + 1);
   // keyboard
   document.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true }));
@@ -105,7 +106,7 @@ setTimeout(() => {
   finger('pointerdown', 11, fx, fy); finger('pointerup', 11, fx, fy);
   ok('finger tap writes a snare ' + voice(4, 0), voice(4, 0).join() === '0:480:38');
   const n4 = voice(4, 0).length, vx0 = S.doc.view.x, vy0 = S.doc.view.y;
-  [fx, fy] = screenOf(4, 960, 3);
+  [fx, fy] = screenOf(4, 960, 14); // beside the lines: a finger scrolls
   finger('pointerdown', 11, fx, fy);
   for (let k = 1; k <= 5; k++) finger('pointermove', 11, fx - k * 20, fy + k * 4);
   finger('pointerup', 11, fx - 100, fy + 20);
@@ -120,26 +121,22 @@ setTimeout(() => {
   // drag: a row of hi-hat eighths in one go, one undo step
   TC.actions.setValue(8); TC.actions.setArt(42);
   const at = (bar, tick, line) => screenOf(bar, tick, line);
-  const mouse = (type, [x, y]) => vp.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 1, pointerType: 'mouse' }));
-  mouse('pointerdown', at(5, 0, -1));
-  [480, 960, 1440, 1920, 2400].forEach((t) => mouse('pointermove', at(5, t, -1)));
-  mouse('pointerup', at(5, 2400, -1));
-  ok('drag writes 6 hi-hat eighths (3/4) ' + voice(5, 0).length, voice(5, 0).length === 6 && voice(5, 0).every((s) => s.endsWith(':42')));
+  const mouse = (type, [x, y], o = {}) => vp.dispatchEvent(new PointerEvent(type, Object.assign({ clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 1, pointerType: 'mouse' }, o)));
+  // a row: write the first note, then Ctrl + drag from it (hold + drag works too, see the finger test)
+  const drawRow = (bar, ticks, line) => { click(bar, 0, line); const c = { ctrlKey: true }; mouse('pointerdown', at(bar, 0, line), c); ticks.forEach((t) => mouse('pointermove', at(bar, t, line), c)); mouse('pointerup', at(bar, ticks[ticks.length - 1], line), c); };
+  drawRow(5, [480, 960, 1440, 1920, 2400], -1);
+  ok('Ctrl + drag from a note writes 6 hi-hat eighths (3/4) ' + voice(5, 0).length, voice(5, 0).length === 6 && voice(5, 0).every((s) => s.endsWith(':42')));
   TC.actions.undo();
-  ok('one undo removes the whole row', voice(5, 0).length === 0);
+  ok('one undo removes the whole row (the first note stays)', voice(5, 0).length === 1);
   TC.actions.redo();
   // dotted eighths and triplets: the row steps by the note length, the pointer passes every grid position
   TC.actions.toggleDotted();
-  mouse('pointerdown', at(8, 0, -1));
-  for (let t = 240; t <= 2400; t += 240) mouse('pointermove', at(8, t, -1));
-  mouse('pointerup', at(8, 2400, -1));
+  drawRow(8, [240, 480, 720, 960, 1200, 1440, 1680, 1920, 2160, 2400], -1);
   TC.actions.toggleDotted();
   ok('drag dotted eighths (3/4) ' + voice(8, 0).join(' '), voice(8, 0).join() === '0:720:42,720:720:42,1440:720:42,2160:720:42');
   TC.actions.addBar();
   TC.actions.toggleTriplet();
-  mouse('pointerdown', at(9, 0, -1));
-  for (let t = 320; t <= 2560; t += 320) mouse('pointermove', at(9, t, -1));
-  mouse('pointerup', at(9, 2560, -1));
+  drawRow(9, [320, 640, 960, 1280, 1600, 1920, 2240, 2560], -1);
   TC.actions.toggleTriplet();
   ok('drag triplet eighths (3/4): 9 ' + voice(9, 0).length, voice(9, 0).length === 9 && voice(9, 0).every((s) => s.split(':')[1] === '320'));
   // copy / paste / simile
@@ -200,9 +197,52 @@ setTimeout(() => {
   ok('released on the snare line: snare written ' + voice(nb, 0).join(' '), voice(nb, 0).join() === '0:480:38');
   click(nb, 0, 3);
   mouse('pointerdown', at(nb, 0, 3));
-  mouse('pointermove', at(nb, 0, 8));
-  mouse('pointerup', at(nb, 0, 8));
-  ok('released away from the selected note: not deleted', voice(nb, 0).length === 1);
+  mouse('pointermove', at(nb, 0, 14));
+  mouse('pointerup', at(nb, 0, 14));
+  ok('note dragged off the lines and released: stays, not deleted', voice(nb, 0).join() === '0:480:38');
+  // aim: the new note follows the pointer sideways too; moving and choosing bars
+  const nb2 = S.doc.bars.length;
+  TC.actions.addBar();
+  mouse('pointerdown', at(nb2, 0, 3));
+  mouse('pointermove', at(nb2, 480, 3));
+  mouse('pointermove', at(nb2, 960, 3));
+  ok('aiming: nothing written while held', voice(nb2, 0).length === 0);
+  mouse('pointerup', at(nb2, 960, 3));
+  ok('aim moved sideways: written where released ' + voice(nb2, 0).join(' '), voice(nb2, 0).join() === '960:480:38');
+  mouse('pointerdown', at(nb2, 0, 3));
+  mouse('pointermove', at(nb2, 0, 14));
+  mouse('pointerup', at(nb2, 0, 14));
+  ok('aim released off the lines: no note', voice(nb2, 0).length === 1);
+  mouse('pointerdown', at(nb2, 960, 3));
+  mouse('pointermove', at(nb2, 1440, 3));
+  mouse('pointerup', at(nb2, 1440, 3));
+  ok('drag a note sideways: moved in time ' + voice(nb2, 0).join(' '), voice(nb2, 0).join() === '1440:480:38' && S.selection.size === 1);
+  mouse('pointerdown', at(nb2, 1440, 3));
+  mouse('pointermove', at(nb2, 1440, -1));
+  mouse('pointerup', at(nb2, 1440, -1));
+  ok('drag a note up: other instrument (hi-hat) ' + voice(nb2, 0).join(' '), voice(nb2, 0).join() === '1440:480:42');
+  TC.actions.undo();
+  ok('move: one undo step', voice(nb2, 0).join() === '1440:480:38');
+  S.selBar = 0; TC.refresh();
+  click(nb2, 480, 11.5);
+  ok('tap below the lines: the bar is selected, no note', S.selBar === nb2 && voice(nb2, 0).length === 1 && voice(nb2, 1).length === 0);
+  S.selBar = 0; TC.actions.toggleLock();
+  click(nb2, 2400, 11.5);
+  ok('instrument lock: below the lines still selects the bar', S.selBar === nb2 && voice(nb2, 0).length === 1);
+  click(nb2, 2400, 6);
+  ok('instrument lock: on the lines writes the snare anywhere ' + voice(nb2, 0).join(' '), voice(nb2, 0).join() === '1440:480:38,2400:480:38');
+  TC.actions.toggleLock();
+  const fp = screenOf(nb2, 0, 3);
+  finger('pointerdown', 11, fp[0], fp[1]);
+  const fq = screenOf(nb2, 480, 3);
+  finger('pointermove', 11, fq[0], fq[1]);
+  finger('pointerup', 11, fq[0], fq[1]);
+  ok('finger: aim and release writes where released ' + voice(nb2, 0).join(' '), voice(nb2, 0)[0] === '480:480:38');
+  TC.actions.toggleFingerWrites();
+  const fr = screenOf(nb2, 2880, 3);
+  finger('pointerdown', 11, fr[0], fr[1]); finger('pointerup', 11, fr[0], fr[1]);
+  ok('fingers do not write (setting off): a tap selects the bar', !voice(nb2, 0).some((s) => s.startsWith('2880')) && S.selBar === nb2);
+  TC.actions.toggleFingerWrites();
   // rest cleanup: kick on 1 and 3 drawn as quarters, setting saved in the score and undoable
   ok('rest cleanup default: beat', S.doc.tracks[0].fill === 'beat');
   TC.actions.setFill('next');

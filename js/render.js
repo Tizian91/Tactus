@@ -707,6 +707,10 @@
     L.map = [];
     L.mapSys = s.i; // the drum map stands next to this line
     if (S.settings.showDrumMap) drawDrumMap(out, hl, s.ox);
+    if (h && h.barHl && L.bars[h.bar]) {
+      const b = L.bars[h.bar]; // beside the lines: a tap selects this bar
+      out.push(rect(b.x, -3.5 * SP, b.w, 11 * SP, 'hover-bar'));
+    }
     if (h && L.bars[h.bar] && h.tick !== undefined) {
       const b = L.bars[h.bar];
       const x = RD.tickX(b, h.tick);

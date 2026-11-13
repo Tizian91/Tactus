@@ -327,6 +327,28 @@
     '"{name}" was changed in Dropbox meanwhile (on another device?).\n\nOK: overwrite it with this version\nCancel: save this version under a new name':
       '„{name}“ wurde inzwischen in der Dropbox geändert (auf einem anderen Gerät?).\n\nOK: mit dieser Version überschreiben\nAbbrechen: diese Version unter neuem Namen speichern',
     'In Dropbox: {path}': 'In der Dropbox: {path}',
+    // pressing, moving, rows, bars
+    'drag: move · hold, then drag: row': 'ziehen: verschieben · halten, dann ziehen: Notenreihe',
+    'click: select the bar · drag: scroll': 'Klick: Takt auswählen · ziehen: scrollen',
+    Dropped: 'Verworfen',
+    'release here: no note': 'hier loslassen: keine Note',
+    'release here: stays': 'hier loslassen: bleibt',
+    'Bar {n} selected': 'Takt {n} ausgewählt',
+    move: 'verschieben',
+    'release: move here': 'loslassen: hierher verschieben',
+    'There is already such a note': 'Dort gibt es diese Note schon',
+    moved: 'verschoben',
+    'Press, drag, release': 'Drücken, ziehen, loslassen',
+    'A new note follows; release writes it': 'Die neue Note wandert mit; Loslassen setzt sie',
+    'Drag a note': 'Note ziehen',
+    'Move it (sideways: time, up / down: instrument)': 'Verschieben (seitlich: Zeit, hoch / runter: Instrument)',
+    'Hold a note, drag': 'Note halten, ziehen',
+    'Row of notes (mouse: Ctrl + drag)': 'Notenreihe (Maus: Strg + ziehen)',
+    'Beside the lines': 'Neben den Linien',
+    'Tap: select the bar · drag: scroll': 'Tippen: Takt auswählen · ziehen: scrollen',
+    'Two fingers': 'Zwei Finger',
+    'Scroll and zoom': 'Scrollen und zoomen',
+    'Fingers write notes (off: only pen and mouse; a finger selects and scrolls)': 'Finger setzt Noten (aus: nur Stift und Maus; der Finger wählt aus und scrollt)',
   };
 
   TC.getLang = () => (TC.state && TC.state.settings && TC.state.settings.lang) || 'de';

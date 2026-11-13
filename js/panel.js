@@ -226,6 +226,7 @@
       <p class="hint tight">${tr('Rest cleanup: a note lasts until the next one instead of leaving rests (saved with the score).')}</p>
       ${check('toggleCounts', S.settings.showCounts, tr('Counting under the staff (1 e + a)'))}
       ${check('toggleLeftHanded', S.settings.leftHanded, tr('Left-handed mode (swap the panels)'))}
+      ${check('toggleFingerWrites', S.settings.fingerWrites !== false, tr('Fingers write notes (off: only pen and mouse; a finger selects and scrolls)'))}
     </section>`;
   }
 
@@ -235,8 +236,11 @@
       ['L / Shift', tr('Lock instrument (switch / while held)')],
       ['H O S K', tr('Hi-hat closed / open, snare, kick')], ['R C F P', tr('Ride, crash, floor tom, pedal hi-hat')],
       ['A / G', tr('Accent / ghost note')], ['↑ ↓', tr('Selected notes to the next instrument')],
-      [tr('Drag'), tr('Write a row of notes (e.g. hi-hat eighths)')],
-      [tr('Finger'), tr('Hold a note, then drag: row of notes')],
+      [tr('Press, drag, release'), tr('A new note follows; release writes it')],
+      [tr('Drag a note'), tr('Move it (sideways: time, up / down: instrument)')],
+      [tr('Hold a note, drag'), tr('Row of notes (mouse: Ctrl + drag)')],
+      [tr('Beside the lines'), tr('Tap: select the bar · drag: scroll')],
+      [tr('Two fingers'), tr('Scroll and zoom')],
       [tr('Ctrl+click'), tr('Select several notes')],
       [tr('Space'), tr('Play / stop')], ['Ctrl+C / V / D', tr('Copy / paste / duplicate the bar')],
       [tr('Del'), tr('Delete selected notes')], ['Ctrl+Z / Y', tr('Undo / redo')],

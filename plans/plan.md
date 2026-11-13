@@ -119,6 +119,15 @@ Formate und MIDI-Werte wie in Guitar Pro.
 - Änderungen während des Abspielens sind sofort zu hören; Klang beim Setzen einer Note
 - Später: echte Samples, Swing / Shuffle, Tempo pro Takt im Panel, Wiederholungszeichen beim Abspielen
 
+## Bedienung: setzen, verschieben, Reihen, Takte ✅ (zum Ausprobieren)
+
+Eine Regel für Maus, Stift und Finger:
+- Leere Stelle auf den Linien drücken: Vorschau wandert mit (Spalte und Linie), **Loslassen setzt**; neben den Linien losgelassen: nichts
+- Note ziehen: **verschieben** (seitlich Zeit, hoch / runter Instrument); Note halten, dann ziehen: **Notenreihe** (Maus: Strg + ziehen)
+- Neben den Linien (darüber, darunter, Taktanfang): tippen **wählt den Takt**, ziehen **scrollt**; Finger halten: Taktmenü
+- Zwei Finger: scrollen + zoomen; Einstellung „Finger setzt Noten“ (aus: Finger wählt nur aus und scrollt)
+- Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
+
 ## Dropbox ✅ (zum Ausprobieren)
 
 - Datei → „Mit Dropbox verbinden…“ (nur online, https): eigene Dropbox-App, nur der App-Ordner

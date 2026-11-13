@@ -333,6 +333,12 @@
   };
   A.togglePanelRight = () => A.togglePanel('right');
   /** Left-handed: the note panel goes to the right, the settings to the left. */
+  /** Fingers write notes on the lines (off: pen / mouse only, a finger selects and scrolls). */
+  A.toggleFingerWrites = function () {
+    S.settings.fingerWrites = S.settings.fingerWrites === false;
+    TC.saveSettings();
+    TC.refresh();
+  };
   A.toggleLeftHanded = function () {
     S.settings.leftHanded = !S.settings.leftHanded;
     TC.saveSettings();

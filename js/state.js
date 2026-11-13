@@ -42,6 +42,7 @@ window.TC = window.TC || {};
       showPanelRight: true, // right panel: score, bar, drum kit, view
       panelRightWidth: 270,
       leftHanded: false,    // swaps the two panels
+      fingerWrites: true,   // a finger on the lines writes notes (off: only pen / mouse; fingers select and scroll)
       showDrumMap: true,    // instrument names next to the lines
       mapUsedOnly: false,   // drum map: only instruments used in the score (+ the selected one)
       kit: 'standard',      // drum kit (drummap.js TC.KITS)

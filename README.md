@@ -21,14 +21,22 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
 
 - Choose a **note value** on the left (keys `1`–`7`, `.` dotted, `T` triplet). It is also the **click grid**:
   only positions of that value can be clicked; a finer grid widens the bars so a cell never gets too small.
-- **Click on a line** of the staff: the preview shows the note and its name; keep the button down and move up /
-  down to pick another line – the note is written when you release. The nearest line
-  with an instrument of the kit decides ("magnet"); where several instruments share a line (hi-hat closed / half /
-  open, snare / rimshot / side stick …), the one chosen in the panel is written.
-- **Instrument lock** (panel switch for tablets, key `L`, or hold `Shift`): the height no longer matters – a click
-  anywhere in the column writes the selected instrument.
-- Click a note to **select** it, click it again to **delete** it, `Ctrl`+click selects several. With notes selected
-  the note panel changes them (accent, ghost note, notehead, instrument, value).
+- **One rule for mouse, pen and finger:**
+
+  | where you press | tap | drag | hold (½ s), then drag |
+  |---|---|---|---|
+  | empty place on the lines | write the note | the preview follows (column and line), **release writes it**; off the lines: nothing | same as drag |
+  | on a note | select (again: delete; `Ctrl`: several) | **move it**: sideways in time, up / down to another instrument | **row** of that instrument (mouse: `Ctrl` + drag) |
+  | beside the lines (above, below, bar start) | **select the bar** | **scroll** | finger: bar menu |
+  | two fingers | – | scroll + zoom | – |
+
+  "On the lines": near a line with an instrument of the kit – the nearest one decides ("magnet"); where several
+  instruments share a line (hi-hat closed / half / open, snare / rimshot / side stick …), the one chosen in the
+  panel is written. Mouse / pen above the screen show the preview before pressing. `Esc` drops a held note.
+  Setting "fingers write notes" (settings → view) off: a finger only selects and scrolls.
+- **Instrument lock** (panel switch for tablets, key `L`, or hold `Shift`): the height on the lines no longer
+  matters – the selected instrument is written; beside the lines a tap still selects the bar.
+- With notes selected the note panel changes them (accent, ghost note, notehead, instrument, value).
 - **Right-click a bar**: time signature (from this bar on), insert / clear / delete bars.
 - **Two panels:** the note panel (left) holds what every note needs, for the hand that does not hold the pen /
   mouse; the settings panel (right) holds score, bar, drum kit and view. **Left-handed mode** swaps them.
@@ -48,8 +56,8 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   bar texts as markers, velocity (ghost / accent), flam / drag / rolls and %-bars written out.
 - **Drum map**: short names (HH, SN, BD …) exactly at the height of their line; pointer on one lights its line
   up, a click chooses the instrument. Option: only the instruments used in the score.
-- **Drag sideways** from a new or existing note (mouse / pen; finger: hold the note first): the same instrument
-  is written at every grid position passed – a row of hi-hat eighths in one go (one undo step).
+- **Rows**: hold a note, then drag sideways (mouse: `Ctrl` + drag): the same instrument is written in steps of
+  the note value – a row of hi-hat eighths in one go (one undo step).
 - **Rest cleanup** (settings → view → note values, drums): a note lasts up to the next one, at most to the end
   of its beat, so fewer rests are written. Alternatives: up to the next note, or as written. Only the display
   changes; the saved durations stay.
@@ -63,8 +71,8 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   line automatic or fixed, a line break after any bar (bar menu, marked ↵). **Text above a bar** (Intro, Verse, Chorus …)
   and **bar numbers** (start of each line / every bar / none). **PDF**: File → PDF / print (`Ctrl+P`),
   choose "Save as PDF".
-- **Tablet**: one finger drag scrolls, tap writes, hold opens the bar menu, hold a note and drag writes a row,
-  two fingers zoom; a pen writes.
+- **Tablet**: see the table above – on the lines a finger aims and writes on release, beside the lines it
+  scrolls and selects bars, two fingers scroll and zoom.
 
 ## Code layout
 

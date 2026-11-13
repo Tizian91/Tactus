@@ -264,6 +264,7 @@ details > summary { list-style-position: outside; }
 .score .dm-lead.hl { stroke: var(--accent); stroke-width: 1; stroke-dasharray: none; opacity: 1; }
 .score .hover-band { fill: var(--accent); opacity: 0.16; }
 .score .hover-col.lock { opacity: 0.12; }
+.score .hover-bar { fill: var(--accent); opacity: 0.05; stroke: var(--accent); stroke-width: 1; stroke-opacity: 0.35; }
 .score .hover-label-bg { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; opacity: 0.92; }
 .score .hover-label { font-size: 9px; font-weight: 600; fill: var(--accent); }
 .score .mus.mid { text-anchor: middle; }

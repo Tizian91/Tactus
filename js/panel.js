@@ -268,6 +268,7 @@
       [tr('Drag a note'), tr('Move it (sideways: time, up / down: instrument)')],
       [tr('Hold a note, drag'), tr('Row of notes (mouse: Ctrl + drag)')],
       [tr('Hold a note, up / down'), tr('Strength: ghost · normal · accent')],
+      [tr('Hold a note, release'), tr('Menu: instruments of the line (hi-hat closed / open …), ghost / accent')],
       [tr('Beside the lines'), tr('Tap: select the bar · drag: scroll')],
       [tr('Two fingers'), tr('Scroll and zoom')],
       [tr('Shift + click beside the lines'), tr('Select bars up to there')],

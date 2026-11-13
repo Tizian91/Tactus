@@ -349,8 +349,10 @@
     'Bar {n} – {p}. time': 'Takt {n} – {p}. Mal',
     'played bar {n}': 'gespielt Takt {n}',
     // strength (hold a note, up / down)
-    'sideways: row · up / down: strength': 'seitlich: Reihe · hoch / runter: Anschlag',
-    'sideways: row of notes · up / down: ghost / normal / accent': 'seitlich: Notenreihe · hoch / runter: Ghost / normal / Akzent',
+    'sideways: row · up / down: strength · release: instrument': 'seitlich: Reihe · hoch / runter: Anschlag · loslassen: Instrument',
+    'sideways: row of notes · up / down: ghost / normal / accent · release: choose the instrument of the line': 'seitlich: Notenreihe · hoch / runter: Ghost / normal / Akzent · loslassen: Instrument der Linie wählen',
+    'Hold a note, release': 'Note halten, loslassen',
+    'Menu: instruments of the line (hi-hat closed / open …), ghost / accent': 'Menü: Instrumente der Linie (Hi-Hat zu / offen …), Ghost / Akzent',
     Strength: 'Anschlag',
     Ghost: 'Ghost',
     '{n} notes': '{n} Noten',

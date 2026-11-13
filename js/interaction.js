@@ -315,7 +315,7 @@
     vp.classList.remove('panning');
     if (!cancelled) {
       if (d.mode === 'aim' && d.t) writeNote(d.t, false);
-      else if (d.mode === 'note') act(d.t, e);
+      else if (d.mode === 'note') d.held ? noteMenu(d, e) : act(d.t, e); // held and released: instruments of the line
       else if (d.mode === 'move') dropMove(d);
       else if (d.mode === 'tap') act(d.t, d.down);
     }
@@ -523,13 +523,14 @@
     const d = S.drag;
     if (!d || d.mode !== 'note') return;
     d.row = true;
+    d.held = true; // released without moving: the menu with the instruments of this line
     if (navigator.vibrate) navigator.vibrate(15);
     const art = TC.drums.byId(d.hit.note.art);
     S.hover = { bar: d.t.bar, tick: d.t.tick, line: d.t.line, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y,
-      label: `${TC.drums.label(art, true)} – ${tr('sideways: row · up / down: strength')}` };
+      label: `${TC.drums.label(art, true)} – ${tr('sideways: row · up / down: strength · release: instrument')}` };
     I.hoverKey = null;
     TC.render.drawHover();
-    TC.ui.status(`${where(d.t)} · ${TC.drums.label(art)} · ${tr('sideways: row of notes · up / down: ghost / normal / accent')}`);
+    TC.ui.status(`${where(d.t)} · ${TC.drums.label(art)} · ${tr('sideways: row of notes · up / down: ghost / normal / accent · release: choose the instrument of the line')}`);
   }
 
   // ---- Strength: hold a note, then up / down (ghost · normal · accent) ---------------------------
@@ -568,6 +569,42 @@
     I.hoverKey = null;
     TC.render.drawHover();
     TC.ui.status(`${where(d.t)} · ${tr('Strength')}: ${tr(LEVELS[d.level])}${d.notes.length > 1 ? ' · ' + tr('{n} notes', { n: d.notes.length }) : ''}`);
+  }
+
+  /**
+   * A note held and released without moving: a small menu next to it with the instruments of its
+   * line (hi-hat closed / half / open, snare / rimshot / side stick …) and ghost / normal / accent.
+   * Changes the held note - or all selected notes, if it is one of them.
+   */
+  function noteMenu(d, e) {
+    const n = d.hit.note, a = TC.drums.byId(n.art);
+    if (!a) return;
+    const ids = S.selection.has(n.id) && S.selection.size > 1 ? [...S.selection] : [n.id];
+    const offer = TC.drums.clickable();
+    offer.add(n.art);
+    const arts = TC.drums.atLine(a.line).filter((x) => offer.has(x.id));
+    const choose = (fn) => () => {
+      S.selection = new Set(ids);
+      TC.selectBar(d.t.bar);
+      fn();
+    };
+    const items = arts.length > 1 ? arts.map((x) => ({
+      label: TC.drums.label(x), checked: x.id === n.art,
+      action: choose(() => {
+        A().setArt(x.id);
+        if (S.settings.sound) TC.audio.preview(n);
+      }),
+    })).concat('-') : [];
+    const lv = levelOf(n);
+    LEVELS.forEach((s, k) => items.push({
+      label: tr(s), checked: lv === k,
+      action: choose(() => {
+        ids.forEach((id) => { const h = TC.score.findNote(S.doc, id); if (h) setLevel(h.note, k); });
+        TC.commit();
+        if (S.settings.sound) TC.audio.preview(n);
+      }),
+    }));
+    TC.menu.open(items, e.clientX + 14, e.clientY - 24);
   }
 
   function finishVel(d) {

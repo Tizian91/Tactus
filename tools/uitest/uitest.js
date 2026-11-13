@@ -407,11 +407,24 @@ setTimeout(() => {
       finger('pointerup', 11, ex, ey);
       ok('… and no note is written on release ' + voice(nb, 0).join(' '), voice(nb, 0).join() === '0:480:38');
       TC.menu.close();
-      S.doc.view.x = 190; TC.refresh();
-      const pre = document.createElement('pre');
-      pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
-      pre.textContent = out.join('\n');
-      document.body.appendChild(pre);
+      // finger held on the hi-hat of bar 1 and released: menu with the instruments of its line
+      const [hhx, hhy] = screenOf(0, 0, -1);
+      finger('pointerdown', 11, hhx, hhy);
+      setTimeout(() => {
+        finger('pointerup', 11, hhx, hhy);
+        const menu = document.getElementById('context-menu');
+        const open = [...menu.querySelectorAll('.menu-item')].find((el) => el.textContent.trim() === TC.drums.label(TC.drums.byId(46)));
+        ok('hold + release a hi-hat: menu with closed / half / open and ghost / accent', TC.menu.isOpen() && !!open && /Akzent/.test(menu.textContent));
+        if (open) open.click();
+        ok('menu: open hi-hat chosen ' + voice(0, 0)[0], voice(0, 0)[0].startsWith('0:') && voice(0, 0)[0].includes('46') && !TC.menu.isOpen());
+        TC.actions.undo();
+        ok('… one undo step: closed again', voice(0, 0)[0].includes('42'));
+        S.doc.view.x = 190; TC.refresh();
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
+        pre.textContent = out.join('\n');
+        document.body.appendChild(pre);
+      }, 700);
     }, 700);
   }, 700);
 }, 500);

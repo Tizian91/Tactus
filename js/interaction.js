@@ -277,9 +277,11 @@
       case 'note':
         if (!moved(d, e)) return;
         clearTimeout(holdTimer);
-        if (d.row) return beginRow(e);
+        // held (or Ctrl): the first movement decides - sideways a row, up / down the strength
+        if (d.row) return Math.abs(e.clientY - d.sy) > Math.abs(e.clientX - d.sx) ? beginVel(e) : beginRow(e);
         d.mode = 'move';
         return moveMove(e);
+      case 'vel': return velMove(e);
       case 'tap':
         if (!moved(d, e)) return;
         clearTimeout(holdTimer);
@@ -321,6 +323,7 @@
       S.drag = d;
       finishRow();
     }
+    if (d.mode === 'vel') finishVel(d);
     if (e.pointerType === 'touch') clearHover();
     else {
       I.hoverKey = null;
@@ -340,6 +343,7 @@
   function startPinch() {
     clearTimeout(holdTimer);
     if (S.drag && (S.drag.mode === 'write' || S.drag.mode === 'row')) finishRow();
+    if (S.drag && S.drag.mode === 'vel') finishVel(S.drag);
     S.drag = null;
     clearHover();
     const [a, b] = [...touches.values()], v = S.doc.view;
@@ -361,8 +365,14 @@
   /** Esc while a note is held: it is not written / moved. */
   I.cancelDrag = function () {
     const d = S.drag;
-    if (!d || !['aim', 'note', 'move'].includes(d.mode)) return false;
+    if (!d || !['aim', 'note', 'move', 'vel'].includes(d.mode)) return false;
     clearTimeout(holdTimer);
+    if (d.mode === 'vel') {
+      // the strength goes back to what it was
+      d.notes.forEach((n, k) => Object.assign(n, d.before[k]));
+      S.rev++;
+      TC.render.draw();
+    }
     d.mode = 'done';
     clearHover();
     TC.ui.status(tr('Dropped'));
@@ -516,10 +526,54 @@
     if (navigator.vibrate) navigator.vibrate(15);
     const art = TC.drums.byId(d.hit.note.art);
     S.hover = { bar: d.t.bar, tick: d.t.tick, line: d.t.line, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y,
-      label: `${TC.drums.label(art, true)} – ${tr('drag: row of notes')}` };
+      label: `${TC.drums.label(art, true)} – ${tr('sideways: row · up / down: strength')}` };
     I.hoverKey = null;
     TC.render.drawHover();
-    TC.ui.status(`${where(d.t)} · ${TC.drums.label(art)} · ${tr('drag: row of notes')}`);
+    TC.ui.status(`${where(d.t)} · ${TC.drums.label(art)} · ${tr('sideways: row of notes · up / down: ghost / normal / accent')}`);
+  }
+
+  // ---- Strength: hold a note, then up / down (ghost · normal · accent) ---------------------------
+  // the held note - or all selected notes, if it is one of them; one undo step on release
+
+  const VEL_STEP = 28; // px per step
+  const LEVELS = ['Ghost', 'normal', 'Accent'];
+  const levelOf = (n) => (n.ghost ? 0 : n.accent ? 2 : 1);
+  function setLevel(n, lv) {
+    n.ghost = lv === 0;
+    if (lv === 2) n.accent = n.accent || 1; // a marcato stays a marcato
+    else n.accent = 0;
+    n.vel = null;
+  }
+
+  function beginVel(e) {
+    const d = S.drag, held = d.hit.note;
+    const ids = S.selection.has(held.id) && S.selection.size > 1 ? [...S.selection] : [held.id];
+    const notes = ids.map((id) => TC.score.findNote(S.doc, id)).filter(Boolean).map((h) => h.note);
+    S.drag = { mode: 'vel', id: d.id, sx: d.sx, sy: d.sy, t: d.t, notes, before: notes.map((n) => ({ ghost: n.ghost, accent: n.accent, vel: n.vel })),
+      level0: levelOf(held), level: levelOf(held) };
+    velMove(e, true);
+  }
+
+  function velMove(e, first) {
+    const d = S.drag;
+    const lv = TC.clamp(d.level0 + Math.round((d.sy - e.clientY) / VEL_STEP), 0, 2); // up: stronger
+    if (lv !== d.level || first) {
+      d.level = lv;
+      d.notes.forEach((n) => setLevel(n, lv));
+      S.rev++;
+      TC.render.draw();
+      if (S.settings.sound) TC.audio.preview(d.notes[0]);
+    }
+    S.hover = { bar: d.t.bar, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, vel: { level: d.level, names: LEVELS.map((s) => tr(s)) } };
+    I.hoverKey = null;
+    TC.render.drawHover();
+    TC.ui.status(`${where(d.t)} · ${tr('Strength')}: ${tr(LEVELS[d.level])}${d.notes.length > 1 ? ' · ' + tr('{n} notes', { n: d.notes.length }) : ''}`);
+  }
+
+  function finishVel(d) {
+    const changed = d.notes.some((n, k) => n.ghost !== d.before[k].ghost || n.accent !== d.before[k].accent || n.vel !== d.before[k].vel);
+    if (changed) TC.commit();
+    else TC.refresh();
   }
 
   function beginRow(e) {

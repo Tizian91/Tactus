@@ -268,6 +268,24 @@ setTimeout(() => {
   ok('drag a note up: other instrument (hi-hat) ' + voice(nb2, 0).join(' '), voice(nb2, 0).join() === '1440:480:42');
   TC.actions.undo();
   ok('move: one undo step', voice(nb2, 0).join() === '1440:480:38');
+  // strength: hold (here: Ctrl) a note, then up = accent, down = ghost; sideways would be a row
+  const vn = () => S.doc.tracks[0].bars[nb2].voices[0][0].notes[0];
+  const [vx, vy] = at(nb2, 1440, 3), cK = { ctrlKey: true };
+  mouse('pointerdown', [vx, vy], cK);
+  mouse('pointermove', [vx + 1, vy - 20], cK);
+  ok('strength meter shown while held', !!document.querySelector('#score .vel-seg.on'));
+  mouse('pointermove', [vx + 1, vy - 40], cK);
+  mouse('pointerup', [vx + 1, vy - 40], cK);
+  ok('up: accent ' + JSON.stringify([vn().accent, vn().ghost]), vn().accent === 1 && !vn().ghost && voice(nb2, 0).join() === '1440:480:38');
+  mouse('pointerdown', [vx, vy], cK);
+  mouse('pointermove', [vx, vy + 30], cK);
+  mouse('pointermove', [vx, vy + 70], cK);
+  mouse('pointerup', [vx, vy + 70], cK);
+  ok('down (two steps): ghost', vn().ghost && !vn().accent);
+  TC.actions.undo();
+  ok('strength: one undo step per drag (accent again)', vn().accent === 1 && !vn().ghost);
+  TC.actions.undo();
+  ok('… and normal again', !vn().accent && !vn().ghost);
   S.selBar = 0; TC.refresh();
   click(nb2, 480, 11.5);
   ok('tap below the lines: the bar is selected, no note', S.selBar === nb2 && voice(nb2, 0).length === 1 && voice(nb2, 1).length === 0);

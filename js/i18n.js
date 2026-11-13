@@ -348,6 +348,14 @@
     'Repeats written out: {n} bars': 'Wiederholungen ausgeschrieben: {n} Takte',
     'Bar {n} – {p}. time': 'Takt {n} – {p}. Mal',
     'played bar {n}': 'gespielt Takt {n}',
+    // strength (hold a note, up / down)
+    'sideways: row · up / down: strength': 'seitlich: Reihe · hoch / runter: Anschlag',
+    'sideways: row of notes · up / down: ghost / normal / accent': 'seitlich: Notenreihe · hoch / runter: Ghost / normal / Akzent',
+    Strength: 'Anschlag',
+    Ghost: 'Ghost',
+    '{n} notes': '{n} Noten',
+    'Hold a note, up / down': 'Note halten, hoch / runter',
+    'Strength: ghost · normal · accent': 'Anschlag: Ghost · normal · Akzent',
     // settings window
     'Bar · score': 'Takt · Stück',
     'Show / hide the panel for bar, playback and score': 'Panel für Takt, Wiedergabe und Stück ein-/ausblenden',

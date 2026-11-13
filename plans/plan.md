@@ -125,6 +125,8 @@ Formate und MIDI-Werte wie in Guitar Pro.
 Eine Regel für Maus, Stift und Finger:
 - Leere Stelle auf den Linien drücken: Vorschau wandert mit (Spalte und Linie), **Loslassen setzt**; neben den Linien losgelassen: nichts
 - Note ziehen: **verschieben** (seitlich Zeit, hoch / runter Instrument); Note halten, dann ziehen: **Notenreihe** (Maus: Strg + ziehen)
+- Note halten, dann **hoch / runter: Anschlag** Ghost · normal · Akzent (kleiner Balken an der Note; bei mehreren ausgewählten Noten für alle);
+  die erste Bewegung nach dem Halten entscheidet: seitlich = Reihe, hoch / runter = Anschlag; Esc nimmt es zurück
 - Neben den Linien (darüber, darunter, Taktanfang): tippen **wählt den Takt**, ziehen **scrollt**; Finger halten: Taktmenü
 - Finger / Stift auf einer leeren Stelle der Linien **still halten**: Taktmenü statt Note (wer vorher zielt, setzt normal)
 - Zwei Finger: scrollen + zoomen; Einstellung „Finger setzt Noten“ (aus: Finger wählt nur aus und scrollt)

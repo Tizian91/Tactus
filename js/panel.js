@@ -147,6 +147,7 @@
     const beamRow = choices.length ? `<div class="row"><label>${tr('Beams')}</label><select data-action="setBeam">${choices.map((g, k) =>
       `<option value="${k === 0 ? 'default' : g.join('+')}"${g.join('+') === curBeam ? ' selected' : ''}>${g.join('+')}${k === 0 ? ' ' + tr('(default)') : ''}</option>`).join('')}</select></div>` : '';
     // several bars: from the selected one up to … (for playing / looping them)
+    const [ra, rb] = TC.actions.rangeAt(i), many = rb > ra, ab = { a: ra + 1, b: rb + 1 };
     const R = TC.barRange(), end = S.selBarEnd !== null && S.doc.bars[S.selBarEnd] ? S.selBarEnd : i;
     const toOpts = S.doc.bars.map((_, k) => `<option value="${k}"${k === end ? ' selected' : ''}>${k === i ? '– ' + tr('only this one') : k + 1}</option>`).join('');
     const title = R && R[1] > R[0] ? `${tr('Bars')} ${R[0] + 1}–${R[1] + 1}` : `${tr('Bar')} ${i + 1}`;
@@ -163,20 +164,21 @@
         <select data-action="setVolta" title="${esc(tr('Ending (1st / 2nd time bar)'))}">${TC.actions.VOLTAS.map(([v, l]) =>
           `<option value="${v}"${(h.volta || []).join(',') === v ? ' selected' : ''}>${v ? '⌐ ' + l : '⌐ –'}</option>`).join('')}</select></div>
       ${R && R[1] > R[0] ? `<div class="btn-row">${btn('repeatSelection', 2, tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }))}</div>` : ''}
+      <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-bartempo value="${i === 0 ? S.doc.meta.tempo : h.tempo || ''}" placeholder="${TC.timeline.tempoAt(S.doc, i)}"> <span class="muted">${tr(i === 0 ? 'BPM' : 'from here')}</span></div>
       <div class="row"><label>${tr('Text')}</label><input type="text" data-marker maxlength="40" value="${esc(h.marker || '')}" placeholder="${esc(tr('e.g. Verse, Chorus'))}"></div>
       ${i > 0 ? check('toggleLineBreak', !!h.lineBreak, tr('New line from this bar (page view)')) : ''}
       ${S.doc.bars[i + 1] ? check('toggleBreakAfter', !!S.doc.bars[i + 1].lineBreak, tr('Line break after this bar (page view)')) : ''}
       <div class="btn-row">
-        ${btn('copyBar', undefined, tr('Copy'), false, tr('Copy bar') + ' (Ctrl+C)')}
+        ${btn('copyBar', undefined, tr('Copy'), false, (many ? tr('Copy bars {a}–{b}', ab) : tr('Copy bar')) + ' (Ctrl+C)')}
         ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
-        ${btn('duplicateBar', undefined, tr('Duplicate'), false, tr('Duplicate bar') + ' (Ctrl+D)')}
+        ${btn('duplicateBar', undefined, tr('Duplicate'), false, (many ? tr('Duplicate bars {a}–{b}', ab) : tr('Duplicate bar')) + ' (Ctrl+D)')}
         ${i > 0 ? btn('toggleSimile', undefined, '%', !!h.simile, tr('Repeat the bar before (%)')) : ''}
       </div>
       <div class="btn-row">
         ${btn('insertBarBefore', undefined, tr('+ before'), false, tr('Insert bar before'))}
         ${btn('insertBarAfter', undefined, tr('+ after'), false, tr('Insert bar after'))}
-        ${btn('clearBar', undefined, tr('Clear'), false, tr('Clear bar'))}
-        ${btn('deleteBar', undefined, tr('Delete'), false, tr('Delete bar'), 'danger')}
+        ${btn('clearBar', undefined, tr('Clear'), false, many ? tr('Clear bars {a}–{b}', ab) : tr('Clear bar'))}
+        ${btn('deleteBar', undefined, tr('Delete'), false, many ? tr('Delete bars {a}–{b}', ab) : tr('Delete bar'), 'danger')}
       </div></section>`;
   }
 
@@ -386,6 +388,9 @@
       else TC.actions.setTimeSig(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
+    } else if (el.matches('input[data-bartempo]')) {
+      el.blur();
+      TC.actions.setBarTempo(el.value);
     } else if (el.matches('input[data-marker]')) {
       el.blur();
       TC.actions.setMarker(el.value);
@@ -466,7 +471,7 @@
       root.addEventListener('click', onClick);
       root.addEventListener('change', onChange);
       root.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && e.target.matches('input[data-meta]')) e.target.blur();
+        if (e.key === 'Enter' && e.target.matches('input[data-meta], input[data-bartempo]')) e.target.blur();
       });
     }
     document.querySelectorAll('.panel-expand').forEach((b) => b.addEventListener('click', () => {

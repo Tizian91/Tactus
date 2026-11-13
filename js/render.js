@@ -160,6 +160,13 @@
       return { i, L, ts: h.ts, beam: h.beam, simile, scale, showTs, rs, re, volta: h.volta || null,
         tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices, marker: h.marker || '' };
     });
+    // a tempo change shows "♩ = 140" above its bar
+    let run = doc.meta.tempo;
+    bars.forEach((b, i) => {
+      const t = doc.bars[i].tempo;
+      b.tempo = i > 0 && t && t !== run ? t : null;
+      if (t) run = t;
+    });
     const fixed = (b) => b.tsW + HEAD_OFF + 0.2 * SP + (b.re ? REP_W : 0);
     const width = (b) => fixed(b) + b.L * b.scale;
 
@@ -207,7 +214,7 @@
       }
       s.end = ux;
       if (page) {
-        const text = k === 0 || ln.some((b) => b.marker); // the first line carries the tempo
+        const text = k === 0 || ln.some((b) => b.marker || b.tempo); // the first line carries the tempo
         const under = S.settings.showCounts || ln.some(hasSticking);
         s.above = (text ? 9.8 : 7.2) * SP;
         s.below = (under ? 12.4 : 8.4) * SP;
@@ -417,9 +424,10 @@
         const nx = page && lineStart ? s.ox + 0.3 * SP : b.x + 0.25 * SP;
         o.push(`<text class="barno" x="${f(nx)}" y="${f(-2.9 * SP)}">${i + 1}</text>`);
       }
+      if (b.tempo) o.push(`<text class="tempo" x="${f(b.x + 0.4 * SP)}" y="${f(TEXT_Y)}"><tspan class="mus-sm"></tspan> = ${esc(b.tempo)}</text>`);
       // text above the bar (Verse, Chorus …), in a box
       if (b.marker) {
-        const x = b.x + 0.2 * SP + (i === 0 ? TEMPO_W : 0);
+        const x = b.x + 0.2 * SP + (i === 0 || b.tempo ? TEMPO_W : 0);
         const w = markerW(b.marker);
         o.push(`<g class="marker">${rect(x, TEXT_Y - 1.4 * SP, w, 1.95 * SP, 'marker-box')}` +
           `<text class="marker-text" x="${f(x + 0.5 * SP)}" y="${f(TEXT_Y)}">${esc(b.marker)}</text></g>`);

@@ -266,17 +266,43 @@
     TC.selectBar(i + 1);
     TC.commit();
   };
+  /** Bar i, or all selected bars if i is one of them: [first, last]. */
+  function rangeAt(i) {
+    const R = TC.barRange();
+    return R && R[1] > R[0] && i >= R[0] && i <= R[1] ? R : [i, i];
+  }
+  A.rangeAt = rangeAt;
+  /** Delete bar i - or all selected bars, if i is one of them (at least one bar stays). */
   A.deleteBar = function (i = curBar()) {
-    if (!TC.score.deleteBars(S.doc, i, 1)) return TC.ui.hint(tr('The last bar cannot be deleted'));
+    const [a, b] = rangeAt(i);
+    if (!TC.score.deleteBars(S.doc, a, b - a + 1)) return TC.ui.hint(tr('The last bar cannot be deleted'));
     S.doc.bars[0].simile = false; // the first bar has nothing before it to repeat
-    TC.selectBar(Math.min(i, S.doc.bars.length - 1));
+    TC.selectBar(Math.min(a, S.doc.bars.length - 1));
+    TC.pruneSelection();
+    TC.commit();
+    if (b > a) TC.ui.hint(tr('{n} bars deleted', { n: b - a + 1 }));
+  };
+  /** Empty bar i - or all selected bars, if i is one of them. */
+  A.clearBar = function (i = curBar()) {
+    const [a, b] = rangeAt(i);
+    for (let k = a; k <= b; k++) TC.score.clearBar(S.doc, k);
     TC.pruneSelection();
     TC.commit();
   };
-  A.clearBar = function (i = curBar()) {
-    TC.score.clearBar(S.doc, i);
-    TC.pruneSelection();
+
+  /** Tempo from bar i on ('' / 0: as the bars before; bar 1: the tempo of the score). */
+  A.setBarTempo = function (v, i = curBar()) {
+    const n = Math.round(Number(v) || 0);
+    if (i === 0) {
+      if (n) S.doc.meta.tempo = TC.clamp(n, 20, 400);
+    } else {
+      S.doc.bars[i].tempo = n ? TC.clamp(n, 20, 400) : null;
+    }
     TC.commit();
+  };
+  A.editBarTempo = function (i = curBar()) {
+    const v = prompt(tr('Tempo from bar {n} (quarter notes per minute) – empty: as before', { n: i + 1 }), i === 0 ? S.doc.meta.tempo : S.doc.bars[i].tempo || '');
+    if (v !== null) A.setBarTempo(v, i);
   };
   /** Time signature "n/d" from bar i on (onlyThis: this bar alone). */
   A.setTimeSig = function (value, i = curBar(), onlyThis = false) {
@@ -296,24 +322,32 @@
     TC.commit();
   };
 
+  /** Copy bar i - or all selected bars, if i is one of them. */
   A.copyBar = function (i = curBar()) {
-    S.clipboard = TC.score.copyBar(S.doc, i);
-    TC.selectBar(i);
-    TC.ui.hint(tr('Bar {n} copied – click a bar and paste (Ctrl+V)', { n: i + 1 }));
+    const [a, b] = rangeAt(i);
+    S.clipboard = TC.score.copyBars(S.doc, a, b);
+    if (a === b) TC.selectBar(i);
+    TC.ui.hint(a === b ? tr('Bar {n} copied – click a bar and paste (Ctrl+V)', { n: a + 1 })
+      : tr('Bars {a}–{b} copied – click a bar and paste (Ctrl+V)', { a: a + 1, b: b + 1 }));
     TC.refresh();
   };
+  /** Paste the copied bar(s) from bar i on (the first of the selected bars); new bars at the end if needed. */
   A.pasteBar = function (i = curBar()) {
     if (!S.clipboard) return TC.ui.hint(tr('Copy a bar first (Ctrl+C)'));
-    TC.score.pasteBar(S.doc, i, S.clipboard);
-    TC.selectBar(i);
+    const at = rangeAt(i)[0];
+    const n = TC.score.pasteBars(S.doc, at, S.clipboard);
+    TC.selectBar(at);
+    if (n > 1) TC.selectBar(at + n - 1, true);
     TC.pruneSelection();
     TC.commit();
-    TC.ui.hint(tr('Pasted into bar {n}', { n: i + 1 }));
+    TC.ui.hint(n > 1 ? tr('Pasted into bars {a}–{b}', { a: at + 1, b: at + n }) : tr('Pasted into bar {n}', { n: at + 1 }));
   };
-  /** A copy of the bar right after it. */
+  /** A copy of the bar (or of the selected bars) right after it. */
   A.duplicateBar = function (i = curBar()) {
-    TC.score.duplicateBar(S.doc, i);
-    TC.selectBar(i + 1);
+    const [a, b] = rangeAt(i);
+    const n = TC.score.duplicateBars(S.doc, a, b);
+    TC.selectBar(b + 1);
+    if (n > 1) TC.selectBar(b + n, true);
     TC.commit();
   };
   /**
@@ -703,6 +737,9 @@
     const h = S.doc.bars[i];
     const R = TC.barRange();
     const multi = R && R[1] > R[0];
+    // copy / duplicate / clear / delete work on all selected bars when the menu is opened on one of them
+    const [ra, rb] = rangeAt(i), many = rb > ra, ab = { a: ra + 1, b: rb + 1 };
+    const clipN = S.clipboard ? (S.clipboard.bars ? S.clipboard.bars.length : 1) : 0;
     const extend = before !== undefined && before !== null && before !== i && !(multi && i >= R[0] && i <= R[1])
       ? { label: tr('Select bars {a}–{b}', { a: Math.min(before, i) + 1, b: Math.max(before, i) + 1 }), action: () => A.selectBarsTo(i, before) }
       : null;
@@ -726,19 +763,20 @@
       extend,
       play,
       '-',
-      { label: 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
-      { label: 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
-      { label: 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
+      { label: many ? tr('Copy bars {a}–{b}', ab) : 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
+      { label: clipN > 1 ? tr('Paste {n} bars from here', { n: clipN }) : 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
+      { label: many ? tr('Duplicate bars {a}–{b}', ab) : 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
       { label: 'Repeat the bar before (%)', checked: !!h.simile, action: () => A.toggleSimile(i), disabled: i === 0 },
       '-',
+      { label: TC.tr('Tempo from here…') + (i > 0 && h.tempo ? ` (${h.tempo})` : ''), action: () => A.editBarTempo(i) },
       { label: 'Text above the bar…', action: () => A.editMarker(i) },
       { label: 'Line break after this bar', checked: !!(S.doc.bars[i + 1] && S.doc.bars[i + 1].lineBreak), action: () => A.toggleBreakAfter(i), disabled: i === S.doc.bars.length - 1 },
       { label: 'New line from this bar', checked: !!h.lineBreak, action: () => A.toggleLineBreak(i), disabled: i === 0 },
       '-',
       { label: 'Insert bar before', action: () => A.insertBarBefore(i) },
       { label: 'Insert bar after', action: () => A.insertBarAfter(i) },
-      { label: 'Clear bar', action: () => A.clearBar(i) },
-      { label: 'Delete bar', action: () => A.deleteBar(i), disabled: S.doc.bars.length < 2 },
+      { label: many ? tr('Clear bars {a}–{b}', ab) : 'Clear bar', action: () => A.clearBar(i) },
+      { label: many ? tr('Delete bars {a}–{b}', ab) : 'Delete bar', action: () => A.deleteBar(i), disabled: S.doc.bars.length < 2 },
     ].filter(Boolean), x, y);
   };
 })(window.TC);

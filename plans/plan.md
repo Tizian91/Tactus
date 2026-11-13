@@ -135,6 +135,13 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## Paket „Takte“ ✅
+
+- **Tempowechsel ab einem Takt**: Takt-Panel (Feld „Tempo … ab hier“, leer = wie davor) oder Taktmenü „Tempo ab hier…“;
+  „♩ = 140“ über dem Takt (beide Ansichten, PDF); Abspielen und MIDI-Export folgen
+- **Mehrere Takte**: Kopieren, Einfügen (ab dem Takt, am Ende kommen Takte dazu), Verdoppeln, Leeren, Löschen wirken auf
+  die ausgewählten Takte (Panel, Taktmenü „Takte a–b …“, Strg+C / V / D)
+
 ## Werkzeuge ✅
 
 - Oben im Noten-Panel (Tasten W / V / E): **✏ Schreiben** (wie bisher), **⬚ Auswählen**, **⌫ Radieren**

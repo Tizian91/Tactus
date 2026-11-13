@@ -74,7 +74,8 @@ Not available when `index.html` is opened as a file (Dropbox needs https).
   changes; the saved durations stay.
 - **Flam, drag, roll, sticking** per note in the note panel: grace notes, 1–3 strokes through the stem,
   R / L under the staff. **Counting** (1 e + a) under the staff can be switched on (settings → view).
-- **Bars**: copy / paste / duplicate (`Ctrl+C` / `V` / `D`), **% = repeat the bar before**, **beam groups**
+- **Bars**: copy / paste / duplicate (`Ctrl+C` / `V` / `D`) – of all selected bars, also clear / delete; **tempo from a
+  bar on** (bar panel or bar menu, "♩ = 140" above it); **% = repeat the bar before**, **beam groups**
   for odd meters (7/8 = 2+2+3, 3+2+2 …).
 - **Playback** (`Space` or ▶): synthesized drum sounds, running cursor, metronome, count-in, loop of the
   selected bar, tempo in the toolbar. Changes are heard while it plays. A note sounds when it is written.

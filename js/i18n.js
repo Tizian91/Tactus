@@ -397,6 +397,18 @@
     'More settings…': 'Weitere Einstellungen…',
     'Drum kit, notation, page, view, keyboard shortcuts': 'Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
     'Settings: drum kit, notation, page, view, keyboard shortcuts': 'Einstellungen: Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
+    // bar package: tempo per bar, several bars
+    'Tempo from here…': 'Tempo ab hier…',
+    'Tempo from bar {n} (quarter notes per minute) – empty: as before': 'Tempo ab Takt {n} (Viertel pro Minute) – leer: wie davor',
+    'from here': 'ab hier',
+    'Copy bars {a}–{b}': 'Takte {a}–{b} kopieren',
+    'Paste {n} bars from here': '{n} Takte ab hier einfügen',
+    'Duplicate bars {a}–{b}': 'Takte {a}–{b} verdoppeln',
+    'Clear bars {a}–{b}': 'Takte {a}–{b} leeren',
+    'Delete bars {a}–{b}': 'Takte {a}–{b} löschen',
+    'Bars {a}–{b} copied – click a bar and paste (Ctrl+V)': 'Takte {a}–{b} kopiert – Takt anklicken und einfügen (Strg+V)',
+    'Pasted into bars {a}–{b}': 'In Takte {a}–{b} eingefügt',
+    '{n} bars deleted': '{n} Takte gelöscht',
     // several bars
     Bars: 'Takte',
     'to bar': 'bis Takt',

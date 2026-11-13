@@ -218,6 +218,22 @@ setTimeout(() => {
   ok('panel: repeat controls', !!document.querySelector('#panel-settings select[data-action="setRepeatEnd"]') && !!document.querySelector('#panel-settings select[data-action="setVolta"]'));
   TC.actions.undo(); TC.actions.undo();
   ok('undo: no repeats left', !TC.score.hasRepeats(S.doc));
+  // several bars: duplicate / delete the selected bars; tempo from a bar on
+  const nBars = S.doc.bars.length;
+  TC.selectBar(1); TC.selectBar(2, true); TC.refresh();
+  TC.actions.barMenu(1, 300, 300);
+  ok('bar menu names the range', /Takte 2–3 kopieren/.test(document.getElementById('context-menu').textContent));
+  TC.menu.close();
+  TC.actions.duplicateBar(1);
+  ok('duplicate bars 2-3: two more bars, the copies selected ' + JSON.stringify(TC.barRange()), S.doc.bars.length === nBars + 2 && JSON.stringify(TC.barRange()) === '[3,4]');
+  TC.actions.deleteBar(3);
+  ok('delete bars 4-5 (the selection): as many bars as before', S.doc.bars.length === nBars);
+  TC.actions.setBarTempo(140, 2);
+  ok('tempo 140 from bar 3: drawn above it', S.doc.bars[2].tempo === 140 && [...document.querySelectorAll('#score .tempo')].some((t) => t.textContent.includes('140')));
+  TC.selectBar(2); TC.refresh();
+  ok('bar panel: tempo field', !!document.querySelector('#panel-settings input[data-bartempo]') && document.querySelector('#panel-settings input[data-bartempo]').value === '140');
+  TC.actions.undo(); TC.actions.undo(); TC.actions.undo();
+  ok('undo: tempo and bars as before', !S.doc.bars[2].tempo && S.doc.bars.length === nBars);
   TC.actions.selectNone();
   // file menu: Dropbox entry (as a file page: only the hint that it needs the online version)
   TC.actions.fileMenu();

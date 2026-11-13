@@ -62,4 +62,17 @@ module.exports = function (T) {
   const bad = TC.normalizeDoc({ bars: [{ ts: [7, 8], beam: [3, 3], simile: true }], tracks: [{ kind: 'drums', bars: [{ voices: [[{ tick: 0, dur: 480, notes: [{ art: 38, orn: 'x', trem: 9, stick: 'Q' }] }]] }] }] });
   T.eq('bad values are dropped', [bad.bars[0].beam, bad.bars[0].simile, bad.tracks[0].bars[0].voices[0][0].notes[0].orn, bad.tracks[0].bars[0].voices[0][0].notes[0].trem, bad.tracks[0].bars[0].voices[0][0].notes[0].stick],
     [null, false, null, 0, '']);
+
+  // several bars: copy, paste (new bars at the end), duplicate
+  const d3 = TC.emptyScore(3);
+  TC.state.doc = d3;
+  const t3 = d3.tracks[0];
+  SC.setTimeSig(d3, 1, [3, 4], true);
+  [[0, 36], [1, 38], [2, 42]].forEach(([bi, art]) => SC.place(d3, t3, bi, TC.drums.byId(art).voice, 0, 480, TC.newDrumNote(art, {})));
+  const first = (bi) => (t3.bars[bi].voices.flat()[0] || { notes: [{}] }).notes[0].art;
+  const clip3 = SC.copyBars(d3, 0, 1);
+  T.eq('copy bars 1-2: two bars', clip3.bars.length, 2);
+  T.eq('paste them from bar 3: bar 4 is added with the copied 3/4', [SC.pasteBars(d3, 2, clip3), d3.bars.length, first(2), first(3), d3.bars[3].ts.join('/')], [2, 4, 36, 38, '3/4']);
+  T.eq('a single copyBar can be pasted too', [SC.pasteBars(d3, 0, SC.copyBar(d3, 1)), first(0)], [1, 38]);
+  T.eq('duplicate bars 2-3: copies right after, time signatures kept', [SC.duplicateBars(d3, 1, 2), d3.bars.length, first(3), first(4), d3.bars[3].ts.join('/')], [2, 6, 38, 36, '3/4']);
 };

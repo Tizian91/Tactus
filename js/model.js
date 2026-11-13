@@ -528,6 +528,37 @@
     return true;
   };
 
+  /** Copy of bars a … b: { bars: [ copyBar … ] } (%-bars: what they play). */
+  SC.copyBars = function (doc, a, b) {
+    const bars = [];
+    for (let i = a; i <= b; i++) bars.push(SC.copyBar(doc, i));
+    return { bars };
+  };
+  /**
+   * Paste copied bars from bar `at` on (each replaces the notes of one bar); past the end of the
+   * score new bars are added with the copied time signature. Also takes a single copyBar.
+   * Returns how many bars were pasted.
+   */
+  SC.pasteBars = function (doc, at, clip) {
+    const list = clip && clip.bars ? clip.bars : clip ? [clip] : [];
+    list.forEach((c, k) => {
+      if (at + k >= doc.bars.length) SC.insertBars(doc, doc.bars.length, 1, c.ts);
+      SC.pasteBar(doc, at + k, c);
+    });
+    return list.length;
+  };
+  /** A copy of bars a … b right after b (their time signatures and beam groups too). */
+  SC.duplicateBars = function (doc, a, b) {
+    const clip = SC.copyBars(doc, a, b);
+    for (let i = a; i <= b; i++) {
+      const at = b + 1 + (i - a);
+      SC.insertBars(doc, at, 1, doc.bars[i].ts);
+      doc.bars[at].beam = doc.bars[i].beam ? doc.bars[i].beam.slice() : null;
+    }
+    SC.pasteBars(doc, b + 1, clip);
+    return b - a + 1;
+  };
+
   /** A copy of bar `bi` right after it. */
   SC.duplicateBar = function (doc, bi) {
     const clip = SC.copyBar(doc, bi);

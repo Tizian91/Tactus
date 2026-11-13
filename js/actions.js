@@ -456,6 +456,13 @@
   A.toggleSound = () => toggleSetting('sound');
   A.toggleMetronome = () => toggleSetting('metronome');
   A.toggleMidiSynth = () => toggleSetting('midiOutSynth');
+  /** Lead of the MIDI output in ms (the drum VST's delay is made up for). */
+  A.setMidiLead = function (ms) {
+    S.settings.midiLead = TC.clamp(Math.round(Number(ms) || 0), 0, 500);
+    TC.saveSettings();
+    if (TC.player.playing) TC.player.restartHere();
+    TC.refresh();
+  };
   /**
    * Sound of the playback: '' = Tactus' own sounds, '?' = look for MIDI outputs (the browser asks
    * once), otherwise the name of a MIDI output (js/midiout.js: Cubase plays the notes).

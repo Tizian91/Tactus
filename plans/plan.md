@@ -218,4 +218,6 @@ Eine Regel für Maus, Stift und Finger:
   an den Ausgang, mit genauem Zeitpunkt; Cursor und Metronom bleiben in Tactus. „Tactus-Klänge zusätzlich“ wahlweise.
 - Einrichtung (Windows): virtuelles MIDI-Kabel, z. B. **loopMIDI** (kostenlos), Port anlegen; in Cubase die
   Drum-Spur (Groove Agent …) auf diesen MIDI-Eingang stellen und Monitor einschalten (oder Aufnahme aktivieren).
-- Auch beim Setzen einer Note klingt sie über Cubase. Später: Latenz-Ausgleich einstellbar, MIDI-Eingang (Aufnahme).
+- **Vorlauf** (ms, im Panel unter dem Ausgang): die Noten gehen so viel früher los, wie das Drum-VST zu spät klingt (Audio-Puffer);
+  mit Metronom einstellen. Ohne ASIO-Treiber hat ein Standalone-VST oft 100–250 ms, Cubase mit ASIO meist nur wenige ms.
+- Auch beim Setzen einer Note klingt sie über Cubase (dort ohne Vorlauf). Später: MIDI-Eingang (Aufnahme).

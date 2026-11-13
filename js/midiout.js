@@ -58,11 +58,16 @@
    * A stroke at audio time `when` (seconds on the audio clock of `ctx`), velocity 0 … 1.2.
    * The browser sends it at the matching moment of its own clock.
    */
+  /** Lead in seconds: the receiving program's own delay (audio buffer), set in the panel (0 … 500 ms). */
+  MO.lead = () => TC.clamp(Number(S.settings.midiLead) || 0, 0, 500) / 1000;
+
   MO.hit = function (art, when, vel, ctx) {
     const o = port(), k = key(art);
     if (!o || !k) return;
-    const lat = ctx ? (ctx.outputLatency || ctx.baseLatency || 0) : 0; // in time with what is heard
-    const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat) * 1000;
+    // in time with Tactus' own sound (metronome, cursor): its output delay, minus the lead that
+    // makes up for the delay of the drum VST
+    const lat = ctx ? (ctx.outputLatency || ctx.baseLatency || 0) : 0;
+    const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
     const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
     try {
       o.send([0x90 | k.ch, k.note, v], at);

@@ -65,6 +65,8 @@
     Sound: 'Klang',
     'Tactus sounds': 'Tactus-Klänge',
     'Tactus sounds as well': 'Tactus-Klänge zusätzlich',
+    Lead: 'Vorlauf',
+    'Sends the notes earlier, as much as the drum VST is late (its audio buffer). Set it with the metronome on until both sound together.': 'Schickt die Noten früher los, so viel wie das Drum-VST zu spät kommt (sein Audio-Puffer). Mit eingeschaltetem Metronom einstellen, bis beides zusammen klingt.',
     'MIDI output (Cubase …)…': 'MIDI-Ausgang (Cubase …)…',
     'Look for MIDI outputs again…': 'MIDI-Ausgänge neu suchen…',
     '"{name}" is not connected.': '„{name}“ ist nicht verbunden.',

@@ -537,6 +537,9 @@ setTimeout(() => {
             TC.audio.preview(TC.newDrumNote(38, { accent: 1 }));
             ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127) ' + JSON.stringify(sent[0]),
               sent.length === 2 && sent[0].join() === [0x99, 38, 127].join() && sent[1][0] === 0x89);
+            TC.actions.setMidiLead(200);
+            ok('MIDI output: lead 200 ms set in the panel', TC.midiOut.lead() === 0.2 && document.querySelector('input[data-midilead]').value === '200');
+            TC.actions.setMidiLead(0);
             TC.actions.setMidiOut('');
             ok('MIDI output off: Tactus sounds again', !TC.midiOut.active());
           }).catch((e) => ok('MIDI output: ' + e.message, false));

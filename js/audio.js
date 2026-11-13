@@ -285,7 +285,9 @@
       idx = tl.hits.findIndex((h) => h.t > until);
       if (idx < 0) idx = tl.hits.length;
     }
-    const horizon = ctx.currentTime - t0 + AHEAD;
+    // MIDI output with a lead (settings.midiLead): its strokes are handed over that much earlier
+    const lead = TC.midiOut && TC.midiOut.active() ? TC.midiOut.lead() : 0;
+    const horizon = ctx.currentTime - t0 + AHEAD + lead;
     for (;;) {
       if (idx >= tl.hits.length) {
         if (!S.settings.loop) break;
@@ -385,7 +387,7 @@
     build();
     idx = 0;
     until = -1;
-    t0 = ctx.currentTime + 0.05;
+    t0 = ctx.currentTime + 0.05 + (TC.midiOut && TC.midiOut.active() ? TC.midiOut.lead() : 0); // room for the MIDI lead
     bus = ctx.createGain(); // this run's own output: stop() fades it without touching the next run
     bus.connect(master);
     P.playing = true;

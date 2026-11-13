@@ -262,6 +262,8 @@
       more = MO.missing()
         ? `<p class="hint warn">${tr('"{name}" is not connected.', { name: st.midiOut })}</p>`
         : `<p class="hint tight">${tr('Keys of the kit profile: {name}', { name: p ? p.name : 'General MIDI' })}</p>`;
+      more += `<div class="row"><label>${tr('Lead')}</label><input type="number" min="0" max="500" step="10" data-midilead value="${Number(st.midiLead) || 0}"> <span class="muted">ms</span></div>
+        <p class="hint tight">${tr('Sends the notes earlier, as much as the drum VST is late (its audio buffer). Set it with the metronome on until both sound together.')}</p>`;
       more += check('toggleMidiSynth', !!st.midiOutSynth, tr('Tactus sounds as well'));
     }
     return `<div class="row"><label>${tr('Sound')}</label><select data-action="setMidiOut">${opts}</select></div>${more}`;
@@ -410,6 +412,8 @@
     } else if (el.matches('select[data-ts]')) {
       if (el.value === 'other') TC.actions.customTimeSig();
       else TC.actions.setTimeSig(el.value);
+    } else if (el.matches('input[data-midilead]')) {
+      TC.actions.setMidiLead(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
     } else if (el.matches('input[data-bartempo]')) {

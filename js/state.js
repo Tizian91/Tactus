@@ -55,6 +55,7 @@ window.TC = window.TC || {};
       importGrid: '16t',    // MIDI import: grid (js/midiin.js)
       midiOut: '',          // playback through this MIDI output (js/midiout.js), '' = Tactus' own sounds
       midiOutSynth: false,  // with a MIDI output: Tactus' sounds as well
+      midiLead: 0,          // MIDI output: sent this many ms earlier (the drum VST's own delay)
       kitCustom: null,      // ids of the custom kit
       layout: 'endless',    // 'endless' | 'page' (A4 pages as printed)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)

@@ -193,7 +193,7 @@
 
   A.selectNone = function () {
     S.selection.clear();
-    S.selBar = null;
+    TC.selectBar(null);
     TC.refresh();
   };
 
@@ -203,23 +203,23 @@
 
   A.addBar = function () {
     TC.score.insertBars(S.doc, S.doc.bars.length, 1);
-    S.selBar = S.doc.bars.length - 1;
+    TC.selectBar(S.doc.bars.length - 1);
     TC.commit();
   };
   A.insertBarBefore = function (i = curBar()) {
     TC.score.insertBars(S.doc, i, 1, S.doc.bars[i].ts);
-    S.selBar = i;
+    TC.selectBar(i);
     TC.commit();
   };
   A.insertBarAfter = function (i = curBar()) {
     TC.score.insertBars(S.doc, i + 1, 1, S.doc.bars[i].ts);
-    S.selBar = i + 1;
+    TC.selectBar(i + 1);
     TC.commit();
   };
   A.deleteBar = function (i = curBar()) {
     if (!TC.score.deleteBars(S.doc, i, 1)) return TC.ui.hint(tr('The last bar cannot be deleted'));
     S.doc.bars[0].simile = false; // the first bar has nothing before it to repeat
-    S.selBar = Math.min(i, S.doc.bars.length - 1);
+    TC.selectBar(Math.min(i, S.doc.bars.length - 1));
     TC.pruneSelection();
     TC.commit();
   };
@@ -248,14 +248,14 @@
 
   A.copyBar = function (i = curBar()) {
     S.clipboard = TC.score.copyBar(S.doc, i);
-    S.selBar = i;
+    TC.selectBar(i);
     TC.ui.hint(tr('Bar {n} copied – click a bar and paste (Ctrl+V)', { n: i + 1 }));
     TC.refresh();
   };
   A.pasteBar = function (i = curBar()) {
     if (!S.clipboard) return TC.ui.hint(tr('Copy a bar first (Ctrl+C)'));
     TC.score.pasteBar(S.doc, i, S.clipboard);
-    S.selBar = i;
+    TC.selectBar(i);
     TC.pruneSelection();
     TC.commit();
     TC.ui.hint(tr('Pasted into bar {n}', { n: i + 1 }));
@@ -263,7 +263,7 @@
   /** A copy of the bar right after it. */
   A.duplicateBar = function (i = curBar()) {
     TC.score.duplicateBar(S.doc, i);
-    S.selBar = i + 1;
+    TC.selectBar(i + 1);
     TC.commit();
   };
   /**
@@ -279,7 +279,7 @@
       TC.score.clearBar(S.doc, i);
       h.simile = true;
     }
-    S.selBar = i;
+    TC.selectBar(i);
     TC.pruneSelection();
     TC.commit();
   };
@@ -573,8 +573,30 @@
   };
 
   /** Right-click on a bar. */
-  A.barMenu = function (i, x, y) {
+  /** Select the bars from the selected one (or `from`) up to bar i (e.g. to play / loop them). */
+  A.selectBarsTo = function (i, from) {
+    i = Number(i);
+    if (!S.doc.bars[i]) return;
+    if (from !== undefined && from !== null) TC.selectBar(from);
+    if (S.selBar === null) TC.selectBar(i);
+    else TC.selectBar(i, true);
+    S.selection.clear();
+    TC.refresh();
+    const [a, b] = TC.barRange();
+    TC.ui.hint(a === b ? tr('Bar {n} selected', { n: a + 1 }) : tr('Bars {a}–{b} selected', { a: a + 1, b: b + 1 }));
+  };
+
+  /** Right-click / long press on bar i; before: the bar selected until then (offers "bars before … to i"). */
+  A.barMenu = function (i, x, y, before) {
     const h = S.doc.bars[i];
+    const R = TC.barRange();
+    const multi = R && R[1] > R[0];
+    const extend = before !== undefined && before !== null && before !== i && !(multi && i >= R[0] && i <= R[1])
+      ? { label: tr('Select bars {a}–{b}', { a: Math.min(before, i) + 1, b: Math.max(before, i) + 1 }), action: () => A.selectBarsTo(i, before) }
+      : null;
+    const play = multi && i >= R[0] && i <= R[1]
+      ? { label: tr('Play bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }), action: () => TC.player.play(), shortcut: tr('Space') }
+      : { label: 'Play from here', action: () => TC.player.play(i), shortcut: tr('Space') };
     const sigs = TC.TIME_SIGS.map((ts) => ({
       label: ts.join('/'), checked: h.ts.join('/') === ts.join('/'), action: () => A.setTimeSig(ts.join('/'), i),
     }));
@@ -588,7 +610,8 @@
       { label: 'Time signature from here', submenu: sigs.concat(['-', { label: 'Other…', action: () => A.customTimeSig(i) }]) },
       beamItems.length ? { label: 'Beam groups', submenu: beamItems } : null,
       '-',
-      { label: 'Play from here', action: () => TC.player.play(i), shortcut: tr('Space') },
+      extend,
+      play,
       '-',
       { label: 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
       { label: 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },

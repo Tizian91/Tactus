@@ -327,6 +327,16 @@
     '"{name}" was changed in Dropbox meanwhile (on another device?).\n\nOK: overwrite it with this version\nCancel: save this version under a new name':
       '„{name}“ wurde inzwischen in der Dropbox geändert (auf einem anderen Gerät?).\n\nOK: mit dieser Version überschreiben\nAbbrechen: diese Version unter neuem Namen speichern',
     'In Dropbox: {path}': 'In der Dropbox: {path}',
+    // several bars
+    Bars: 'Takte',
+    'to bar': 'bis Takt',
+    'only this one': 'nur dieser',
+    'Bars {a}–{b} selected': 'Takte {a}–{b} ausgewählt',
+    'Select bars {a}–{b}': 'Takte {a}–{b} auswählen',
+    'Play bars {a}–{b}': 'Takte {a}–{b} abspielen',
+    'Play / loop plays these bars. The settings below apply to bar {n}.': 'Abspielen / Schleife spielt diese Takte. Die Einstellungen darunter gelten für Takt {n}.',
+    'Shift + click beside the lines': 'Shift + Klick neben die Linien',
+    'Select bars up to there': 'Takte bis dorthin auswählen',
     // pressing, moving, rows, bars
     'drag: move · hold, then drag: row': 'ziehen: verschieben · halten, dann ziehen: Notenreihe',
     'click: select the bar · drag: scroll': 'Klick: Takt auswählen · ziehen: scrollen',

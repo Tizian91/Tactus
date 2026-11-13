@@ -391,7 +391,7 @@
    */
   function writeNote(t, sound) {
     S.selection.clear();
-    S.selBar = t.bar;
+    TC.selectBar(t.bar);
     const art = t.art;
     const note = TC.newDrumNote(art.id, S.input);
     const res = TC.score.place(S.doc, S.doc.tracks[0], t.bar, art.voice, t.tick, TC.inputTicks(S.input), note);
@@ -425,7 +425,16 @@
       }
       return;
     }
-    S.selBar = t.bar;
+    if (t.kind === 'bar' && e.shiftKey && S.selBar !== null) {
+      // Shift + tap beside the lines: the bars from the one selected before up to this one
+      TC.selectBar(t.bar, true);
+      S.selection.clear();
+      TC.refresh();
+      const [a, b] = TC.barRange();
+      TC.ui.hint(tr('Bars {a}–{b} selected', { a: a + 1, b: b + 1 }));
+      return;
+    }
+    TC.selectBar(t.bar);
     if (t.kind === 'head') {
       const id = t.head.id;
       if (e.ctrlKey || e.metaKey) {
@@ -480,7 +489,7 @@
     const moved = Object.assign({}, n, { art: to.art.id });
     const res = TC.score.place(doc, track, to.bar, to.art.voice, to.tick, dur, moved);
     S.selection = new Set([res.note ? res.note.id : n.id]);
-    S.selBar = to.bar;
+    TC.selectBar(to.bar);
     TC.commit();
     TC.ui.status(`${where(to)} · ${TC.drums.label(to.art)} · ${tr('moved')}`);
   }
@@ -585,9 +594,11 @@
     const p = I.toLocal(e.clientX, e.clientY);
     const bar = p && TC.render.barAt(p.x);
     if (!bar) return;
-    S.selBar = bar.i;
+    // inside the selected bars: they stay selected; otherwise this bar (the menu can extend to it)
+    const R = TC.barRange(), before = S.selBar;
+    if (!R || bar.i < R[0] || bar.i > R[1]) TC.selectBar(bar.i);
     TC.refresh();
-    A().barMenu(bar.i, e.clientX, e.clientY);
+    A().barMenu(bar.i, e.clientX, e.clientY, before);
   }
 
   // ---- Keyboard ---------------------------------------------------------------------------------

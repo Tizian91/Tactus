@@ -323,9 +323,12 @@
     lines[0].push(`<text class="tempo" x="${f(s0.ox + 0.4 * SP)}" y="${f(TEXT_Y)}"><tspan class="mus-sm"></tspan> = ${esc(meta.tempo)}</text>`);
 
     // selected bar, selected instrument's line
-    if (!print && S.selBar !== null && L.bars[S.selBar]) {
-      const b = L.bars[S.selBar];
-      O(b).push(rect(b.x, top, b.w, bottom - top, 'bar-sel'));
+    const R = !print && TC.barRange();
+    if (R) {
+      for (let i = R[0]; i <= R[1]; i++) {
+        const b = L.bars[i];
+        if (b) O(b).push(rect(b.x, top, b.w, bottom - top, 'bar-sel'));
+      }
     }
     const selArt = TC.drums.byId(S.input.art);
     if (!print && selArt) L.systems.forEach((s) => lines[s.i].push(rect(s.ox, stepY(selArt.line) - SP / 4, s.end - s.ox, SP / 2, 'line-band')));

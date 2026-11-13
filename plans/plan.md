@@ -127,6 +127,7 @@ Eine Regel für Maus, Stift und Finger:
 - Neben den Linien (darüber, darunter, Taktanfang): tippen **wählt den Takt**, ziehen **scrollt**; Finger halten: Taktmenü
 - Zwei Finger: scrollen + zoomen; Einstellung „Finger setzt Noten“ (aus: Finger wählt nur aus und scrollt)
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
+- **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
 ## Dropbox ✅ (zum Ausprobieren)
 

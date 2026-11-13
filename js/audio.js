@@ -322,14 +322,23 @@
     }
   }
 
-  /** Play from bar `from` (default: the selected bar, else the start). */
+  /**
+   * Play from bar `from` (default: the selected bar, else the start). Several bars selected:
+   * just those (loop: over and over); one bar selected and loop: that bar.
+   */
   P.play = function (from) {
     if (!ensure()) return TC.ui.hint(TC.tr('This browser cannot play sound'));
     P.stop(true);
     const n = S.doc.bars.length;
-    let start = from !== undefined && from !== null ? from : S.selBar !== null ? S.selBar : 0;
+    const has = from !== undefined && from !== null;
+    const R = TC.barRange();
+    let start = has ? from : S.selBar !== null ? S.selBar : 0;
     start = TC.clamp(start, 0, n - 1);
-    range = S.settings.loop && S.selBar !== null && (from === undefined || from === S.selBar) ? [S.selBar, S.selBar] : [start, n - 1];
+    if (R && R[1] > R[0] && (!has || (from >= R[0] && from <= R[1]))) {
+      range = S.settings.loop || !has ? [R[0], R[1]] : [start, R[1]];
+    } else {
+      range = S.settings.loop && S.selBar !== null && (!has || from === S.selBar) ? [S.selBar, S.selBar] : [start, n - 1];
+    }
     lap = 0;
     build();
     idx = 0;
@@ -362,6 +371,8 @@
   };
 
   P.toggle = () => (P.playing ? P.stop() : P.play());
+  /** The bars being played [first, last] (for the tests). */
+  P.range = () => range;
 
   /** Start again at the bar that is playing now (after a tempo or loop change). */
   P.restartHere = function () {

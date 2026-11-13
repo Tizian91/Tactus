@@ -134,7 +134,13 @@
     const curBeam = (TC.beamGroups(h.ts, h.beam) || []).join('+');
     const beamRow = choices.length ? `<div class="row"><label>${tr('Beams')}</label><select data-action="setBeam">${choices.map((g, k) =>
       `<option value="${k === 0 ? 'default' : g.join('+')}"${g.join('+') === curBeam ? ' selected' : ''}>${g.join('+')}${k === 0 ? ' ' + tr('(default)') : ''}</option>`).join('')}</select></div>` : '';
-    return `<section><h3>${tr('Bar')} ${i + 1}</h3>
+    // several bars: from the selected one up to … (for playing / looping them)
+    const R = TC.barRange(), end = S.selBarEnd !== null && S.doc.bars[S.selBarEnd] ? S.selBarEnd : i;
+    const toOpts = S.doc.bars.map((_, k) => `<option value="${k}"${k === end ? ' selected' : ''}>${k === i ? '– ' + tr('only this one') : k + 1}</option>`).join('');
+    const title = R && R[1] > R[0] ? `${tr('Bars')} ${R[0] + 1}–${R[1] + 1}` : `${tr('Bar')} ${i + 1}`;
+    return `<section><h3>${title}</h3>
+      <div class="row"><label>${tr('to bar')}</label><select data-action="selectBarsTo">${toOpts}</select></div>
+      ${R && R[1] > R[0] ? `<p class="hint tight">${tr('Play / loop plays these bars. The settings below apply to bar {n}.', { n: i + 1 })}</p>` : ''}
       <div class="row"><label>${tr('Time sig.')}</label><select data-ts>${opts}<option value="other">${tr('Other…')}</option></select></div>
       ${beamRow}
       <p class="hint">${tr('Applies from this bar up to the next change.')}</p>
@@ -241,6 +247,7 @@
       [tr('Hold a note, drag'), tr('Row of notes (mouse: Ctrl + drag)')],
       [tr('Beside the lines'), tr('Tap: select the bar · drag: scroll')],
       [tr('Two fingers'), tr('Scroll and zoom')],
+      [tr('Shift + click beside the lines'), tr('Select bars up to there')],
       [tr('Ctrl+click'), tr('Select several notes')],
       [tr('Space'), tr('Play / stop')], ['Ctrl+C / V / D', tr('Copy / paste / duplicate the bar')],
       [tr('Del'), tr('Delete selected notes')], ['Ctrl+Z / Y', tr('Undo / redo')],
@@ -268,7 +275,7 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
-    const keyS = JSON.stringify([S.selBar, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, S.doc.tracks[0].fill, S.doc.page, lang,
+    const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, S.doc.tracks[0].fill, S.doc.page, lang,
       S.settings, !!S.clipboard, S.doc.bars.length]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

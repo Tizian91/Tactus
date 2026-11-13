@@ -18,6 +18,7 @@ window.TC = window.TC || {};
     doc: null,              // the score, set by main.js (TC.emptyScore / storage)
     selection: new Set(),   // ids of selected notes
     selBar: null,           // index of the bar shown in the panel's "Bar" section
+    selBarEnd: null,        // other end of a range of selected bars (null: only selBar), see TC.barRange
     hover: null,            // where the pointer is: { bar, tick, line, art } (render.js draws a preview)
     drag: null,             // pan with the middle mouse / space (interaction.js)
     // what the next click writes (left panel)
@@ -117,6 +118,24 @@ window.TC = window.TC || {};
       this.restore(this.redoStack.pop());
       return true;
     },
+  };
+
+  /** Select bar i (extend: from the bar selected before up to i, e.g. to play several bars). */
+  TC.selectBar = function (i, extend) {
+    const S = TC.state;
+    if (extend && S.selBar !== null && i !== null) {
+      S.selBarEnd = i === S.selBar ? null : i;
+    } else {
+      S.selBar = i;
+      S.selBarEnd = null;
+    }
+  };
+  /** The selected bars [first, last] (a single bar: [i, i]), or null. */
+  TC.barRange = function () {
+    const S = TC.state, n = S.doc ? S.doc.bars.length : 0;
+    if (S.selBar === null || S.selBar >= n) return null;
+    const e = S.selBarEnd !== null && S.selBarEnd < n ? S.selBarEnd : S.selBar;
+    return [Math.min(S.selBar, e), Math.max(S.selBar, e)];
   };
 
   /** Remove selected ids whose notes no longer exist. */

@@ -174,6 +174,27 @@ setTimeout(() => {
   ok('playing ' + document.getElementById('play-btn').textContent, TC.player.playing && document.getElementById('play-btn').textContent === '■');
   TC.player.stop();
   ok('stopped', !TC.player.playing && document.getElementById('play-btn').textContent === '▶');
+  // several bars: Shift + click beside the lines, the panel field, the bar menu; playback plays them
+  click(1, 480, 11.5);
+  click(3, 480, 11.5, { shift: true });
+  ok('Shift + click beside the lines: bars 2-4 ' + JSON.stringify(TC.barRange()), JSON.stringify(TC.barRange()) === '[1,3]' && document.querySelectorAll('#score .bar-sel').length === 3);
+  TC.player.play();
+  ok('play: only bars 2-4 ' + JSON.stringify(TC.player.range()), JSON.stringify(TC.player.range()) === '[1,3]');
+  TC.player.stop();
+  S.settings.loop = true; TC.player.play();
+  ok('loop: bars 2-4', JSON.stringify(TC.player.range()) === '[1,3]');
+  TC.player.stop(); S.settings.loop = false;
+  const toSel = document.querySelector('#panel-settings select[data-action="selectBarsTo"]');
+  ok('panel: to bar field shows bar 4', !!toSel && toSel.value === '3');
+  TC.actions.selectBarsTo(1);
+  ok('to bar = the same bar: one bar again', JSON.stringify(TC.barRange()) === '[1,1]');
+  TC.actions.barMenu(4, 300, 300, 1);
+  const bm = document.getElementById('context-menu').textContent;
+  TC.menu.close();
+  ok('bar menu offers bars 2-5', /Takte 2–5 auswählen/.test(bm));
+  TC.actions.selectBarsTo(4, 1);
+  ok('bar menu: bars 2-5 selected', JSON.stringify(TC.barRange()) === '[1,4]');
+  TC.actions.selectNone();
   // file menu: Dropbox entry (as a file page: only the hint that it needs the online version)
   TC.actions.fileMenu();
   const menuText = document.getElementById('context-menu').textContent;

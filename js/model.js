@@ -63,7 +63,25 @@
   TC.emptyMeta = () => ({
     title: '', subtitle: '', artist: '', album: '', music: '', words: '', transcriber: '', copyright: '', notes: '', tempo: 120,
     kit: '', kitName: '', // kit profile for MIDI export / import (js/kits.js): id, and the name to find it on another computer
+    swing: 50,            // swing / shuffle in %: 50 straight, 67 shuffle (triplet feel), up to 75 (see TC.swingTick)
+    swingUnit: 8,         // which notes swing: 8 eighths, 16 sixteenths
   });
+
+  /** Swing amounts offered (%): straight, light, swing, shuffle (triplet feel), hard. */
+  TC.SWINGS = [[50, 'Straight'], [58, 'Light swing'], [62, 'Swing'], [67, 'Shuffle (triplet feel)'], [75, 'Hard shuffle']];
+
+  /**
+   * Where a note at `tick` (from the bar start) sounds with swing: within every pair of eighths
+   * (unit 8; sixteenths: unit 16) the second one comes later - at `amount` % of the pair instead of
+   * 50 %; the positions in between stretch along. Triplets (and other positions off the 64th grid)
+   * stay where they are. Used by playback and the MIDI export.
+   */
+  TC.swingTick = function (tick, amount, unit) {
+    if (!amount || amount === 50 || tick % 60 !== 0) return tick;
+    const pair = unit === 16 ? 480 : 960, split = (pair * amount) / 100;
+    const base = Math.floor(tick / pair) * pair, pos = tick - base, half = pair / 2;
+    return base + (pos < half ? (pos * split) / half : split + ((pos - half) * (pair - split)) / half);
+  };
 
   TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false });
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system' });
@@ -167,7 +185,11 @@
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.bars)) throw new Error('Not a Tactus file');
     const doc = TC.emptyScore(0);
     Object.keys(doc.meta).forEach((k) => {
-      if (raw.meta && raw.meta[k] !== undefined) doc.meta[k] = k === 'tempo' ? TC.clamp(num(raw.meta.tempo, 120), 20, 400) : str(raw.meta[k]);
+      if (!raw.meta || raw.meta[k] === undefined) return;
+      if (k === 'tempo') doc.meta.tempo = TC.clamp(num(raw.meta.tempo, 120), 20, 400);
+      else if (k === 'swing') doc.meta.swing = TC.clamp(Math.round(num(Number(raw.meta.swing), 50)), 50, 80);
+      else if (k === 'swingUnit') doc.meta.swingUnit = Number(raw.meta.swingUnit) === 16 ? 16 : 8;
+      else doc.meta[k] = str(raw.meta[k]);
     });
     doc.bars = raw.bars.map((b, i) => {
       const h = TC.newBarHeader(b && validTs(b.ts) ? b.ts : [4, 4]);

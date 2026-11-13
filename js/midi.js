@@ -2,7 +2,8 @@
 /*
  * MIDI export (Standard MIDI File, type 0, 960 ticks per quarter = Tactus ticks).
  *
- *   TC.midi.build(doc, target) -> { bytes: Uint8Array, replaced: [ {art, by} ], missing: [art] }
+ *   TC.midi.build(doc, target, { straight }) -> { bytes: Uint8Array, replaced: [ {art, by} ], missing: [art] }
+ *     straight         true: no swing (otherwise swing / shuffle of the score as heard)
  *     target null       General MIDI (channel 10): the MIDI note of each instrument as in Guitar Pro,
  *                       so the file also opens in Guitar Pro and any GM drum sound
  *     target = profile  a kit profile (js/kits.js): the first key of each instrument, the channel of
@@ -62,7 +63,7 @@
   const text = (s) => Array.from(unescape(encodeURIComponent(s)), (c) => c.charCodeAt(0)); // UTF-8
   const meta = (type, data) => [0xff, type].concat(vlq(data.length), data);
 
-  M.build = function (doc, target) {
+  M.build = function (doc, target, opts = {}) {
     const track = doc.tracks[0], T = TC.timeline, R = TC.rhythm;
     const report = { replaced: new Map(), missing: new Set() };
     const ev = []; // { t, order, bytes } order: 0 meta, 1 note off, 2 note on
@@ -70,6 +71,8 @@
     add(0, 0, meta(0x03, text(doc.meta.title || 'Tactus')));
 
     let t0 = 0, tempo = null, ts = null, prev = -1;
+    // swing / shuffle as heard (opts.straight: the notes on the grid, e.g. to swing them in the DAW)
+    const sw = (k) => (opts.straight ? k : Math.round(TC.swingTick(k, doc.meta.swing || 50, doc.meta.swingUnit || 8)));
     // repeats and endings written out, bar after bar as played (model.js playOrder); a marker where a
     // repeat begins again ("Bar 5 – 2nd time"), so the bars in Cubase can be told apart
     for (const o of TC.score.playOrder(doc)) {
@@ -104,7 +107,7 @@
               add(t, 2, [0x90 | k.ch, k.note, v]);
               add(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
             };
-            const at = t0 + e.tick, vel = T.velocity(n);
+            const at = t0 + sw(e.tick), vel = T.velocity(n); // swing: an offbeat comes later
             if (n.orn === 'flam') hit(at - msTicks(30), 0.35);
             if (n.orn === 'drag') {
               hit(at - msTicks(60), 0.33);
@@ -113,7 +116,7 @@
             hit(at, vel);
             if (n.trem) {
               const step = T.rollStep(dur, n.trem);
-              for (let s = step, j = 1; s < dur - 1; s += step, j++) hit(at + s, vel * (j % 2 ? 0.7 : 0.8));
+              for (let s = step, j = 1; s < dur - 1; s += step, j++) hit(t0 + sw(e.tick + s), vel * (j % 2 ? 0.7 : 0.8));
             }
           }
         }

@@ -130,6 +130,8 @@
   const SYS_GAP = 30 * SP;        // staff coordinates between two lines
 
   RD.isPage = () => S.settings.layout === 'page';
+  /** Name of a swing amount (%), as written above the first bar. */
+  RD.swingName = (a) => (a < 60 ? 'Light swing' : a < 65 ? 'Swing' : a < 71 ? 'Shuffle' : 'Hard shuffle');
 
   /** Does a bar write sticking under the staff? */
   const hasSticking = (b) => b.voices.some((items) => items.some((it) => it.kind === 'note' && it.ev.notes.some((n) => n.stick)));
@@ -352,6 +354,10 @@
       if (sub) out.push(`<text class="subtitle" x="0" y="${f(-10.6 * SP)}">${esc(sub)}</text>`);
     }
     const s0 = L.systems[0];
+    // swing / shuffle next to the tempo ("Shuffle", "Swing (16ths)")
+    const swingText = (meta.swing || 50) !== 50 ? TC.tr(RD.swingName(meta.swing)) + (meta.swingUnit === 16 ? ' ' + TC.tr('(16ths)') : '') : '';
+    const swingW = swingText ? swingText.length * 7.2 + 1.2 * SP : 0;
+    if (swingText) lines[0].push(`<text class="tempo swing" x="${f(s0.ox + 0.4 * SP + TEMPO_W)}" y="${f(TEXT_Y)}">${esc(swingText)}</text>`);
     lines[0].push(`<text class="tempo" x="${f(s0.ox + 0.4 * SP)}" y="${f(TEXT_Y)}"><tspan class="mus-sm"></tspan> = ${esc(meta.tempo)}</text>`);
 
     // selected bar, selected instrument's line
@@ -427,7 +433,7 @@
       if (b.tempo) o.push(`<text class="tempo" x="${f(b.x + 0.4 * SP)}" y="${f(TEXT_Y)}"><tspan class="mus-sm"></tspan> = ${esc(b.tempo)}</text>`);
       // text above the bar (Verse, Chorus …), in a box
       if (b.marker) {
-        const x = b.x + 0.2 * SP + (i === 0 || b.tempo ? TEMPO_W : 0);
+        const x = b.x + 0.2 * SP + (i === 0 ? TEMPO_W + swingW : b.tempo ? TEMPO_W : 0);
         const w = markerW(b.marker);
         o.push(`<g class="marker">${rect(x, TEXT_Y - 1.4 * SP, w, 1.95 * SP, 'marker-box')}` +
           `<text class="marker-text" x="${f(x + 0.5 * SP)}" y="${f(TEXT_Y)}">${esc(b.marker)}</text></g>`);

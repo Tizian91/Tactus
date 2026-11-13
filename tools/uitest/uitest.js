@@ -234,6 +234,12 @@ setTimeout(() => {
   ok('bar panel: tempo field', !!document.querySelector('#panel-settings input[data-bartempo]') && document.querySelector('#panel-settings input[data-bartempo]').value === '140');
   TC.actions.undo(); TC.actions.undo(); TC.actions.undo();
   ok('undo: tempo and bars as before', !S.doc.bars[2].tempo && S.doc.bars.length === nBars);
+  // swing / shuffle: panel, label above the first bar, MIDI option
+  TC.actions.setSwing(67);
+  ok('shuffle: written above the music, panel shows it', [...document.querySelectorAll('#score .tempo.swing')].some((t) => t.textContent === 'Shuffle') &&
+    document.querySelector('#panel-settings select[data-action="setSwing"]').value === '67' && !!document.querySelector('#panel-settings [data-action="toggleSwingMidi"]'));
+  TC.actions.undo();
+  ok('undo: straight again', S.doc.meta.swing === 50 && !document.querySelector('#score .tempo.swing'));
   TC.actions.selectNone();
   // file menu: Dropbox entry (as a file page: only the hint that it needs the online version)
   TC.actions.fileMenu();

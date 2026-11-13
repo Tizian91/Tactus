@@ -188,6 +188,9 @@
     return `<section><h3>${tr('Score')}</h3>
       ${field('title', 'Title')}${field('subtitle', 'Subtitle')}${field('artist', 'Artist')}
       <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-meta="tempo" value="${m.tempo}"> <span class="muted">BPM</span></div>
+      <div class="row"><label>${tr('Swing')}</label><select data-action="setSwing">${TC.SWINGS.map(([v, l]) => `<option value="${v}"${v === (m.swing || 50) ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select>
+        <select data-action="setSwingUnit"${(m.swing || 50) === 50 ? ' disabled' : ''}><option value="8"${m.swingUnit !== 16 ? ' selected' : ''}>${tr('8ths')}</option><option value="16"${m.swingUnit === 16 ? ' selected' : ''}>${tr('16ths')}</option></select></div>
+      ${(m.swing || 50) !== 50 ? check('toggleSwingMidi', S.settings.swingMidi !== false, tr('Swing in the MIDI export too (off: straight, to swing it in the DAW)')) : ''}
     </section>`;
   }
 

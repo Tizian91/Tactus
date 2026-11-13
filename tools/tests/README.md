@@ -24,6 +24,7 @@ Die erste Zeile der Ausgabe lautet `ALL OK: … passed` oder `FAILED: …`, daru
 | `test_repeats.js` | Wiederholungen: Abspielfolge (2×, 3×, ohne Anfang, 1./2. Ende, mehrtaktige Klammer, neue Abschnitte), Auswahl-Bereiche, Wiedergabe und MIDI-Export ausgeschrieben mit Markern, Ausschreiben im Stück, Laden |
 | `test_stems.js` | Notenhälse: Füße / tiefe Toms / alles nach oben, Noten wandern in die passende Stimme, Akkorde, Ids bleiben |
 | `test_tools.js` | Mehrere Noten verschieben: über Taktgrenzen (auch andere Taktart), zu einem anderen Instrument, blockiert am Stückende / auf gleicher Note / im %-Takt |
+| `test_swing.js` | Swing / Shuffle: Zeitpunkte (Achtel, Sechzehntel, Triolen bleiben), Wiedergabe, MIDI mit und ohne Swing, Laden |
 | `test_cubase.js` | Cubase-Drummaps (`.drm`): lesen, Instrumente an den Namen erkennen (Pattern-Tasten auslassen), auf die Tactus-Darstellung umschreiben, Klänge (INote / ONote) bleiben |
 | `test_kits.js` | Kit-Profile: automatische Zuordnung, verdächtige Tasten (falsche Ausgangsnote), eine Taste = ein Instrument, Cubase-Drummap mit Tactus-Darstellung und Reihenfolge, Export / Import, Speichern im Browser |
 | `test_midi.js` | MIDI-Export: Noten und Zeiten, Anschlag (Ghost / Akzent), %-Takt, Flam, Tempo / Taktart / Marker, Kit-Profil mit Ersatz-Instrument und Fehlendem |

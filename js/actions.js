@@ -290,6 +290,22 @@
     TC.commit();
   };
 
+  /** Swing / shuffle of the score (%: 50 straight … 75 hard); part of the score, undoable. */
+  A.setSwing = function (v) {
+    S.doc.meta.swing = TC.clamp(Math.round(Number(v) || 50), 50, 80);
+    TC.commit();
+  };
+  A.setSwingUnit = function (u) {
+    S.doc.meta.swingUnit = Number(u) === 16 ? 16 : 8;
+    TC.commit();
+  };
+  /** Swing also in the MIDI export (off: straight notes, to swing them in the DAW). */
+  A.toggleSwingMidi = function () {
+    S.settings.swingMidi = S.settings.swingMidi === false;
+    TC.saveSettings();
+    TC.refresh();
+  };
+
   /** Tempo from bar i on ('' / 0: as the bars before; bar 1: the tempo of the score). */
   A.setBarTempo = function (v, i = curBar()) {
     const n = Math.round(Number(v) || 0);
@@ -639,7 +655,7 @@
   /** Writes the score as a MIDI file (js/midi.js) for General MIDI or a kit profile. */
   A.exportMidi = function (profileId) {
     const p = profileId ? TC.kits.byId(profileId) : null;
-    const res = TC.midi.build(S.doc, p);
+    const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
     const clean = (s) => s.replace(/[\\/:*?"<>|]+/g, '-');
     const base = clean(S.doc.meta.title || S.file.name.replace(/\.tactus\.json$|\.json$/i, '') || 'Tactus');
     const a = document.createElement('a');

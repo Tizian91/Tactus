@@ -67,6 +67,7 @@
       t += L * spt;
     }
     const start = t;
+    const sw = doc.meta.swing || 50, su = doc.meta.swingUnit || 8, st = (k) => TC.swingTick(k, sw, su); // swing / shuffle
     // repeats and endings written out (model.js playOrder): the same order as the MIDI export
     for (const o of TC.score.playBars(doc, from, to)) {
       const bi = o.bar;
@@ -77,7 +78,7 @@
         const ends = track.kind === 'drums' && TC.rhythm ? TC.rhythm.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
         for (const ev of voice) {
           if (ev.tick >= L) continue;
-          const t0 = t + ev.tick * spt;
+          const t0 = t + st(ev.tick) * spt; // swing: an offbeat comes later
           const dur = ends && ends.has(ev) ? ends.get(ev) - ev.tick : Math.min(ev.dur, L - ev.tick);
           for (const n of ev.notes) {
             const art = TC.drums.byId(n.art);
@@ -92,7 +93,7 @@
             if (n.trem) {
               const step = T.rollStep(dur, n.trem);
               for (let k = step, j = 1; k < dur - 1; k += step, j++) {
-                hits.push({ t: t0 + k * spt, art: n.art, vel: vel * (j % 2 ? 0.7 : 0.8), choke, roll: true });
+                hits.push({ t: t + st(ev.tick + k) * spt, art: n.art, vel: vel * (j % 2 ? 0.7 : 0.8), choke, roll: true });
               }
             }
           }

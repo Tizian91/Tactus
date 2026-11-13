@@ -135,6 +135,12 @@ Eine Regel für Maus, Stift und Finger:
 - Instrument-Sperre gilt nur auf den Linien; darunter / darüber bleibt die Taktauswahl
 - **Mehrere Takte**: Shift + Klick neben die Linien, Taktmenü „Takte a–b auswählen“ (Finger: lange drücken), Panel „bis Takt“; Abspielen / Schleife spielt genau diese Takte
 
+## Swing / Shuffle ✅
+
+- Takt · Stück → Stück → **Swing**: gerade, leichter Swing, Swing, Shuffle (triolisch, 2:1), harter Shuffle; Achtel oder Sechzehntel
+- Abspielen swingt; **MIDI-Export** swingt auch (abschaltbar: gerade Noten, um in der DAW zu swingen)
+- Über dem ersten Takt steht „Shuffle“ / „Swing“ neben dem Tempo; Triolen bleiben, wie sie sind
+
 ## Paket „Takte“ ✅
 
 - **Tempowechsel ab einem Takt**: Takt-Panel (Feld „Tempo … ab hier“, leer = wie davor) oder Taktmenü „Tempo ab hier…“;

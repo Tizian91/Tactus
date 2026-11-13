@@ -397,6 +397,17 @@
     'More settings…': 'Weitere Einstellungen…',
     'Drum kit, notation, page, view, keyboard shortcuts': 'Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
     'Settings: drum kit, notation, page, view, keyboard shortcuts': 'Einstellungen: Drum-Kit, Darstellung, Seite, Ansicht, Tastenkürzel',
+    // swing / shuffle
+    Swing: 'Swing',
+    Straight: 'Gerade',
+    'Light swing': 'Leichter Swing',
+    'Shuffle (triplet feel)': 'Shuffle (triolisch)',
+    'Hard shuffle': 'Harter Shuffle',
+    Shuffle: 'Shuffle',
+    '8ths': 'Achtel',
+    '16ths': 'Sechzehntel',
+    '(16ths)': '(Sechzehntel)',
+    'Swing in the MIDI export too (off: straight, to swing it in the DAW)': 'Swing auch im MIDI-Export (aus: gerade, zum Swingen in der DAW)',
     // bar package: tempo per bar, several bars
     'Tempo from here…': 'Tempo ab hier…',
     'Tempo from bar {n} (quarter notes per minute) – empty: as before': 'Tempo ab Takt {n} (Viertel pro Minute) – leer: wie davor',

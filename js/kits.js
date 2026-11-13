@@ -169,6 +169,7 @@
       if (!p.assign[id].length) delete p.assign[id];
     }
     if (notes.length) p.assign[artId] = notes;
+    if (p.subst && notes.length) K.setSubst(p, artId, 'auto'); // it has a key of its own now
   };
 
   /** Instrument a key plays in a profile (null = none). */
@@ -222,6 +223,68 @@
       if (s) styles[e.inote] = { display: s.display, head: s.head, instrument: '', technique: '' };
     }
     return C.write(p.drm, styles, { name: p.name + ' (Tactus)', order });
+  };
+
+  // ---- Instruments of a score the profile lacks -------------------------------------------
+  //
+  // p.subst = { artId: otherArtId | 0 }   chosen by the user: play it as that instrument of the
+  // profile, or 0 = not at all. Without a choice the related instrument (js/midi.js FALLBACK).
+
+  /** How often each instrument occurs in the score: Map artId -> count. */
+  K.used = function (doc) {
+    const n = new Map();
+    for (const b of doc.tracks[0].bars) for (const v of b.voices) for (const ev of v) {
+      for (const x of ev.notes) n.set(x.art, (n.get(x.art) || 0) + 1);
+    }
+    return n;
+  };
+
+  /**
+   * Instruments of the score without a key in the profile:
+   * [{ art, count, by: artId played instead | null, silent, chosen: the user decided }]
+   */
+  K.check = function (doc, p) {
+    if (!p) return [];
+    const out = [];
+    for (const [art, count] of K.used(doc)) {
+      if ((p.assign[art] || []).length) continue;
+      const a = TC.drums.byId(art);
+      if (!a) continue;
+      const report = { replaced: new Map(), missing: new Set() };
+      const k = TC.midi.keyFor(a, p, report);
+      const chosen = !!p.subst && Object.prototype.hasOwnProperty.call(p.subst, art);
+      out.push({ art, count, by: k ? report.replaced.get(art) || null : null, silent: !k, chosen });
+    }
+    return out.sort((x, y) => y.count - x.count);
+  };
+
+  /** The user's choice for an instrument the profile lacks: 'auto', 0 (silent) or an instrument id. */
+  K.setSubst = function (p, art, value) {
+    p.subst = p.subst || {};
+    if (value === 'auto') delete p.subst[art];
+    else p.subst[art] = Number(value) || 0;
+    if (!Object.keys(p.subst).length) delete p.subst;
+  };
+
+  /** Keys of the profile no instrument uses yet (offered for an instrument it lacks). */
+  K.freeKeys = (p) => K.keys(p).filter((e) => K.artOfKey(p, e.inote) === null);
+
+  /**
+   * In the score: every note of instrument `from` becomes `to` (the notation changes); where the
+   * same beat already has `to`, the note goes. Returns how many notes changed.
+   */
+  K.replaceInScore = function (doc, from, to) {
+    let n = 0;
+    for (const b of doc.tracks[0].bars) for (const v of b.voices) for (const ev of v) {
+      if (!ev.notes.some((x) => x.art === from)) continue;
+      const has = b.voices.some((w) => w.some((e) => e.tick === ev.tick && e.notes.some((x) => x.art === to)));
+      if (has) ev.notes = ev.notes.filter((x) => x.art !== from);
+      else ev.notes.forEach((x) => { if (x.art === from) x.art = to; });
+      n++;
+    }
+    // empty beats left behind are dropped
+    for (const b of doc.tracks[0].bars) b.voices = b.voices.map((v) => v.filter((ev) => ev.notes.length));
+    return n;
   };
 
   // ---- Storage ----------------------------------------------------------------------------
@@ -531,4 +594,91 @@
       changed();
     }
   }
+
+  // ---- "What the profile lacks" (status bar, after choosing the score's profile) -----------
+
+  let checkRoot = null;
+  K.isCheckOpen = () => !!checkRoot;
+  K.closeCheck = function () {
+    if (checkRoot) checkRoot.remove();
+    checkRoot = null;
+    if (TC.refresh) TC.refresh();
+  };
+
+  /** Instrument played automatically for `art` (without the user's choice), or null. */
+  function autoBy(p, art) {
+    const q = Object.assign({}, p, { subst: undefined }), report = { replaced: new Map(), missing: new Set() };
+    return TC.midi.keyFor(TC.drums.byId(art), q, report) ? report.replaced.get(art) : null;
+  }
+
+  /** Shows which instruments of the open score the profile `p` has no key for, and what is played instead. */
+  K.openCheck = function (p = K.current(TC.state.doc)) {
+    if (!p) return;
+    K.closeCheck();
+    checkRoot = document.createElement('div');
+    checkRoot.className = 'dialog-backdrop';
+    checkRoot.innerHTML = '<div class="dialog kit-check" role="dialog" aria-modal="true"></div>';
+    document.body.appendChild(checkRoot);
+    checkRoot.addEventListener('pointerdown', (e) => { if (e.target === checkRoot) K.closeCheck(); });
+    const lab = (id) => TC.drums.label(TC.drums.byId(id));
+    const draw = () => {
+      const rows = K.check(TC.state.doc, p);
+      const assigned = K.rows().filter((a) => (p.assign[a.id] || []).length);
+      const free = K.freeKeys(p);
+      const body = rows.length ? rows.map((r) => {
+        const auto = autoBy(p, r.art);
+        const val = r.chosen ? (p.subst[r.art] ? 'a:' + p.subst[r.art] : 'off') : 'auto';
+        const opt = (v, text) => `<option value="${v}"${v === val ? ' selected' : ''}>${esc(text)}</option>`;
+        const sel = opt('auto', tr('Automatic: {x}', { x: auto ? lab(auto) : tr('not played') })) +
+          `<optgroup label="${esc(tr('Play as'))}">${assigned.map((a) => opt('a:' + a.id, lab(a.id))).join('')}</optgroup>` +
+          (free.length ? `<optgroup label="${esc(tr('Free key of the VST (saved in the profile)'))}">${free.map((e) => opt('k:' + e.inote, keyLabel(e))).join('')}</optgroup>` : '') +
+          opt('off', tr('Do not play'));
+        return `<div class="check-row" data-art="${r.art}">
+          <div class="check-name"><b>${esc(lab(r.art))}</b> <span class="muted">${r.count}×</span></div>
+          <div class="check-ctl"><select data-k="subst">${sel}</select>
+            <button type="button" class="icon play" data-k="play" title="${esc(tr('Play this key'))}"${r.silent ? ' disabled' : ''}>▶</button>
+            <button type="button" data-k="replace"${r.by ? '' : ' disabled'} title="${esc(tr('Changes the notation of this score (undo: Ctrl+Z)'))}">${esc(r.by ? tr('In the score: → {x}', { x: lab(r.by) }) : tr('In the score …'))}</button></div>
+        </div>`;
+      }).join('') : `<p>${tr('Everything there: every instrument of this score has a key in the profile.')}</p>`;
+      checkRoot.querySelector('.dialog').innerHTML = `<header><h2>${tr('Kit profile: {name}', { name: esc(p.name) })}</h2>
+          <button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
+        <div class="kit-body">
+          ${rows.length ? `<p class="hint">${tr('These instruments of the score have no key in the profile. Choose what plays instead (saved in the profile, for every score), or change the notes of this score.')}</p>` : ''}
+          ${body}
+        </div>
+        <footer class="btn-row"><button type="button" data-k="kits">${tr('Kit profiles…')}</button><button type="button" data-k="close">${tr('Close')}</button></footer>`;
+    };
+    checkRoot.addEventListener('change', (e) => {
+      const row = e.target.closest('[data-art]');
+      if (!row || e.target.dataset.k !== 'subst') return;
+      const art = +row.dataset.art, v = e.target.value;
+      if (v.startsWith('k:')) K.setKeys(p, art, [+v.slice(2)]);
+      else K.setSubst(p, art, v === 'auto' ? 'auto' : v === 'off' ? 0 : +v.slice(2));
+      K.save();
+      draw();
+    });
+    checkRoot.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-k]');
+      if (!b) return;
+      const row = b.closest('[data-art]'), art = row ? +row.dataset.art : null;
+      if (b.dataset.k === 'close') return K.closeCheck();
+      if (b.dataset.k === 'kits') { K.closeCheck(); cur = p.id; return K.open(); }
+      if (b.dataset.k === 'play') {
+        const k = TC.midi.keyFor(TC.drums.byId(art), p, { replaced: new Map(), missing: new Set() });
+        if (k && TC.midiOut && TC.midiOut.active()) TC.midiOut.sendKey(k.note, k.ch);
+        else if (k && TC.audio) TC.audio.preview(TC.newDrumNote(K.artOfKey(p, k.note) || art, {}));
+      }
+      if (b.dataset.k === 'replace') {
+        const to = K.check(TC.state.doc, p).find((r) => r.art === art);
+        if (!to || !to.by) return;
+        const n = K.replaceInScore(TC.state.doc, art, to.by);
+        TC.score.revoice(TC.state.doc);
+        TC.pruneSelection && TC.pruneSelection();
+        TC.commit();
+        TC.ui.hint(tr('{n}× {a} → {b} (undo: Ctrl+Z)', { n, a: lab(art), b: lab(to.by) }));
+        draw();
+      }
+    });
+    draw();
+  };
 })(window.TC);

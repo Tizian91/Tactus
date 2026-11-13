@@ -209,7 +209,7 @@ Eine Regel für Maus, Stift und Finger:
 
 ## Als Nächstes (Reihenfolge)
 
-1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. Tempo-Übersicht im Panel, Klang-Umschalter in der Werkzeugleiste
+1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
 4. Rubrik „Wiederholungen & Sprünge“ im Takt-Panel mit D.S. / D.C. / Coda / Fine (nach dem Sprung Wiederholungen einmal, letzte Klammer; Häkchen „mit Wiederholungen“), Erklärung in der Hilfe
 5. Samples aus freien Bibliotheken (Lizenz prüfen), umschaltbar  6. Vorlagen für kostenlose VSTs (MT Power Drum Kit 2, SSD 5.5 Free; Groove Agent SE = GM)
 7. Drummap-Export für weitere DAWs (Reaper-Notennamen, Studio-One-Pitchlist – Formate erst prüfen)  8. Handbuch / Hilfeseite mit ⓘ-Links
@@ -241,3 +241,14 @@ Eine Regel für Maus, Stift und Finger:
   in Cubase muss nichts mehr abgetippt werden
 - Drum-Kit **„Wie das Kit-Profil“** (⚙ → Drum-Kit): Panel und Linien bieten genau die Instrumente des Kit-Profils des Stücks an
   (z. B. China, Tom-Rimshots bei EZDrummer); ohne Profil das Standard-Kit
+
+## Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung ✅ (zum Ausprobieren)
+
+- Panel → Stück: **Tempowechsel** als Liste („Takt 17: ♩ = 140“) – Klick springt zum Takt, ✕ entfernt den Wechsel
+- Werkzeugleiste: **Tactus / MIDI** schaltet zwischen den Tactus-Klängen und dem zuletzt gewählten MIDI-Ausgang um
+  (erscheint, sobald einmal ein Ausgang gewählt wurde; rot, wenn der Ausgang fehlt)
+- **Was fehlt im Kit-Profil**: öffnet sich beim Wechsel des Profils, sonst Klick auf „Kit: …“ (⚠ = es fehlt etwas).
+  Pro Instrument des Stücks ohne Taste: Automatisch (verwandtes Instrument), „Spielen als“ ein anderes Instrument des
+  Profils, eine freie Taste des VSTs (wird Taste des Instruments) oder „Nicht spielen“ – gespeichert im Profil (`subst`),
+  gilt für Abspielen und MIDI-Export. „Im Stück: → …“ schreibt die Noten des Stücks um (ein Rückgängig-Schritt).
+- Toms ohne Taste: das nächstgelegene Tom des Kits

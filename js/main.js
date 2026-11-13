@@ -46,14 +46,27 @@
     document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
     document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
     document.getElementById('follow-btn').classList.toggle('active', S.settings.followPlay !== false);
+    // sound switch: only where MIDI exists and an output was chosen once
+    const snd = document.getElementById('sound-btn');
+    if (snd) {
+      const out = S.settings.midiOut;
+      snd.hidden = !TC.midiOut.supported() || !(out || S.settings.midiOutLast);
+      snd.textContent = out ? 'MIDI' : 'Tactus';
+      snd.classList.toggle('active', !!out);
+      snd.classList.toggle('missing', !!out && TC.midiOut.missing());
+      snd.title = (out ? tr('Sound: {name}', { name: out }) : tr('Sound: Tactus')) + ' – ' +
+        tr('Sound of the playback: Tactus sounds or the MIDI output (Cubase …). Click: switch');
+    }
     const tempo = document.getElementById('tempo-input');
     if (document.activeElement !== tempo) tempo.value = S.doc.meta.tempo;
     UI.updateZoom();
     const kit = document.getElementById('status-kit');
     if (kit) {
       const p = TC.kits.current(S.doc), missing = !p && S.doc.meta.kitName;
-      kit.textContent = tr('Kit: {name}', { name: p ? p.name : missing ? S.doc.meta.kitName + ' ' + tr('(missing)') : 'General MIDI' });
+      const lacks = p ? TC.kits.check(S.doc, p).length : 0; // instruments of the score without a key
+      kit.textContent = tr('Kit: {name}', { name: p ? p.name : missing ? S.doc.meta.kitName + ' ' + tr('(missing)') : 'General MIDI' }) + (lacks ? ' ⚠' : '');
       kit.classList.toggle('missing', !!missing);
+      kit.classList.toggle('lacks', !!lacks);
       kit.title = tr('Kit profile of this score: MIDI export uses its keys. Click: change');
     }
     document.title = (S.doc.meta.title ? S.doc.meta.title + ' – ' : '') + 'Tactus';

@@ -399,9 +399,26 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .status-btn { border: none; background: none; padding: 0 4px; font-size: 12px; color: var(--label); border-radius: 4px; }
 .status-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .status-btn.missing { color: var(--danger); }
+#sound-btn.missing { color: var(--danger); }
 .kit-body details.kit-free { color: var(--muted); margin: 8px 0; } .kit-body details.kit-free summary { cursor: pointer; }
 .panel .hint.warn { color: var(--danger); }
 .kit-tabs { display: flex; gap: 4px; padding: 6px 14px 0; }
 .kit-tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .kit-table td.key { white-space: nowrap; width: 70px; }
 .kit-table button.play { padding: 0 6px; font-size: 11px; color: var(--accent); }
+
+/* panel: list of tempo changes */
+.tempo-list { margin: 2px 0 8px; font-size: 13px; }
+.tempo-item { display: flex; align-items: center; gap: 4px; }
+.tempo-item button.link { flex: 1; text-align: left; background: none; border: none; padding: 2px 4px; color: var(--accent, #2b6cde); cursor: pointer; }
+.tempo-item button.link.active { font-weight: 700; }
+.tempo-item button.icon { padding: 0 6px; }
+
+/* "what the kit profile lacks" */
+.kit-check { max-width: 640px; }
+.kit-check .check-row { padding: 6px 0; border-bottom: 1px solid var(--line, #ddd); }
+.kit-check .check-name { margin-bottom: 4px; }
+.kit-check .check-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.kit-check .check-ctl select { max-width: 260px; }
+.kit-check footer { padding: 10px 16px; justify-content: flex-end; }
+.status-btn.lacks { color: #b7791f; }

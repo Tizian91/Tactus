@@ -25,7 +25,8 @@
     92: [46, 42], 46: [92, 42], 42: [92, 46], 44: [42],
     37: [38], 91: [38], 40: [38], 39: [38], 31: [37, 38],
     35: [36], 36: [35],
-    50: [48, 47], 48: [50, 47], 47: [48, 45], 45: [47, 43], 43: [41, 45], 41: [43, 45],
+    // toms: the nearest tom the kit has
+    50: [48, 47, 45, 43, 41], 48: [50, 47, 45, 43, 41], 47: [48, 45, 50, 43, 41], 45: [47, 43, 48, 41, 50], 43: [41, 45, 47, 48, 50], 41: [43, 45, 47, 48, 50],
     93: [51], 94: [51], 53: [51], 126: [51], 59: [93, 51], 127: [53, 51],
     97: [49], 57: [49], 98: [57, 97, 49], 55: [49], 95: [55, 49], 52: [49], 96: [52, 49], 30: [49],
     101: [56], 99: [56], 100: [56], 102: [56], 103: [56], 54: [56],
@@ -43,6 +44,13 @@
     };
     let k = pick(art.id);
     if (k) return k;
+    // the user's choice for an instrument the profile lacks (js/kits.js K.setSubst)
+    const sub = target.subst && target.subst[art.id];
+    if (sub === 0) return null;
+    if (sub && (k = pick(sub))) {
+      report.replaced.set(art.id, sub);
+      return k;
+    }
     for (const id of (FALLBACK[art.id] || []).concat(art.tom ? [art.tom] : [])) { // tom rim shot / rim -> the tom
       k = pick(id);
       if (k) {

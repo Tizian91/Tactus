@@ -481,12 +481,28 @@ setTimeout(() => {
     ok('stems low: kick down again, choice of toms shown', voice(0, 1).join() === '0:480:36' && !!document.querySelector('.settings-dialog .stem-toms'));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     ok('settings window: Escape closes it', !TC.panel.isSettingsOpen() && !document.querySelector('.settings-dialog'));
+    // tempo changes listed in the panel: click goes to the bar, ✕ removes the change
+    TC.actions.setBarTempo(140, 1);
+    const ti = document.querySelector('#panel-settings .tempo-item [data-action="gotoBar"]');
+    ok('tempo list: bar 2 ♩ = 140 ' + (ti && ti.textContent), !!ti && /2: ♩ = 140/.test(ti.textContent));
+    ti.click();
+    ok('tempo list: click selects bar 2', S.selBar === 1);
+    document.querySelector('#panel-settings .tempo-item [data-action="clearBarTempo"]').click();
+    ok('tempo list: ✕ removes the change', !S.doc.bars[1].tempo && !document.querySelector('#panel-settings .tempo-item'));
     const sk = document.getElementById('status-kit');
     ok('status bar: kit General MIDI for a new score (' + sk.textContent + ')', /General MIDI/.test(sk.textContent));
     const saveKits = TC.kits.save; TC.kits.save = () => true;
     TC.kits.list.push({ id: 'ui-test', name: 'UI-Kit', drm: '<DrumMap><list name="Map"></list></DrumMap>', assign: {} });
     TC.actions.setKitProfile('ui-test');
     ok('status bar shows the kit profile of the score', /UI-Kit/.test(sk.textContent) && S.doc.meta.kitName === 'UI-Kit');
+    ok('kit profile lacks instruments: the check opens by itself, ⚠ in the status bar (' + document.querySelectorAll('.kit-check .check-row').length + ' rows)',
+      TC.kits.isCheckOpen() && document.querySelectorAll('.kit-check .check-row').length === TC.kits.check(S.doc, TC.kits.byId('ui-test')).length && /⚠/.test(sk.textContent));
+    const csel = document.querySelector('.kit-check select[data-k="subst"]');
+    csel.value = 'off';
+    csel.dispatchEvent(new Event('change', { bubbles: true }));
+    ok('check: "do not play" is kept in the profile', Object.values(TC.kits.byId('ui-test').subst || {}).includes(0));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    ok('check: Escape closes it', !TC.kits.isCheckOpen());
     TC.actions.undo();
     ok('kit profile: undo', /General MIDI/.test(sk.textContent));
     TC.kits.list = TC.kits.list.filter((p) => p.id !== 'ui-test'); TC.kits.save = saveKits;
@@ -585,8 +601,16 @@ setTimeout(() => {
             TC.kits.list = TC.kits.list.filter((q) => q.name !== 'Test-Kit');
             TC.kits.save = realSave;
             window.prompt = realPrompt;
-            TC.actions.setMidiOut('');
-            ok('MIDI output off: Tactus sounds again', !TC.midiOut.active());
+            const sb = document.getElementById('sound-btn');
+            ok('toolbar: sound switch shows MIDI', !sb.hidden && sb.textContent === 'MIDI' && sb.classList.contains('active'));
+            sb.click();
+            ok('toolbar: click → Tactus sounds', !TC.midiOut.active() && sb.textContent === 'Tactus' && !sb.hidden);
+            sb.click();
+            return new Promise((r) => setTimeout(r, 50)).then(() => {
+              ok('toolbar: click again → the MIDI output chosen last', TC.midiOut.active() && sb.textContent === 'MIDI');
+              TC.actions.setMidiOut('');
+              ok('MIDI output off: Tactus sounds again', !TC.midiOut.active());
+            });
           }).catch((e) => ok('MIDI output: ' + e.message, false));
         }).then(() => {
           S.doc.view.x = 190; TC.refresh();

@@ -316,6 +316,17 @@
     }
     TC.commit();
   };
+  A.clearBarTempo = (i) => A.setBarTempo('', Number(i));
+  /** Select bar i and scroll it into view (tempo list in the panel). */
+  A.gotoBar = function (i) {
+    i = Number(i);
+    if (!S.doc.bars[i]) return;
+    TC.selectBar(i);
+    S.selection.clear();
+    TC.refresh();
+    const L = TC.render.layout, b = L && L.bars[i];
+    if (b) TC.player.keepInView({ x: L.systems[b.sys].tx + b.x + b.w / 2, y: L.systems[b.sys].ty + 2 * TC.render.SP });
+  };
   A.editBarTempo = function (i = curBar()) {
     const v = prompt(tr('Tempo from bar {n} (quarter notes per minute) – empty: as before', { n: i + 1 }), i === 0 ? S.doc.meta.tempo : S.doc.bars[i].tempo || '');
     if (v !== null) A.setBarTempo(v, i);
@@ -478,8 +489,22 @@
     }
     if (TC.player.playing) TC.player.stop(true);
     S.settings.midiOut = value || '';
+    if (value) S.settings.midiOutLast = value; // for the switch in the toolbar
     TC.saveSettings();
     TC.refresh();
+  };
+  /** Toolbar: Tactus sounds ↔ the MIDI output chosen last. */
+  A.toggleSoundOut = function () {
+    if (S.settings.midiOut) {
+      S.settings.midiOutLast = S.settings.midiOut;
+      return A.setMidiOut('');
+    }
+    const last = S.settings.midiOutLast;
+    if (!last) return TC.ui.hint(tr('Choose a MIDI output first: panel → Playback → Sound.'));
+    TC.midiOut.init().then(() => {
+      A.setMidiOut(last);
+      if (TC.midiOut.missing()) TC.ui.hint(tr('No MIDI output found - is the virtual MIDI cable (e.g. loopMIDI) running?'));
+    });
   };
   /** The view follows the playback cursor (off: it stays, to change notes while listening). */
   A.toggleFollowPlay = function () {
@@ -684,12 +709,20 @@
     S.doc.meta.kit = p ? p.id : '';
     S.doc.meta.kitName = p ? p.name : '';
     TC.commit();
+    // instruments of the score the profile has no key for: show them right away
+    if (p && TC.kits.check(S.doc, p).length) TC.kits.openCheck(p);
   };
   A.kitMenu = function () {
     TC.kits.load();
     const r = document.getElementById('status-kit').getBoundingClientRect();
     const cur = curKit();
-    const items = [{ label: 'General MIDI (Guitar Pro …)', checked: !cur, action: () => A.setKitProfile(null) }];
+    const items = [];
+    const p = TC.kits.byId(cur);
+    if (p) {
+      const n = TC.kits.check(S.doc, p).length;
+      items.push({ label: n ? tr('Missing in this profile ({n})…', { n }) : tr('Check the kit profile…'), action: () => TC.kits.openCheck(p) }, '-');
+    }
+    items.push({ label: 'General MIDI (Guitar Pro …)', checked: !cur, action: () => A.setKitProfile(null) });
     if (TC.kits.list.length) items.push('-');
     for (const p of TC.kits.list) items.push({ label: p.name, checked: p.id === cur, action: () => A.setKitProfile(p.id) });
     items.push('-', { label: 'Kit profiles (Cubase)…', action: A.openKits });

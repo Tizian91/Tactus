@@ -864,6 +864,18 @@
     TC.ui.hint(tr('Page turning MIDI exported ({n} pages): {file}', { n, file }));
   };
 
+  /**
+   * MusicXML (js/musicxml.js) for Guitar Pro, MuseScore, Sibelius, Dorico: every track a part, as drawn
+   * (values, triplets, beams, noteheads, ghost notes, accents, flams, rolls, repeats, endings, jumps).
+   */
+  A.exportMusicXml = function () {
+    const d = new Date(), pad = (n) => String(n).padStart(2, '0');
+    const xml = TC.musicxml.build(S.doc, { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` });
+    const file = baseName() + '.musicxml';
+    download(new TextEncoder().encode(xml), file, 'application/vnd.recordare.musicxml+xml');
+    TC.ui.hint(tr('MusicXML exported: {file}', { file }));
+  };
+
   /** PDF / print: the page view on A4 (the browser's print dialog: "Save as PDF"). */
   A.print = function () {
     if (TC.player.playing) TC.player.stop();
@@ -1011,6 +1023,7 @@
       { label: S.doc.tracks.length > 1 ? TC.tr('Export MIDI…') : TC.tr('Export MIDI ({name})', { name: kitName() }), action: () => A.exportMidiCurrent(), shortcut: 'Ctrl+E' },
       { label: 'Export MIDI for', submenu: A.midiTargets() },
       { label: 'Export page turning MIDI…', action: A.exportPageTurns },
+      { label: 'Export MusicXML (Guitar Pro, MuseScore …)', action: A.exportMusicXml },
     ], r.left, r.bottom + 2);
   };
 
@@ -1063,9 +1076,9 @@
   const cleanName = (s) => s.replace(/[\\/:*?"<>|]+/g, '-');
   const baseName = () => cleanName(S.doc.meta.title || S.file.name.replace(/\.tactus\.json$|\.json$/i, '') || 'Tactus');
   /** Hands a file to the browser as a download. */
-  function download(bytes, name) {
+  function download(bytes, name, type = 'audio/midi') {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([bytes], { type: 'audio/midi' }));
+    a.href = URL.createObjectURL(new Blob([bytes], { type }));
     a.download = name;
     document.body.appendChild(a);
     a.click();

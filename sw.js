@@ -35,6 +35,7 @@ const FILES = [
   'js/cubase.js',
   'js/kits.js',
   'js/midi.js',
+  'js/musicxml.js',
   'js/midiin.js',
   'js/midiout.js',
   'js/remote.js',

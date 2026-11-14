@@ -174,6 +174,8 @@
     'Which tracks to take - each becomes a track of its own - and which drum map each comes from:': 'Welche Spuren übernommen werden – jede wird eine eigene Spur – und aus welcher Drum-Map jede kommt:',
     'All from': 'Alle aus',
     'channel 10': 'Kanal 10',
+    'Export MusicXML (Guitar Pro, MuseScore …)': 'MusicXML exportieren (Guitar Pro, MuseScore …)',
+    'MusicXML exported: {file}': 'MusicXML exportiert: {file}',
     // turning pages
     Stage: 'Bühne',
     'Stage view: only the pages, full screen; turn with a tap at the side, Page Down / Up or MIDI (Esc: back)': 'Bühnenansicht: nur die Seiten, Vollbild; umblättern mit Tippen am Rand, Bild↓ / Bild↑ oder MIDI (Esc: zurück)',

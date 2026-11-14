@@ -235,7 +235,8 @@ Eine Regel für Maus, Stift und Finger:
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
-9. **Mehrere Spuren** (siehe unten)  10. **MusicXML-Export** (Import in Guitar Pro, MuseScore …; danach mit allen Spuren)
+9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (zum Ausprobieren in Guitar Pro / MuseScore, siehe unten)
+11. **Melodien** (Notensystem mit Tonleiter, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
 
@@ -282,6 +283,34 @@ Schritte:
 5. ✅ **Ansicht folgt beim Abspielen: springend oder flüssig** (Panel → Wiedergabe → Folgen; Einstellung des Browsers): flüssig =
    Cursor bleibt bei einem Drittel der Breite, Seitenansicht: die gespielte Zeile gleitet ins obere Viertel; Sprünge gleiten mit.
    Die Seitenansicht berücksichtigt dabei die Höhe aller Notenzeilen.
+
+## MusicXML-Export ✅ (zum Ausprobieren)
+
+- Datei → **„MusicXML exportieren (Guitar Pro, MuseScore …)“** (`js/musicxml.js`, MusicXML 3.1 partwise, `Titel.musicxml`).
+- Jede Spur ein Part (Schlagzeug-Notensystem, einlinige Spuren mit einer Linie); jedes Instrument nennt seine General-MIDI-Taste
+  (`midi-unpitched`), damit das andere Programm den Klang findet. Noten wie in Tactus gezeichnet: Werte, Pausen, Punktierung,
+  Triolen, Balken, zwei Stimmen (Hälse oben / unten).
+- Notenköpfe, Ghost (Klammern), Akzent / starker Akzent, Flam / Drag (Vorschlagsnoten), Wirbel (Tremolo-Striche), Sticking (Text
+  unter der Note), %-Takte (Taktwiederholung, Noten für die Wiedergabe mitgeschrieben), Taktarten, Tempo und Tempowechsel, Swing
+  als Text, Takt-Texte (Studierzeichen), |: :| n×, Klammern 1. / 2., Segno / Coda / Fine / To Coda / D.C. / D.S. (mit `<sound>`
+  für die Wiedergabe), Zeilenumbrüche. Texte und Tempo in der ersten Spur, Wiederholungen in allen.
+- **Offen zum Ausprobieren:** Import in Guitar Pro 8 (Instrumente richtig? Notenköpfe? Sprünge?) und MuseScore 4.
+
+## Phase 5 – Melodien (Idee, noch nicht begonnen)
+
+Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben schnell eine Melodie festhalten – im Tactus-Stil oft
+einfacher als in der DAW.
+
+- **Notenschlüssel und Tonleiter definieren** (Violin- / Bassschlüssel; Grundton + Tonleiter: Dur, Moll, Pentatonik, Blues …;
+  daraus die Vorzeichen am Zeilenanfang).
+- **Tippen auf Linie / Zwischenraum setzt den Ton der Tonleiter** an dieser Stelle – man spielt nicht aus Versehen „falsch“.
+  Bei Tonleitern mit weniger als 7 Tönen (Pentatonik): Magnet zum nächsten Ton der Tonleiter (wie die Linien beim Schlagzeug).
+- **Außerhalb der Tonleiter ist eine bewusste Entscheidung:** Note gedrückt halten, dann hoch / runter = erhöhen / erniedrigen
+  (♯ / ♭, Anzeige wie beim Anschlag-Balken), Esc nimmt es zurück. (Beim Schlagzeug bleibt hoch / runter der Anschlag; bei
+  Melodie-Spuren dann über das Notenmenü.)
+- Dazu nötig: Spur-Art „Melodie“ (Instrument, Schlüssel, Tonleiter), Tonhöhen im Datenmodell, Vorzeichen und Hilfslinien im
+  Notenbild, Haltebögen über Taktgrenzen (rhythm.js kann das schon für Nicht-Schlagzeug), Klang (einfacher Synth / Samples),
+  MIDI mit Kanal und Programm, MusicXML mit Tonhöhen. Später: Akkorde, Klaviersystem (zwei Zeilen), Tabulatur (Phase 6).
 
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 

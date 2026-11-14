@@ -260,6 +260,9 @@
   const P = (TC.player = { playing: false });
   const AHEAD = 0.15;
   let shownN = 0, tl = null, idx = 0, t0 = 0, timer = 0, raf = 0, rev = -1, tempo = 0, range = null, loopLen = 0, lap = 0, until = -1, bus = null;
+  // ran to the end without loop: the next start (without a new bar chosen) is from bar 1, the whole piece
+  let endedSel = null;
+  const selKey = () => [S.selBar, S.selBarEnd].join();
 
   function build() {
     tl = TC.timeline.build(S.doc, { from: range[0], to: range[1], metronome: S.settings.metronome, countIn: S.settings.countIn && lap === 0 });
@@ -315,7 +318,7 @@
       until = h.t;
       idx++;
     }
-    if (!S.settings.loop && ctx.currentTime - t0 > tl.end + 0.3) P.stop();
+    if (!S.settings.loop && ctx.currentTime - t0 > tl.end + 0.3) P.finish();
   }
 
   function follow() {
@@ -374,8 +377,12 @@
     if (!ensure()) return TC.ui.hint(TC.tr('This browser cannot play sound'));
     P.stop(true);
     const n = S.doc.bars.length;
+    // after running to the end without loop: from the start, unless another bar was chosen since
+    const fresh = (from === undefined || from === null) && !S.settings.loop && endedSel !== null && endedSel === selKey();
+    if (fresh) from = 0;
+    endedSel = null;
     const has = from !== undefined && from !== null;
-    const R = TC.barRange();
+    const R = fresh ? null : TC.barRange();
     let start = has ? from : S.selBar !== null ? S.selBar : 0;
     start = TC.clamp(start, 0, n - 1);
     if (R && R[1] > R[0] && (!has || (from >= R[0] && from <= R[1]))) {
@@ -413,6 +420,12 @@
       bus = null;
     }
     if (!quiet) TC.refresh();
+  };
+
+  /** The end of the piece reached (no loop): stop; the next start is from bar 1 unless another bar is chosen. */
+  P.finish = function () {
+    P.stop();
+    endedSel = selKey();
   };
 
   P.toggle = () => (P.playing ? P.stop() : P.play());

@@ -195,6 +195,14 @@ setTimeout(() => {
   S.settings.loop = true; TC.player.play();
   ok('loop: bars 2-4', JSON.stringify(TC.player.range()) === '[1,3]');
   TC.player.stop(); S.settings.loop = false;
+  // ran to the end without loop: the next start is from bar 1, the whole piece; with loop the selection again
+  TC.player.play(); TC.player.finish(); TC.player.play();
+  ok('after the end (no loop): from bar 1, the whole piece ' + JSON.stringify(TC.player.range()), JSON.stringify(TC.player.range()) === JSON.stringify([0, S.doc.bars.length - 1]));
+  TC.player.stop(); TC.player.play();
+  ok('stopped by hand: the selected bars again', JSON.stringify(TC.player.range()) === '[1,3]');
+  TC.player.finish(); TC.selectBar(2); TC.player.play();
+  ok('after the end, another bar chosen: from that bar ' + JSON.stringify(TC.player.range()), TC.player.range()[0] === 2);
+  TC.player.stop(); TC.selectBar(1); TC.selectBar(3, true); TC.refresh();
   const toSel = document.querySelector('#panel-settings select[data-action="selectBarsTo"]');
   ok('panel: to bar field shows bar 4', !!toSel && toSel.value === '3');
   TC.actions.selectBarsTo(1);

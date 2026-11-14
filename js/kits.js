@@ -68,7 +68,7 @@
   K.styleOf = function (a) {
     const pl = K.place(a), role = K.ART_ROLE[a.id];
     const s = (role && C.style(role)) || { head: CUBASE_HEAD[pl.head] || 0, instrument: '', technique: '' };
-    return { display: K.linePitch(pl.line), head: s.head, instrument: s.instrument, technique: s.technique };
+    return { display: K.linePitch(pl.line), head: s.head, instrument: s.instrument, technique: s.technique, old: C.OLD_HEAD[pl.head] || 0 };
   };
 
   // ---- Profiles (pure) ------------------------------------------------------------------
@@ -232,7 +232,7 @@
   };
 
   /** Cubase drum map of a profile: every assigned key gets the notation of its instrument. */
-  K.toDrm = function (p) {
+  K.toDrm = function (p, opts = {}) {
     const styles = {}, order = [];
     for (const a of K.rows()) {
       for (const n of p.assign[a.id] || []) {
@@ -247,9 +247,10 @@
     const known = C.KNOWN[K.map(p).name.replace(/\s*\[\d+\]$/, '')] || {};
     for (const e of K.unassigned(p)) {
       const s = C.style(known[e.inote] || C.roleOf(e));
-      if (s) styles[e.inote] = { display: s.display, head: s.head, instrument: '', technique: '' };
+      if (s) styles[e.inote] = { display: s.display, head: s.head, instrument: '', technique: '', old: C.OLD_FROM_SET[s.head] || 0 };
     }
-    return C.write(p.drm, styles, { name: p.name + ' (Tactus)', order });
+    // opts.legacy: Cubase 13 and older (head symbols only, no instruments / techniques)
+    return C.write(p.drm, styles, { name: p.name + (opts.legacy ? ' (Tactus, Cubase 13)' : ' (Tactus)'), order, legacy: !!opts.legacy });
   };
 
   // ---- Instruments of a score the profile lacks -------------------------------------------
@@ -473,7 +474,7 @@
       ${p ? `<div class="kit-tabs"><button type="button" data-k="view" data-v="arts" class="${view === 'arts' ? 'active' : ''}">${tr('By instrument')}</button><button type="button" data-k="view" data-v="keys" class="${view === 'keys' ? 'active' : ''}">${tr('By key (key chart)')}</button></div>` : ''}
       <div class="kit-body">${body}</div>
       <footer>
-        ${p ? `<button type="button" data-k="drm" class="primary">${tr('Save drum map for Cubase')}</button>` : ''}
+        ${p ? `<button type="button" data-k="drm" class="primary" title="${tr('With noteheads, instruments and playing techniques')}">${tr('Drum map for Cubase 14+')}</button><button type="button" data-k="drm13" title="${tr('Older format: noteheads only (Cubase 13 knows no playing techniques)')}">${tr('… for Cubase 13 and older')}</button>` : ''}
         <span class="grow"></span>
         <button type="button" data-k="export"${K.list.length ? '' : ' disabled'}>${tr('Export profiles')}</button>
         <button type="button" data-k="import">${tr('Import profiles…')}</button>
@@ -590,6 +591,9 @@
           K.save();
           K.open();
         }
+        break;
+      case 'drm13':
+        download(K.toDrm(p, { legacy: true }), fileName(p.name) + ' (Tactus, Cubase 13).drm', 'application/xml');
         break;
       case 'drm':
         download(K.toDrm(p), fileName(p.name) + ' (Tactus).drm', 'application/xml');

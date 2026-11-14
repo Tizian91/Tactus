@@ -123,5 +123,14 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   const mtDrm = C.parse(K.toDrm(mt));
   T.eq('template: drum map for Cubase with named keys', ['36', '57', '65'].map((n) => mtDrm.entries.find((e) => e.inote === +n).name), ['Kick', 'Crash high', 'Pedal hi-hat']);
   T.eq('template General MIDI: GM keys', K.fromTemplate('gm').assign[38], [38]);
+
+  // Cubase 13 and older: head symbols only, no notehead sets / instruments / techniques
+  const old = K.toDrm(mt, { legacy: true });
+  const hs = (n) => +new RegExp(`<int name="INote" value="${n}"/>[\\s\\S]*?<int name="HeadSymbol" value="(\\d+)"/>`).exec(old)[1];
+  T.eq('Cubase 13: head symbols (kick normal, hi-hat x, half open ⊘, open ⊗, crash bold x, bell diamond)', [36, 42, 44, 46, 57, 53].map(hs), [0, 2, 1, 7, 6, 3]);
+  T.ok('Cubase 13: no notehead sets, instruments or techniques', !/NoteheadSet|InstrumentEntityID|TechniqueEntityID/.test(old));
+  T.ok('Cubase 13: Windows line ends, order list as Cubase writes it, display notes kept', !/[^\r]\n/.test(old) && /<list name="Order" type="int">/.test(old) &&
+    C.parse(old).entries.find((e) => e.inote === 42).display === C.parse(K.toDrm(mt)).entries.find((e) => e.inote === 42).display);
+  T.ok('Cubase 14+: notehead sets and techniques', /<int name="NoteheadSet" value="34"\/>/.test(K.toDrm(mt)) && /pt\.closed/.test(K.toDrm(mt)));
   T.eq('drum map channel -1 ("the track\'s channel") plays on channel 10', [K.channel({ channel: -1 }), K.channel({ channel: 3 }), K.channel(null)], [9, 3, 9]);
 };

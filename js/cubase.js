@@ -77,6 +77,15 @@
     'UJAM-Drummer': { 49: 'crash1', 57: 'crash2' },
   };
 
+  /**
+   * Cubase 13 and older: one "HeadSymbol" number per key (index in Cubase's list of heads, checked with
+   * a map saved by Cubase 13): 0 normal, 1 circle with slash, 2 x, 3 diamond, 4 slash, 5 square, 6 bold x,
+   * 7 circle with x, 8 long slash, 9 small, 10 / 11 triangle left / right, 14 triangle down.
+   * C.OLD_HEAD: from a Tactus notehead; C.OLD_FROM_SET: from a Cubase 14 notehead set.
+   */
+  C.OLD_HEAD = { normal: 0, x: 2, heavyX: 6, heavyXHat: 6, circleX: 7, circleSlash: 1, diamond: 3, triangle: 14, slashed: 4 };
+  C.OLD_FROM_SET = { 0: 0, 34: 2, 3: 7, 23: 2, 2: 3, 25: 3, 28: 14 };
+
   // Tom rim shot / rim only: same line, rim-shot or side-stick head
   const TOM_TECH = { rimshot: [2, 'pt.rimShot'], rim: [23, 'pt.sideStick'] };
 
@@ -238,12 +247,18 @@
       if (!s) return all;
       let out = item;
       out = setField(out, 'DisplayNote', s.display);
-      out = setField(out, 'NoteheadSet', s.head);
-      out = setField(out, 'InstrumentEntityID', s.instrument || '', true);
-      out = setField(out, 'TechniqueEntityID', s.technique || '', true);
+      if (opts.legacy) {
+        out = setField(out, 'HeadSymbol', s.old || 0);
+      } else {
+        out = setField(out, 'NoteheadSet', s.head);
+        out = setField(out, 'InstrumentEntityID', s.instrument || '', true);
+        out = setField(out, 'TechniqueEntityID', s.technique || '', true);
+      }
       if (s.name) out = setField(out, 'Name', esc(s.name), true);
       return '<item>' + out + '</item>';
     });
+    // Cubase 13 and older know neither notehead sets nor instruments / techniques: those fields go
+    const legacy = (t) => t.replace(/\r?\n[ \t]*<(?:int|string) name="(?:NoteheadSet|InstrumentEntityID|TechniqueEntityID)" value="[^"]*"(?: wide="true")?\/>/g, '');
     let out = text.slice(0, m.index) + m[1] + body + m[3] + text.slice(m.index + m[0].length);
     if (opts.name) out = out.replace(/(<DrumMap>\s*<string name="Name" value=")[^"]*(")/, `$1${esc(opts.name)}$2`);
     if (opts.order) {
@@ -254,6 +269,8 @@
         return open + first.concat(old.filter((n) => !first.includes(n))).map((n) => `\n${indent}<item value="${n}"/>`).join('') + close;
       });
     }
+    // (Windows line ends, as Cubase writes them)
+    if (opts.legacy) out = legacy(out).replace(/\r?\n/g, '\r\n');
     return out;
   };
 

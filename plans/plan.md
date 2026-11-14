@@ -278,3 +278,12 @@ Eine Regel für Maus, Stift und Finger:
   „Drummap für Cubase speichern“ erzeugt die Cubase-Map mit der Tactus-Notation.
 - Drummap-Erkennung robuster: „SIDE-STICK“, „Tom Hi / Mid / Low“, Zweittasten in Klammern „(Snare)“, Instrument-Tasten
   ohne Anzeigenote („Hi-Hat Pedal“), „---“ = ohne Name; Kanal −1 („Kanal der Spur“) spielt auf Kanal 10.
+
+## Drummap für Cubase 13 und älter ✅ (zum Testen in Cubase 13)
+
+- Kit-Profile: **„Drummap für Cubase 14+ speichern“** (Notenköpfe, Instrumente, Spielweisen) und **„… für Cubase 13 und älter“**
+  (altes Format: nur `HeadSymbol`, ohne NoteheadSet / Instrument / Spielweise – Cubase 13 kennt keine Spielweisen; Windows-Zeilenenden)
+- `HeadSymbol` = Index in Cubases Kopf-Liste, ermittelt an einer in Cubase 13 gespeicherten Map: 0 normal, 1 ⊘, 2 x, 3 Raute,
+  4 Schrägstrich, 5 Quadrat, 6 dickes x, 7 ⊗, 8 langer Schrägstrich, 9 klein, 10 / 11 Dreieck links / rechts, 14 Dreieck unten.
+  Tactus: Hi-Hat / Ride x (2), halb offen ⊘ (1), offen ⊗ (7), Crash / China dickes x (6), Rimshot / Glocke Raute (3),
+  Cowbell vorerst Dreieck unten (14; Werte 16–30 noch unbekannt)

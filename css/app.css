@@ -408,11 +408,12 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .kit-table button.play { padding: 0 6px; font-size: 11px; color: var(--accent); }
 
 /* panel: list of tempo changes */
-.tempo-list { margin: 2px 0 8px; font-size: 13px; }
-.tempo-item { display: flex; align-items: center; gap: 4px; }
-.tempo-item button.link { flex: 1; text-align: left; background: none; border: none; padding: 2px 4px; color: var(--accent, #2b6cde); cursor: pointer; }
-.tempo-item button.link.active { font-weight: 700; }
-.tempo-item button.icon { padding: 0 6px; }
+.tempo-list, .track-list { margin: 2px 0 8px; font-size: 13px; }
+.tempo-item, .track-item { display: flex; align-items: center; gap: 4px; }
+.tempo-item button.link, .track-item button.link { flex: 1; text-align: left; background: none; border: none; padding: 2px 4px; color: var(--accent, #2b6cde); cursor: pointer; }
+.tempo-item button.link.active, .track-item button.link.active { font-weight: 700; }
+.tempo-item button.icon, .track-item button.icon { padding: 0 6px; }
+.track-item button.off { opacity: 0.3; pointer-events: none; }
 
 /* "what the kit profile lacks" */
 .kit-check { max-width: 640px; }

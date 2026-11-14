@@ -165,7 +165,7 @@
         ${btn('copyBar', undefined, tr('Copy'), false, (many ? tr('Copy bars {a}–{b}', ab) : tr('Copy bar')) + ' (Ctrl+C)')}
         ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
         ${btn('duplicateBar', undefined, tr('Duplicate'), false, (many ? tr('Duplicate bars {a}–{b}', ab) : tr('Duplicate bar')) + ' (Ctrl+D)')}
-        ${i > 0 ? btn('toggleSimile', undefined, '%', !!S.doc.tracks[0].bars[i].simile, tr('Repeat the bar before (%)')) : ''}
+        ${i > 0 ? btn('toggleSimile', undefined, '%', !!TC.curTrack().bars[i].simile, tr('Repeat the bar before (%)')) : ''}
       </div>
       <div class="btn-row">
         ${btn('insertBarBefore', undefined, tr('+ before'), false, tr('Insert bar before'))}
@@ -198,6 +198,26 @@
       ${problems.map((p) => `<p class="hint warn tight">${tr('Bar {n}', { n: p.bar + 1 })}: ${esc(TC.actions.jumpProblemText(p))}</p>`).join('')}
       <div class="btn-row">${btn('jumpHelp', undefined, 'ⓘ ' + tr('How jumps work'), false, '', 'link')}
         ${btn('unfoldRepeats', undefined, tr('Write out…'), false, tr('Write the repeats out (bar numbers as in Cubase)…'), TC.score.hasRepeats(S.doc) ? '' : 'off')}</div>
+    </section>`;
+  }
+
+  /**
+   * The tracks: click = write into it (and show it), ✎ rename, ↑ ↓ order, ⧉ duplicate, ✕ delete.
+   * They share the bars (time signature, tempo, repeats, jumps); notes and %-bars are their own.
+   */
+  function tracksSection() {
+    const cur = TC.curTrack(), ts = S.doc.tracks, many = ts.length > 1;
+    const rows = ts.map((t, k) => '<div class="track-item">' +
+      btn('selectTrack', t.id, esc(t.name), t === cur, tr('Write into this track'), 'link') +
+      btn('renameTrack', t.id, '✎', false, tr('Rename'), 'icon') +
+      (many ? btn('moveTrackUp', t.id, '↑', false, tr('Up'), 'icon' + (k ? '' : ' off')) +
+        btn('moveTrackDown', t.id, '↓', false, tr('Down'), 'icon' + (k < ts.length - 1 ? '' : ' off')) : '') +
+      btn('duplicateTrack', t.id, '⧉', false, tr('Duplicate track'), 'icon') +
+      (many ? btn('deleteTrack', t.id, '✕', false, tr('Delete track'), 'icon') : '') + '</div>').join('');
+    return `<section><h3>${tr('Tracks')}</h3>
+      <div class="track-list">${rows}</div>
+      <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track (e.g. one only for the snare)'))}</div>
+      ${many ? `<p class="hint tight">${tr('You see and write the highlighted track; playback and MIDI export play all of them.')}</p>` : ''}
     </section>`;
   }
 
@@ -340,7 +360,7 @@
   }
 
   function viewSection() {
-    const fill = S.doc.tracks[0].fill;
+    const fill = TC.curTrack().fill;
     const fills = [['beat', 'Up to the end of the beat'], ['next', 'Up to the next note'], ['off', 'As written']];
     const opts = fills.map(([k, label]) => `<option value="${k}"${k === fill ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
     return `<section><h3>${tr('View')}</h3>
@@ -376,19 +396,21 @@
       notesRoot.innerHTML = head(tr('Notes'), 'left') + toolSection() + valueSection() + instrumentSection(cur) + noteSection(hit);
       notesRoot.scrollTop = scroll;
     }
+    const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
+      cur.id, !!(curBar && curBar.simile), S.doc.tracks.map((t) => t.id + ':' + t.name).join(),
       S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       // what is needed while writing; the rest is in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + barSection() + repeatSection() + playSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + repeatSection() + playSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       setRoot.scrollTop = scroll;
     }
     if (dlg) {
       const body = dlg.querySelector('.settings-body');
-      const keyD = JSON.stringify([S.settings, S.doc.page, S.doc.tracks[0].fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length]);
+      const keyD = JSON.stringify([S.settings, S.doc.page, TC.curTrack().fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length]);
       if ((force || keyD !== lastDlg) && !(!force && typing(body))) {
         lastDlg = keyD;
         const scroll = body.scrollTop;

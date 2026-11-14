@@ -19,6 +19,7 @@ window.TC = window.TC || {};
     selection: new Set(),   // ids of selected notes
     selBar: null,           // index of the bar shown in the panel's "Bar" section
     selBarEnd: null,        // other end of a range of selected bars (null: only selBar), see TC.barRange
+    trackId: null,          // the track being written (null / unknown: the first one), see TC.curTrack
     tool: 'write',          // 'write' | 'select' (frame, move several) | 'erase' (note panel, keys W / V / E)
     hover: null,            // where the pointer is: { bar, tick, line, art } (render.js draws a preview)
     drag: null,             // pan with the middle mouse / space (interaction.js)
@@ -153,6 +154,12 @@ window.TC = window.TC || {};
     if (S.selBar === null || S.selBar >= n) return null;
     const e = S.selBarEnd !== null && S.selBarEnd < n ? S.selBarEnd : S.selBar;
     return [Math.min(S.selBar, e), Math.max(S.selBar, e)];
+  };
+
+  /** The track being written / shown (the first one if none is chosen or it is gone). */
+  TC.curTrack = function () {
+    const S = TC.state, ts = S.doc ? S.doc.tracks : [];
+    return ts.find((t) => t.id === S.trackId) || ts[0] || null;
   };
 
   /** Remove selected ids whose notes no longer exist. */

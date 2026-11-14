@@ -44,7 +44,7 @@
 
   /** The note of instrument `art` at `tick` in a bar (any voice), or null. */
   function noteAt(bi, tick, art) {
-    for (const voice of S.doc.tracks[0].bars[bi].voices) {
+    for (const voice of TC.curTrack().bars[bi].voices) {
       for (const ev of voice) {
         if (ev.tick !== tick) continue;
         const n = ev.notes.find((x) => x.art === art);
@@ -443,7 +443,7 @@
     TC.selectBar(t.bar);
     const art = t.art;
     const note = TC.newDrumNote(art.id, S.input);
-    const res = TC.score.place(S.doc, S.doc.tracks[0], t.bar, art.voice, t.tick, TC.inputTicks(S.input), note);
+    const res = TC.score.place(S.doc, TC.curTrack(), t.bar, art.voice, t.tick, TC.inputTicks(S.input), note);
     if (res.status === 'exists') {
       S.selection = new Set([res.note.id]);
       TC.refresh();
@@ -531,7 +531,7 @@
   function dropMove(d) {
     const to = d.to, n = d.hit.note;
     if (!to || (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.art.id === n.art)) return;
-    const doc = S.doc, track = doc.tracks[0];
+    const doc = S.doc, track = TC.curTrack();
     if (noteAt(to.bar, to.tick, to.art.id)) return TC.ui.hint(tr('There is already such a note'));
     const dur = d.hit.ev.dur;
     TC.score.removeNotes(doc, [n.id]);
@@ -838,7 +838,7 @@
         t = 0;
         continue;
       }
-      if (!S.doc.tracks[0].bars[b].simile) out.push([b, t]);
+      if (!TC.curTrack().bars[b].simile) out.push([b, t]);
       t += step;
     }
     return out;
@@ -855,7 +855,7 @@
     let added = 0;
     for (const [bi, tk] of row) {
       const note = TC.newDrumNote(d.art.id, S.input);
-      const res = TC.score.place(S.doc, S.doc.tracks[0], bi, d.art.voice, tk, TC.inputTicks(S.input), note);
+      const res = TC.score.place(S.doc, TC.curTrack(), bi, d.art.voice, tk, TC.inputTicks(S.input), note);
       if (res.status !== 'exists' && res.status !== 'outside') added++;
     }
     [d.bar, d.tick] = row[row.length - 1]; // the row goes on from its last note

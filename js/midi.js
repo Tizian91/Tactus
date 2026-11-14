@@ -74,7 +74,7 @@
   const meta = (type, data) => [0xff, type].concat(vlq(data.length), data);
 
   M.build = function (doc, target, opts = {}) {
-    const track = doc.tracks[0], T = TC.timeline, R = TC.rhythm;
+    const T = TC.timeline, R = TC.rhythm;
     const report = { replaced: new Map(), missing: new Set() };
     const ev = []; // { t, order, bytes } order: 0 meta, 1 note off, 2 note on
     const add = (t, order, bytes) => ev.push({ t: Math.max(0, Math.round(t)), order, bytes });
@@ -102,32 +102,34 @@
       if (h.marker) add(t0, 0, meta(0x06, text(h.marker)));
       const msTicks = (ms) => (ms / 1000) * (bpm / 60) * TC.TPQ; // grace notes: fixed time before the beat
 
-      const src = TC.score.sourceBar(doc, bi, track);
-      for (const voice of track.bars[src].voices) {
-        const ends = track.kind === 'drums' && R ? R.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
-        for (const e of voice) {
-          if (e.tick >= L) continue;
-          const dur = ends && ends.has(e) ? ends.get(e) - e.tick : Math.min(e.dur, L - e.tick);
-          for (const n of e.notes) {
-            const art = TC.drums.byId(n.art);
-            if (!art) continue;
-            const k = keyFor(art, target, report);
-            if (!k) continue;
-            const hit = (t, vel) => {
-              const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
-              add(t, 2, [0x90 | k.ch, k.note, v]);
-              add(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
-            };
-            const at = t0 + sw(e.tick), vel = T.velocity(n); // swing: an offbeat comes later
-            if (n.orn === 'flam') hit(at - msTicks(30), 0.35);
-            if (n.orn === 'drag') {
-              hit(at - msTicks(60), 0.33);
-              hit(at - msTicks(30), 0.38);
-            }
-            hit(at, vel);
-            if (n.trem) {
-              const step = T.rollStep(dur, n.trem);
-              for (let s = step, j = 1; s < dur - 1; s += step, j++) hit(t0 + sw(e.tick + s), vel * (j % 2 ? 0.7 : 0.8));
+      for (const track of doc.tracks) { // all tracks together, on their keys of the kit profile
+        const src = TC.score.sourceBar(doc, bi, track);
+        for (const voice of track.bars[src].voices) {
+          const ends = track.kind === 'drums' && R ? R.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
+          for (const e of voice) {
+            if (e.tick >= L) continue;
+            const dur = ends && ends.has(e) ? ends.get(e) - e.tick : Math.min(e.dur, L - e.tick);
+            for (const n of e.notes) {
+              const art = TC.drums.byId(n.art);
+              if (!art) continue;
+              const k = keyFor(art, target, report);
+              if (!k) continue;
+              const hit = (t, vel) => {
+                const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
+                add(t, 2, [0x90 | k.ch, k.note, v]);
+                add(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
+              };
+              const at = t0 + sw(e.tick), vel = T.velocity(n); // swing: an offbeat comes later
+              if (n.orn === 'flam') hit(at - msTicks(30), 0.35);
+              if (n.orn === 'drag') {
+                hit(at - msTicks(60), 0.33);
+                hit(at - msTicks(30), 0.38);
+              }
+              hit(at, vel);
+              if (n.trem) {
+                const step = T.rollStep(dur, n.trem);
+                for (let s = step, j = 1; s < dur - 1; s += step, j++) hit(t0 + sw(e.tick + s), vel * (j % 2 ? 0.7 : 0.8));
+              }
             }
           }
         }

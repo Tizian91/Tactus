@@ -270,6 +270,51 @@
 
   const SC = (TC.score = {});
 
+  // ---- Tracks: they share the bar headers (time signature, tempo, repeats, jumps), each has its own
+  // notes and its own %-bars
+
+  /** A new drum track at the end (or after track `after`), as many bars as the score. */
+  SC.addTrack = function (doc, name, after) {
+    const t = TC.newTrack('drums', doc.bars.length);
+    t.name = name || SC.freeTrackName(doc, 'Drums');
+    const at = after ? doc.tracks.indexOf(after) + 1 : doc.tracks.length;
+    doc.tracks.splice(at > 0 ? at : doc.tracks.length, 0, t);
+    return t;
+  };
+  /** "Drums", "Drums 2", "Drums 3" … whichever is not taken yet. */
+  SC.freeTrackName = function (doc, base) {
+    const taken = new Set(doc.tracks.map((t) => t.name));
+    if (!taken.has(base)) return base;
+    for (let n = 2; ; n++) if (!taken.has(base + ' ' + n)) return base + ' ' + n;
+  };
+  /** Remove a track (the last one stays). */
+  SC.deleteTrack = function (doc, track) {
+    const i = doc.tracks.indexOf(track);
+    if (i < 0 || doc.tracks.length < 2) return false;
+    doc.tracks.splice(i, 1);
+    return true;
+  };
+  /** Move a track up (-1) or down (+1) in the list. */
+  SC.moveTrack = function (doc, track, dir) {
+    const i = doc.tracks.indexOf(track), j = i + dir;
+    if (i < 0 || j < 0 || j >= doc.tracks.length) return false;
+    doc.tracks.splice(i, 1);
+    doc.tracks.splice(j, 0, track);
+    return true;
+  };
+  /** A copy of a track (new ids) right after it. */
+  SC.duplicateTrack = function (doc, track) {
+    const t = TC.clone(track);
+    t.id = TC.uid('t');
+    t.name = SC.freeTrackName(doc, track.name);
+    t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => {
+      ev.id = TC.uid('e');
+      ev.notes.forEach((n) => { n.id = TC.uid('n'); });
+    })));
+    doc.tracks.splice(doc.tracks.indexOf(track) + 1, 0, t);
+    return t;
+  };
+
   /** Call fn(note, event, voiceIndex, barIndex, track) for every note. */
   SC.eachNote = function (doc, fn) {
     for (const t of doc.tracks) {
@@ -322,9 +367,10 @@
     return true;
   };
 
-  SC.clearBar = function (doc, bi) {
+  /** Empty bar `bi` (its %-sign goes too): in every track, or in track `only`. */
+  SC.clearBar = function (doc, bi, only) {
     doc.tracks.forEach((t) => {
-      t.bars[bi] = TC.newTrackBar(t.bars[bi].voices.length);
+      if (!only || t === only) t.bars[bi] = TC.newTrackBar(t.bars[bi].voices.length);
     });
   };
 
@@ -582,7 +628,8 @@
    * %-bar, or on a note of the same instrument that does not move.
    */
   SC.moveNotes = function (doc, ids, delta, art) {
-    const track = doc.tracks[0], moving = new Set(ids), items = [], slots = new Set();
+    const first = ids.length && SC.findNote(doc, ids[0]);
+    const track = first ? first.track : doc.tracks[0], moving = new Set(ids), items = [], slots = new Set();
     for (const id of ids) {
       const h = SC.findNote(doc, id);
       if (!h) continue;
@@ -646,11 +693,18 @@
     };
   };
 
-  /** Put copied notes into bar `bi` (replaces its notes; new ids; cut to its length). */
-  SC.pasteBar = function (doc, bi, clip) {
+
+  /**
+   * Put copied notes into bar `bi` (replaces its notes; new ids; cut to its length): track k gets
+   * the copied track k (a track the copy does not have stays as it is). only: put the first copied
+   * track into this track alone (e.g. a MIDI import into the track being written).
+   */
+  SC.pasteBar = function (doc, bi, clip, only) {
     if (!clip) return false;
     doc.tracks.forEach((t, k) => {
-      const bar = TC.clone(clip.tracks[k] || clip.tracks[0]);
+      const from = only ? (t === only ? clip.tracks[0] : null) : clip.tracks[k];
+      if (!from) return;
+      const bar = TC.clone(from);
       bar.simile = false;
       bar.voices.forEach((v) => v.forEach((ev) => {
         ev.id = TC.uid('e');
@@ -673,11 +727,11 @@
    * score new bars are added with the copied time signature. Also takes a single copyBar.
    * Returns how many bars were pasted.
    */
-  SC.pasteBars = function (doc, at, clip) {
+  SC.pasteBars = function (doc, at, clip, only) {
     const list = clip && clip.bars ? clip.bars : clip ? [clip] : [];
     list.forEach((c, k) => {
       if (at + k >= doc.bars.length) SC.insertBars(doc, doc.bars.length, 1, c.ts);
-      SC.pasteBar(doc, at + k, c);
+      SC.pasteBar(doc, at + k, c, only);
     });
     return list.length;
   };

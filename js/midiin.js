@@ -225,9 +225,10 @@
   /**
    * Put bars `from` … `to` of an imported score (src) into `doc` from bar `at` on: their notes replace
    * those bars' notes, bars are added at the end if needed; takeTs: those bars get the time
-   * signature of the file (otherwise notes beyond a shorter bar are cut). Returns how many bars.
+   * signature of the file (otherwise notes beyond a shorter bar are cut); only: the track that gets the
+   * notes (default: the first). Returns how many bars.
    */
-  MI.insertInto = function (doc, src, at, from = 0, to = src.bars.length - 1, takeTs = true) {
+  MI.insertInto = function (doc, src, at, from = 0, to = src.bars.length - 1, takeTs = true, only = doc.tracks[0]) {
     from = TC.clamp(from, 0, src.bars.length - 1);
     to = TC.clamp(to, from, src.bars.length - 1);
     const clip = TC.score.copyBars(src, from, to);
@@ -237,7 +238,7 @@
         if (i < doc.bars.length && doc.bars[i].ts.join('/') !== c.ts.join('/')) TC.score.setTimeSig(doc, i, c.ts, true);
       });
     }
-    return TC.score.pasteBars(doc, at, clip);
+    return TC.score.pasteBars(doc, at, clip, only);
   };
 
   const tr = (s, v) => TC.tr(s, v);
@@ -381,7 +382,7 @@
         S.settings.importTarget = 'into';
         TC.saveSettings();
         MI.close();
-        const n = MI.insertInto(S.doc, res.doc, at, from, to, st.takeTs);
+        const n = MI.insertInto(S.doc, res.doc, at, from, to, st.takeTs, TC.curTrack());
         S.selection.clear();
         TC.selectBar(at);
         if (n > 1) TC.selectBar(at + n - 1, true);

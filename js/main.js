@@ -69,6 +69,13 @@
       kit.classList.toggle('lacks', !!lacks);
       kit.title = tr('Kit profile of this score: MIDI export uses its keys. Click: change');
     }
+    const trk = document.getElementById('status-track');
+    if (trk) {
+      // several tracks: the one shown and written (click: the next one)
+      trk.hidden = S.doc.tracks.length < 2;
+      trk.textContent = tr('Track: {name}', { name: TC.curTrack().name });
+      trk.title = tr('The track you see and write into. Click: next track (all tracks: panel "Tracks")');
+    }
     document.title = (S.doc.meta.title ? S.doc.meta.title + ' – ' : '') + 'Tactus';
   };
 
@@ -80,6 +87,7 @@
       if (fn) fn(b.dataset.value);
     });
     document.getElementById('status-kit').addEventListener('click', () => TC.actions.kitMenu());
+    document.getElementById('status-track').addEventListener('click', () => TC.actions.nextTrack());
     const tempo = document.getElementById('tempo-input');
     tempo.addEventListener('change', () => {
       S.doc.meta.tempo = TC.clamp(Math.round(Number(tempo.value) || 120), 20, 400);

@@ -549,6 +549,30 @@ setTimeout(() => {
     ok('tempo list: click selects bar 2', S.selBar === 1);
     document.querySelector('#panel-settings .tempo-item [data-action="clearBarTempo"]').click();
     ok('tempo list: ✕ removes the change', !S.doc.bars[1].tempo && !document.querySelector('#panel-settings .tempo-item'));
+    // tracks: add one, write into it, switch back, delete it
+    const st = document.getElementById('status-track');
+    ok('tracks: one track, listed in the panel, nothing in the status bar', document.querySelectorAll('#panel-settings .track-item').length === 1 && st.hidden);
+    const first = S.doc.tracks[0], before = JSON.stringify(first.bars);
+    const savePrompt = window.prompt; window.prompt = () => 'Snare';
+    TC.actions.addTrack();
+    window.prompt = savePrompt;
+    const sn = TC.curTrack();
+    ok('tracks: added "Snare", writing into it, status bar shows it', S.doc.tracks.length === 2 && sn.name === 'Snare' && sn !== first &&
+      document.querySelectorAll('#panel-settings .track-item').length === 2 && !st.hidden && /Snare/.test(st.textContent));
+    TC.selectBar(0);
+    TC.refresh();
+    click(0, 0, 3);
+    ok('tracks: a click writes into the new track only', sn.bars[0].voices.flat().length === 1 && JSON.stringify(first.bars) === before);
+    ok('tracks: the view shows the new track (one note head)', TC.render.layout.bars[0].voices.flat().filter((it) => it.kind === 'note').length === 1);
+    st.click();
+    ok('tracks: status bar click goes to the next track', TC.curTrack() === first && /Drums/.test(st.textContent));
+    document.querySelector(`#panel-settings .track-item [data-action="deleteTrack"][data-value="${sn.id}"]`).click();
+    ok('tracks: ✕ deletes the track (asked first: it has a note)', S.doc.tracks.length === 1 && st.hidden && JSON.stringify(first.bars) === before);
+    TC.actions.undo();
+    ok('tracks: undo brings it back with its note', S.doc.tracks.length === 2 && S.doc.tracks[1].bars[0].voices.flat().length === 1);
+    TC.actions.undo();
+    TC.actions.undo();
+    ok('tracks: undo back to one track', S.doc.tracks.length === 1 && TC.curTrack() === S.doc.tracks[0]);
     const sk = document.getElementById('status-kit');
     ok('status bar: kit General MIDI for a new score (' + sk.textContent + ')', /General MIDI/.test(sk.textContent));
     const saveKits = TC.kits.save; TC.kits.save = () => true;

@@ -186,13 +186,68 @@
     TC.refresh();
   }
 
-  /** Rest cleanup of the drum track (rhythm.js R.ends): part of the score, so undoable. */
+  /** Rest cleanup of the drum tracks (rhythm.js R.ends): part of the score, so undoable. */
   A.setFill = function (fill) {
-    const t = S.doc.tracks[0];
-    if (!TC.rhythm.FILLS.includes(fill) || t.fill === fill) return;
-    t.fill = fill;
+    if (!TC.rhythm.FILLS.includes(fill) || TC.curTrack().fill === fill) return;
+    S.doc.tracks.forEach((t) => { if (t.kind === 'drums') t.fill = fill; });
     TC.commit();
   };
+
+  // ---- Tracks -------------------------------------------------------------------------------
+  // All tracks share the bars (time signature, tempo, repeats, jumps); each has its own notes and
+  // %-bars. The track being written is TC.curTrack() (not part of the score, not undone).
+
+  const trackOf = (id) => S.doc.tracks.find((t) => t.id === id) || TC.curTrack();
+  /** Write into this track (and show it). */
+  A.selectTrack = function (id) {
+    const t = trackOf(id);
+    if (!t || t.id === S.trackId) return;
+    S.trackId = t.id;
+    S.selection.clear();
+    S.hover = null;
+    TC.refresh();
+  };
+  /** The next track (status bar, cycles). */
+  A.nextTrack = function () {
+    const ts = S.doc.tracks, i = ts.indexOf(TC.curTrack());
+    if (ts.length > 1) A.selectTrack(ts[(i + 1) % ts.length].id);
+  };
+  A.addTrack = function () {
+    const name = prompt(tr('Name of the new track (e.g. Snare, Cymbals):'), TC.score.freeTrackName(S.doc, tr('Drums')));
+    if (name === null) return;
+    const t = TC.score.addTrack(S.doc, name.trim() || TC.score.freeTrackName(S.doc, tr('Drums')), TC.curTrack());
+    S.trackId = t.id;
+    S.selection.clear();
+    TC.commit();
+    TC.ui.hint(tr('Track "{name}" added - you are writing into it now', { name: t.name }));
+  };
+  A.renameTrack = function (id) {
+    const t = trackOf(id);
+    const name = prompt(tr('Name of the track:'), t.name);
+    if (name === null || !name.trim() || name.trim() === t.name) return;
+    t.name = name.trim();
+    TC.commit();
+  };
+  A.duplicateTrack = function (id) {
+    const t = TC.score.duplicateTrack(S.doc, trackOf(id));
+    S.trackId = t.id;
+    S.selection.clear();
+    TC.commit();
+  };
+  A.deleteTrack = function (id) {
+    const t = trackOf(id);
+    if (S.doc.tracks.length < 2) return TC.ui.hint(tr('The last track cannot be deleted'));
+    let notes = 0;
+    t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => { notes += ev.notes.length; })));
+    if (notes && !confirm(tr('Delete the track "{name}" with its {n} notes? (Undo is possible.)', { name: t.name, n: notes }))) return;
+    const i = S.doc.tracks.indexOf(t);
+    TC.score.deleteTrack(S.doc, t);
+    if (S.trackId === t.id || !S.trackId) S.trackId = S.doc.tracks[Math.min(i, S.doc.tracks.length - 1)].id;
+    TC.pruneSelection();
+    TC.commit();
+  };
+  A.moveTrackUp = (id) => { if (TC.score.moveTrack(S.doc, trackOf(id), -1)) TC.commit(); };
+  A.moveTrackDown = (id) => { if (TC.score.moveTrack(S.doc, trackOf(id), 1)) TC.commit(); };
   /** Instrument in / out of the kit (the kit becomes a custom one). */
   A.toggleKitArt = function (id) {
     id = Number(id);
@@ -222,7 +277,8 @@
   A.selectAll = function () {
     const R = TC.barRange(), part = R && R[1] > R[0];
     S.selection = new Set();
-    TC.score.eachNote(S.doc, (n, ev, vi, bi) => { if (!part || (bi >= R[0] && bi <= R[1])) S.selection.add(n.id); });
+    const cur = TC.curTrack();
+    TC.score.eachNote(S.doc, (n, ev, vi, bi, t) => { if (t === cur && (!part || (bi >= R[0] && bi <= R[1]))) S.selection.add(n.id); });
     TC.refresh();
     TC.ui.hint(tr('{n} note(s) selected', { n: S.selection.size }));
   };
@@ -284,7 +340,7 @@
   /** Empty bar i - or all selected bars, if i is one of them. */
   A.clearBar = function (i = curBar()) {
     const [a, b] = rangeAt(i);
-    for (let k = a; k <= b; k++) TC.score.clearBar(S.doc, k);
+    for (let k = a; k <= b; k++) TC.score.clearBar(S.doc, k, TC.curTrack()); // the track being written
     TC.pruneSelection();
     TC.commit();
   };
@@ -382,7 +438,7 @@
    */
   A.toggleSimile = function (i = curBar()) {
     if (i <= 0) return TC.ui.hint(tr('The first bar has no bar before it to repeat'));
-    const track = S.doc.tracks[0]; // the % belongs to a track (later: the track being written)
+    const track = TC.curTrack(); // the % belongs to the track being written
     TC.score.setSimile(S.doc, track, i, !track.bars[i].simile);
     TC.selectBar(i);
     TC.pruneSelection();
@@ -924,7 +980,7 @@
       { label: many ? tr('Copy bars {a}–{b}', ab) : 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
       { label: clipN > 1 ? tr('Paste {n} bars from here', { n: clipN }) : 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
       { label: many ? tr('Duplicate bars {a}–{b}', ab) : 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
-      { label: 'Repeat the bar before (%)', checked: !!S.doc.tracks[0].bars[i].simile, action: () => A.toggleSimile(i), disabled: i === 0 },
+      { label: 'Repeat the bar before (%)', checked: !!TC.curTrack().bars[i].simile, action: () => A.toggleSimile(i), disabled: i === 0 },
       '-',
       { label: TC.tr('Tempo from here…') + (i > 0 && h.tempo ? ` (${h.tempo})` : ''), action: () => A.editBarTempo(i) },
       { label: 'Text above the bar…', action: () => A.editMarker(i) },

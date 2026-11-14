@@ -233,7 +233,12 @@ Snare oder Becken). Das Datenmodell kennt schon mehrere Spuren (`doc.tracks`), d
   Seitenansicht: % mit Anzahl bzw. Mehrtaktpause nur, wenn es für alle Spuren gilt.
 
 Schritte:
-1. Spuren verwalten: hinzufügen, umbenennen, löschen, sortieren; aktive Spur zum Schreiben
+1. ✅ Spuren verwalten (zum Ausprobieren): Panel „Takt · Stück“ → **Spuren**: hinzufügen (+ Spur, nach der aktiven), umbenennen ✎,
+   sortieren ↑ ↓, verdoppeln ⧉, löschen ✕ (Rückfrage, wenn Noten drin sind), alles rückgängig machbar. Klick auf den Namen = **aktive
+   Spur**: Ansicht, Schreiben, Auswahl (Strg+A), %, „Leeren“ und MIDI-Import „in das offene Stück“ betreffen nur sie. Statusleiste
+   „Spur: …“ (ab zwei Spuren; Klick = nächste). Bis Schritt 2 zeigt die Ansicht nur die aktive Spur. **Abspielen und MIDI-Export
+   spielen alle Spuren** zusammen. Kopieren / Einfügen / Verdoppeln von Takten nimmt alle Spuren mit; Takte einfügen / löschen
+   gilt für alle. Pausenbereinigung gilt für alle Schlagzeugspuren.
 2. Endlos-Ansicht: Spuren untereinander, gemeinsame Taktstriche; Spuren ein- / ausblenden; Kit pro Spur (Einzellinie)
 3. Seitenansicht / PDF: Partitursystem mit Klammer und Spurnamen, ausgeblendete Spuren nicht gedruckt
 4. Wiedergabe / MIDI: alle Spuren, Stumm / Solo; MIDI-Export eine Spur je Tactus-Spur oder alles auf Kanal 10; Import je Spur

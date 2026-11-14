@@ -174,7 +174,7 @@
 
   /** Positions of all bars and lines, the notation items of every voice. */
   RD.computeLayout = function () {
-    const doc = S.doc, track = doc.tracks[0], page = RD.isPage(), MARGIN = margin();
+    const doc = S.doc, track = TC.curTrack(), page = RD.isPage(), MARGIN = margin();
     const grid = TC.gridTicks(S.input);
     const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
@@ -526,7 +526,7 @@
 
     // notes
     L.heads = [];
-    const track = doc.tracks[0];
+    const track = TC.curTrack();
     for (const b of L.bars) {
       if (b.hidden !== undefined) continue;
       if (b.multi && b.simile) {

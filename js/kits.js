@@ -283,7 +283,7 @@
   /** How often each instrument occurs in the score: Map artId -> count. */
   K.used = function (doc) {
     const n = new Map();
-    for (const b of doc.tracks[0].bars) for (const v of b.voices) for (const ev of v) {
+    for (const b of doc.tracks.flatMap((t) => t.bars)) for (const v of b.voices) for (const ev of v) {
       for (const x of ev.notes) n.set(x.art, (n.get(x.art) || 0) + 1);
     }
     return n;
@@ -325,7 +325,7 @@
    */
   K.replaceInScore = function (doc, from, to) {
     let n = 0;
-    for (const b of doc.tracks[0].bars) for (const v of b.voices) for (const ev of v) {
+    for (const b of doc.tracks.flatMap((t) => t.bars)) for (const v of b.voices) for (const ev of v) {
       if (!ev.notes.some((x) => x.art === from)) continue;
       const has = b.voices.some((w) => w.some((e) => e.tick === ev.tick && e.notes.some((x) => x.art === to)));
       if (has) ev.notes = ev.notes.filter((x) => x.art !== from);
@@ -333,7 +333,7 @@
       n++;
     }
     // empty beats left behind are dropped
-    for (const b of doc.tracks[0].bars) b.voices = b.voices.map((v) => v.filter((ev) => ev.notes.length));
+    for (const b of doc.tracks.flatMap((t) => t.bars)) b.voices = b.voices.map((v) => v.filter((ev) => ev.notes.length));
     return n;
   };
 

@@ -4,6 +4,22 @@ Ein Notenschreibprogramm im Browser: Noten werden per Klick auf die richtige Lin
 richtige Stelle gesetzt. Zuerst Schlagzeug, später Notensystem und Tabulatur.
 Formate und MIDI-Werte wie in Guitar Pro.
 
+## Leitlinien
+
+Tactus ist ein Nischenwerkzeug für den Arbeitsweg von Schlagzeugern – kein Konkurrent zu kostenpflichtigen Plattformen mit
+Song-Datenbanken.
+
+- **Für immer kostenlos.** Keine Bezahlschranke, kein Konto, keine Anmeldung.
+- **Kleinste Einstiegshürde:** Link öffnen und loslegen – im Zug, zuhause, im Bandraum; offline, ohne Installation (installierbar
+  auf Wunsch). Ein Stück teilt man per Link.
+- **Tiefe nur auf Wunsch:** Wer sich eingewöhnt hat, bettet Tactus vollständig in seinen Ablauf ein (DAW, Drum-Maps / Kit-Profile,
+  Drum-VSTs über MIDI, Backing-Tracks mit Umblättern auf der Bühne). Diese Funktionen bleiben optional und stören den Einstieg nicht.
+- **Bedienung genauso einfach:** Grundlegendes geht ohne Anleitung; Gesten sind intuitiv (tippen, halten, ziehen – Finger, Stift,
+  Maus nach derselben Regel). Die meisten Funktionen findet man zufällig einmal und nutzt sie dann; nichts Wichtiges versteckt sich
+  hinter Einstellungen. Neue Funktionen müssen diese Regel einhalten: sinnvolle Standardwerte, keine Pflicht-Einrichtung.
+  Zeiten der Gesten: Note halten 350 ms (Reihe / Anschlag / Menü), leere Stelle halten 500 ms (Taktmenü – länger, damit ein Finger,
+  der kurz zielt, trotzdem seine Note setzt).
+
 ## Grundentscheidungen
 
 - **Bauweise wie MindMapper:** reines JavaScript ohne Build-Schritt, läuft per Doppelklick

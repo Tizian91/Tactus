@@ -191,6 +191,9 @@
 
   const touches = new Map(); // fingers on the screen: pointerId -> { x, y }
   let pinch = null, holdTimer = 0, lastTouch = 0;
+  // holding still: on a note (row, strength, its menu) the hold is short; on an empty place of the lines
+  // (bar menu instead of a note) longer, so a finger that takes a moment to aim still writes its note
+  const NOTE_HOLD_MS = 350;
   const HOLD_MS = 500;
   const moveMin = (e) => (e.pointerType === 'touch' ? 10 : 6); // px before a press becomes a drag
   const fingerWrites = (e) => e.pointerType !== 'touch' || S.settings.fingerWrites !== false;
@@ -243,7 +246,7 @@
       const hit = TC.score.findNote(S.doc, t.head.id);
       if (!hit) return;
       S.drag = Object.assign(base, { mode: 'note', t, hit, row: !touch && (e.ctrlKey || e.metaKey) });
-      holdTimer = setTimeout(armRow, HOLD_MS);
+      holdTimer = setTimeout(armRow, NOTE_HOLD_MS);
       return;
     }
     // a finger that does not write: a tap chooses the bar (or selects the note), dragging scrolls
@@ -731,7 +734,7 @@
         if (!d || d.mode !== 'sel') return;
         d.held = true; // released without moving: the menu (instrument / strength) for the selection
         if (navigator.vibrate) navigator.vibrate(15);
-      }, HOLD_MS);
+      }, NOTE_HOLD_MS);
       return;
     }
     S.drag = Object.assign(base, { mode: 'rect', w0: I.toWorld(e.clientX, e.clientY), keep: add ? new Set(S.selection) : new Set(), p });

@@ -6,7 +6,7 @@
  * Network first: online you always get the current files, the cache is only the offline copy.
  * New file in index.html? Add it to FILES, so it is there offline from the start.
  */
-const CACHE = 'tactus-v52';
+const CACHE = 'tactus-v53';
 const SAMPLES = 'tactus-samples-v1'; // samples/*.flac (new version only when the recordings change)
 const FILES = [
   './',
@@ -75,7 +75,9 @@ self.addEventListener('fetch', (e) => {
     }))));
     return;
   }
-  e.respondWith(fetch(req)
+  // "no-cache": ask the server every time (GitHub Pages lets the browser keep files 10 min - an update would
+  // otherwise mix a new index.html with old scripts); unchanged files cost only a short "not modified"
+  e.respondWith(fetch(req, { cache: 'no-cache' })
     .then((res) => {
       if (res.ok) {
         const copy = res.clone();

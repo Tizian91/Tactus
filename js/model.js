@@ -470,10 +470,13 @@
     let k = order.findIndex((o) => o.bar >= from);
     const out = [];
     if (k < 0) return out;
+    // played up to the end: after a D.C. / D.S. the bars before `from` belong to it too
+    let free = false;
     for (; k < order.length; k++) {
       const o = order[k];
+      if (o.via && to >= doc.bars.length - 1) free = true;
       if (o.bar > to) break;
-      if (o.bar >= from) out.push(o);
+      if (free || o.bar >= from) out.push(o);
     }
     return out;
   };

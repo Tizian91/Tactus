@@ -84,6 +84,9 @@ module.exports = function (T) {
   const jd = score(10, (b) => { b[2].mark = 'segno'; b[5].end = 'toCoda'; b[7].jump = 'dsCoda'; b[8].mark = 'coda'; });
   T.eq('the bar after a jump knows it (markers)', SC.playOrder(jd).filter((o) => o.via).map((o) => [o.bar + 1, o.via]), [[3, 'ds'], [9, 'coda']]);
   T.eq('problems: none', SC.jumpProblems(jd), []);
+  const dcs = score(4, (b) => { b[3].jump = 'dc'; });
+  T.eq('played from bar 3 to the end: D.C. still goes back to bar 1', SC.playBars(dcs, 2).map((o) => o.bar + 1).join(' '), '3 4 1 2 3 4');
+  T.eq('… D.S. to a segno before the start bar too', SC.playBars(jd, 5).map((o) => o.bar + 1).join(' '), '6 7 8 3 4 5 6 9 10');
   const jp = score(3, (b) => { b[2].jump = 'dsCoda'; });
   T.eq('problems: no segno, no To Coda, no coda', SC.jumpProblems(jp).map((p) => p.problem), ['noSegno', 'noToCoda', 'noCoda']);
   const jm = TC.midi.read(TC.midi.build(jd, null).bytes).metas.filter((x) => x.type === 6).map((x) => [x.t / 3840, decodeURIComponent(escape(String.fromCharCode(...x.data)))]);

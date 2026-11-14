@@ -279,7 +279,7 @@ Eine Regel für Maus, Stift und Finger:
 - Drummap-Erkennung robuster: „SIDE-STICK“, „Tom Hi / Mid / Low“, Zweittasten in Klammern „(Snare)“, Instrument-Tasten
   ohne Anzeigenote („Hi-Hat Pedal“), „---“ = ohne Name; Kanal −1 („Kanal der Spur“) spielt auf Kanal 10.
 
-## Drummap für Cubase 13 und älter ✅ (zum Testen in Cubase 13)
+## Drummap für Cubase 13 und älter ✅ (in Cubase 13 getestet)
 
 - Kit-Profile: **„Drummap für Cubase 14+ speichern“** (Notenköpfe, Instrumente, Spielweisen) und **„… für Cubase 13 und älter“**
   (altes Format: nur `HeadSymbol`, ohne NoteheadSet / Instrument / Spielweise – Cubase 13 kennt keine Spielweisen; Windows-Zeilenenden)

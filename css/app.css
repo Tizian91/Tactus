@@ -250,6 +250,8 @@ details > summary { list-style-position: outside; }
 .score .line-band { fill: var(--band); }
 .score .bar-sel { fill: var(--accent-soft); opacity: 0.7; }
 .score .barno { font-size: 10px; fill: var(--muted); }
+.score .staff-name { font-size: 10px; font-weight: 600; fill: var(--muted); }
+.score .staff-name.cur { fill: var(--accent); }
 .score .title { font-size: 26px; font-weight: 600; fill: var(--text); }
 .score .subtitle { font-size: 14px; fill: var(--label); }
 .score .tempo { font-size: 13px; font-weight: 600; fill: var(--text); }
@@ -414,6 +416,8 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .tempo-item button.link.active, .track-item button.link.active { font-weight: 700; }
 .tempo-item button.icon, .track-item button.icon { padding: 0 6px; }
 .track-item button.off { opacity: 0.3; pointer-events: none; }
+.track-item.hidden-track button.link { opacity: 0.5; font-style: italic; }
+.track-item button.eye { padding: 0 4px; }
 
 /* "what the kit profile lacks" */
 .kit-check { max-width: 640px; }

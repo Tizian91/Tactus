@@ -95,7 +95,7 @@
       ${btn('toggleLock', undefined, `🔒 ${tr('Lock instrument')}`, lock, tr('A click anywhere in the column writes the selected instrument (L, or hold Shift)'), 'lock-btn')}
       <p class="hint tight">${lock ? tr('On: the height no longer matters.') : tr('Hold Shift: lock while held · L: switch')}</p>
       ${groups}
-      <p class="hint">${tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
+      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: panel "Bar · score" → Tracks.') : tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
   }
 
   function noteSection(hit) {
@@ -202,22 +202,37 @@
   }
 
   /**
-   * The tracks: click = write into it (and show it), ✎ rename, ↑ ↓ order, ⧉ duplicate, ✕ delete.
+   * The tracks: click = write into it, 👁 show / hide, ✎ rename, ↑ ↓ order, ⧉ duplicate, ✕ delete.
    * They share the bars (time signature, tempo, repeats, jumps); notes and %-bars are their own.
+   * Below: the instruments of the track being written (those of the drum kit, or its own; one line).
    */
   function tracksSection() {
     const cur = TC.curTrack(), ts = S.doc.tracks, many = ts.length > 1;
-    const rows = ts.map((t, k) => '<div class="track-item">' +
+    const rows = ts.map((t, k) => `<div class="track-item${t.hidden ? ' hidden-track' : ''}">` +
+      (many ? btn('toggleTrackHidden', t.id, t.hidden ? '◌' : '◉', false, tr(t.hidden ? 'Hidden – click: show' : 'Shown – click: hide'), 'icon eye') : '') +
       btn('selectTrack', t.id, esc(t.name), t === cur, tr('Write into this track'), 'link') +
       btn('renameTrack', t.id, '✎', false, tr('Rename'), 'icon') +
       (many ? btn('moveTrackUp', t.id, '↑', false, tr('Up'), 'icon' + (k ? '' : ' off')) +
         btn('moveTrackDown', t.id, '↓', false, tr('Down'), 'icon' + (k < ts.length - 1 ? '' : ' off')) : '') +
       btn('duplicateTrack', t.id, '⧉', false, tr('Duplicate track'), 'icon') +
       (many ? btn('deleteTrack', t.id, '✕', false, tr('Delete track'), 'icon') : '') + '</div>').join('');
+    const art = TC.drums.byId(S.input.art);
+    const own = TC.drums.ownKit(cur), ids = TC.drums.kit(cur);
+    const list = own ? Object.keys(TC.DRUM_ELEMENTS).map((el) => {
+      const arts = TC.DRUM_ARTS.filter((a) => a.el === el);
+      const name = de() ? TC.DRUM_ELEMENTS[el].de : TC.DRUM_ELEMENTS[el].en;
+      return `<div class="kit-group"><div class="el-name">${esc(name)}</div>` +
+        arts.map((a) => check('toggleTrackArt', ids.has(a.id), `${esc(de() ? a.de : a.en)} <span class="muted">${esc(a.ab)}</span>`, a.id)).join('') + '</div>';
+    }).join('') : '';
     return `<section><h3>${tr('Tracks')}</h3>
       <div class="track-list">${rows}</div>
-      <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track (e.g. one only for the snare)'))}</div>
-      ${many ? `<p class="hint tight">${tr('You see and write the highlighted track; playback and MIDI export play all of them.')}</p>` : ''}
+      <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track with the whole drum kit'))}
+        ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}</div>
+      <div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
+        <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
+      ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}
+        <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}
+      ${many ? `<p class="hint tight">${tr('Click into a staff or on a name: you write into that track. Playback and MIDI export play all tracks, hidden ones too.')}</p>` : ''}
     </section>`;
   }
 
@@ -252,7 +267,7 @@
     const kit = S.settings.kit;
     const opts = Object.keys(TC.KITS).map((k) => `<option value="${k}"${k === kit ? ' selected' : ''}>${esc(de() ? TC.KITS[k].de : TC.KITS[k].en)}</option>`).join('');
     const notationOpts = Object.keys(TC.NOTATIONS).map((k) => `<option value="${k}"${k === TC.drums.notation ? ' selected' : ''}>${esc(de() ? TC.NOTATIONS[k].de : TC.NOTATIONS[k].en)}</option>`).join('');
-    const ids = TC.drums.kit();
+    const ids = TC.drums.globalKit();
     const list = Object.keys(TC.DRUM_ELEMENTS).map((el) => {
       const arts = TC.DRUM_ARTS.filter((a) => a.el === el);
       const name = de() ? TC.DRUM_ELEMENTS[el].de : TC.DRUM_ELEMENTS[el].en;
@@ -337,6 +352,10 @@
     return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit + delay;
   }
 
+  /** Options of a spacing in % (std: marked as the standard). */
+  const gapOpts = (list, cur, std) => list.map((p) =>
+    `<option value="${p}"${p === cur ? ' selected' : ''}>${p} %${p === std ? ' (' + esc(tr('standard')) + ')' : ''}</option>`).join('');
+
   function pageSection() {
     const pg = S.doc.page;
     const per = [0, 2, 3, 4, 5, 6, 8].map((n) => `<option value="${n}"${n === pg.barsPerLine ? ' selected' : ''}>${n ? n : esc(tr('Automatic'))}</option>`).join('');
@@ -347,6 +366,10 @@
       <div class="row"><label>${tr('Bars per line')}</label><select data-action="setBarsPerLine">${per}</select></div>
       <div class="row"><label>${tr('Bar numbers')}</label><select data-action="setBarNumbers">${nums}</select></div>
       <div class="row"><label>${tr('Margins')}</label><select data-action="setMargin">${margins}</select></div>
+      <div class="row"><label>${tr('Staff spacing')}</label><select data-action="setStaffGap">${gapOpts(TC.STAFF_GAPS, pg.staffGap || 80, 80)}</select></div>
+      <p class="hint tight">${tr('Space between the staves of several tracks (screen and PDF). Below 60 %, notes of full drum kits may touch.')}</p>
+      <div class="row"><label>${tr('Line spacing')}</label><select data-action="setLineGap">${gapOpts(TC.LINE_GAPS, pg.lineGap || 100, 100)}</select></div>
+      <p class="hint tight">${tr('Space between the lines of the page view, where a line breaks (PDF too).')}</p>
       ${check('togglePageHeader', pg.header, tr('Title and page number on the following pages'))}
       ${check('toggleMultiRest', pg.multiRest, tr('Combine empty bars (multi-bar rest)'))}
       <div class="row"><label>${tr('%-bars')}</label><select data-action="setSimileMode">${[['single', 'Each one as it is'], ['count', 'Narrow, counted (2, 3, 4 …)'], ['combine', 'One % with the number']]
@@ -388,7 +411,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join()]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;
@@ -398,14 +421,16 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.doc.tracks.map((t) => t.id + ':' + t.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine])),
       S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
+      const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing; the rest is in the settings window (⚙)
       setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + repeatSection() + playSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
+      if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
     }
     if (dlg) {

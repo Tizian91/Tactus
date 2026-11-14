@@ -239,8 +239,17 @@ Schritte:
    „Spur: …“ (ab zwei Spuren; Klick = nächste). Bis Schritt 2 zeigt die Ansicht nur die aktive Spur. **Abspielen und MIDI-Export
    spielen alle Spuren** zusammen. Kopieren / Einfügen / Verdoppeln von Takten nimmt alle Spuren mit; Takte einfügen / löschen
    gilt für alle. Pausenbereinigung gilt für alle Schlagzeugspuren.
-2. Endlos-Ansicht: Spuren untereinander, gemeinsame Taktstriche; Spuren ein- / ausblenden; Kit pro Spur (Einzellinie)
-3. Seitenansicht / PDF: Partitursystem mit Klammer und Spurnamen, ausgeblendete Spuren nicht gedruckt
+2. ✅ Spuren untereinander (zum Ausprobieren), Endlos- und Seitenansicht / PDF: jede sichtbare Spur eine Notenzeile, eine
+   Linie links verbindet sie, Name über jeder Zeile (die aktive farbig); Taktstriche, Taktart, Wiederholungszeichen in jeder Zeile,
+   Texte / Tempo / Klammern / Sprünge über der obersten. **In eine Zeile klicken = in diese Spur schreiben** (wird aktiv; auch
+   Taktmenü). Drum-Map und Vorschau an der Zeile unter dem Zeiger. Mehrtaktpausen / zusammengefasste % nur, wenn es für alle
+   sichtbaren Spuren gilt. **Ein- / ausblenden** ◉ / ◌ im Panel (ausgeblendete werden weiter gespielt, nicht gedruckt; eine
+   bleibt sichtbar). **Instrumente pro Spur:** „Drum-Kit (⚙)“ oder „Eigene Auswahl“ (Häkchen), dazu **„Eine Notenlinie“**:
+   alle Noten auf der Mittellinie, kurze Taktstriche. **„+ Spur für Snare“** (das gewählte Instrument) legt so eine Spur an.
+   Noten verschiedener Spuren lassen sich nicht zusammen verschieben. ⚙ → Seite → **Abstand der Notenzeilen** (zwischen den Spuren;
+   40–160 %, Standard 80 %; unter 60 % können sich volle Drum-Kits berühren) und **Abstand der Zeilen** (Seitenansicht, wo eine
+   Zeile umbricht; 40–160 %, Standard 100 %), beide mit dem Stück gespeichert, Bildschirm und PDF.
+3. ✅ Seitenansicht / PDF: in Schritt 2 enthalten
 4. Wiedergabe / MIDI: alle Spuren, Stumm / Solo; MIDI-Export eine Spur je Tactus-Spur oder alles auf Kanal 10; Import je Spur
 
 ## Offen zum Ausprobieren

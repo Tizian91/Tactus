@@ -200,10 +200,10 @@
     return new Set(ids.filter((id) => byId.has(id)));
   };
 
-  /** Ids of the drum notes used in a score. */
-  D.usedIds = function (doc) {
+  /** Ids of the drum notes used in a score (or in one track of it). */
+  D.usedIds = function (doc, track) {
     const s = new Set();
-    if (doc) TC.score.eachNote(doc, (n) => { if (n.art) s.add(n.art); });
+    if (doc) TC.score.eachNote(doc, (n, ev, vi, bi, t) => { if (n.art && (!track || t === track)) s.add(n.art); });
     return s;
   };
 
@@ -245,8 +245,8 @@
 
   // ---- With the app state (settings, open score) ---------------------------------------
 
-  /** Instruments of the chosen kit. */
-  D.kit = function () {
+  /** Instruments of the kit chosen in the settings (⚙ → drum kit), for all tracks without a kit of their own. */
+  D.globalKit = function () {
     const st = TC.state.settings;
     if (st.kit === 'profile') {
       // the instruments the drum VST has (kit profile of the score); without a profile: the standard kit
@@ -256,20 +256,64 @@
     return D.kitIds(st.kit, st.kitCustom);
   };
 
-  /** Instruments a click may write: the kit, plus the selected one. */
-  D.clickable = function () {
-    const s = D.kit();
-    s.add(TC.state.input.art);
+  /** The track (default: the one being written) - null without a score. */
+  const trackOr = (track) => (track !== undefined ? track : TC.curTrack ? TC.curTrack() : null);
+  /** Does a track have instruments of its own (track.kit: a list of ids)? */
+  D.ownKit = (track) => !!(track && Array.isArray(track.kit) && track.kit.length);
+  /** One line (e.g. a track only for the snare): every note sits on the middle line. */
+  D.oneLine = (track) => !!(track && track.oneLine && D.ownKit(track));
+
+  /** Instruments of a track: its own, or the kit of the settings. */
+  D.kit = function (track) {
+    track = trackOr(track);
+    if (D.ownKit(track)) return new Set(track.kit.filter((id) => byId.has(id)));
+    return D.globalKit();
+  };
+
+  /** Instruments a click may write: the kit, plus the selected one (a track with its own instruments: only those). */
+  D.clickable = function (track) {
+    track = trackOr(track);
+    const s = D.kit(track);
+    if (!D.ownKit(track)) s.add(TC.state.input.art);
     return s;
   };
 
-  /** Instruments the drum map shows: kit (or only the used ones) + used in the score + selected. */
-  D.mapIds = function () {
-    const used = D.usedIds(TC.state.doc);
-    const s = TC.state.settings.mapUsedOnly ? new Set(used) : D.kit();
+  /** Instruments the drum map shows: kit (or only the used ones) + used in the track + selected. */
+  D.mapIds = function (track) {
+    track = trackOr(track);
+    const used = D.usedIds(TC.state.doc, track);
+    const s = TC.state.settings.mapUsedOnly && !D.ownKit(track) ? new Set(used) : D.kit(track);
     used.forEach((id) => s.add(id));
-    s.add(TC.state.input.art);
+    if (!D.ownKit(track)) s.add(TC.state.input.art);
     return s;
+  };
+
+  /** The line an instrument is drawn on in a track (one-line tracks: the middle line). */
+  D.lineOf = (a, track) => (D.oneLine(track) ? 4 : a ? a.line : 4);
+
+  /**
+   * The instrument a click at staff position `pos` writes in a track (see D.resolve); a one-line
+   * track: its selected instrument (or its first one) near the line.
+   */
+  D.resolveIn = function (pos, track) {
+    track = trackOr(track);
+    if (D.oneLine(track)) {
+      if (Math.abs(pos - 4) > 3) return null;
+      const kit = D.kit(track), sel = TC.state.input.art;
+      return D.byId(kit.has(sel) ? sel : [...kit][0]);
+    }
+    const kit = D.ownKit(track) ? D.kit(track) : null;
+    const sel = kit && !kit.has(TC.state.input.art) ? null : TC.state.input.art;
+    return D.resolve(pos, sel, D.clickable(track));
+  };
+
+  /** The instruments offered on a line of a track (drum map, note menu): one-line tracks: all of theirs. */
+  D.lineArts = function (line, track, extra) {
+    track = trackOr(track);
+    const offer = D.mapIds(track);
+    if (extra) offer.add(extra);
+    if (D.oneLine(track)) return TC.DRUM_ARTS.filter((a) => offer.has(a.id));
+    return D.atLine(line).filter((a) => offer.has(a.id));
   };
 
   /** Name of an articulation in the current language ("Snare – Rimshot"). */
@@ -280,6 +324,13 @@
     if (!de) return a.en;
     if (short || a.el === 'tom' || a.el === 'perc' || a.el === 'kick' || a.de.startsWith(el.de)) return a.de;
     return `${el.de} – ${a.de}`;
+  };
+
+  /** Name of the drum an instrument belongs to ("Snare" for a snare rimshot, "Hi-Hat" …). */
+  D.elName = function (a) {
+    const el = a && TC.DRUM_ELEMENTS[a.el];
+    if (!el) return D.label(a, true);
+    return TC.getLang && TC.getLang() === 'de' ? el.de : el.en;
   };
 
   /** The notehead a drum note is drawn with. */

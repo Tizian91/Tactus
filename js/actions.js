@@ -144,7 +144,7 @@
 
   A.setKit = function (kit) {
     if (!TC.KITS[kit]) return;
-    if (kit === 'custom' && !S.settings.kitCustom) S.settings.kitCustom = [...TC.drums.kit()];
+    if (kit === 'custom' && !S.settings.kitCustom) S.settings.kitCustom = [...TC.drums.globalKit()];
     S.settings.kit = kit;
     TC.saveSettings();
     TC.refresh();
@@ -201,11 +201,71 @@
   /** Write into this track (and show it). */
   A.selectTrack = function (id) {
     const t = trackOf(id);
-    if (!t || t.id === S.trackId) return;
+    if (!t || t === TC.curTrack()) return;
     S.trackId = t.id;
     S.selection.clear();
     S.hover = null;
+    fitArt(t);
     TC.refresh();
+  };
+  /** A track with instruments of its own: the selected instrument becomes one of them. */
+  function fitArt(t) {
+    const kit = TC.drums.kit(t);
+    if (TC.drums.ownKit(t) && !kit.has(S.input.art)) S.input.art = [...kit][0];
+  }
+  /** A new track only for the selected instrument (one line, named after it), e.g. a snare part. */
+  A.addTrackFor = function () {
+    const art = TC.drums.byId(S.input.art);
+    if (!art) return;
+    const t = TC.score.addTrack(S.doc, TC.score.freeTrackName(S.doc, TC.drums.elName(art)), TC.curTrack());
+    t.kit = [art.id];
+    t.oneLine = true;
+    S.trackId = t.id;
+    S.selection.clear();
+    TC.commit();
+    TC.ui.hint(tr('Track "{name}" added - you are writing into it now', { name: t.name }));
+  };
+  /** Show / hide a track (still played; the one being written goes to a shown one). */
+  A.toggleTrackHidden = function (id) {
+    const t = trackOf(id);
+    if (!t.hidden && S.doc.tracks.filter((x) => !x.hidden).length < 2) return TC.ui.hint(tr('At least one track stays visible'));
+    t.hidden = !t.hidden;
+    if (t.hidden && t === TC.curTrack()) {
+      S.trackId = S.doc.tracks.find((x) => !x.hidden).id;
+      S.selection.clear();
+      fitArt(TC.curTrack());
+    }
+    TC.commit();
+  };
+  /** Instruments of the track being written: 'kit' (those of the settings) or 'own' (a list of its own). */
+  A.setTrackKit = function (v) {
+    const t = TC.curTrack();
+    if (v === 'own' && !TC.drums.ownKit(t)) t.kit = [...TC.drums.kit(t)];
+    else if (v === 'kit') {
+      t.kit = null;
+      t.oneLine = false;
+    } else return;
+    TC.commit();
+  };
+  /** An instrument in / out of the own instruments of the track being written (one stays). */
+  A.toggleTrackArt = function (id) {
+    id = Number(id);
+    const t = TC.curTrack(), ids = TC.drums.kit(t);
+    if (ids.has(id)) {
+      if (ids.size < 2) return TC.ui.hint(tr('One instrument stays'));
+      ids.delete(id);
+    } else ids.add(id);
+    t.kit = [...ids];
+    fitArt(t);
+    TC.commit();
+  };
+  /** One staff line for the track being written (its own instruments; without any: the selected one). */
+  A.toggleTrackOneLine = function () {
+    const t = TC.curTrack();
+    if (!TC.drums.ownKit(t)) t.kit = [S.input.art];
+    t.oneLine = !t.oneLine;
+    fitArt(t);
+    TC.commit();
   };
   /** The next track (status bar, cycles). */
   A.nextTrack = function () {
@@ -251,7 +311,7 @@
   /** Instrument in / out of the kit (the kit becomes a custom one). */
   A.toggleKitArt = function (id) {
     id = Number(id);
-    const ids = TC.drums.kit();
+    const ids = TC.drums.globalKit();
     if (ids.has(id)) ids.delete(id);
     else ids.add(id);
     S.settings.kitCustom = [...ids];
@@ -654,6 +714,20 @@
     n = TC.clamp(Math.round(Number(n) || 0), 0, 12);
     if (S.doc.page.barsPerLine === n) return;
     S.doc.page.barsPerLine = n;
+    TC.commit();
+  };
+  /** Space between the staves of several tracks (% of the standard): part of the score, like the margins. */
+  A.setStaffGap = function (p) {
+    p = Number(p);
+    if (!TC.STAFF_GAPS.includes(p) || (S.doc.page.staffGap || 80) === p) return;
+    S.doc.page.staffGap = p;
+    TC.commit();
+  };
+  /** Space between the lines of the page view (% of the basic space). */
+  A.setLineGap = function (p) {
+    p = Number(p);
+    if (!TC.LINE_GAPS.includes(p) || (S.doc.page.lineGap || 100) === p) return;
+    S.doc.page.lineGap = p;
     TC.commit();
   };
   /** Page margins in mm (page view / PDF). */

@@ -97,9 +97,9 @@ module.exports = function (T) {
     tracks: [{ kind: 'drums' }], page: { barsPerLine: 4, barNumbers: 'every' } });
   T.eq('page: markers and line breaks loaded (bar 1 never breaks)',
     pd.bars.map((h) => [h.marker, h.lineBreak]), [['Intro', false], ['Chorus', true], ['', false]]);
-  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every', margin: 15, header: true, multiRest: true, simile: 'combine' });
+  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 });
   T.eq('page: defaults and bad values', [TC.emptyScore(1).page, TC.normalizeDoc({ bars: [{}], page: { barsPerLine: 99, barNumbers: 'x', margin: 13, header: 'no' } }).page],
-    [{ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine' }, { barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine' }]);
-  T.eq('page: margin and running header loaded', TC.normalizeDoc({ bars: [{}], page: { margin: 25, header: false, multiRest: true, simile: 'combine' } }).page,
-    { barsPerLine: 0, barNumbers: 'system', margin: 25, header: false, multiRest: true, simile: 'combine' });
+    [{ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 }, { barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 }]);
+  T.eq('page: margin and running header loaded', TC.normalizeDoc({ bars: [{}], page: { margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 } }).page,
+    { barsPerLine: 0, barNumbers: 'system', margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 });
 };

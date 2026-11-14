@@ -15,7 +15,8 @@ setTimeout(() => {
   TC.actions.setNotation('gp');                                // positions below are Guitar Pro lines
   const click = (bar, tick, line, opts = {}) => {
     const L = TC.render.layout, b = L.bars[bar], v = S.doc.view, r = vp.getBoundingClientRect();
-    const wx = TC.render.tickX(b, tick) + (opts.dx || 0), wy = TC.render.stepY(line) + (opts.dy || 0);
+    const z = L.staves.find((q) => q.track === (opts.track || TC.curTrack())) || L.staves[0]; // the staff of the track being written
+    const wx = TC.render.tickX(b, tick) + (opts.dx || 0), wy = z.dy + TC.render.stepY(line) + (opts.dy || 0);
     const cx = r.left + v.x + wx * v.zoom, cy = r.top + v.y + wy * v.zoom;
     const init = { clientX: cx, clientY: cy, button: 0, buttons: 1, bubbles: true, pointerId: 1, shiftKey: !!opts.shift };
     vp.dispatchEvent(new PointerEvent('pointermove', init));
@@ -573,6 +574,42 @@ setTimeout(() => {
     TC.actions.undo();
     TC.actions.undo();
     ok('tracks: undo back to one track', S.doc.tracks.length === 1 && TC.curTrack() === S.doc.tracks[0]);
+    // several staves: a track only for the snare (one line), click into the other staff, hide / show
+    const drums = S.doc.tracks[0], drumsBefore = JSON.stringify(drums.bars);
+    TC.actions.setArt(38);
+    TC.actions.addTrackFor();
+    const sn2 = TC.curTrack();
+    ok('staves: "+ track for snare": own kit [snare], one line, two staves', sn2.kit.join() === '38' && sn2.oneLine && TC.render.layout.staves.length === 2 &&
+      TC.render.layout.staves[1].dy > 0 && TC.render.layout.staves[1].one);
+    ok('staves: names above the staves', document.querySelectorAll('#score .staff-name').length === 2);
+    click(1, 0, 4);
+    ok('staves: a click on the one line writes the snare into its track', sn2.bars[1].voices.flat().map((e) => e.notes[0].art).join() === '38' && JSON.stringify(drums.bars) === drumsBefore);
+    ok('staves: its head sits on the middle line of the lower staff', TC.render.layout.heads.some((h) => h.track === sn2 && h.line === 4 && h.dy === TC.render.layout.staves[1].dy));
+    const d1 = drums.bars[1].voices.flat().length;
+    click(1, 960, 3, { track: drums });
+    ok('staves: a click into the upper staff makes it the track being written and writes there ' + [TC.curTrack().name, drums.bars[1].voices.flat().length, sn2.bars[1].voices.flat().length], TC.curTrack() === drums && drums.bars[1].voices.flat().length === d1 + 1 && sn2.bars[1].voices.flat().length === 1);
+    TC.actions.toggleTrackHidden(sn2.id);
+    ok('staves: hidden track: one staff, still in the score', TC.render.layout.staves.length === 1 && S.doc.tracks.length === 2);
+    TC.actions.toggleTrackHidden(drums.id);
+    ok('staves: the last visible track cannot be hidden', !drums.hidden);
+    TC.actions.toggleTrackHidden(sn2.id);
+    ok('staves: shown again', TC.render.layout.staves.length === 2);
+    TC.actions.toggleLayout();
+    ok('page view: both staves in every line', TC.render.layout.page && TC.render.layout.systems.every((s) => s.above && TC.render.layout.stackH > 8 * TC.render.SP));
+    const sysGap = () => { const ss = TC.render.layout.systems; return ss.length > 1 ? ss[1].ty - ss[0].ty : 0; };
+    const g100 = sysGap();
+    TC.actions.setLineGap(50);
+    ok('line spacing 50 %: the lines of the page view move closer (' + [Math.round(sysGap()), Math.round(g100)] + ')', g100 > 0 && sysGap() < g100);
+    TC.actions.setLineGap(100);
+    const dy100 = TC.render.layout.staves[1].dy;
+    TC.actions.setStaffGap(60);
+    const dy60 = TC.render.layout.staves[1].dy;
+    TC.actions.setStaffGap(160);
+    ok('staff spacing 60 % / 160 %: the lower staff moves up / down (' + [dy60, dy100, TC.render.layout.staves[1].dy].map(Math.round) + ')', dy60 < dy100 && TC.render.layout.staves[1].dy > dy100);
+    TC.actions.setStaffGap(100);
+    TC.actions.toggleLayout();
+    for (let k = 0; k < 6; k++) TC.actions.undo();
+    ok('staves: undo back to one track (' + S.doc.tracks.length + ')', S.doc.tracks.length === 1 && JSON.stringify(S.doc.tracks[0].bars) === drumsBefore);
     const sk = document.getElementById('status-kit');
     ok('status bar: kit General MIDI for a new score (' + sk.textContent + ')', /General MIDI/.test(sk.textContent));
     const saveKits = TC.kits.save; TC.kits.save = () => true;

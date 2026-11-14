@@ -78,4 +78,37 @@ module.exports = function (T) {
     [names(), doc.tracks.map((t) => t.id), ['960:38'], [false, false, true]]);
   const one = TC.emptyScore(1);
   T.eq('the last track is not deleted', SC.deleteTrack(one, one.tracks[0]), false);
+
+  // instruments of a track: the kit of the settings, or its own (one line)
+  const D = TC.drums;
+  S.settings.kit = 'standard';
+  S.input.art = 42;
+  T.eq('a new track: the kit of the settings', [drums.kit, D.ownKit(drums), D.kit(drums).has(42), D.kit(drums).size === D.globalKit().size], [null, false, true, true]);
+  snare.kit = [38, 37];
+  T.eq('own instruments', [D.ownKit(snare), [...D.kit(snare)].sort()], [true, [37, 38]]);
+  T.eq('a click in a track with its own instruments: not the hi-hat selected elsewhere', [D.clickable(snare).has(42), D.clickable(drums).has(42)], [false, true]);
+  T.eq('… the line of the snare gives the snare, the hi-hat line nothing near', [D.resolveIn(3, snare).id, D.resolveIn(-1, snare)], [38, null]);
+  T.eq('without one line: instruments on their lines', [D.oneLine(snare), D.lineOf(D.byId(38), snare)], [false, D.byId(38).line]);
+  snare.oneLine = true;
+  T.eq('one line: every instrument on the middle line', [D.oneLine(snare), D.lineOf(D.byId(38), snare), D.lineOf(D.byId(37), snare)], [true, 4, 4]);
+  T.eq('one line: near the line its instrument (the selected one if it has it)', [D.resolveIn(4.8, snare).id, (S.input.art = 37, D.resolveIn(3.5, snare).id), D.resolveIn(9, snare)], [38, 37, null]);
+  S.input.art = 42;
+  T.eq('one line: the drum map / menu offers all of its instruments', D.lineArts(4, snare).map((a) => a.id).sort(), [37, 38]);
+  T.eq('one line without own instruments does not count', D.oneLine({ oneLine: true, kit: null }), false);
+  T.eq('drum name of an instrument (track names)', [D.elName(D.byId(37)), D.elName(D.byId(42))].map((s) => s.toLowerCase()), ['snare', 'hi-hat']);
+
+  // hidden, saved, loaded, shared
+  cym.hidden = true;
+  const saved = TC.normalizeDoc(JSON.parse(JSON.stringify(doc)));
+  const sv = saved.tracks.find((t) => t.name === 'Snare'), cv = saved.tracks.find((t) => t.name === 'Drums 2');
+  T.eq('saved and loaded: own instruments, one line, hidden', [sv.kit.slice().sort(), sv.oneLine, cv.hidden, saved.tracks[0].kit, saved.tracks[0].hidden], [[37, 38], true, true, null, false]);
+  const allHidden = TC.normalizeDoc({ bars: [{}], tracks: [{ kind: 'drums', hidden: true, bars: [] }, { kind: 'drums', hidden: true, bars: [] }] });
+  T.eq('all tracks hidden in a file: the first one is shown', allHidden.tracks.map((t) => t.hidden), [false, true]);
+  T.eq('bad instruments are dropped, one line needs instruments', TC.normalizeDoc({ bars: [{}], tracks: [{ kind: 'drums', kit: [9999], oneLine: true, bars: [] }] }).tracks[0].kit, null);
+
+  // notes of two tracks do not move together
+  const mixed = [drums.bars[0].voices.flat()[0].notes[0].id, snare.bars[0].voices.flat()[0].notes[0].id];
+  T.eq('moving notes of two tracks: refused', SC.moveNotes(doc, mixed, 480), false);
+  T.eq('staff spacing: kept when loaded, bad values: 80 % (standard)', [TC.normalizeDoc({ bars: [{}], page: { staffGap: 40 } }).page.staffGap, TC.normalizeDoc({ bars: [{}], page: { staffGap: 55 } }).page.staffGap, TC.emptyScore(1).page.staffGap], [40, 80, 80]);
+  T.eq('line spacing: kept when loaded, bad values: 100 % (standard)', [TC.normalizeDoc({ bars: [{}], page: { lineGap: 60 } }).page.lineGap, TC.normalizeDoc({ bars: [{}], page: { lineGap: 33 } }).page.lineGap, TC.emptyScore(1).page.lineGap], [60, 100, 100]);
 };

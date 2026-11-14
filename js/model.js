@@ -11,7 +11,8 @@
  *     tracks: [ Track ],
  *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off',
  *               margin: 10 … 30 (mm), header: true (title and page number on the pages after the first),
- *               multiRest: true (empty bars in a row as one multi-bar rest), simile: 'combine' (%-bars in a row: one % with the number) | 'count' (each narrow, counted 2, 3 …) | 'single' }   page view / PDF
+ *               multiRest: true (empty bars in a row as one multi-bar rest), simile: 'combine' (%-bars in a row: one % with the number) | 'count' (each narrow, counted 2, 3 …) | 'single',
+ *               staffGap: 80 (space between the staves of several tracks, %), lineGap: 100 (between the lines of the page view, %) }   page view / PDF
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
@@ -26,7 +27,7 @@
  *                end: '' | 'fine' | 'toCoda'   at the end: Fine (after a jump: the end), To Coda (after a jump: on to ⊕)
  *                jump: '' | 'dc' | 'dcFine' | 'dcCoda' | 'ds' | 'dsFine' | 'dsCoda'   at the end: back to bar 1 / 𝄋
  *                jumpRep: false          after the jump the repeats are played again (default: once, last ending) }
- *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill,
+ *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false } ] }       // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
@@ -95,7 +96,10 @@
   TC.MARKS = ['segno', 'coda'];
   TC.ENDS = ['fine', 'toCoda'];
   TC.JUMPS = ['dc', 'dcFine', 'dcCoda', 'ds', 'dsFine', 'dsCoda'];
-  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine' });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 });
+  // space between the staves of several tracks / between the lines of the page view, % of the basic space
+  TC.STAFF_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
+  TC.LINE_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
   TC.SIMILE_MODES = ['single', 'count', 'combine'];
   TC.MARGINS = [10, 12, 15, 20, 25, 30];
   TC.BAR_NUMBERS = ['system', 'every', 'off'];
@@ -153,6 +157,9 @@
       program: 0,
       volume: 100,
       fill: kind === 'drums' ? 'beat' : 'off', // rest cleanup on screen (rhythm.js R.ends): beat | next | off
+      kit: null,         // instruments of its own (ids; e.g. only the snare), null = the kit of the settings
+      oneLine: false,    // with instruments of its own: one staff line, every note on it
+      hidden: false,     // not shown (still played)
       bars: [],
     };
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
@@ -226,6 +233,8 @@
     if (Number.isInteger(pg.barsPerLine) && pg.barsPerLine >= 0 && pg.barsPerLine <= 12) doc.page.barsPerLine = pg.barsPerLine;
     if (TC.BAR_NUMBERS.includes(pg.barNumbers)) doc.page.barNumbers = pg.barNumbers;
     if (TC.MARGINS.includes(pg.margin)) doc.page.margin = pg.margin;
+    if (TC.STAFF_GAPS.includes(pg.staffGap)) doc.page.staffGap = pg.staffGap;
+    if (TC.LINE_GAPS.includes(pg.lineGap)) doc.page.lineGap = pg.lineGap;
     if (pg.header === false) doc.page.header = false;
     if (pg.multiRest === false) doc.page.multiRest = false;
     if (TC.SIMILE_MODES.includes(pg.simile)) doc.page.simile = pg.simile;
@@ -240,6 +249,10 @@
       out.program = TC.clamp(Math.round(num(t.program, 0)), 0, 127);
       out.volume = TC.clamp(Math.round(num(t.volume, 100)), 0, 127);
       if (['beat', 'next', 'off'].includes(t.fill)) out.fill = t.fill;
+      if (Array.isArray(t.kit)) out.kit = [...new Set(t.kit.map(Number).filter((id) => TC.drums && TC.drums.byId(id)))];
+      if (out.kit && !out.kit.length) out.kit = null;
+      out.oneLine = !!t.oneLine && !!out.kit;
+      out.hidden = !!t.hidden;
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
         const bar = TC.newTrackBar();
@@ -259,6 +272,7 @@
       return out;
     });
     if (!doc.tracks.length) doc.tracks.push(TC.newTrack('drums', doc.bars.length));
+    if (doc.tracks.every((t) => t.hidden)) doc.tracks[0].hidden = false; // one track is always shown
     doc.tracks.forEach((t) => doc.bars.forEach((h, i) => TC.score.fitBar(doc, t, i)));
     if (raw.view && typeof raw.view === 'object') {
       doc.view = { x: num(raw.view.x, 40), y: num(raw.view.y, 140), zoom: TC.clamp(num(raw.view.zoom, 1), 0.25, 4) };
@@ -630,6 +644,7 @@
   SC.moveNotes = function (doc, ids, delta, art) {
     const first = ids.length && SC.findNote(doc, ids[0]);
     const track = first ? first.track : doc.tracks[0], moving = new Set(ids), items = [], slots = new Set();
+    if (ids.some((id) => { const h = SC.findNote(doc, id); return h && h.track !== track; })) return false; // notes of several tracks do not move together
     for (const id of ids) {
       const h = SC.findNote(doc, id);
       if (!h) continue;

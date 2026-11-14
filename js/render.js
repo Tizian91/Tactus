@@ -52,6 +52,7 @@
   const ACCENT = { 1: ['', '', 1.356], 2: ['', '', 0.94] };
 
   let svg, world, stat, hov, play, selg;
+  let staffNow = null; // the staff drawVoice draws into (its heads remember the track and the staff)
 
   RD.init = function () {
     svg = document.getElementById('score');
@@ -76,13 +77,13 @@
     selg.innerHTML = rect(x, y, Math.abs(r.x2 - r.x1), Math.abs(r.y2 - r.y1), 'sel-frame');
   };
 
-  /** The drawn noteheads with their position in view coordinates (all lines of the page view). */
+  /** The drawn noteheads with their position in view coordinates (all lines of the page view, all staves). */
   RD.headsInView = function () {
     const L = RD.layout;
     if (!L) return [];
     return L.heads.map((h) => {
       const s = L.systems[L.bars[h.bar].sys];
-      return Object.assign({}, h, { wx: h.x + s.tx, wy: h.y + s.ty });
+      return Object.assign({}, h, { wx: h.x + s.tx, wy: h.y + (h.dy || 0) + s.ty });
     });
   };
 
@@ -99,14 +100,14 @@
       play.innerHTML = '';
       return null;
     }
-    const b = L.bars[bar], s = L.systems[b.sys], x = RD.tickX(b, tick);
-    let html = onLine(s, rect(b.x, -3.5 * SP, b.w, 11 * SP, 'play-bar') + rect(x - 1, -3.5 * SP, 2, 11 * SP, 'play-cursor'));
+    const b = L.bars[bar], s = L.systems[b.sys], x = RD.tickX(b, tick), hh = L.stackH + 7 * SP; // over all staves
+    let html = onLine(s, rect(b.x, -3.5 * SP, b.w, hh, 'play-bar') + rect(x - 1, -3.5 * SP, 2, hh, 'play-cursor'));
     if (loop && L.bars[loop[0]] && L.bars[loop[1]]) {
       const a = L.bars[loop[0]], z = L.bars[loop[1]];
       for (let k = a.sys; k <= z.sys; k++) {
         const sy = L.systems[k];
         const x1 = k === a.sys ? a.x : L.bars[sy.first].x, x2 = k === z.sys ? z.x + z.w : sy.end;
-        html += onLine(sy, rect(x1 + 1, -4 * SP, x2 - x1 - 2, 12 * SP, 'loop-range'));
+        html += onLine(sy, rect(x1 + 1, -4 * SP, x2 - x1 - 2, hh + SP, 'loop-range'));
       }
     }
     play.innerHTML = html;
@@ -135,8 +136,33 @@
   /** Name of a swing amount (%), as written above the first bar. */
   RD.swingName = (a) => (a < 60 ? 'Light swing' : a < 65 ? 'Swing' : a < 71 ? 'Shuffle' : 'Hard shuffle');
 
-  /** Does a bar write sticking under the staff? */
-  const hasSticking = (b) => b.voices.some((items) => items.some((it) => it.kind === 'note' && it.ev.notes.some((n) => n.stick)));
+  /** Does a bar (of one track: b.parts[k]) write sticking under the staff? */
+  const hasSticking = (p) => p.voices.some((items) => items.some((it) => it.kind === 'note' && it.ev.notes.some((n) => n.stick)));
+
+  // Several tracks: one staff each, under each other in every line ("system"), sharing the bar lines.
+  // A staff k is drawn at translate(0, dy) inside its line; its notes keep staff coordinates (y from
+  // its own top line), so RD.toLocal() also says which staff a point is on.
+  const STAFF_ABOVE = 5 * SP;     // room above a staff under another one (notes and accents above it)
+  const staffBelow = (under) => (under ? 12.4 : 8.4) * SP; // … below a staff (with sticking / counting)
+  /** The tracks with a staff: every shown one (the one being written always). */
+  RD.shownTracks = (doc) => doc.tracks.filter((t) => !t.hidden || t === TC.curTrack());
+  /** The staves of the shown tracks (bars: their parts in the same order). */
+  function staves(tracks, bars) {
+    // the space between two staves (below the one, above the next): ⚙ → Page, % of the standard
+    const gap = ((S.doc.page && S.doc.page.staffGap) || 80) / 100;
+    let dy = 0;
+    return tracks.map((track, k) => {
+      const under = !!S.settings.showCounts || bars.some((b) => hasSticking(b.parts[k]));
+      const z = { k, track, dy, one: TC.drums.oneLine(track), below: staffBelow(under) };
+      dy += 4 * SP + (z.below + STAFF_ABOVE) * gap;
+      return z;
+    });
+  }
+  /** Is bar b a %-bar in a track (default: the one being written)? */
+  RD.simileAt = (b, track) => {
+    const p = track && b.parts ? b.parts.find((q) => q.track === track) : null;
+    return p ? p.simile : !!b.simile;
+  };
 
   /** Height of the title block on the first page. */
   function headerHeight(meta) {
@@ -151,15 +177,15 @@
   const SIMILE_W = 5 * SP; // width of a narrow, counted %-bar
 
   /**
-   * Multi-bar rests: runs of at least two bars without a note in any track, as [first bar, count].
+   * Multi-bar rests: runs of at least two bars without a note in any shown track, as [first bar, count].
    * The first bar may start with a time signature, tempo, text, |: or a new line; a bar with any of
    * those (or an ending, :|, %) inside the run ends it, as in printed parts.
    */
   RD.multiRests = function (doc, bars, simile = false) {
     const plain = (i) => !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) && !doc.bars[i].end && !doc.bars[i].jump;
     // simile: runs of %-bars instead (one % with the number of bars above)
-    const fits = simile ? (i) => i > 0 && doc.tracks.every((t) => !!t.bars[i].simile) && plain(i) // % in every track
-      : (i) => plain(i) && doc.tracks.every((t) => !t.bars[i].simile && t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
+    const fits = simile ? (i) => i > 0 && bars[i].parts.every((p) => p.simile) && plain(i) // % in every shown track
+      : (i) => plain(i) && bars[i].parts.every(({ track: t }) => !t.bars[i].simile && t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
     const opens = (i) => bars[i].showTs || bars[i].tempo || doc.bars[i].marker || doc.bars[i].repeatStart || doc.bars[i].lineBreak || doc.bars[i].mark;
     const out = [];
     for (let i = 0; i < doc.bars.length;) {
@@ -174,21 +200,30 @@
 
   /** Positions of all bars and lines, the notation items of every voice. */
   RD.computeLayout = function () {
-    const doc = S.doc, track = TC.curTrack(), page = RD.isPage(), MARGIN = margin();
+    const doc = S.doc, cur = TC.curTrack(), page = RD.isPage(), MARGIN = margin();
     const grid = TC.gridTicks(S.input);
+    const tracks = RD.shownTracks(doc);
     const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');
-      const simile = !!track.bars[i].simile && i > 0; // "%": repeats the bar before, no notes of its own
-      const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam, track.fill));
+      // every shown track: its notes in this bar, or "%" (repeats its bar before, no notes of its own)
+      const parts = tracks.map((track) => {
+        const simile = !!track.bars[i].simile && i > 0;
+        const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam, track.fill));
+        return { track, simile, voices };
+      });
       let finest = L;
-      voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); }));
+      parts.forEach((p) => p.voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); })));
       // endless: a finer click grid widens the bar; page: the notes alone decide (as printed)
       const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
       const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : 0;
-      return { i, L, ts: h.ts, beam: h.beam, simile, scale, showTs, rs, re, volta: h.volta || null,
-        tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '' };
+      const own = parts.find((p) => p.track === cur) || parts[0];
+      // simile / voices: of the track being written; allSimile: "%" in every staff (one % with a number)
+      return { i, L, ts: h.ts, beam: h.beam, simile: own.simile, allSimile: parts.every((p) => p.simile), parts, scale, showTs, rs, re, volta: h.volta || null,
+        tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '' };
     });
+    const sv = staves(tracks, bars), lastSv = sv[sv.length - 1];
+    const stackH = lastSv.dy + 4 * SP; // top line of the first staff to the bottom line of the last one
     // a tempo change shows "♩ = 140" above its bar
     let run = doc.meta.tempo;
     bars.forEach((b, i) => {
@@ -204,7 +239,7 @@
     // (or each %-bar narrow, counted: the bar it repeats is 1, then 2, 3 …)
     if (page && doc.page.simile === 'count') {
       bars.forEach((b, i) => {
-        if (!b.simile) return;
+        if (!b.allSimile) return;
         b.simileN = bars[i - 1].simileN ? bars[i - 1].simileN + 1 : 2;
         b.scale = SIMILE_W / b.L;
       });
@@ -265,10 +300,13 @@
       s.end = ux;
       if (page) {
         const text = k === 0 || ln.some((b) => b.marker || b.tempo || b.mark || b.end || b.jump); // the first line carries the tempo
-        const under = S.settings.showCounts || ln.some(hasSticking);
-        s.above = (text ? 9.8 : 7.2) * SP;
-        s.below = (under ? 12.4 : 8.4) * SP;
-        const h = s.above + 4 * SP + s.below;
+        const under = S.settings.showCounts || ln.some((b) => hasSticking(b.parts[lastSv.k])); // (of the lowest staff)
+        // the space between two lines (above the first staff, below the last one): ⚙ → Page, % of the basic space
+        const lg = (doc.page.lineGap || 100) / 100;
+        s.above = (text ? 9.8 : 7.2) * SP * lg;
+        if (k === 0) s.above = Math.max(s.above, 9.8 * SP); // (the first line: room for the tempo under the title)
+        s.below = staffBelow(under) * lg;
+        const h = s.above + stackH + s.below;
         if (yRel + h > PAGE_H - MARGIN && yRel > MARGIN + 1) {
           pageNo++;
           pages.push({ y: pageNo * (PAGE_H + PAGE_GAP) });
@@ -294,7 +332,7 @@
     }
     const last = systems[systems.length - 1];
     RD.layout = {
-      bars, systems, pages, page, grid, margin: MARGIN, heads: [], map: [], mapSys: 0,
+      bars, systems, pages, page, grid, margin: MARGIN, heads: [], map: [], mapSys: 0, mapTrack: null, staves: sv, stackH,
       width: page ? PAGE_W : last.end,
       add: { x: last.end + 1.5 * SP, y: 0, w: 3 * SP, h: 4 * SP },
     };
@@ -312,14 +350,19 @@
     for (const s of L.systems) {
       const lx = p.x - s.tx, ly = p.y - s.ty;
       if (L.page && (lx < s.ox - 12 * SP || lx > s.end + 6 * SP)) continue;
-      const d = ly < -s.above ? -s.above - ly : ly > 4 * SP + s.below ? ly - 4 * SP - s.below : 0;
+      const d = ly < -s.above ? -s.above - ly : ly > L.stackH + s.below ? ly - L.stackH - s.below : 0;
       if (d < bd) {
         bd = d;
         best = s;
       }
     }
     if (!best || bd > 2 * SP) return null;
-    return { x: p.x - best.tx, y: p.y - best.ty, sys: best };
+    // the staff: the last one whose top (with the room for notes above it) is above the point
+    const ly = p.y - best.ty;
+    let st = L.staves[0];
+    // (close staves: the gap between them is shared half and half)
+    L.staves.forEach((z, k) => { if (k && ly >= z.dy - Math.min(4.2 * SP, (z.dy - L.staves[k - 1].dy - 4 * SP) / 2)) st = z; });
+    return { x: p.x - best.tx, y: ly - st.dy, sys: best, staff: st, track: st.track };
   };
 
   /** x of a tick in a bar. */
@@ -344,10 +387,11 @@
   /** Staff position (half spaces from the top line, fractional) of world y. */
   RD.posAt = (y) => y / (SP / 2);
 
-  /** The drawn notehead nearest to a world point (within reach), or null. */
+  /** The drawn notehead nearest to a point in staff coordinates (within reach, on the staff of p.track), or null. */
   RD.headAt = function (p) {
     let best = null, bd = 0.85 * SP;
     for (const h of RD.layout ? RD.layout.heads : []) {
+      if (p.track && h.track !== p.track) continue;
       const d = Math.hypot((p.x - h.x) * 0.8, p.y - h.y);
       if (d < bd) {
         bd = d;
@@ -377,9 +421,13 @@
     const L = RD.computeLayout();
     const doc = S.doc, page = L.page;
     const out = [];
-    const lines = L.systems.map(() => []); // markup of each line, in staff coordinates
+    const lines = L.systems.map(() => []); // markup of each line, in staff coordinates (of the first staff)
     const O = (b) => lines[b.sys];
+    // … and of each staff of each line, in its own staff coordinates (drawn at translate(0, dy))
+    const staffOut = L.systems.map(() => L.staves.map(() => []));
+    const OS = (b, z) => staffOut[b.sys][z.k];
     const top = -3.5 * SP, bottom = 7.5 * SP;
+    const cur = TC.curTrack(), many = L.staves.length > 1;
 
     // pages, title, tempo
     const meta = doc.meta;
@@ -430,63 +478,84 @@
     if (R) {
       for (let i = R[0]; i <= R[1]; i++) {
         const b = L.bars[i];
-        if (b) O(b).push(rect(b.x, top, b.w, bottom - top, 'bar-sel'));
+        if (b) O(b).push(rect(b.x, top, b.w, L.stackH - 4 * SP + bottom - top, 'bar-sel'));
       }
     }
-    const selArt = TC.drums.byId(S.input.art);
-    if (!print && selArt) L.systems.forEach((s) => lines[s.i].push(rect(s.ox, stepY(selArt.line) - SP / 4, s.end - s.ox, SP / 2, 'line-band')));
+    // the line of the selected instrument, in the staff being written
+    const selArt = TC.drums.byId(S.input.art), cz = L.staves.find((z) => z.track === cur);
+    if (!print && selArt && cz && TC.drums.clickable(cur).has(selArt.id)) {
+      const y = cz.dy + stepY(TC.drums.lineOf(selArt, cur));
+      L.systems.forEach((s) => lines[s.i].push(rect(s.ox, y - SP / 4, s.end - s.ox, SP / 2, 'line-band')));
+    }
 
-    // grid
-    for (const b of print ? [] : L.bars) {
-      if (b.simile || b.hidden !== undefined) continue;
-      const beat = TC.rhythm.beatTicks(b.ts);
-      const G = TC.rhythm.groupSpans(b.ts, b.beam);
-      const starts = G && new Set(G.map((g) => g[0])); // odd meters: the beam groups are the strong lines
-      for (let t = 0; t < b.L; t += L.grid) {
-        const x = RD.tickX(b, t);
-        O(b).push(line(x, top + SP, x, bottom - SP, (starts ? starts.has(t) : t % beat === 0) ? 'grid beat' : 'grid'));
+    // grid (every staff, not in its %-bars)
+    for (const z of print ? [] : L.staves) {
+      for (const b of L.bars) {
+        if (b.parts[z.k].simile || b.hidden !== undefined) continue;
+        const beat = TC.rhythm.beatTicks(b.ts);
+        const G = TC.rhythm.groupSpans(b.ts, b.beam);
+        const starts = G && new Set(G.map((g) => g[0])); // odd meters: the beam groups are the strong lines
+        for (let t = 0; t < b.L; t += L.grid) {
+          const x = RD.tickX(b, t);
+          OS(b, z).push(line(x, top + SP, x, bottom - SP, (starts ? starts.has(t) : t % beat === 0) ? 'grid beat' : 'grid'));
+        }
       }
     }
 
-    // staff: every line starts with the clef
+    // staves: every line starts with the clef; one-line tracks: one line (in the middle)
     for (const s of L.systems) {
-      for (let k = 0; k < 5; k++) lines[s.i].push(line(s.ox, k * SP, s.end, k * SP, 'staff'));
-      lines[s.i].push(glyph('', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
+      for (const z of L.staves) {
+        const o = staffOut[s.i][z.k];
+        for (let k = z.one ? 2 : 0; k < (z.one ? 3 : 5); k++) o.push(line(s.ox, k * SP, s.end, k * SP, 'staff'));
+        o.push(glyph('', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
+        // several staves: the name of the track above its staff (the one being written in colour)
+        if (many) o.push(`<text class="staff-name${z.track === cur && !print ? ' cur' : ''}" x="${f(s.ox)}" y="${f((z.one ? 0.4 : -1.0) * SP)}">${esc(z.track.name)}</text>`);
+      }
+      if (many) {
+        // the staves of a line belong together: a line at the left joins them
+        const z0 = L.staves[0], zl = L.staves[L.staves.length - 1];
+        lines[s.i].push(line(s.ox, z0.one ? SP : 0, s.ox, zl.dy + (zl.one ? 3 : 4) * SP, 'barline'));
+      }
     }
     // bar numbers: endless view every bar (to find your way); page view as chosen
     const numbers = page ? doc.page.barNumbers : 'every';
     L.bars.forEach((b, i) => {
       if (b.hidden !== undefined) return; // inside a multi-bar rest
       const o = O(b), s = L.systems[b.sys], lastOf = b.multi ? i + b.multi - 1 : i;
-      if (b.showTs) {
-        const num = String(b.ts[0]), den = String(b.ts[1]);
-        const put = (str, y) => {
-          const w = str.length * 1.9 * SP;
-          let x = b.x + (b.rs ? REP_W : 0) + TS_W / 2 - w / 2 + 0.05 * SP;
-          for (const d of str) {
-            o.push(glyph(TS_DIGIT(+d), x, y));
-            x += 1.9 * SP;
-          }
-        };
-        put(num, SP);
-        put(den, 3 * SP);
-      }
       const end = b.x + b.w;
-      const dots = (x) => [1.5, 2.5].map((y) => `<circle class="repeat-dot" cx="${f(x)}" cy="${f(y * SP)}" r="${f(0.22 * SP)}"/>`).join('');
-      if (b.rs) {
-        // |: thick line, thin line, two dots
-        o.push(rect(b.x, 0, 0.5 * SP, 4 * SP, 'barline-thick'), line(b.x + 0.85 * SP, 0, b.x + 0.85 * SP, 4 * SP, 'barline'), dots(b.x + 1.25 * SP));
+      // in every staff: time signature, bar line, repeat signs (one-line staves: shorter lines)
+      for (const z of L.staves) {
+        const so = OS(b, z), y0 = z.one ? SP : 0, y1 = z.one ? 3 * SP : 4 * SP;
+        if (b.showTs) {
+          const num = String(b.ts[0]), den = String(b.ts[1]);
+          const put = (str, y) => {
+            const w = str.length * 1.9 * SP;
+            let x = b.x + (b.rs ? REP_W : 0) + TS_W / 2 - w / 2 + 0.05 * SP;
+            for (const d of str) {
+              so.push(glyph(TS_DIGIT(+d), x, y));
+              x += 1.9 * SP;
+            }
+          };
+          put(num, SP);
+          put(den, 3 * SP);
+        }
+        const dots = (x) => [1.5, 2.5].map((y) => `<circle class="repeat-dot" cx="${f(x)}" cy="${f(y * SP)}" r="${f(0.22 * SP)}"/>`).join('');
+        if (b.rs) {
+          // |: thick line, thin line, two dots
+          so.push(rect(b.x, y0, 0.5 * SP, y1 - y0, 'barline-thick'), line(b.x + 0.85 * SP, y0, b.x + 0.85 * SP, y1, 'barline'), dots(b.x + 1.25 * SP));
+        }
+        if (b.re) {
+          // :| two dots, thin line, thick line
+          so.push(dots(end - 1.25 * SP), line(end - 0.85 * SP, y0, end - 0.85 * SP, y1, 'barline'), rect(end - 0.5 * SP, y0, 0.5 * SP, y1 - y0, 'barline-thick'));
+        } else if (lastOf === L.bars.length - 1) {
+          so.push(line(end - 0.75 * SP, y0, end - 0.75 * SP, y1, 'barline'));
+          so.push(rect(end - 0.5 * SP, y0, 0.5 * SP, y1 - y0, 'barline-thick'));
+        } else {
+          so.push(line(end, y0, end, y1, 'barline'));
+        }
       }
-      if (b.re) {
-        // :| two dots, thin line, thick line; played more than twice: "3×" above
-        o.push(dots(end - 1.25 * SP), line(end - 0.85 * SP, 0, end - 0.85 * SP, 4 * SP, 'barline'), rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
-        if (b.re > 2) o.push(`<text class="repeat-count" x="${f(end - 0.2 * SP)}" y="${f(-0.8 * SP)}">${b.re}×</text>`);
-      } else if (lastOf === L.bars.length - 1) {
-        o.push(line(end - 0.75 * SP, 0, end - 0.75 * SP, 4 * SP, 'barline'));
-        o.push(rect(end - 0.5 * SP, 0, 0.5 * SP, 4 * SP, 'barline-thick'));
-      } else {
-        o.push(line(end, 0, end, 4 * SP, 'barline'));
-      }
+      // played more than twice: "3×" above the first staff
+      if (b.re > 2) o.push(`<text class="repeat-count" x="${f(end - 0.2 * SP)}" y="${f(-0.8 * SP)}">${b.re}×</text>`);
       // page view (not printed): a manual line break after this bar
       if (page && !print && doc.bars[lastOf + 1] && doc.bars[lastOf + 1].lineBreak) {
         o.push(`<text class="break-mark" x="${f(end + 0.5 * SP)}" y="${f(2.6 * SP)}"><title>${esc(TC.tr('manual line break'))}</title>↵</text>`);
@@ -524,36 +593,44 @@
       }
     });
 
-    // notes
+    // notes: every staff, every bar
     L.heads = [];
-    const track = TC.curTrack();
-    for (const b of L.bars) {
-      if (b.hidden !== undefined) continue;
-      if (b.multi && b.simile) {
-        // %-bars in a row: one % with the number of bars above
-        const cx = b.x0 + (b.x + b.w - b.x0) / 2;
-        O(b).push(`<g class="multisimile"><text class="mus mid" x="${f(cx)}" y="${f(2 * SP)}">${''}</text>` +
-          `<text class="multirest-n" x="${f(cx)}" y="${f(-1.0 * SP)}">${b.multi}</text></g>`);
-        continue;
+    for (const z of L.staves) {
+      for (const b of L.bars) {
+        if (b.hidden !== undefined) continue;
+        const o = OS(b, z), part = b.parts[z.k];
+        if (b.multi && b.allSimile) {
+          // %-bars in a row: one % with the number of bars above
+          const cx = b.x0 + (b.x + b.w - b.x0) / 2;
+          o.push(`<g class="multisimile"><text class="mus mid" x="${f(cx)}" y="${f(2 * SP)}">${''}</text>` +
+            `<text class="multirest-n" x="${f(cx)}" y="${f(-1.0 * SP)}">${b.multi}</text></g>`);
+          continue;
+        }
+        if (b.multi) {
+          // multi-bar rest: thick bar on the middle line with serifs, the number of bars above
+          const x1 = b.x0 + 0.8 * SP, x2 = b.x + b.w - 1.2 * SP, cx = (x1 + x2) / 2;
+          o.push(`<g class="multirest">${rect(x1, 1.55 * SP, x2 - x1, 0.9 * SP, 'multirest-bar')}` +
+            line(x1, SP, x1, 3 * SP, 'multirest-end') + line(x2, SP, x2, 3 * SP, 'multirest-end') +
+            `<text class="multirest-n" x="${f(cx)}" y="${f(-1.0 * SP)}">${b.multi}</text></g>`);
+          continue;
+        }
+        if (part.simile) {
+          o.push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
+          if (b.simileN) o.push(`<text class="simile-n" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(-1.0 * SP)}">${b.simileN}</text>`);
+          continue;
+        }
+        // the bar as seen by this staff: its voices; its highest ink (drawVoice) for the ending brackets
+        const pb = Object.create(b);
+        pb.voices = part.voices;
+        pb.top = 0;
+        staffNow = z;
+        const used = part.voices.map((items) => items.some((it) => it.kind === 'note'));
+        part.voices.forEach((items, vi) => drawVoice(o, pb, items, vi, used, z.track));
+        drawUnder(o, pb);
+        if (z.k === 0) b.top = pb.top;
       }
-      if (b.multi) {
-        // multi-bar rest: thick bar on the middle line with serifs, the number of bars above
-        const x1 = b.x0 + 0.8 * SP, x2 = b.x + b.w - 1.2 * SP, cx = (x1 + x2) / 2;
-        O(b).push(`<g class="multirest">${rect(x1, 1.55 * SP, x2 - x1, 0.9 * SP, 'multirest-bar')}` +
-          line(x1, SP, x1, 3 * SP, 'multirest-end') + line(x2, SP, x2, 3 * SP, 'multirest-end') +
-          `<text class="multirest-n" x="${f(cx)}" y="${f(-1.0 * SP)}">${b.multi}</text></g>`);
-        continue;
-      }
-      if (b.simile) {
-        O(b).push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
-        if (b.simileN) O(b).push(`<text class="simile-n" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(-1.0 * SP)}">${b.simileN}</text>`);
-        continue;
-      }
-      const used = b.voices.map((items) => items.some((it) => it.kind === 'note'));
-      b.top = 0; // highest ink above the staff (drawVoice), for the ending brackets
-      b.voices.forEach((items, vi) => drawVoice(O(b), b, items, vi, used, track));
-      drawUnder(O(b), b);
     }
+    staffNow = null;
 
     // endings (1. / 2.): a bracket over the bars of one ending, per line; open at the right after the last one
     const vkey = (b) => (b && b.volta ? b.volta.join(',') : '');
@@ -585,7 +662,9 @@
         `<text class="add-plus" x="${f(a.x + a.w / 2)}" y="${f(a.y + a.h / 2 + 5)}">+</text></g>`);
     }
 
-    L.systems.forEach((s) => out.push(onLine(s, lines[s.i].join(''))));
+    // each line: what belongs to it (texts, brackets above), then its staves, each moved down to its place
+    L.systems.forEach((s) => out.push(onLine(s, lines[s.i].join('') +
+      L.staves.map((z) => `<g class="stave" transform="translate(0,${f(z.dy)})">${staffOut[s.i][z.k].join('')}</g>`).join(''))));
     return out.join('');
   };
 
@@ -620,7 +699,7 @@
       const heads = it.ev.notes.map((n) => {
         const art = TC.drums.byId(n.art);
         const head = TC.HEADS[TC.drums.headOf(n)];
-        return { n, art, line: art ? art.line : 4, head, w: head.w[gi] * SP, g: head.g[gi], dx: 0 };
+        return { n, art, line: TC.drums.lineOf(art, track), head, w: head.w[gi] * SP, g: head.g[gi], dx: 0 };
       }).sort((a, c) => a.line - c.line);
       // seconds in a chord: one head to the other side of the stem
       if (up) {
@@ -697,7 +776,7 @@
           const dy = h.line % 2 === 0 ? -SP / 2 : 0;
           out.push(glyph('', q.x + Math.max(...q.heads.map((z) => z.dx + z.w / 2)) + 0.35 * SP, y + dy, 'head'));
         }
-        RD.layout.heads.push({ x: cx, y, id: h.n.id, bar: b.i, tick: it.tick, line: h.line });
+        RD.layout.heads.push({ x: cx, y, id: h.n.id, bar: b.i, tick: it.tick, line: h.line, track: staffNow ? staffNow.track : track, dy: staffNow ? staffNow.dy : 0 });
       }
       if (it.base < 3840) {
         out.push(line(q.stemX, q.startY, q.stemX, q.endY, 'stem'));
@@ -846,8 +925,9 @@
    */
   const MAP_FONT = 9;
   const textW = (s) => s.length * MAP_FONT * 0.62 + 2;
-  function drawDrumMap(out, hl, ox) {
-    const lines = TC.drums.lines(TC.drums.mapIds());
+  function drawDrumMap(out, hl, ox, track) {
+    // a one-line track: one row with all of its instruments
+    const lines = TC.drums.oneLine(track) ? [[4, TC.drums.lineArts(4, track)]] : TC.drums.lines(TC.drums.mapIds(track));
     const rows = lines.map(([l, arts]) => {
       const abs = [];
       arts.forEach((a) => { if (!abs.includes(a.ab)) abs.push(a.ab); });
@@ -884,11 +964,14 @@
     const h = S.hover, L = RD.layout;
     if (!L) return;
     const out = [], s = hoverLine(h, L);
+    // the staff: the one under the pointer (h.trk), else the one being written
+    const z = (h && h.trk && L.staves.find((q) => q.track.id === h.trk)) || L.staves.find((q) => q.track === TC.curTrack()) || L.staves[0];
     const hl = h ? (h.mapLine !== undefined ? h.mapLine : h.line) : null;
     if (hl !== null && hl !== undefined) out.push(rect(s.ox, stepY(hl) - SP / 4, s.end - s.ox, SP / 2, 'hover-band'));
     L.map = [];
-    L.mapSys = s.i; // the drum map stands next to this line
-    if (S.settings.showDrumMap) drawDrumMap(out, hl, s.ox);
+    L.mapSys = s.i; // the drum map stands next to this line, at this staff
+    L.mapTrack = z.track;
+    if (S.settings.showDrumMap) drawDrumMap(out, hl, s.ox, z.track);
     if (h && h.erase) {
       // eraser: a circle; notes under it are deleted while pressed
       out.push(`<circle class="erase-ring${h.erase.on ? ' on' : ''}" cx="${f(h.erase.x)}" cy="${f(h.erase.y)}" r="${f(RD.ERASE_R)}"/>`);
@@ -925,9 +1008,10 @@
       } else if (h.art) {
         const head = TC.HEADS[S.input.head !== 'auto' && TC.HEADS[S.input.head] ? S.input.head : h.art.head];
         const gi = S.input.value === 1 ? 2 : S.input.value === 2 ? 1 : 0;
-        const w = head.w[gi] * SP, y = stepY(h.art.line);
-        for (let l = -2; l >= h.art.line; l -= 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
-        for (let l = 10; l <= h.art.line; l += 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
+        const ln = h.line !== undefined ? h.line : h.art.line; // (one-line tracks: the middle line)
+        const w = head.w[gi] * SP, y = stepY(ln);
+        for (let l = -2; l >= ln; l -= 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
+        for (let l = 10; l <= ln; l += 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         out.push(glyph(head.g[gi], x - w / 2, y, 'ghost'));
         labelX = x + w / 2 + 0.7 * SP;
         labelY = y;
@@ -940,13 +1024,13 @@
         out.push(`<text class="hover-label" x="${f(labelX)}" y="${f(labelY + 3.6)}">${esc(text)}</text>`);
       }
     }
-    hov.innerHTML = onLine(s, out.join(''));
+    hov.innerHTML = onLine(s, `<g transform="translate(0,${f(z.dy)})">${out.join('')}</g>`);
   };
 
   /** The drum map row under point p (staff coordinates, see RD.toLocal), or null. */
   RD.mapLineAt = function (p) {
     const rows = RD.layout && RD.layout.map;
-    if (!rows || !rows.length || !p.sys || p.sys.i !== RD.layout.mapSys) return null;
+    if (!rows || !rows.length || !p.sys || p.sys.i !== RD.layout.mapSys || (p.track && p.track !== RD.layout.mapTrack)) return null;
     let best = null, bd = SP / 2;
     for (const r of rows) {
       if (p.x < r.x1 - 4 || p.x > r.x2 + 2) continue;

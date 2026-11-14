@@ -21,6 +21,7 @@
 
   // ---- Compact JSON (pure, tested) ----------------------------------------------------------
 
+  const TRACK_DEFAULTS = { kit: null, oneLine: false, hidden: false };
   const NOTE_DEFAULTS = { accent: 0, ghost: false, head: 'auto', vel: null, orn: null, trem: 0, stick: '' };
   const BAR_DEFAULTS = { tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, lineBreak: false,
     mark: '', end: '', jump: '', jumpRep: false };
@@ -33,6 +34,7 @@
     d.bars.forEach((h) => strip(h, BAR_DEFAULTS));
     d.tracks.forEach((t) => {
       delete t.id;
+      strip(t, TRACK_DEFAULTS);
       t.bars.forEach((b) => { if (!b.simile) delete b.simile; });
       t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((e) => {
         delete e.id;

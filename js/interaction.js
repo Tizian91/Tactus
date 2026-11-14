@@ -42,9 +42,9 @@
   /** Is the instrument lock on (switch, or Shift held)? */
   I.locked = (e) => !!(S.input.lock || shiftDown || (e && e.shiftKey));
 
-  /** The note of instrument `art` at `tick` in a bar (any voice), or null. */
-  function noteAt(bi, tick, art) {
-    for (const voice of TC.curTrack().bars[bi].voices) {
+  /** The note of instrument `art` at `tick` in a bar of a track (any voice), or null. */
+  function noteAt(bi, tick, art, track = TC.curTrack()) {
+    for (const voice of track.bars[bi].voices) {
       for (const ev of voice) {
         if (ev.tick !== tick) continue;
         const n = ev.notes.find((x) => x.art === art);
@@ -55,7 +55,7 @@
   }
 
   /** The instrument whose line is near staff point p (the "magnet"), or null beside the lines. */
-  const lineArt = (p) => TC.drums.resolve(TC.render.posAt(p.y), S.input.art, TC.drums.clickable());
+  const lineArt = (p) => TC.drums.resolveIn(TC.render.posAt(p.y), p.track || TC.curTrack());
 
   /**
    * Where a note would go at point p: { kind: 'place', bar, tick, line, art, lock } or null
@@ -65,14 +65,17 @@
     const RD = TC.render;
     if (!p || p.x < p.sys.ox) return null;
     if (p.y < RD.stepY(RD.LINE_MIN) - 5 || p.y > RD.stepY(RD.LINE_MAX) + 5) return null;
+    const track = p.track || TC.curTrack();
+    if (S.drag && track !== TC.curTrack()) return null; // a note being aimed / moved stays in its track
     const bar = RD.barAt(p.x);
-    if (!bar || bar.simile || p.x < bar.x0) return null;
+    if (!bar || RD.simileAt(bar, track) || p.x < bar.x0) return null;
     const near = lineArt(p);
     if (!near) return null; // beside the lines (also with the lock): that is where bars are chosen
     const tick = RD.snapTick(bar, p.x);
     const lock = I.locked(e);
-    const art = keepArt || (lock ? TC.drums.byId(S.input.art) : near);
-    return { kind: 'place', bar: bar.i, tick, line: art.line, art, lock };
+    const own = TC.drums.ownKit(track) && !TC.drums.kit(track).has(S.input.art); // the lock keeps to the track's instruments
+    const art = keepArt || (lock && !own ? TC.drums.byId(S.input.art) : near);
+    return { kind: 'place', bar: bar.i, tick, line: TC.drums.lineOf(art, track), art, lock, track };
   }
 
   /** What a tap at point p (staff coordinates, null: off every line) would do. */
@@ -80,22 +83,24 @@
     const RD = TC.render, L = RD.layout;
     if (!L || !p) return null;
     const a = L.add;
-    if (p.sys === L.systems[L.systems.length - 1] && p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y - 10 && p.y <= a.y + a.h + 10) return { kind: 'add' };
+    if (p.sys === L.systems[L.systems.length - 1] && (!p.staff || p.staff.k === 0) && p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y - 10 && p.y <= a.y + a.h + 10) return { kind: 'add' };
     if (p.x < p.sys.ox) {
       const ml = RD.mapLineAt(p);
-      return ml === null ? null : { kind: 'map', line: ml, sys: p.sys.i };
+      return ml === null ? null : { kind: 'map', line: ml, sys: p.sys.i, track: p.track };
     }
     const bar = RD.barAt(p.x);
     if (!bar) return null;
-    if (bar.simile) return { kind: 'bar', bar: bar.i, simile: true }; // "%" bar: nothing to write into
+    const track = p.track || TC.curTrack();
+    if (RD.simileAt(bar, track)) return { kind: 'bar', bar: bar.i, simile: true }; // "%" bar: nothing to write into
     if (I.locked(e) && lineArt(p) && p.x >= bar.x0) {
       // the height does not matter: the selected instrument at this grid position
       const art = TC.drums.byId(S.input.art);
       const tick = RD.snapTick(bar, p.x);
-      const n = noteAt(bar.i, tick, art.id);
+      const n = noteAt(bar.i, tick, art.id, track);
       if (n) {
-        return { kind: 'head', bar: bar.i, tick, line: art.line, lock: true,
-          head: { id: n.id, x: RD.tickX(bar, tick), y: RD.stepY(art.line), bar: bar.i, tick, line: art.line } };
+        const ln = TC.drums.lineOf(art, track);
+        return { kind: 'head', bar: bar.i, tick, line: ln, lock: true,
+          head: { id: n.id, x: RD.tickX(bar, tick), y: RD.stepY(ln), bar: bar.i, tick, line: ln, track } };
       }
     }
     if (!I.locked(e)) {
@@ -117,7 +122,8 @@
     const e = lastMove;
     if (!e || S.drag) return;
     if (toolOf(e) !== 'write') return toolHover(e);
-    const t = target(I.toLocal(e.clientX, e.clientY), e);
+    const p = I.toLocal(e.clientX, e.clientY);
+    const t = target(p, e);
     let h = null;
     if (t && (t.kind === 'place' || t.kind === 'head')) {
       h = { bar: t.bar, tick: t.tick, line: t.line, art: t.art || null, lock: !!t.lock };
@@ -136,7 +142,7 @@
       }
     } else if (t && t.kind === 'map') {
       h = { mapLine: t.line, sys: t.sys };
-      TC.ui.status(TC.drums.lines(TC.drums.mapIds()).filter(([l]) => l === t.line).map(([, arts]) => arts.map((a) => TC.drums.label(a)).join(', '))[0] +
+      TC.ui.status(TC.drums.lineArts(t.line, t.track).map((a) => TC.drums.label(a)).join(', ') +
         ' – ' + tr('click: choose'));
     } else if (t && t.kind === 'add') {
       TC.ui.status(tr('Add a bar'));
@@ -149,6 +155,7 @@
     } else {
       TC.ui.status('');
     }
+    if (h && p && p.track) h.trk = p.track.id; // the staff under the pointer
     const key = JSON.stringify(h);
     if (key !== I.hoverKey) {
       I.hoverKey = key;
@@ -214,7 +221,13 @@
     const tool = toolOf(e);
     if (tool === 'erase') return startErase(e);
     if (tool === 'select') return startSelect(e);
-    let t = target(I.toLocal(e.clientX, e.clientY), e);
+    let p = I.toLocal(e.clientX, e.clientY);
+    if (p && p.track && p.track !== TC.curTrack()) {
+      // pressed in the staff of another track: from now on it is the one being written
+      A().selectTrack(p.track.id);
+      p = I.toLocal(e.clientX, e.clientY);
+    }
+    let t = target(p, e);
     const base = { id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e };
     if (e.pointerType === 'pen') lastTouch = Date.now(); // a pen's own long-press menu is ignored too
     const holdMenu = touch || e.pointerType === 'pen'; // finger / pen held still: bar menu (mouse: right-click)
@@ -466,7 +479,7 @@
     if (t.kind === 'add') return A().addBar();
     if (t.kind === 'map') {
       // choose an instrument of that line; tapping again goes to the next one there
-      const arts = TC.drums.atLine(t.line).filter((a) => TC.drums.mapIds().has(a.id));
+      const arts = TC.drums.lineArts(t.line);
       const k = arts.findIndex((a) => a.id === S.input.art);
       if (arts.length) {
         A().setArt(arts[(k + 1) % arts.length].id);
@@ -602,9 +615,7 @@
     const n = d.hit.note, a = TC.drums.byId(n.art);
     if (!a) return;
     const ids = S.selection.has(n.id) && S.selection.size > 1 ? [...S.selection] : [n.id];
-    const offer = TC.drums.clickable();
-    offer.add(n.art);
-    const arts = TC.drums.atLine(a.line).filter((x) => offer.has(x.id));
+    const arts = TC.drums.lineArts(TC.drums.lineOf(a, d.hit.track), d.hit.track, n.art);
     const choose = (fn) => () => {
       S.selection = new Set(ids);
       TC.selectBar(d.t.bar);
@@ -654,13 +665,13 @@
   function toolHover(e) {
     const p = I.toLocal(e.clientX, e.clientY);
     if (toolOf(e) === 'erase') {
-      setHover(p ? { sys: p.sys.i, erase: { x: p.x, y: p.y } } : null);
+      setHover(p ? { sys: p.sys.i, trk: p.track.id, erase: { x: p.x, y: p.y } } : null);
       TC.ui.status(tr('Eraser: tap or wipe over notes'));
       vp.style.cursor = 'crosshair';
       return;
     }
     const head = p && TC.render.headAt(p);
-    setHover(head ? { bar: head.bar, ring: { x: head.x, y: head.y } } : null);
+    setHover(head ? { bar: head.bar, trk: head.track.id, ring: { x: head.x, y: head.y } } : null);
     TC.ui.status(tr(head ? 'click: select (Shift: add) · drag: move the selection · hold: instrument / strength' : 'drag: selection frame · click: deselect, choose the bar'));
     vp.style.cursor = head ? 'move' : 'crosshair';
   }
@@ -690,7 +701,7 @@
     }
     const p = I.toLocal(e.clientX, e.clientY);
     I.hoverKey = null;
-    setHover(p ? { sys: p.sys.i, erase: { x: p.x, y: p.y, on: true } } : null);
+    setHover(p ? { sys: p.sys.i, trk: p.track.id, erase: { x: p.x, y: p.y, on: true } } : null);
   }
   function finishErase(d) {
     if (d.n) TC.commit();
@@ -773,10 +784,10 @@
     }
     const p = I.toLocal(e.clientX, e.clientY);
     const bar = p && TC.render.barAt(p.x);
-    if (!bar || bar.simile || p.x < bar.x0) return;
+    if (!bar || TC.render.simileAt(bar, d.hit.track) || p.x < bar.x0) return;
     const delta = TC.score.absTick(S.doc, bar.i, TC.render.snapTick(bar, p.x)) - d.from;
     let art = null;
-    if (d.oneArt && !I.locked(e)) {
+    if (d.oneArt && !I.locked(e) && p.track === d.hit.track) {
       const a = lineArt(p);
       if (a && a.id !== d.oneArt) art = a.id;
     }
@@ -848,7 +859,7 @@
     const d = S.drag, RD = TC.render;
     const p = I.toLocal(e.clientX, e.clientY);
     const bar = p && RD.barAt(p.x);
-    if (!bar || bar.simile || p.x < bar.x0) return;
+    if (!bar || RD.simileAt(bar, TC.curTrack()) || p.x < bar.x0) return;
     const tick = RD.snapTick(bar, p.x);
     const row = between(d.bar, d.tick, bar.i, tick);
     if (!row.length) return;
@@ -891,7 +902,11 @@
     e.preventDefault();
     // a finger held down opens the menu by itself (above); the browser's own long-press menu is ignored
     if (!e.fromHold && (touches.size || Date.now() - lastTouch < 1000)) return;
-    const p = I.toLocal(e.clientX, e.clientY);
+    let p = I.toLocal(e.clientX, e.clientY);
+    if (p && p.track && p.track !== TC.curTrack()) {
+      A().selectTrack(p.track.id); // the bar menu acts on the track of that staff (%, clear)
+      p = I.toLocal(e.clientX, e.clientY);
+    }
     const bar = p && TC.render.barAt(p.x);
     if (!bar) return;
     // inside the selected bars: they stay selected; otherwise this bar (the menu can extend to it)

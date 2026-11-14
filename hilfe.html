@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tactus – Handbuch</title>
+  <meta name="theme-color" content="#2b6cde">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/bravura.css">
+  <link rel="stylesheet" href="css/help.css">
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Inhalt">
+  <a class="brand" href="index.html">Tactus</a>
+  <div class="sub">Handbuch</div>
+  <ol>
+    <li><a href="#idee">1. Die Idee hinter Tactus</a>
+      <ol><li><a href="#daw">Anders als Guitar Pro</a></li></ol></li>
+    <li><a href="#schnellstart">2. Schnellstart im Bandraum</a></li>
+    <li><a href="#finger">3. Mit Finger und Stift</a></li>
+    <li><a href="#zuhause">4. Zuhause: vom Tablet nach Cubase</a>
+      <ol>
+        <li><a href="#kit-profile">Kit-Profile</a></li>
+        <li><a href="#vst-wiedergabe">Über das Drum-VST anhören</a></li>
+        <li><a href="#midi-export">MIDI nach Cubase</a></li>
+        <li><a href="#drummap-export">Drummap für Cubase &amp; Co.</a></li>
+        <li><a href="#midi-import">MIDI aus Cubase holen</a></li>
+      </ol></li>
+    <li><a href="#vst-wechsel">5. Drum-VST wechseln mit Tactus</a></li>
+    <li><a href="#schreiben">6. Noten schreiben im Detail</a></li>
+    <li><a href="#takte">7. Takte und Form</a>
+      <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
+    <li><a href="#notenblatt">8. Notenblatt und PDF</a></li>
+    <li><a href="#wiedergabe">9. Wiedergabe und Klang</a>
+      <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
+    <li><a href="#speichern">10. Speichern und Teilen</a></li>
+    <li><a href="#nachschlagen">11. Nachschlagen</a>
+      <ol><li><a href="#linien">Welche Linie ist was?</a></li><li><a href="#kuerzel">Gesten und Tastenkürzel</a></li></ol></li>
+    <li><a href="#fragen">12. Häufige Fragen</a></li>
+    <li><a href="#lizenzen">13. Lizenzen und Dank</a></li>
+  </ol>
+</nav>
+
+<main>
+<article>
+
+<h1>Tactus – Handbuch</h1>
+<p class="lead">Schlagzeugnoten im Bandraum mitschreiben, sofort anhören – und zuhause mit dem echten Drum-VST in Cubase weiterarbeiten.</p>
+
+<!-- ================================================================================= -->
+<h2 id="idee">1. Die Idee hinter Tactus</h2>
+<p>Tactus ist für einen ganz bestimmten Ablauf gebaut:</p>
+<div class="flow">
+  <div class="box"><b>Bandraum · Tablet</b>Groove mit dem Finger mitschreiben, während die Band spielt. Sofort anhören, in der Schleife, und live verbessern.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Dropbox</b>Das Stück liegt automatisch auch auf dem PC – oder du schickst es als Link.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Zuhause · PC</b>Mit dem echten Drum-VST (EZDrummer, Groove Agent, UJAM …) anhören, verfeinern.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Cubase</b>Als MIDI in die Schlagzeugspur – mit passender Drummap und sauberem Notenbild.</div>
+</div>
+<p>Der zweite große Vorteil: Tactus versteht <b>Instrumente</b>, nicht Tasten. Deshalb kann es zwischen den Tastenbelegungen
+verschiedener Drum-VSTs übersetzen – ein Groove, den du für UJAM geschrieben hast, klingt mit einem Klick in EZDrummer richtig
+(<a href="#vst-wechsel">Kapitel 5</a>).</p>
+
+<h3 id="daw">Anders als Guitar Pro – eher wie eine DAW</h3>
+<p>Wer Guitar Pro kennt, sollte kurz umdenken. Tactus arbeitet wie der Drum-Editor einer DAW, nur dass du dabei echte Noten siehst:</p>
+<table>
+  <tr><th></th><th>Guitar Pro</th><th>Tactus</th></tr>
+  <tr><td>Noten eingeben</td><td>Note für Note mit dem Cursor, Notenwerte selbst passend machen</td><td>Einfach ins Raster tippen, wo der Schlag sitzt – Notenwerte, Pausen und Balken ergeben sich von selbst</td></tr>
+  <tr><td>Instrumente</td><td>Notenlinie + Kopf</td><td>Jede Linie ist ein Instrument, wie eine Zeile im Drum-Editor; auf einer Linie wählst du die Spielweise (Hi-Hat zu / halb / offen …)</td></tr>
+  <tr><td>Lautstärke</td><td>Akzent / Ghost</td><td>Fünf Anschlagstufen pro Schlag (Ghost · leise · normal · kräftig · Akzent) – wie Velocity</td></tr>
+  <tr><td>Anhören</td><td>eingebaute Klänge</td><td>Schleife über ausgewählte Takte, <b>bearbeiten während es läuft</b> – jede Änderung ist sofort zu hören; auf Wunsch über dein echtes Drum-VST</td></tr>
+  <tr><td>Zur DAW</td><td>MIDI-Export</td><td>MIDI mit der Tastenbelegung <i>deines</i> VSTs, dazu die passende Drummap für Cubase, Reaper oder Studio One</td></tr>
+</table>
+
+<!-- ================================================================================= -->
+<h2 id="schnellstart">2. Schnellstart im Bandraum</h2>
+
+<h3>Tactus aufs Tablet holen – einmal, mit Internet</h3>
+<ol class="steps">
+  <li>Die Adresse von Tactus im Browser öffnen (Chrome, Edge oder Safari).</li>
+  <li>Als App installieren: <b>Android / Chrome / Edge:</b> Menü → <span class="ui">App installieren</span> bzw. <span class="ui">Zum Startbildschirm hinzufügen</span>.
+    <b>iPad:</b> Teilen-Knopf → <span class="ui">Zum Home-Bildschirm</span>.</li>
+  <li>Einmal öffnen, solange Internet da ist. Danach funktioniert Tactus <b>komplett ohne WLAN</b> – im Bandraum ist kein Netz nötig.</li>
+  <li>Falls du die aufgenommenen Klänge willst (<a href="#wiedergabe">Kapitel 9</a>): sie <b>einmal online einschalten</b>, dann sind sie auch offline da.</li>
+</ol>
+
+<h3>Den ersten Groove schreiben</h3>
+<figure><img src="help/img/ueberblick.png" alt="Tactus mit dem Beispiel-Groove: links das Noten-Panel, in der Mitte die Noten, rechts Takt und Wiedergabe">
+  <figcaption>Links das Noten-Panel (Werkzeug, Notenwert, Instrument), in der Mitte die Noten, rechts Takt, Wiedergabe und Stück.</figcaption></figure>
+<ol class="steps">
+  <li><span class="ui">Datei → Neues Stück</span>. Takt und Tempo stellst du rechts im Panel ein.</li>
+  <li>Links den <b>Notenwert</b> wählen, z. B. Achtel. Er bestimmt das Raster, in das deine Schläge einrasten.</li>
+  <li>Auf die <b>Hi-Hat-Linie</b> tippen: es erscheint eine Vorschau-Note, beim Loslassen ist sie gesetzt. Für eine ganze Achtelreihe:
+    auf die erste Note tippen, <b>halten</b>, dann seitwärts ziehen (<a href="#finger">Kapitel 3</a>).</li>
+  <li>Snare und Bassdrum genauso. Welche Linie welches Instrument ist, zeigt die <span class="ui">Drum-Map</span> (Werkzeugleiste) links an den Linien.</li>
+  <li><b>Anhören:</b> ▶ oder <kbd>Leertaste</kbd>. Den Takt antippen und <span class="ui">⟳</span> (Schleife) einschalten: der Takt läuft immer wieder.</li>
+  <li><b>Live verbessern:</b> während die Schleife läuft, Noten setzen, verschieben, lauter oder leiser machen – du hörst es beim nächsten Durchlauf sofort.</li>
+  <li>Takt fertig? Rechts <span class="ui">Verdoppeln</span> oder <span class="ui">%</span> (wiederholt den Takt davor), Tempo oben in der Werkzeugleiste.</li>
+</ol>
+
+<h3>Speichern</h3>
+<p>Tactus merkt sich das offene Stück automatisch im Gerät. Zum Aufheben: <span class="ui">Datei → Speichern</span> (eine Datei <code>.tactus.json</code>)
+oder – praktischer für den Weg nach Hause – <span class="ui">In Dropbox speichern</span> (<a href="#speichern">Kapitel 10</a>).</p>
+<div class="tip">Im Bandraum ohne Netz kann Tactus nicht in die Dropbox speichern. Das Stück bleibt im Gerät; zuhause mit WLAN einfach noch einmal <span class="ui">In Dropbox speichern</span>.</div>
+
+<p>Zum Ausprobieren gibt es fertige Beispiele unter <span class="ui">Datei → Beispiele</span>: <a class="open" href="index.html?beispiel=groove">▶ Groove</a> <a class="open" href="index.html?beispiel=wiederholungen">▶ Wiederholungen &amp; Häuser</a> <a class="open" href="index.html?beispiel=spruenge">▶ Sprünge</a></p>
+
+<!-- ================================================================================= -->
+<h2 id="finger">3. Mit Finger und Stift</h2>
+<p>Tactus ist zuerst für das Tablet gebaut. Alles geht mit dem Finger – mit dem Stift noch genauer.</p>
+
+<h3>Die Gesten</h3>
+<table>
+  <tr><th>Geste</th><th>Wo</th><th>Was passiert</th></tr>
+  <tr><td>Tippen</td><td>auf den Linien</td><td>Note setzen. Beim Drücken erscheint eine Vorschau; solange du hältst, kannst du hoch / runter zielen – <b>Loslassen setzt</b>.</td></tr>
+  <tr><td>Tippen</td><td>auf eine Note</td><td>Note auswählen (zum Ändern im Noten-Panel) bzw. – im Werkzeug Radieren – löschen.</td></tr>
+  <tr><td>Ziehen</td><td>eine Note</td><td>Verschieben: seitwärts in der Zeit, hoch / runter auf ein anderes Instrument.</td></tr>
+  <tr><td>Halten, dann seitwärts ziehen</td><td>eine Note</td><td><b>Notenreihe</b>: z. B. eine ganze Hi-Hat-Achtelreihe in einem Zug.</td></tr>
+  <tr><td>Halten, dann hoch / runter</td><td>eine Note</td><td><b>Anschlag</b>: Ghost · leise · normal · kräftig · Akzent. Neben der Note erscheint eine kleine Skala.</td></tr>
+  <tr><td>Halten und loslassen</td><td>eine Note</td><td><b>Menü</b>: die anderen Spielweisen der Linie (Hi-Hat zu / halb / offen, Snare / Rimshot / Sidestick …) und der Anschlag.</td></tr>
+  <tr><td>Halten</td><td>leere Stelle / neben den Linien</td><td><b>Taktmenü</b>: Takt einfügen, löschen, kopieren, Taktart, Wiederholung, Text, neue Zeile …</td></tr>
+  <tr><td>Tippen</td><td>neben den Linien (darüber / darunter)</td><td>Takt auswählen (für Panel, Schleife, Kopieren).</td></tr>
+  <tr><td>Ziehen</td><td>neben den Linien</td><td>Ansicht verschieben.</td></tr>
+  <tr><td>Zwei Finger</td><td>überall</td><td>Verschieben und zoomen.</td></tr>
+  <tr><td>Stift-Radierer</td><td>auf Noten</td><td>Das Radierer-Ende eines Stifts löscht immer – antippen oder darüberwischen.</td></tr>
+</table>
+<figure><img src="help/img/notenmenue.png" alt="Menü einer gehaltenen Hi-Hat-Note: geschlossen, halb offen, offen und die fünf Anschlagstufen">
+  <figcaption>Note halten und loslassen: die Spielweisen der Linie und der Anschlag – der schnelle Weg von „Hi-Hat zu“ nach „offen“.</figcaption></figure>
+<figure><img src="help/img/anschlag.png" alt="Gehaltene Snare-Note mit Anschlagsskala, oberste Stufe Akzent">
+  <figcaption>Note halten und nach oben ziehen: lauter bis zum Akzent; nach unten: leiser bis zur Ghost Note.</figcaption></figure>
+
+<h3>Werkzeuge</h3>
+<p>Oben im Noten-Panel: <span class="ui">✏ Schreiben</span> (Standard), <span class="ui">⬚ Auswählen</span> (Rahmen aufziehen, mehrere Noten
+gemeinsam verschieben oder ändern) und <span class="ui">⌫ Radieren</span> (antippen oder über Noten wischen – ein Rückgängig-Schritt).</p>
+
+<h3>Tipps für schnelles Mitschreiben</h3>
+<ul>
+  <li><b>Instrument sperren</b> (Knopf im Noten-Panel): solange gesperrt, schreibt jeder Tipp das gewählte Instrument, egal wie genau du die Linie triffst – ideal für schnelle Hi-Hat- oder Bassdrum-Figuren.</li>
+  <li>Zuerst das Gerüst (Hi-Hat, Snare, Bassdrum), dann mit <span class="ui">%</span> oder <span class="ui">Verdoppeln</span> weiter – die Feinheiten (Ghost Notes, offene Hi-Hat) kommen danach mit Halten + Menü.</li>
+  <li>Takt in die <b>Schleife</b> nehmen und so lange ändern, bis es klingt wie das, was der Drummer spielt.</li>
+  <li>Nur mit dem Stift schreiben, mit dem Finger blättern: <span class="ui">⚙ → Ansicht → „Finger setzt Noten“</span> ausschalten.</li>
+  <li>Linkshänder: <span class="ui">⚙ → Ansicht → Linkshändermodus</span> tauscht die beiden Panels.</li>
+</ul>
+
+<!-- ================================================================================= -->
+<h2 id="zuhause">4. Zuhause: vom Tablet nach Cubase</h2>
+<ol class="steps">
+  <li>Am PC Tactus öffnen und das Stück holen: <span class="ui">Datei → Aus Dropbox öffnen…</span> (oder den geteilten Link öffnen).</li>
+  <li>Einmalig: ein <b>Kit-Profil</b> für dein Drum-VST anlegen (unten).</li>
+  <li>Unten in der Statusleiste auf <span class="ui">Kit: …</span> tippen und das Profil für dieses Stück wählen.</li>
+  <li>Anhören über das echte VST (unten) – oder direkt <span class="ui">MIDI exportieren</span> und in Cubase auf die Schlagzeugspur ziehen.</li>
+</ol>
+
+<h3 id="kit-profile">Kit-Profile – das Prinzip</h3>
+<p>Jedes Drum-VST legt seine Klänge auf andere Tasten: bei dem einen ist die offene Hi-Hat Taste 46, beim anderen 26.
+Ein <b>Kit-Profil</b> sagt Tactus, welche Taste deines VSTs welches Instrument ist. <b>Das Notenbild bleibt immer gleich</b> –
+die Snare steht immer auf derselben Linie, nur die Taste dahinter wechselt je nach Profil.</p>
+<p>Öffnen: <span class="ui">Datei → Kit-Profile…</span> oder <span class="ui">⚙ → Kit-Profile</span>. Drei Wege zu einem Profil:</p>
+<table>
+  <tr><th>Weg</th><th>Wann</th></tr>
+  <tr><td><span class="ui">Neu aus Drummap…</span></td><td>Du hast eine Drummap des Herstellers: Cubase <code>.drm</code>, Reaper-Notennamen <code>.txt</code> oder Studio-One-<code>.pitchlist</code>. Tactus erkennt an den Namen, welche Taste welches Instrument ist – du korrigierst nur, was nicht passt.</td></tr>
+  <tr><td><span class="ui">Neu aus Vorlage…</span></td><td>Für das kostenlose <b>MT Power Drum Kit 2</b> und alles nach <b>General MIDI</b> (z. B. Groove Agent SE, das bei Cubase dabei ist).</td></tr>
+  <tr><td><span class="ui">Neu ohne Drummap…</span></td><td>Der Hersteller liefert keine Drummap: alle 128 Tasten, General MIDI vorbelegt. In der Ansicht <span class="ui">Nach Taste</span> spielst du jede Taste mit ▶ an und wählst das Instrument – wie den Belegungsplan aus dem Handbuch des VSTs abtippen.</td></tr>
+</table>
+<figure><img src="help/img/kitprofil.png" alt="Kit-Profil-Dialog: pro Instrument die Taste der Drummap, weitere Tasten, Knöpfe zum Speichern der Drummap">
+  <figcaption>Pro Instrument (Linie und Kopf sind fest) die Taste deines VSTs. ▶ spielt die Taste an. Unten: Drummaps für Cubase und andere DAWs.</figcaption></figure>
+<ul>
+  <li><b>Weitere Tasten:</b> manche VSTs haben einen Klang auf mehreren Tasten (z. B. Snare auf 38 und 40). Die erste Taste wird beim Export benutzt, alle zählen beim Import.</li>
+  <li>Mit <span class="ui">Für dieses Stück verwenden</span> gilt das Profil für das offene Stück – es wird mit dem Stück gespeichert.</li>
+  <li>Kit-Profile liegen im Browser und – wenn verbunden – automatisch in der Dropbox, also auf allen deinen Geräten.</li>
+</ul>
+
+<h3>Was fehlt im Profil?</h3>
+<p>Hat das VST ein Instrument nicht, das im Stück vorkommt (z. B. keine China), meldet Tactus das beim Wechsel des Profils, und in der
+Statusleiste steht ein ⚠. Pro fehlendem Instrument wählst du:</p>
+<figure><img src="help/img/fehlt.png" alt="Dialog: Cowbell, Tom-Rimshot und Pedal-Hi-Hat offen fehlen im Profil MT Power Drum Kit 2, mit Ersatz-Auswahl">
+  <figcaption>Ohne Eingriff spielt ein verwandtes Instrument (Tom-Rimshot → Tom). Du kannst auch ein anderes wählen, eine freie Taste des VSTs oder „nicht spielen“.</figcaption></figure>
+<ul>
+  <li><b>Automatisch:</b> ein verwandtes Instrument (China → Crash, Tom 5 → nächstes Tom, abgestopptes Becken → Becken).</li>
+  <li><b>Spielen als:</b> ein anderes Instrument des Profils – oder eine <b>freie Taste des VSTs</b> (z. B. ein „FX“-Klang).</li>
+  <li><b>Nicht spielen.</b></li>
+  <li><span class="ui">Im Stück: → …</span> schreibt die Noten selbst um (z. B. alle China-Noten zu Crash) – ein Rückgängig-Schritt.</li>
+</ul>
+<p>Die Wahl wird im Profil gespeichert und gilt für Abspielen und MIDI-Export.</p>
+
+<h3 id="vst-wiedergabe">Über das echte Drum-VST anhören</h3>
+<p>Tactus kann die Noten live an Cubase (oder ein Standalone-VST) schicken – dann hörst du dein Stück mit EZDrummer, Groove Agent, UJAM …
+Das geht in <b>Chrome und Edge am PC</b>.</p>
+<ol class="steps">
+  <li>Einmalig ein virtuelles MIDI-Kabel einrichten: unter Windows das kostenlose <b>loopMIDI</b> installieren und dort einen Port anlegen
+    (Mac: der eingebaute IAC-Treiber).</li>
+  <li>In Cubase: die Schlagzeugspur auf diesen MIDI-Eingang stellen und <b>Monitor</b> einschalten (oder die Aufnahme aktivieren).
+    Ein Standalone-VST stellst du in seinen MIDI-Einstellungen auf den Port.</li>
+  <li>In Tactus: Panel <span class="ui">Wiedergabe → Klang → MIDI-Ausgang (Cubase …)…</span>; beim ersten Mal fragt der Browser um Erlaubnis. Dann den Port wählen.</li>
+  <li>Abspielen. Die Tasten kommen aus dem Kit-Profil des Stücks.</li>
+  <li><b>Vorlauf</b> einstellen (Feld unter dem Ausgang): mit Metronom abspielen und erhöhen, bis VST und Klick zusammen sind.
+    Mit ASIO-Treiber sind das wenige Millisekunden, ein Standalone-VST ohne ASIO braucht oft 100–250 ms.</li>
+</ol>
+<p>Der Knopf <span class="ui">Tactus / MIDI</span> in der Werkzeugleiste schaltet danach mit einem Tipp zwischen Tactus-Klängen und deinem VST um.</p>
+
+<h3 id="midi-export">MIDI nach Cubase</h3>
+<p><span class="ui">Datei → MIDI exportieren für</span> → das Kit-Profil (oder <kbd>Strg</kbd>+<kbd>E</kbd> mit dem Profil des Stücks). Die Datei enthält:</p>
+<ul>
+  <li>die Tasten deines VSTs, Anschlag (Velocity), Flams / Drags / Wirbel ausgespielt,</li>
+  <li>Tempo und Tempowechsel, Taktarten, Takt-Texte als Marker,</li>
+  <li><b>Wiederholungen, %-Takte und Sprünge ausgeschrieben</b> – so wie gespielt (Cubase kennt keine Wiederholungen), mit Markern wie „Takt 5 – 2. Mal“ oder „D.S. – Takt 3“,</li>
+  <li>Swing wie gehört – oder gerade (Panel <span class="ui">Stück → Swing</span>), wenn du in Cubase swingen willst.</li>
+</ul>
+<p>In Cubase: die Datei auf die Schlagzeugspur ziehen. Für <b>Guitar Pro</b> nimm <span class="ui">General MIDI</span> (Guitar Pro liest dabei Triolen leider nicht als Triolen).</p>
+
+<h3 id="drummap-export">Drummap für Cubase, Reaper und Studio One</h3>
+<p>Damit Cubase dein Schlagzeug genauso notiert wie Tactus: im Kit-Profil <span class="ui">Drummap für Cubase 14+ speichern</span> (mit Notenköpfen,
+Instrumenten und Spielweisen) bzw. <span class="ui">… für Cubase 13 und älter</span> (älteres Format, nur Notenköpfe – ältere Versionen kennen keine Spielweisen).
+In Cubase: <span class="ui">MIDI → Drum-Map-Einstellungen → Laden</span>, dann der Spur im Inspector zuweisen.</p>
+<p><span class="ui">Andere DAWs…</span> speichert die Tastennamen für den MIDI-Editor von <b>Reaper</b> (<code>.txt</code>, „Load note names from file“) und
+<b>Studio One</b> (<code>.pitchlist</code>). Diese Formate kennen nur Namen, keine Notenköpfe.</p>
+
+<h3 id="midi-import">Der Rückweg: MIDI aus Cubase holen</h3>
+<p><span class="ui">Datei → MIDI importieren…</span> oder die <code>.mid</code>-Datei einfach auf das Tactus-Fenster ziehen.</p>
+<figure><img src="help/img/import.png" alt="Dialog MIDI importieren: Kommt von, Raster, Tempo, Ziel in das offene Stück ab Takt 5">
+  <figcaption>Kommt von: das Kit-Profil des VSTs, mit dem die Datei gemacht wurde. Ziel: ein neues Stück oder in das offene ab einem Takt.</figcaption></figure>
+<ul>
+  <li><b>Spur:</b> bei einem ganzen Projekt die Schlagzeugspur (Tactus schlägt sie vor).</li>
+  <li><b>Kommt von:</b> das Profil des VSTs, das die Datei gespielt hat – sonst landen die Tasten auf falschen Instrumenten.</li>
+  <li><b>Raster:</b> wie fein Tactus die Schläge einrastet; „1/16 + Triolen“ entscheidet pro Schlag, ob gerade oder triolisch passt.</li>
+  <li><b>Ziel:</b> neues Stück, oder <b>in das offene Stück</b> ab einem Takt – z. B. nur den in Cubase eingespielten Refrain holen.</li>
+  <li>Anschlag wird zu den fünf Stufen, leise Schläge kurz vor einem Schlag zu Flam / Drag.</li>
+</ul>
+
+<!-- ================================================================================= -->
+<h2 id="vst-wechsel">5. Drum-VST wechseln mit Tactus</h2>
+<p>Das Problem kennt jeder: In Cubase ist ein Groove für UJAM geschrieben, jetzt soll er mit EZDrummer laufen – und klingt falsch,
+weil jedes VST seine Klänge auf anderen Tasten hat. Cubase-Drummaps lassen sich kaum ineinander umrechnen.
+<b>Tactus kann das, weil es Instrumente kennt statt Tasten:</b></p>
+<div class="flow">
+  <div class="box"><b>Cubase</b>MIDI der Schlagzeugspur exportieren (Groove für VST A).</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Tactus: Import</b>„Kommt von“: Profil von VST A – Tactus versteht jetzt Snare, Hi-Hat offen, China …</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Tactus: Profil wechseln</b>Statusleiste „Kit:“ → Profil von VST B. Was fehlt, wird angezeigt.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Cubase</b>MIDI für VST B exportieren, auf die Spur mit VST B – plus dessen Drummap.</div>
+</div>
+<ol class="steps">
+  <li>In Cubase die Schlagzeugspur als MIDI-Datei exportieren.</li>
+  <li>In Tactus <span class="ui">MIDI importieren</span>, bei <span class="ui">Kommt von</span> das Profil des <b>alten</b> VSTs wählen.</li>
+  <li>Unten auf <span class="ui">Kit: …</span> tippen und das Profil des <b>neuen</b> VSTs wählen. Fehlt dort etwas, zeigt Tactus es an – Ersatz wählen (<a href="#kit-profile">oben</a>).</li>
+  <li>Optional zur Kontrolle über das neue VST anhören (<a href="#vst-wiedergabe">MIDI-Ausgang</a>).</li>
+  <li><span class="ui">MIDI exportieren</span> mit dem neuen Profil und in Cubase auf die Spur mit dem neuen VST ziehen.
+    Dazu im Kit-Profil die Drummap des neuen VSTs für Cubase speichern und der Spur zuweisen.</li>
+</ol>
+<div class="warn">Die Drummap der Cubase-Spur muss zum VST passen. Hängt noch die Drummap des alten VSTs an der Spur, leitet Cubase die Noten um und es klingen falsche Instrumente.</div>
+<p>Weitere Unterschiede zwischen VSTs, auf die du achten solltest: weniger Toms oder Becken (mehrere Noten landen auf demselben Klang),
+und jedes VST reagiert anders auf Anschlag – Ghost Notes können lauter oder leiser wirken.</p>
+
+<!-- ================================================================================= -->
+<h2 id="schreiben">6. Noten schreiben im Detail</h2>
+<h3>Notenwerte, Triolen, Punktierung</h3>
+<p>Der gewählte Notenwert ist das <b>Klick-Raster</b>: in diesem Abstand rasten neue Noten ein. Wie lang eine Note gezeichnet wird, ergibt sich
+von selbst: sie reicht bis zur nächsten Note, höchstens bis zum Ende ihres Schlags – Pausen und Balken setzt Tactus. Für Triolen
+<span class="ui">3 Triole</span> einschalten, für punktierte Werte <span class="ui">Punktiert</span>. Gerade und triolisch dürfen im selben Takt stehen.</p>
+<h3>Flam, Drag, Wirbel, Sticking</h3>
+<p>Note auswählen (antippen), dann im Noten-Panel: <b>Flam</b> / <b>Drag</b> (Vorschläge), <b>Wirbel</b> mit 1–3 Strichen, <b>Sticking</b> R / L
+unter der Note. Alles wird beim Abspielen und im MIDI-Export ausgespielt.</p>
+<h3>Mehrere Noten auf einmal</h3>
+<p>Werkzeug <span class="ui">Auswählen</span>: Rahmen ziehen, dann gemeinsam verschieben, Instrument oder Anschlag ändern.
+<kbd>Strg</kbd>+<kbd>A</kbd> wählt alle Noten (bzw. die der ausgewählten Takte).</p>
+<h3>Drum-Kit, Darstellung, Notenhälse</h3>
+<ul>
+  <li><span class="ui">⚙ → Drum-Kit</span>: welche Instrumente im Noten-Panel angeboten werden – Standard, Groß, Alle, Eigene Auswahl oder <i>Wie das Kit-Profil</i> (genau die Instrumente deines VSTs).</li>
+  <li><span class="ui">Darstellung</span>: „Tactus“ (Standard; wie die Tactus-Drummap in Cubase) oder „Guitar Pro“. Nur das Bild ändert sich.</li>
+  <li><span class="ui">Notenhälse</span>: alle nach oben, Füße nach unten, oder Füße und tiefe Toms nach unten.</li>
+  <li><span class="ui">⚙ → Ansicht</span>: Zählhilfe unter den Noten (1 e + e), Pausenbereinigung.</li>
+</ul>
+
+<!-- ================================================================================= -->
+<h2 id="takte">7. Takte und Form</h2>
+<p>Ein Takt wird ausgewählt, indem du neben die Linien (darüber oder darunter) tippst. Rechts im Panel stehen dann seine Einstellungen,
+<b>Halten</b> bzw. Rechtsklick öffnet das Taktmenü.</p>
+<ul>
+  <li><b>Taktart</b> und <b>Balkengruppen</b> (7/8 = 2+2+3 …) gelten ab diesem Takt bis zur nächsten Änderung.</li>
+  <li><b>Tempo ab hier</b>: Tempowechsel; alle Wechsel stehen im Panel <span class="ui">Stück</span> als Liste.</li>
+  <li><b>Text</b> über dem Takt (Intro, Strophe, Refrain …) – erscheint als Marker in Cubase.</li>
+  <li><b>Kopieren / Einfügen / Verdoppeln / Leeren / Löschen</b> – auch für mehrere Takte: <kbd>Shift</kbd>+Tippen neben die Linien oder <span class="ui">bis Takt</span> im Panel.</li>
+  <li><b>%</b>: der Takt wiederholt den davor (beim Abspielen und Export ausgeschrieben).</li>
+  <li><b>Swing / Shuffle</b>: Panel <span class="ui">Stück → Swing</span>, für Achtel oder Sechzehntel.</li>
+</ul>
+
+<h3 id="wiederholungen">Wiederholungen und Häuser</h3>
+<p>Panel <span class="ui">Wiederholungen &amp; Sprünge</span> oder Taktmenü <span class="ui">Wiederholung &amp; Sprung</span>:
+<b>|:</b> Anfang, <b>:|</b> Ende (2×, 3× …), <b>Klammern</b> 1. / 2. (Häuser, auch über mehrere Takte). Sind mehrere Takte ausgewählt:
+<span class="ui">Takte a–b wiederholen</span>.</p>
+<div class="ex">|: 1  2  [1. 3 :|  [2. 4  5
+gespielt: 1 2 3 1 2 4 5</div>
+<p>Beim Abspielen zeigt die Statusleiste auch den <b>gespielten</b> Takt (so zählt Cubase). <span class="ui">Ausschreiben…</span> macht aus allen
+Wiederholungen eigene Takte, dann stimmen die Taktnummern 1:1 mit Cubase.</p>
+<figure><img src="help/img/bspwiederholungen.png" alt="Beispiel Wiederholungen und Häuser in der Seitenansicht"><figcaption>Strophe mit 1./2. Haus, %-Takte zusammengefasst, Refrain 3×, zwei Takte Pause als Mehrtaktpause.</figcaption></figure>
+<p><a class="open" href="index.html?beispiel=wiederholungen">▶ Beispiel im Programm öffnen: Wiederholungen &amp; Häuser</a> – Wiederholung mit 1./2. Haus, %-Takte, ein Refrain, der dreimal gespielt wird, und eine Mehrtaktpause. Abspielen und in der Statusleiste mitlesen, welcher Takt gerade gespielt wird. Auch zu finden unter <span class="ui">Datei → Beispiele</span>.</p>
+
+<h3 id="spruenge">Sprünge: D.C., D.S., Coda, Fine</h3>
+<table>
+  <tr><th>Zeichen</th><th>Bedeutung</th></tr>
+  <tr><td><b>D.C.</b> (Da Capo)</td><td>zurück zum Anfang</td></tr>
+  <tr><td><b>D.S.</b> (Dal Segno)</td><td>zurück zum Zeichen <b>𝄋 Segno</b></td></tr>
+  <tr><td><b>… al Fine</b></td><td>nach dem Sprung bis zum Takt mit <b>Fine</b> spielen – dort ist Schluss</td></tr>
+  <tr><td><b>… al Coda</b></td><td>nach dem Sprung bis <b>To Coda</b>, dann weiter beim Takt mit <b>⊕ Coda</b> (dem Schlussteil)</td></tr>
+</table>
+<p><b>Fine und To Coda gelten erst nach dem Sprung</b> – beim ersten Durchlauf spielt man darüber hinweg.</p>
+<div class="ex">Takt  1 2 | 3 𝄋 4 | 5 6 (To Coda) | 7 8 (D.S. al Coda) | 9 ⊕ 10
+gespielt: 1 2 3 4 5 6 7 8 → 𝄋 → 3 4 5 6 → ⊕ → 9 10</div>
+<p><b>Wiederholungen nach dem Sprung</b> werden nur einmal gespielt, bei Häusern das letzte – so ist es üblich. Steht „con rip.“ in den Noten:
+Häkchen <span class="ui">Wiederholungen nach dem Sprung mitspielen</span>.</p>
+<div class="ex">Takt  1 | 2 𝄋 |: 3 [1. 4 :| [2. 5 (Fine) | 6 (D.S. al Fine)
+gespielt: 1 2 3 4 3 5 6 → 𝄋 → 2 3 5  Ende</div>
+<p>Setzen: Takt auswählen → Panel <span class="ui">Wiederholungen &amp; Sprünge</span>: <span class="ui">Zeichen</span> (am Taktanfang),
+<span class="ui">Am Taktende</span> (Fine, To Coda), <span class="ui">Sprung</span>. Fehlt etwas (D.S. ohne Segno …), steht ein Hinweis im Panel.
+Abspielen, Cursor und MIDI-Export folgen den Sprüngen.</p>
+<figure><img src="help/img/bspspruenge.png" alt="Beispiel Sprünge in der Seitenansicht: Segno, To Coda, D.S. al Coda, Coda"><figcaption>Gespielt: Intro, Strophe, Refrain → D.S. → Strophe bis „To Coda“ → Coda.</figcaption></figure>
+<p><a class="open" href="index.html?beispiel=spruenge">▶ Beispiel im Programm öffnen: Sprünge (D.S. al Coda)</a> – Intro, Strophe ab dem Segno, Refrain, zurück zum Segno, bei „To Coda“ in die Coda. Abspielen und dem Cursor folgen.</p>
+
+<!-- ================================================================================= -->
+<h2 id="notenblatt">8. Notenblatt und PDF</h2>
+<p><span class="ui">Seite</span> in der Werkzeugleiste zeigt A4-Seiten wie gedruckt; schreiben geht dort genauso. Drucken oder PDF:
+<span class="ui">Datei → PDF / Drucken</span> (<kbd>Strg</kbd>+<kbd>P</kbd>), als Drucker „Als PDF speichern“.</p>
+<figure><img src="help/img/seite.png" alt="Seitenansicht mit Wiederholung, Häusern, %-Takt mit Anzahl, Segno, To Coda, D.S. al Coda und Coda">
+  <figcaption>Kompakt für den Bandraum: Häuser, %-Takte zusammengefasst, Sprünge – und die Coda beginnt eine neue Zeile.</figcaption></figure>
+<p>Einstellungen unter <span class="ui">⚙ → Seite</span>:</p>
+<ul>
+  <li><b>Takte pro Zeile</b> (automatisch oder fest), <b>neue Zeile</b> ab einem Takt über das Taktmenü.</li>
+  <li><b>Taktnummern</b>, <b>Seitenränder</b>, <b>Titel und Seitenzahl auf den Folgeseiten</b>.</li>
+  <li><b>Leere Takte zusammenfassen</b>: mehrere Pausentakte werden ein Balken mit Anzahl (Mehrtaktpause).</li>
+  <li><b>%-Takte</b>: jeder einzeln, <b>schmal und durchgezählt</b> (2, 3, 4 … – üblich in Schlagzeug-Charts) oder <b>zusammengefasst</b> zu einem % mit Anzahl – das kompakteste für ein volles Notenblatt.</li>
+</ul>
+
+<!-- ================================================================================= -->
+<h2 id="wiedergabe">9. Wiedergabe und Klang</h2>
+<ul>
+  <li>▶ / <kbd>Leertaste</kbd> spielt ab dem ausgewählten Takt; sind mehrere Takte ausgewählt, genau diese.</li>
+  <li><span class="ui">⟳ Schleife</span>: die ausgewählten Takte immer wieder. Läuft das Stück ohne Schleife bis zum Ende, beginnt der nächste Start bei Takt 1.</li>
+  <li><b>Während des Abspielens bearbeiten:</b> jede Änderung ist sofort zu hören – so findest du den Groove am schnellsten.</li>
+  <li><span class="ui">Klick</span> = Metronom, Einzähler im Panel. <span class="ui">Folgen</span> aus: die Ansicht bleibt stehen, damit du beim Hören an einer anderen Stelle ändern kannst.</li>
+  <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (Panel <span class="ui">Wiedergabe</span>, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
+</ul>
+<h3 id="verzoegerung">Verzögerung ausgleichen</h3>
+<p>Bluetooth-Kopfhörer und manche Soundkarten spielen den Ton hörbar später, als der Cursor läuft. Feld
+<span class="ui">Ausgabe-Verzögerung</span> im Panel: den Unterschied eintragen (darunter steht, wie viel der Browser selbst meldet – das ist schon eingerechnet).
+Der Cursor wartet dann auf den Klang. Für das Drum-VST über MIDI gibt es zusätzlich den <span class="ui">Vorlauf</span>.
+Reihenfolge: erst mit Tactus-Klängen die Ausgabe-Verzögerung, dann mit MIDI den Vorlauf einstellen.</p>
+
+<!-- ================================================================================= -->
+<h2 id="speichern">10. Speichern und Teilen</h2>
+<ul>
+  <li><b>Automatisch:</b> das offene Stück bleibt im Browser gespeichert, auch nach dem Schließen.</li>
+  <li><span class="ui">Datei → Speichern / Speichern unter…</span>: eine Datei <code>.tactus.json</code>; <span class="ui">Öffnen…</span> lädt sie wieder.</li>
+  <li><b>Dropbox</b>: <span class="ui">Datei → Mit Dropbox verbinden…</span> (einmal anmelden; Tactus sieht nur seinen eigenen App-Ordner).
+    Dann <span class="ui">In Dropbox speichern</span> / <span class="ui">Aus Dropbox öffnen…</span>; <kbd>Strg</kbd>+<kbd>S</kbd> speichert ein Dropbox-Stück dorthin zurück.
+    Wurde es inzwischen auf einem anderen Gerät geändert, fragt Tactus nach. <b>Kit-Profile</b> werden automatisch abgeglichen.</li>
+  <li><b>Link teilen:</b> <span class="ui">Datei → Link zum Teilen kopieren</span> – das ganze Stück steckt in der Adresse, kein Server nötig. Wer den Link öffnet, bekommt das Stück.</li>
+</ul>
+
+<!-- ================================================================================= -->
+<h2 id="nachschlagen">11. Nachschlagen</h2>
+<h3 id="linien">Welche Linie ist was?</h3>
+<p>Die Darstellung „Tactus“ (Standard). Die Liste kommt direkt aus dem Programm und ist damit immer aktuell.</p>
+<table class="lines" id="lines-table"><tr><td>Wird geladen …</td></tr></table>
+<h3 id="kuerzel">Gesten und Tastenkürzel</h3>
+<dl class="keys" id="keys-list"></dl>
+
+<!-- ================================================================================= -->
+<h2 id="fragen">12. Häufige Fragen</h2>
+<h3>Auf dem iPad gibt es keinen MIDI-Ausgang.</h3>
+<p>Richtig – Safari kann kein Web MIDI. Deshalb der Ablauf: im Bandraum schreiben (mit Tactus-Klängen), zuhause am PC mit Chrome oder Edge über das VST anhören und exportieren.</p>
+<h3>Der MIDI-Ausgang erscheint nicht.</h3>
+<p>Nur Chrome und Edge; die Erlaubnis beim ersten Mal bestätigen; loopMIDI muss laufen (der Port muss angelegt sein). Danach <span class="ui">MIDI-Ausgänge erneut suchen…</span>.</p>
+<h3>Das VST klingt später als der Klick.</h3>
+<p><span class="ui">Vorlauf</span> erhöhen (<a href="#vst-wiedergabe">Kapitel 4</a>). Ein ASIO-Treiber senkt die Verzögerung deutlich.</p>
+<h3>Der Cursor läuft dem Klang voraus.</h3>
+<p><span class="ui">Ausgabe-Verzögerung</span> einstellen (<a href="#verzoegerung">Kapitel 9</a>).</p>
+<h3>Meine Bandkollegen haben Cubase 13.</h3>
+<p>Im Kit-Profil <span class="ui">… für Cubase 13 und älter</span> speichern. Die MIDI-Dateien sind für alle Versionen gleich.</p>
+<h3>Nach dem Import stehen Noten auf falschen Linien.</h3>
+<p>Bei <span class="ui">Kommt von</span> das Profil des VSTs wählen, mit dem die Datei gespielt wurde. Tasten ohne Instrument zeigt der Import-Dialog an.</p>
+<h3>Welcher Browser?</h3>
+<p>Chrome oder Edge am PC (alles inklusive MIDI-Ausgang), auf dem Tablet Chrome oder Safari. Tactus braucht keine Installation, kann aber als App installiert werden.</p>
+
+<!-- ================================================================================= -->
+<h2 id="lizenzen">13. Lizenzen und Dank</h2>
+<ul>
+  <li>Notenschrift <b>Bravura</b> © Steinberg Media Technologies GmbH, SIL Open Font License 1.1.</li>
+  <li>Schlagzeug-Aufnahmen: <b>MuldjordKit</b> von Lars Muldjord (FreePats-Version), CC BY 4.0, und <b>Virtuosity Drums</b> von Versilian Studios, CC0.</li>
+  <li>Linien und Noten der Schlagzeuginstrumente wie in Guitar Pro 7/8, übernommen aus dem Open-Source-Projekt <b>alphaTab</b>.</li>
+  <li>Tactus selbst: PolyForm Noncommercial 1.0.0 – frei für jede nicht-kommerzielle Nutzung.</li>
+</ul>
+
+</article>
+</main>
+</div>
+<a class="back" href="index.html">← Zu Tactus</a>
+
+<script src="js/state.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/drummap.js"></script>
+<script src="js/shortcuts.js"></script>
+<script src="js/helppage.js"></script>
+</body>
+</html>

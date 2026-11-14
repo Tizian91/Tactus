@@ -484,7 +484,7 @@
         ${odd.length ? `<p class="hint warn"><b>${tr('Please check (same output note as another instrument):')}</b> ${odd.map((e) => esc(keyLabel(e)) + ' = ' + esc(TC.drums.label(TC.drums.byId(e.art)))).join(' · ')}</p>` : ''}
         ${free.length ? `<details class="hint kit-free"><summary>${tr('{n} more keys of the drum map have no Tactus instrument (info)', { n: free.length })}</summary>${free.map((e) => esc(keyLabel(e))).join(' · ')}</details>` : ''}`;
     }
-    box.innerHTML = `<header><h2>${tr('Kit profiles')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
+    box.innerHTML = `<header><h2>${tr('Kit profiles')} <a class="help-link" href="hilfe.html#kit-profile" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
       <div class="kit-bar">
         ${K.list.length ? `<select data-k="pick">${opts}</select>` : ''}
         <button type="button" data-k="new">${tr('New from drum map…')}</button>
@@ -718,7 +718,7 @@
             <button type="button" data-k="replace"${r.by ? '' : ' disabled'} title="${esc(tr('Changes the notation of this score (undo: Ctrl+Z)'))}">${esc(r.by ? tr('In the score: → {x}', { x: lab(r.by) }) : tr('In the score …'))}</button></div>
         </div>`;
       }).join('') : `<p>${tr('Everything there: every instrument of this score has a key in the profile.')}</p>`;
-      checkRoot.querySelector('.dialog').innerHTML = `<header><h2>${tr('Kit profile: {name}', { name: esc(p.name) })}</h2>
+      checkRoot.querySelector('.dialog').innerHTML = `<header><h2>${tr('Kit profile: {name}', { name: esc(p.name) })} <a class="help-link" href="hilfe.html#kit-profile" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></h2>
           <button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
           ${rows.length ? `<p class="hint">${tr('These instruments of the score have no key in the profile. Choose what plays instead (saved in the profile, for every score), or change the notes of this score.')}</p>` : ''}

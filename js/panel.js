@@ -297,7 +297,7 @@
         ? `<p class="hint warn">${tr('"{name}" is not connected.', { name: st.midiOut })}</p>`
         : `<p class="hint tight">${tr('Keys of the kit profile: {name}', { name: p ? p.name : 'General MIDI' })}</p>`;
       more += `<div class="row"><label>${tr('Lead')}</label><input type="number" min="0" max="500" step="10" data-midilead value="${Number(st.midiLead) || 0}"> <span class="muted">ms</span></div>
-        <p class="hint tight">${tr('Sends the notes earlier, as much as the drum VST is late (its audio buffer). Set it with the metronome on until both sound together.')}</p>`;
+        <p class="hint tight">${tr('Sends the notes earlier, as much as the drum VST is late (its audio buffer). Set it with the metronome on until both sound together.')} <a class="help-link" href="hilfe.html#vst-wiedergabe" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></p>`;
       more += check('toggleMidiSynth', !!st.midiOutSynth, tr('Tactus sounds as well'));
     }
     return `<div class="row"><label>${tr('Sound')}</label><select data-action="setMidiOut">${opts}</select></div>${more}`;
@@ -313,7 +313,7 @@
     const credit = st.samples ? `<p class="hint tight">${tr('Recordings: MuldjordKit by Lars Muldjord (CC BY 4.0) and Virtuosity Drums by Versilian Studios (CC0).')}</p>` : '';
     const rep = Math.round(TC.audio.reportedDelay() * 1000);
     const delay = `<div class="row"><label>${tr('Output delay')}</label><input type="number" min="0" max="500" step="10" data-audiodelay value="${Number(st.audioDelay) || 0}"> <span class="muted">ms</span></div>
-      <p class="hint tight">${tr('The cursor runs ahead of the sound (e.g. Bluetooth headphones)? Enter the difference; the browser reports {n} ms itself, already allowed for.', { n: rep })}</p>`;
+      <p class="hint tight">${tr('The cursor runs ahead of the sound (e.g. Bluetooth headphones)? Enter the difference; the browser reports {n} ms itself, already allowed for.', { n: rep })} <a class="help-link" href="hilfe.html#verzoegerung" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></p>`;
     return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit + delay;
   }
 
@@ -353,26 +353,7 @@
   }
 
   function keysSection() {
-    const k = [
-      ['1 … 7', tr('Whole … 64th note')], ['.', tr('Dotted')], ['T', tr('Triplet')],
-      ['L / Shift', tr('Lock instrument (switch / while held)')],
-      ['H O S K', tr('Hi-hat closed / open, snare, kick')], ['R C F P', tr('Ride, crash, floor tom, pedal hi-hat')],
-      ['A / G', tr('Accent / ghost note')], ['↑ ↓', tr('Selected notes to the next instrument')],
-      [tr('Press, drag, release'), tr('A new note follows; release writes it')],
-      [tr('Drag a note'), tr('Move it (sideways: time, up / down: instrument)')],
-      [tr('Hold a note, drag'), tr('Row of notes (mouse: Ctrl + drag)')],
-      [tr('Hold a note, up / down'), tr('Strength: ghost · soft · normal · strong · accent')],
-      [tr('Hold a note, release'), tr('Menu: instruments of the line (hi-hat closed / open …), ghost / accent')],
-      ['W / V / E', tr('Write / select / erase')], [tr('Ctrl+A'), tr('Select all notes (or those of the selected bars)')],
-      ['← →', tr('Selected notes one grid step earlier / later')],
-      [tr('Beside the lines'), tr('Tap: select the bar · drag: scroll')],
-      [tr('Two fingers'), tr('Scroll and zoom')],
-      [tr('Shift + click beside the lines'), tr('Select bars up to there')],
-      [tr('Ctrl+click'), tr('Select several notes')],
-      [tr('Space'), tr('Play / stop')], ['Ctrl+C / V / D', tr('Copy / paste / duplicate the bar')],
-      [tr('Del'), tr('Delete selected notes')], ['Ctrl+Z / Y', tr('Undo / redo')],
-      [tr('Wheel'), tr('Scroll (Ctrl: zoom, Shift: up/down)')], [tr('Space+drag'), tr('Move the view')],
-    ];
+    const k = TC.SHORTCUTS.map(([a, b]) => [tr(a), tr(b)]);
     return `<section><details class="keys-list"><summary><h3 class="inline">${tr('Keyboard shortcuts')}</h3></summary>
       <dl class="keys">${k.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('')}</dl></details></section>`;
   }

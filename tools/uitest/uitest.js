@@ -226,7 +226,7 @@ setTimeout(() => {
   ok('panel: repeat controls', !!document.querySelector('#panel-settings select[data-action="setRepeatEnd"]') && !!document.querySelector('#panel-settings select[data-action="setVolta"]'));
   TC.actions.undo(); TC.actions.undo();
   ok('undo: no repeats left', !TC.score.hasRepeats(S.doc));
-  // jumps: panel section, signs drawn, warning, the help window
+  // jumps: panel section, signs drawn, warning, the manual
   TC.selectBar(S.doc.bars.length - 1); TC.refresh();
   ok('panel: section "Repeats & jumps"', [...document.querySelectorAll('#panel-settings h3')].some((h) => h.textContent === 'Wiederholungen & Sprünge') &&
     !!document.querySelector('#panel-settings select[data-action="setJump"]'));
@@ -237,12 +237,29 @@ setTimeout(() => {
   ok('segno drawn on bar 2', !!document.querySelector('#score .jump-sign') && S.doc.bars[1].mark === 'segno');
   ok('played: … then from bar 2 again ' + TC.score.playOrder(S.doc).map((o) => o.bar + 1).join(' '),
     TC.score.playOrder(S.doc).filter((o) => o.via === 'ds').length === 1 && TC.score.playOrder(S.doc).find((o) => o.via).bar === 1);
+  const realOpen = window.open, opened = [];
+  window.open = (url, name) => { opened.push(url + ' ' + name); return {}; };
   document.querySelector('#panel-settings [data-action="jumpHelp"]').click();
-  ok('help window "How jumps work" opens', TC.help.isOpen() && /Da Capo/.test(document.querySelector('.help-dialog').textContent));
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-  ok('help window: Escape closes it', !TC.help.isOpen());
+  document.getElementById('help-btn').click();
+  ok('ⓘ jumps and ? in the toolbar open the manual in its own tab ' + opened.join(', '), opened.join() === 'hilfe.html#spruenge tactus-help,hilfe.html tactus-help');
+  window.open = realOpen;
   TC.actions.undo(); TC.actions.undo();
   ok('undo: no jumps left', !S.doc.bars.some((b) => b.jump || b.mark));
+  // examples: File → Examples, and the links of the manual (index.html?beispiel=…)
+  TC.actions.fileMenu();
+  ok('File menu: examples', /Beispiele/.test(document.getElementById('context-menu').textContent) && /Sprünge \(D\.S\. al Coda\)/.test(document.getElementById('context-menu').textContent));
+  TC.menu.close();
+  const keepDoc = S.doc, keepDirty = S.dirty;
+  S.dirty = false;
+  TC.storage.loadExample('spruenge');
+  const po = TC.score.playOrder(S.doc).map((o) => o.bar + 1).join(' ');
+  ok('example "jumps": D.S. al Coda played ' + po, po === '1 2 3 4 5 6 7 8 3 4 5 9 10' && TC.score.jumpProblems(S.doc).length === 0);
+  S.dirty = false;
+  TC.storage.loadExample('wiederholungen');
+  const pr = TC.score.playOrder(S.doc).map((o) => o.bar + 1).join(' ');
+  ok('example "repeats": endings, %, chorus 3× ' + pr, pr === '1 2 3 4 5 2 3 4 6 7 8 9 10 7 8 9 10 7 8 9 10 11 12 13 14');
+  TC.storage.setDoc(keepDoc, 'Untitled.tactus.json'); S.dirty = keepDirty;
+  TC.refresh();
   // several bars: duplicate / delete the selected bars; tempo from a bar on
   const nBars = S.doc.bars.length;
   TC.selectBar(1); TC.selectBar(2, true); TC.refresh();

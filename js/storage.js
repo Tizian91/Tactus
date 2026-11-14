@@ -233,4 +233,125 @@
     put(5, 2880, 960, 36);
     return doc;
   };
+
+  /** Building blocks of the other examples: a score of n bars and grooves to fill a bar. */
+  function builder(n, title, tempo) {
+    const doc = TC.emptyScore(n);
+    Object.assign(doc.meta, { title, artist: 'Tactus – Beispiel', tempo });
+    const tr0 = doc.tracks[0];
+    const put = (bar, tick, dur, art, extra) => {
+      const a = TC.drums.byId(art);
+      TC.score.place(doc, tr0, bar, a.voice, tick, dur, Object.assign(TC.newDrumNote(art, {}), extra || {}));
+    };
+    const B = {
+      doc, put,
+      // rock: hi-hat eighths, snare on 2 and 4, kick on 1, 3, 3+ (crash on 1 if wanted)
+      rock(bar, crash) {
+        for (let t = 0; t < 3840; t += 480) put(bar, t, 480, crash && t === 0 ? 49 : 42);
+        [960, 2880].forEach((t) => put(bar, t, 480, 38));
+        [0, 1920, 2400].forEach((t) => put(bar, t, 480, 36));
+      },
+      // chorus: ride eighths (bell on the beats), snare 2 and 4 with a ghost note, kick 1, 2+, 3
+      ride(bar, crash) {
+        for (let t = 0; t < 3840; t += 480) put(bar, t, 480, crash && t === 0 ? 49 : t % 960 ? 51 : 53);
+        [960, 2880].forEach((t) => put(bar, t, 480, 38, { accent: 1 }));
+        put(bar, 2160, 240, 38, { ghost: true });
+        [0, 1440, 1920].forEach((t) => put(bar, t, 480, 36));
+      },
+      // fill: groove on 1 and 2, then sixteenths over snare and toms
+      fill(bar, toms) {
+        [0, 480].forEach((t) => put(bar, t, 480, 42));
+        put(bar, 0, 480, 36);
+        put(bar, 960, 480, 38);
+        put(bar, 960, 480, 36);
+        const arts = toms ? [38, 38, 50, 50, 48, 48, 47, 47] : [38, 38, 38, 38, 38, 38, 38, 38];
+        arts.forEach((a, k) => put(bar, 1920 + k * 240, 240, a, { stick: 'RL'[k % 2] }));
+      },
+      // triplet fill over the toms with a flam to start
+      triplets(bar) {
+        put(bar, 0, 960, 42);
+        put(bar, 0, 960, 36);
+        put(bar, 960, 960, 38);
+        [38, 50, 50, 48, 48, 47].forEach((a, k) => put(bar, 1920 + k * 320, 320, a, k === 0 ? { orn: 'flam' } : null));
+      },
+      // ending: crash and kick on 1, ringing
+      end(bar) {
+        put(bar, 0, 3840, 49, { accent: 1 });
+        put(bar, 0, 3840, 36);
+      },
+    };
+    return B;
+  }
+
+  /** Example: repeats with endings (1st / 2nd time bars), %-bars, a repeat played 3×, a multi-bar rest. */
+  ST.repeatsDoc = function () {
+    const B = builder(14, 'Beispiel: Wiederholungen & Häuser', 112), b = B.doc.bars;
+    B.rock(0, true);
+    b[0].marker = 'Intro';
+    // verse: |: groove % % [1. fill :| [2. other fill
+    B.rock(1);
+    b[1].marker = 'Strophe';
+    b[1].repeatStart = true;
+    b[2].simile = b[3].simile = true;
+    B.fill(4, false);
+    b[4].volta = [1];
+    b[4].repeatEnd = 2;
+    B.fill(5, true);
+    b[5].volta = [2];
+    // chorus: |: ride groove % % fill :| three times
+    B.ride(6, true);
+    b[6].marker = 'Refrain';
+    b[6].repeatStart = true;
+    b[7].simile = b[8].simile = true;
+    B.triplets(9);
+    b[9].repeatEnd = 3;
+    // break: two bars rest (a multi-bar rest on the sheet), then the ending
+    b[10].marker = 'Break';
+    B.rock(12);
+    b[12].marker = 'Schluss';
+    B.end(13);
+    return B.doc;
+  };
+
+  /** Example: D.S. al Coda - segno, To Coda, jump back, coda. */
+  ST.jumpsDoc = function () {
+    const B = builder(10, 'Beispiel: Sprünge (D.S. al Coda)', 104), b = B.doc.bars;
+    B.rock(0, true);
+    b[0].marker = 'Intro';
+    b[1].simile = true;
+    // verse from the segno; "To Coda" after it
+    B.rock(2);
+    b[2].marker = 'Strophe';
+    b[2].mark = 'segno';
+    b[3].simile = true;
+    B.fill(4, false);
+    b[4].end = 'toCoda';
+    // chorus, then back to the segno
+    B.ride(5, true);
+    b[5].marker = 'Refrain';
+    b[6].simile = true;
+    B.fill(7, true);
+    b[7].jump = 'dsCoda';
+    // coda
+    B.ride(8, true);
+    b[8].mark = 'coda';
+    b[8].marker = 'Outro';
+    B.end(9);
+    return B.doc;
+  };
+
+  /** The examples (File → Examples, and links of the manual: index.html?beispiel=…). */
+  ST.EXAMPLES = [
+    { id: 'groove', label: 'Example groove', make: () => ST.demoDoc(), file: 'Example.tactus.json' },
+    { id: 'wiederholungen', label: 'Repeats & endings', make: () => ST.repeatsDoc(), file: 'Wiederholungen.tactus.json' },
+    { id: 'spruenge', label: 'Jumps (D.S. al Coda)', make: () => ST.jumpsDoc(), file: 'Spruenge.tactus.json' },
+  ];
+  ST.loadExample = function (id) {
+    const ex = ST.EXAMPLES.find((e) => e.id === id);
+    if (!ex) return false;
+    if (S.dirty && !confirm(tr('Discard the changes of the open score?'))) return false;
+    setDoc(ex.make(), ex.file);
+    TC.actions.home();
+    return true;
+  };
 })(window.TC);

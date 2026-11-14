@@ -157,6 +157,12 @@
     if (TC.dropbox) TC.dropbox.start();
     // opened with a share link (#s=…): its score
     if (TC.share) TC.share.openFromHash();
+    // opened from the manual (index.html?beispiel=spruenge): that example, then the address without it
+    const ex = new URLSearchParams(location.search).get('beispiel');
+    if (ex) {
+      TC.storage.loadExample(ex);
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* file:// */ }
+    }
     // the music font may arrive a moment later: draw again, so widths fit
     if (document.fonts && document.fonts.load) document.fonts.load('40px Bravura').then(() => TC.refresh());
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

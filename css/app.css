@@ -427,7 +427,8 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .score .jump-sign { fill: var(--ink); font-size: 26px; }
 .score .jump-sign.end { text-anchor: end; }
 .score .jump-text { font-size: 13px; font-weight: 700; font-style: italic; text-anchor: end; fill: var(--ink); }
-.help-dialog { max-width: 620px; }
-.help-body { padding: 4px 18px 16px; line-height: 1.5; font-size: 14px; }
-.help-body .help-ex { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; background: var(--panel-alt, rgba(127,127,127,.1)); padding: 6px 8px; border-radius: 4px; }
 .score .simile-n { font-size: 14px; font-weight: 700; text-anchor: middle; fill: var(--ink); }
+/* ⓘ: the chapter of the manual (hilfe.html) */
+.help-link { text-decoration: none; color: var(--accent); font-weight: 400; font-size: 0.9em; margin-left: 4px; }
+.help-link:hover { color: var(--accent-hover); }
+#help-btn { font-weight: 700; min-width: 32px; }

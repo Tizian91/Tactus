@@ -240,7 +240,9 @@
         const fx = ln.reduce((a, b) => a + fixed(b) + (b.simileN ? b.L * b.scale : 0), 0), mv = ln.reduce((a, b) => a + (b.simileN ? 0 : b.L * b.scale), 0);
         if (!mv) return;
         let k2 = (avail - fx) / mv;
-        if (k === lines.length - 1 && k2 > 1) k2 = Math.min(k2, prev || (fx + mv > 0.7 * avail ? k2 : 1));
+        // the last line, and a line ended by a forced break (new line, coda), is not stretched more than the one before
+        const nx = lines[k + 1] && doc.bars[lines[k + 1][0].i], forced = nx && (nx.lineBreak || nx.mark === 'coda');
+        if ((k === lines.length - 1 || forced) && k2 > 1) k2 = Math.min(k2, prev || (fx + mv > 0.7 * avail ? k2 : 1));
         ln.forEach((b) => { if (!b.simileN) b.scale *= k2; });
         prev = k2;
       });

@@ -218,7 +218,7 @@ Eine Regel für Maus, Stift und Finger:
 1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
 5. ~~Samples~~ ✅ (zum Ausprobieren)  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
-7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. Handbuch / Hilfeseite mit ⓘ-Links
+7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
 
 ## Offen zum Ausprobieren
 
@@ -295,3 +295,15 @@ Eine Regel für Maus, Stift und Finger:
 - **Speichern:** „Andere DAWs…“ → Reaper-Notennamen bzw. Studio-One-Pitchliste; zugeordnete Tasten heißen wie in Tactus,
   die übrigen behalten den Namen des Herstellers. Diese Formate kennen nur Namen, keine Notenköpfe / Notenlinien.
 - Nicht unterstützt: Ableton (`.adg` = ganzes Drum-Rack-Preset), Cakewalk (`.map`, binär), Music Maker.
+
+## Handbuch und Beispiele ✅
+
+- **`hilfe.html`** (Werkzeugleiste „?“, öffnet einen eigenen Tab, offline im Cache): roter Faden Bandraum (Tablet) → zuhause →
+  Cubase; eigene Kapitel für Finger / Stift, „Anders als Guitar Pro – eher wie eine DAW“, **Drum-VST wechseln über Tactus**,
+  Wiederholungen / Sprünge mit Beispielen, Notenblatt, Wiedergabe / Verzögerung, Speichern / Teilen, Häufige Fragen.
+- Automatisch aus dem Programm: **Linien-Tabelle** (`js/drummap.js`) und **Gesten / Tastenkürzel** (`js/shortcuts.js`, dieselbe Liste wie in ⚙).
+- **Bilder** per Skript: `bash tools/build_help_images.sh` (Szenen in `tools/help/shots.js`, Tablet-Format 1180 × 820).
+- **ⓘ-Links** an den kniffligen Stellen: Kit-Profile, „Was fehlt“, MIDI-Import, Vorlauf, Ausgabe-Verzögerung, Sprünge.
+- **Beispiele** (Datei → Beispiele, oder aus dem Handbuch „▶ Im Programm öffnen“ = `index.html?beispiel=…`):
+  Groove, **Wiederholungen & Häuser** (1./2. Haus, %, Refrain 3×, Mehrtaktpause), **Sprünge** (D.S. al Coda).
+- Seitenansicht: eine Zeile vor einem erzwungenen Umbruch (Coda, neue Zeile) wird nicht mehr über die volle Breite gestreckt.

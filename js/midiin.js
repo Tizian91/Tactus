@@ -333,7 +333,7 @@
         .concat(withNotes.map((t) => `<option value="${t.i}"${String(t.i) === st.track ? ' selected' : ''}>${esc(t.name || tr('Track {n}', { n: t.i + 1 }))} (${tr('{n} notes', { n: t.notes })})</option>`)).join('');
       const unk = res.unknown.length
         ? `<p class="hint warn"><b>${tr('Keys without an instrument (left out):')}</b> ${res.unknown.map((u) => esc(keyName(u.note)) + ` (${u.count}×)`).join(', ')}</p>` : '';
-      root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Import MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
+      root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Import MIDI')} <a class="help-link" href="hilfe.html#midi-import" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
           <p><b>${esc(fileName)}</b></p>
           ${withNotes.length > 1 ? `<div class="row"><label>${tr('Track')}</label><select data-k="track">${tracks}</select></div>` : ''}

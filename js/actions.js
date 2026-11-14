@@ -695,7 +695,7 @@
       ...dropboxItems(),
       { label: 'Copy a link to share', action: () => TC.share.copyLink() },
       '-',
-      { label: 'Load example groove', action: A.demo },
+      { label: 'Examples', submenu: TC.storage.EXAMPLES.map((e) => ({ label: e.label, action: () => TC.storage.loadExample(e.id) })) },
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },
       '-',
       { label: 'Import MIDI…', action: A.importMidi },
@@ -846,31 +846,14 @@
     ['ds', 'D.S. (from 𝄋)'], ['dsFine', 'D.S. al Fine'], ['dsCoda', 'D.S. al Coda']];
   A.JUMP_LABELS = JUMP_LABELS;
 
-  /** How jumps work: a short explanation with an example (until the manual exists). */
-  A.jumpHelp = function () {
-    TC.help.open(tr('How jumps work'), JUMP_HELP());
+  /** The manual (hilfe.html) in its own tab, at a chapter (anchor). */
+  A.openHelp = function (anchor) {
+    const url = 'hilfe.html' + (anchor ? '#' + anchor : '');
+    const w = window.open(url, 'tactus-help');
+    if (!w) location.href = url; // pop-ups blocked: open it here
   };
-  const JUMP_HELP = () => TC.getLang && TC.getLang() === 'de' ? `
-    <p><b>D.C.</b> (Da Capo) = zurück zum Anfang. <b>D.S.</b> (Dal Segno) = zurück zum Zeichen <b>𝄋 Segno</b>.</p>
-    <p><b>… al Fine</b>: nach dem Sprung bis zum Takt mit <b>Fine</b> spielen – dort ist Schluss.<br>
-       <b>… al Coda</b>: nach dem Sprung bis <b>To Coda</b> spielen, dann weiter beim Takt mit <b>⊕ Coda</b> (dem Schlussteil).</p>
-    <p>Fine und To Coda gelten erst <b>nach</b> dem Sprung; beim ersten Durchlauf spielt man darüber hinweg.</p>
-    <p class="help-ex">Takt&nbsp; 1 2 | 3&nbsp;𝄋 4 | 5 6&nbsp;(To Coda) | 7 8&nbsp;(D.S. al Coda) | 9&nbsp;⊕ 10<br>
-       gespielt: 1 2 3 4 5 6 7 8 → 𝄋 → 3 4 5 6 → ⊕ → 9 10</p>
-    <p><b>Wiederholungen nach dem Sprung</b> werden nur einmal gespielt, bei 1. / 2. Klammer die letzte
-       (so ist es üblich). Steht „con rip.“ in den Noten: Häkchen „Wiederholungen nach dem Sprung mitspielen“.</p>
-    <p class="help-ex">Takt&nbsp; 1 | 2&nbsp;𝄋 |: 3 [1. 4 :| [2. 5 (Fine) | 6 (D.S. al Fine)<br>
-       gespielt: 1 2 3 4 3 5 6 → 𝄋 → 2 3 5 Ende</p>
-    <p>Setzen: Takt-Panel → <b>Wiederholungen &amp; Sprünge</b>, oder Rechtsklick auf den Takt. Abspielen, Cursor und
-       MIDI-Export folgen den Sprüngen (in Cubase mit Markern „D.S. – Takt 3“, „Coda – Takt 9“).</p>` : `
-    <p><b>D.C.</b> (da capo) = back to the start. <b>D.S.</b> (dal segno) = back to the sign <b>𝄋 segno</b>.</p>
-    <p><b>… al Fine</b>: after the jump play up to the bar with <b>Fine</b> – the end.<br>
-       <b>… al Coda</b>: after the jump play up to <b>To Coda</b>, then go on at the bar with <b>⊕ Coda</b>.</p>
-    <p>Fine and To Coda count only <b>after</b> the jump.</p>
-    <p class="help-ex">bars&nbsp; 1 2 | 3&nbsp;𝄋 4 | 5 6&nbsp;(To Coda) | 7 8&nbsp;(D.S. al Coda) | 9&nbsp;⊕ 10<br>
-       played: 1 2 3 4 5 6 7 8 → 𝄋 → 3 4 5 6 → ⊕ → 9 10</p>
-    <p><b>Repeats after the jump</b> are played once, with endings the last one (the usual way). For "con rip.":
-       tick "Play the repeats after the jump".</p>`;
+  /** How jumps work: the chapter of the manual. */
+  A.jumpHelp = () => A.openHelp('spruenge');
   const VOLTAS = [['', '–'], ['1', '1.'], ['2', '2.'], ['3', '3.'], ['4', '4.'], ['1,2', '1., 2.'], ['1,2,3', '1., 2., 3.']];
   A.VOLTAS = VOLTAS;
   /** Submenu "Repeat" of bar i. */

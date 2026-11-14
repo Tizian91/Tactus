@@ -180,8 +180,8 @@
       return muted('ride');
     }
     if (/crash/.test(n)) {
-      const k = /crash ?([1-4lr])\b/.exec(n);
-      const num = !k ? 1 : k[1] === 'l' ? 2 : k[1] === 'r' ? 1 : +k[1];
+      const k = /crash ?(left|right|[1-4lr])\b/.exec(n);
+      const num = !k ? 1 : /^l/.test(k[1]) ? 2 : /^r/.test(k[1]) ? 1 : +k[1];
       return muted('crash' + num);
     }
     if (/cowbell/.test(n)) return 'cowbell';
@@ -274,11 +274,38 @@
     return out;
   };
 
+  // ---- Key names of other programs (no notation, only a name per key) ----------------------------
+  //   Reaper: "note<tab>name" per line ("// …" comments) · Studio One: <Music.PitchName pitch="36" name="Kick"/>
+
+  /** Key names from a Reaper (.txt) or Studio One (.pitchlist) file: { format, names: { note: name } } or null. */
+  C.parseNames = function (text) {
+    const names = {};
+    if (/<Music\.PitchNameList/.test(text)) {
+      text.replace(/<Music\.PitchName\s+pitch="(\d+)"\s+name="([^"]*)"/g, (m, n, v) => { if (+n < 128) names[+n] = unxml(v).trim(); });
+      return Object.keys(names).length ? { format: 'studioone', names } : null;
+    }
+    if (/<|\0/.test(text)) return null;
+    for (const line of text.split(/\r?\n/)) {
+      const m = /^\s*(\d{1,3})\s+(\S.*?)\s*$/.exec(line);
+      if (m && +m[1] < 128) names[+m[1]] = m[2];
+    }
+    return Object.keys(names).length >= 3 ? { format: 'reaper', names } : null;
+  };
+  /** Key names for Reaper (MIDI editor: "Load note names from file"). keys: [{ note, name }] */
+  C.toReaper = (keys) => '// MIDI note name map (Tactus)\n' +
+    keys.slice().sort((a, b) => b.note - a.note).map((k) => `${k.note}\t${k.name.replace(/[\r\n\t]+/g, ' ')}`).join('\n') + '\n';
+  /** Key names for Studio One (pitch name list). */
+  C.toPitchList = (keys) => {
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    return '﻿<?xml version="1.0" encoding="UTF-8"?>\r\n<Music.PitchNameList>\r\n' +
+      keys.slice().sort((a, b) => b.note - a.note).map((k) => `\t<Music.PitchName pitch="${k.note}" name="${esc(k.name)}"/>\r\n`).join('') + '</Music.PitchNameList>\r\n';
+  };
+
   /**
-   * An empty drum map (no file from the maker): 128 keys, each plays its own note, no names.
-   * channel: MIDI channel 0 … 15 (9 = channel 10, General MIDI drums).
+   * An empty drum map (no file from the maker): 128 keys, each plays its own note, no names
+   * (or the names of another program's key list). channel: MIDI channel 0 … 15 (9 = channel 10, General MIDI drums).
    */
-  C.blank = function (name, channel = 9) {
+  C.blank = function (name, channel = 9, names = {}) {
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const items = [];
     for (let n = 0; n < 128; n++) {
@@ -292,7 +319,7 @@
          <int name="HeadSymbol" value="0"/>
          <int name="Voice" value="0"/>
          <int name="PortIndex" value="0"/>
-         <string name="Name" value="" wide="true"/>
+         <string name="Name" value="${esc(names[n] || '')}" wide="true"/>
          <int name="QuantizeIndex" value="0"/>
          <int name="NoteheadSet" value="0"/>
          <string name="InstrumentEntityID" value=""/>

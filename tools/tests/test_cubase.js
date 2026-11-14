@@ -51,6 +51,7 @@ ${[item(20, 20, 0, 0, 'Intro'), item(28, 28, 0, 0, 'Kick A'), item(36, 36, 62, 0
     ['kick', 'kick2', 'snare2', 'clap', 'hhClosed', 'hhHalf', 'hhOpen', 'tomLow', 'tomHigh', 'clapPerc', 'tambourine', 'crash1', 'ride', 'crash2', null, null]);
   // MT Power Drum Kit 2: hyphen, "Tom Hi", second keys in brackets, keys without a display note that are instruments
   const noDisp = (name) => C.roleOf({ name, inote: 60, display: 0, instrument: '' });
+  T.eq('crash left / right written out (Reaper)', ['CRASH LEFT', 'CRASH RIGHT'].map(role), ['crash2', 'crash1']);
   T.eq('MT Power Drum Kit names', ['SIDE-STICK', 'TOM HI', 'TOM MID', 'TOM LOW', '(Tom Low)', '(Snare)', 'CRASH R (main Crash) ', 'CRASH L'].map(role),
     ['sidestick', 'tomHigh', 'tomMid', 'tomLow', 'tomLow', 'snare', 'crash1', 'crash2']);
   T.eq('no display note: an instrument name counts, pattern keys do not', ['Hi-Hat Pedal', 'CRASH R CHOKED', 'Kick A', 'Intro', 'Fill 2', '---'].map(noDisp),

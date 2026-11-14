@@ -218,7 +218,7 @@ Eine Regel für Maus, Stift und Finger:
 1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
 5. ~~Samples~~ ✅ (zum Ausprobieren)  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
-7. Drummap-Export für weitere DAWs (Reaper-Notennamen, Studio-One-Pitchlist – Formate erst prüfen)  8. Handbuch / Hilfeseite mit ⓘ-Links
+7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. Handbuch / Hilfeseite mit ⓘ-Links
 
 ## Offen zum Ausprobieren
 
@@ -287,3 +287,11 @@ Eine Regel für Maus, Stift und Finger:
   4 Schrägstrich, 5 Quadrat, 6 dickes x, 7 ⊗, 8 langer Schrägstrich, 9 klein, 10 / 11 Dreieck links / rechts, 14 Dreieck unten.
   Tactus: Hi-Hat / Ride x (2), halb offen ⊘ (1), offen ⊗ (7), Crash / China dickes x (6), Rimshot / Glocke Raute (3),
   Cowbell vorerst Dreieck unten (14; Werte 16–30 noch unbekannt)
+
+## Andere DAWs: Reaper und Studio One ✅
+
+- **Laden:** „Neu aus Drummap…“ nimmt auch Reaper-Notennamen (`.txt`, „Taste ⇥ Name“) und Studio-One-Pitchlisten (`.pitchlist`) –
+  viele Hersteller liefern genau diese mit. Die Zuordnung wird wie bei Cubase aus den Namen erkannt.
+- **Speichern:** „Andere DAWs…“ → Reaper-Notennamen bzw. Studio-One-Pitchliste; zugeordnete Tasten heißen wie in Tactus,
+  die übrigen behalten den Namen des Herstellers. Diese Formate kennen nur Namen, keine Notenköpfe / Notenlinien.
+- Nicht unterstützt: Ableton (`.adg` = ganzes Drum-Rack-Preset), Cakewalk (`.map`, binär), Music Maker.

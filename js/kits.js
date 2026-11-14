@@ -181,6 +181,28 @@
     return out;
   };
 
+  /** A profile from the key names of another program (Reaper .txt, Studio One .pitchlist), or null. */
+  K.fromNames = function (text, name) {
+    const r = C.parseNames(text);
+    if (!r) return null;
+    const q = K.fromDrm(C.blank(name, 9, r.names), name);
+    q.mapName = name;
+    q.from = r.format;
+    return q;
+  };
+  /** Name of every key of a profile for other programs: Tactus' instrument where assigned, else the maker's name. */
+  K.keyNames = function (p) {
+    const out = [];
+    for (const e of K.map(p).entries) {
+      const art = K.artOfKey(p, e.inote);
+      const name = art !== null ? TC.drums.label(TC.drums.byId(art)) : K.noName(e) ? '' : e.name.trim();
+      if (name) out.push({ note: e.inote, name });
+    }
+    return out;
+  };
+  K.toReaper = (p) => C.toReaper(K.keyNames(p));
+  K.toPitchList = (p) => C.toPitchList(K.keyNames(p));
+
   K.fromDrm = function (text, name) {
     const map = C.parse(text);
     return { id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name || map.name.replace(/\s*\[\d+\]$/, ''),
@@ -420,7 +442,7 @@
       : `<p class="hint tight">${tr('▶ plays a key through the MIDI output (panel → playback → sound) on your drum VST. None is chosen now: ▶ plays Tactus\' sound of the instrument.')}</p>`;
     if (!p) {
       body = `<div class="kit-empty"><p>${tr('No kit profile yet.')}</p>
-        <p class="hint">${tr('Load the Cubase drum map of your drum VST (.drm). Tactus guesses from the key names which key is which instrument; you only correct what does not fit.')}</p>
+        <p class="hint">${tr('Load the drum map of your drum VST (Cubase .drm, or the note names for Reaper .txt / Studio One .pitchlist). Tactus guesses from the key names which key is which instrument; you only correct what does not fit.')}</p>
         <p class="hint">${tr('No drum map from the maker? Start without one: General MIDI is filled in, you check each key by ear (▶) and correct it.')}</p>
         <button type="button" data-k="new">${tr('Load drum map…')}</button> <button type="button" data-k="blank">${tr('New without drum map…')}</button> <button type="button" data-k="template">${tr('New from template…')}</button></div>`;
     } else if (view === 'keys') {
@@ -474,7 +496,7 @@
       ${p ? `<div class="kit-tabs"><button type="button" data-k="view" data-v="arts" class="${view === 'arts' ? 'active' : ''}">${tr('By instrument')}</button><button type="button" data-k="view" data-v="keys" class="${view === 'keys' ? 'active' : ''}">${tr('By key (key chart)')}</button></div>` : ''}
       <div class="kit-body">${body}</div>
       <footer>
-        ${p ? `<button type="button" data-k="drm" class="primary" title="${tr('With noteheads, instruments and playing techniques')}">${tr('Drum map for Cubase 14+')}</button><button type="button" data-k="drm13" title="${tr('Older format: noteheads only (Cubase 13 knows no playing techniques)')}">${tr('… for Cubase 13 and older')}</button>` : ''}
+        ${p ? `<button type="button" data-k="drm" class="primary" title="${tr('With noteheads, instruments and playing techniques')}">${tr('Drum map for Cubase 14+')}</button><button type="button" data-k="drm13" title="${tr('Older format: noteheads only (Cubase 13 knows no playing techniques)')}">${tr('… for Cubase 13 and older')}</button><button type="button" data-k="daw" title="${tr('Key names for the MIDI editor of Reaper or Studio One')}">${tr('Other DAWs…')}</button>` : ''}
         <span class="grow"></span>
         <button type="button" data-k="export"${K.list.length ? '' : ' disabled'}>${tr('Export profiles')}</button>
         <button type="button" data-k="import">${tr('Import profiles…')}</button>
@@ -520,15 +542,18 @@
     switch (b.dataset.k) {
       case 'close': K.close(); break;
       case 'new':
-        pickFile('.drm', (text, fname) => {
+        // a Cubase drum map, or the key names of Reaper (.txt) / Studio One (.pitchlist)
+        pickFile('.drm,.txt,.pitchlist', (text, fname) => {
+          const base = fname.replace(/\.(drm|txt|pitchlist)$/i, '').replace(/_/g, ' ');
           try {
-            const q = K.fromDrm(text);
-            if (!q.name) q.name = fname.replace(/\.drm$/i, '');
+            const q = /<DrumMap/.test(text) ? K.fromDrm(text) : K.fromNames(text, base);
+            if (!q) throw new Error('unknown');
+            if (!q.name) q.name = base;
             K.list.push(q);
             cur = q.id;
             changed();
           } catch (err) {
-            alert(tr('This is not a Cubase drum map (.drm).'));
+            alert(tr('This is not a drum map Tactus knows (Cubase .drm, Reaper .txt, Studio One .pitchlist).'));
           }
         });
         break;
@@ -592,6 +617,15 @@
           K.open();
         }
         break;
+      case 'daw': {
+        // key names for other programs (no notation there, only the names in the MIDI editor)
+        const r = b.getBoundingClientRect();
+        TC.menu.open([
+          { label: tr('Reaper: note names (.txt)'), action: () => download(K.toReaper(p), fileName(p.name) + ' (Tactus) Reaper.txt', 'text/plain') },
+          { label: tr('Studio One: pitch list (.pitchlist)'), action: () => download(K.toPitchList(p), fileName(p.name) + ' (Tactus).pitchlist', 'application/xml') },
+        ], r.left, r.top - 70);
+        break;
+      }
       case 'drm13':
         download(K.toDrm(p, { legacy: true }), fileName(p.name) + ' (Tactus, Cubase 13).drm', 'application/xml');
         break;

@@ -623,6 +623,11 @@
     S.doc.page.multiRest = !S.doc.page.multiRest;
     TC.commit();
   };
+  /** Page view / PDF: %-bars in a row as one % with the number of bars. */
+  A.toggleMultiSimile = function () {
+    S.doc.page.multiSimile = !S.doc.page.multiSimile;
+    TC.commit();
+  };
   A.setBarNumbers = function (mode) {
     if (!TC.BAR_NUMBERS.includes(mode) || S.doc.page.barNumbers === mode) return;
     S.doc.page.barNumbers = mode;

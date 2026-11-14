@@ -174,6 +174,7 @@
     'Title and page number on the following pages': 'Titel und Seitenzahl auf den Folgeseiten',
     'Page {k} / {n}': 'Seite {k} / {n}',
     'Combine empty bars (multi-bar rest)': 'Leere Takte zusammenfassen (Mehrtaktpause)',
+    'Combine repeated bars (% in a row)': 'Wiederholte Takte zusammenfassen (% hintereinander)',
     'Recorded drum sounds (samples) instead of the synthesizer': 'Aufgenommene Schlagzeug-Klänge (Samples) statt Synthesizer',
     'Loading the recordings… (about 3.5 MB, once)': 'Lade die Aufnahmen… (etwa 3,5 MB, einmalig)',
     'The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.': 'Die Aufnahmen konnten nicht geladen werden (offline oder als Datei geöffnet) – der Synthesizer spielt.',

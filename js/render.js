@@ -154,15 +154,17 @@
    * The first bar may start with a time signature, tempo, text, |: or a new line; a bar with any of
    * those (or an ending, :|, %) inside the run ends it, as in printed parts.
    */
-  RD.multiRests = function (doc, bars) {
-    const empty = (i) => !doc.bars[i].simile && !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) && !doc.bars[i].end && !doc.bars[i].jump &&
-      doc.tracks.every((t) => t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
+  RD.multiRests = function (doc, bars, simile = false) {
+    const plain = (i) => !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) && !doc.bars[i].end && !doc.bars[i].jump;
+    // simile: runs of %-bars instead (one % with the number of bars above)
+    const fits = simile ? (i) => i > 0 && !!doc.bars[i].simile && plain(i)
+      : (i) => !doc.bars[i].simile && plain(i) && doc.tracks.every((t) => t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
     const opens = (i) => bars[i].showTs || bars[i].tempo || doc.bars[i].marker || doc.bars[i].repeatStart || doc.bars[i].lineBreak || doc.bars[i].mark;
     const out = [];
     for (let i = 0; i < doc.bars.length;) {
-      if (!empty(i)) { i++; continue; }
+      if (!fits(i)) { i++; continue; }
       let j = i + 1;
-      while (j < doc.bars.length && empty(j) && !opens(j)) j++;
+      while (j < doc.bars.length && fits(j) && !opens(j)) j++;
       if (j - i >= 2) out.push([i, j - i]);
       i = j;
     }
@@ -197,7 +199,8 @@
     const width = (b) => fixed(b) + b.L * b.scale;
 
     // page view: empty bars in a row become one multi-bar rest (▬ with the number above)
-    if (page && doc.page.multiRest) RD.multiRests(doc, bars).forEach(([a, n]) => {
+    // … and %-bars in a row one % with their number
+    (page && doc.page.multiRest ? RD.multiRests(doc, bars) : []).concat(page && doc.page.multiSimile ? RD.multiRests(doc, bars, true) : []).forEach(([a, n]) => {
       bars[a].multi = n;
       bars[a].scale = MULTI_W / bars[a].L;
       for (let k = a + 1; k < a + n; k++) bars[k].hidden = a;
@@ -513,6 +516,13 @@
     const track = doc.tracks[0];
     for (const b of L.bars) {
       if (b.hidden !== undefined) continue;
+      if (b.multi && b.simile) {
+        // %-bars in a row: one % with the number of bars above
+        const cx = b.x0 + (b.x + b.w - b.x0) / 2;
+        O(b).push(`<g class="multisimile"><text class="mus mid" x="${f(cx)}" y="${f(2 * SP)}">${''}</text>` +
+          `<text class="multirest-n" x="${f(cx)}" y="${f(-1.0 * SP)}">${b.multi}</text></g>`);
+        continue;
+      }
       if (b.multi) {
         // multi-bar rest: thick bar on the middle line with serifs, the number of bars above
         const x1 = b.x0 + 0.8 * SP, x2 = b.x + b.w - 1.2 * SP, cx = (x1 + x2) / 2;

@@ -311,7 +311,10 @@
     const note = !st.samples ? '' : state === 'loading' ? `<p class="hint tight">${tr('Loading the recordings… (about 3.5 MB, once)')}</p>`
       : state === 'failed' ? `<p class="hint warn tight">${tr('The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.')}</p>` : '';
     const credit = st.samples ? `<p class="hint tight">${tr('Recordings: MuldjordKit by Lars Muldjord (CC BY 4.0) and Virtuosity Drums by Versilian Studios (CC0).')}</p>` : '';
-    return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit;
+    const rep = Math.round(TC.audio.reportedDelay() * 1000);
+    const delay = `<div class="row"><label>${tr('Output delay')}</label><input type="number" min="0" max="500" step="10" data-audiodelay value="${Number(st.audioDelay) || 0}"> <span class="muted">ms</span></div>
+      <p class="hint tight">${tr('The cursor runs ahead of the sound (e.g. Bluetooth headphones)? Enter the difference; the browser reports {n} ms itself, already allowed for.', { n: rep })}</p>`;
+    return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit + delay;
   }
 
   function pageSection() {
@@ -391,7 +394,7 @@
       notesRoot.scrollTop = scroll;
     }
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
@@ -463,6 +466,8 @@
       else TC.actions.setTimeSig(el.value);
     } else if (el.matches('input[data-midilead]')) {
       TC.actions.setMidiLead(el.value);
+    } else if (el.matches('input[data-audiodelay]')) {
+      TC.actions.setAudioDelay(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
     } else if (el.matches('input[data-bartempo]')) {

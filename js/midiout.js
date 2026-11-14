@@ -66,7 +66,7 @@
     if (!o || !k) return;
     // in time with Tactus' own sound (metronome, cursor): its output delay, minus the lead that
     // makes up for the delay of the drum VST
-    const lat = ctx ? (ctx.outputLatency || ctx.baseLatency || 0) : 0;
+    const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
     const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
     try {

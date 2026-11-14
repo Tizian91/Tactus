@@ -513,6 +513,9 @@ setTimeout(() => {
     TC.audio.preview(TC.newDrumNote(38, {}));
     ok('samples not loaded yet: a written note still sounds (synth), no error', TC.samples.state() !== 'ready');
     TC.actions.toggleSamples();
+    TC.actions.setAudioDelay(150);
+    ok('output delay 150 ms: in the panel, the cursor waits for it', document.querySelector('#panel-settings input[data-audiodelay]').value === '150' && TC.audio.outputDelay() >= 0.15);
+    TC.actions.setAudioDelay(0);
     // tempo changes listed in the panel: click goes to the bar, ✕ removes the change
     TC.actions.setBarTempo(140, 1);
     const ti = document.querySelector('#panel-settings .tempo-item [data-action="gotoBar"]');

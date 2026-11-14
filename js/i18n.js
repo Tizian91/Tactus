@@ -178,6 +178,8 @@
     'Loading the recordings… (about 3.5 MB, once)': 'Lade die Aufnahmen… (etwa 3,5 MB, einmalig)',
     'The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.': 'Die Aufnahmen konnten nicht geladen werden (offline oder als Datei geöffnet) – der Synthesizer spielt.',
     'Recorded drum sounds ready': 'Aufgenommene Schlagzeug-Klänge bereit',
+    'Output delay': 'Ausgabe-Verzögerung',
+    'The cursor runs ahead of the sound (e.g. Bluetooth headphones)? Enter the difference; the browser reports {n} ms itself, already allowed for.': 'Läuft der Cursor dem Klang voraus (z. B. Bluetooth-Kopfhörer)? Trag den Unterschied ein; der Browser meldet selbst {n} ms, die schon berücksichtigt sind.',
     'Recordings: MuldjordKit by Lars Muldjord (CC BY 4.0) and Virtuosity Drums by Versilian Studios (CC0).': 'Aufnahmen: MuldjordKit von Lars Muldjord (CC BY 4.0) und Virtuosity Drums von Versilian Studios (CC0).',
     'Tempo changes': 'Tempowechsel',
     'Tempo changes: bar panel or bar menu, "Tempo from here".': 'Tempowechsel: Takt-Panel oder Taktmenü, „Tempo ab hier“.',

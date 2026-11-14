@@ -58,6 +58,7 @@ window.TC = window.TC || {};
       midiLead: 0,          // MIDI output: sent this many ms earlier (the drum VST's own delay)
       midiOutLast: '',      // the MIDI output chosen last (toolbar switch Tactus ↔ MIDI)
       samples: false,       // recorded drum sounds (js/samples.js) instead of the synthesized ones
+      audioDelay: 0,        // ms the sound is heard later than the browser reports (Bluetooth …): the cursor waits for it
       kitCustom: null,      // ids of the custom kit
       layout: 'endless',    // 'endless' | 'page' (A4 pages as printed)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)

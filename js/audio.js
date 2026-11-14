@@ -42,6 +42,12 @@
     return ctx;
   }
   AU.context = () => ensure();
+  /**
+   * Seconds between a sound handed to the audio clock and the moment it is heard: what the browser
+   * reports for the output device, plus the extra delay set in the panel (Bluetooth often reports too little).
+   */
+  AU.reportedDelay = () => (ctx ? ctx.outputLatency || ctx.baseLatency || 0 : 0);
+  AU.outputDelay = () => AU.reportedDelay() + TC.clamp(Number(S.settings.audioDelay) || 0, 0, 500) / 1000;
   AU.now = () => (ctx ? ctx.currentTime : 0);
   AU.setVolume = (v) => { if (master) master.gain.setTargetAtTime(v, ctx.currentTime, 0.02); };
 
@@ -278,7 +284,8 @@
 
   /** Time in the timeline now (with loops folded back). */
   function songTime() {
-    const el = ctx.currentTime - t0;
+    // what is heard now: the sound card / Bluetooth plays a scheduled stroke this much later
+    const el = ctx.currentTime - t0 - AU.outputDelay();
     if (!S.settings.loop || el < tl.start) return el;
     return tl.start + ((el - tl.start) % loopLen);
   };

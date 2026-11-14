@@ -508,22 +508,6 @@
       }
     });
 
-    // endings (1. / 2.): a bracket over the bars of one ending, per line; open at the right after the last one
-    const vkey = (b) => (b && b.volta ? b.volta.join(',') : '');
-    L.bars.forEach((b, i) => {
-      if (!b.volta || (i > 0 && vkey(L.bars[i - 1]) === vkey(b) && L.bars[i - 1].sys === b.sys)) return;
-      let j = i;
-      while (j + 1 < L.bars.length && vkey(L.bars[j + 1]) === vkey(b) && L.bars[j + 1].sys === b.sys) j++;
-      const last = L.bars[j], x1 = b.x + 0.3 * SP, x2 = last.x + last.w - 0.4 * SP;
-      const more = L.bars[j + 1] && L.bars[j + 1].volta && L.bars[j + 1].sys === b.sys; // another ending follows: closed
-      const hook = 1.4 * SP;
-      const startsHere = i === 0 || vkey(L.bars[i - 1]) !== vkey(b); // (not a continuation on a new line)
-      let d = `M${f(x1)},${f(VOLTA_Y + (startsHere ? hook : 0))} L${f(x1)},${f(VOLTA_Y)} L${f(x2)},${f(VOLTA_Y)}`;
-      if (more || last.re) d += ` L${f(x2)},${f(VOLTA_Y + hook)}`;
-      O(b).push(`<path class="volta" d="${d}"/>`);
-      if (startsHere) O(b).push(`<text class="volta-text" x="${f(x1 + 0.4 * SP)}" y="${f(VOLTA_Y + 1.15 * SP)}">${b.volta.join('., ')}.</text>`);
-    });
-
     // notes
     L.heads = [];
     const track = doc.tracks[0];
@@ -542,9 +526,33 @@
         continue;
       }
       const used = b.voices.map((items) => items.some((it) => it.kind === 'note'));
+      b.top = 0; // highest ink above the staff (drawVoice), for the ending brackets
       b.voices.forEach((items, vi) => drawVoice(O(b), b, items, vi, used, track));
       drawUnder(O(b), b);
     }
+
+    // endings (1. / 2.): a bracket over the bars of one ending, per line; open at the right after the last one
+    const vkey = (b) => (b && b.volta ? b.volta.join(',') : '');
+    L.bars.forEach((b, i) => {
+      if (!b.volta || (i > 0 && vkey(L.bars[i - 1]) === vkey(b) && L.bars[i - 1].sys === b.sys)) return;
+      let j = i;
+      while (j + 1 < L.bars.length && vkey(L.bars[j + 1]) === vkey(b) && L.bars[j + 1].sys === b.sys) j++;
+      const last = L.bars[j], x1 = b.x + 0.3 * SP, x2 = last.x + last.w - 0.4 * SP;
+      const more = L.bars[j + 1] && L.bars[j + 1].volta && L.bars[j + 1].sys === b.sys; // another ending follows: closed
+      const hook = 1.4 * SP;
+      const startsHere = i === 0 || vkey(L.bars[i - 1]) !== vkey(b); // (not a continuation on a new line)
+      // above the notes and accents of all endings side by side on this line (one height for 1. and 2.)
+      let a = i, z = j;
+      while (a > 0 && L.bars[a - 1].volta && L.bars[a - 1].sys === b.sys) a--;
+      while (z + 1 < L.bars.length && L.bars[z + 1].volta && L.bars[z + 1].sys === b.sys) z++;
+      let top = 0;
+      for (let k = a; k <= z; k++) top = Math.min(top, L.bars[k].top || 0);
+      const VY = Math.min(VOLTA_Y, top - 1.7 * SP);
+      let d = `M${f(x1)},${f(VY + (startsHere ? hook : 0))} L${f(x1)},${f(VY)} L${f(x2)},${f(VY)}`;
+      if (more || last.re) d += ` L${f(x2)},${f(VY + hook)}`;
+      O(b).push(`<path class="volta" d="${d}"/>`);
+      if (startsHere) O(b).push(`<text class="volta-text" x="${f(x1 + 0.4 * SP)}" y="${f(VY + 1.15 * SP)}">${b.volta.join('., ')}.</text>`);
+    });
 
     // "+" after the last bar
     if (!print) {
@@ -709,6 +717,7 @@
         my += up ? -1.2 * SP : 1.2 * SP;
       }
       q.markY = marks.length ? my + (up ? 0.5 * SP : -0.5 * SP) : null; // outermost mark (tuplet numbers go beyond it)
+      if (up) b.top = Math.min(b.top || 0, q.endY - 0.3 * SP, marks.length ? my + 0.4 * SP : 0);
       if (it.tie) {
         const nx = RD.tickX(b, it.tick + it.dur);
         const y = stepY(q.heads[0].line) + (up ? 0.6 * SP : -0.6 * SP);
@@ -731,6 +740,7 @@
       if (marks.length) edge = up ? Math.min(edge, Math.min(...marks) - 0.3 * SP) : Math.max(edge, Math.max(...marks) + 1.8 * SP);
       const mx = (x1 + x2) / 2 + (up ? 0.6 * SP : -0.6 * SP);
       out.push(glyph('', mx - 0.6 * SP, edge, 'tuplet'));
+      if (up) b.top = Math.min(b.top || 0, edge - 1.4 * SP);
       if (!oneBeam) {
         const by = up ? edge - 0.6 * SP : edge - 1 * SP;
         const hook = up ? 0.6 * SP : -0.6 * SP;

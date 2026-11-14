@@ -449,9 +449,12 @@ setTimeout(() => {
   ok('combining switched off: every bar of its own', !PL().bars.some((b) => b.multi) && !document.querySelector('#score .multirest'));
   [2, 3, 4, 5].forEach((k) => TC.actions.toggleSimile(k));
   ok('%-bars 3-6: one % with "4" above', PL().bars[2].multi === 4 && PL().bars[2].simile && (document.querySelector('#score .multisimile .multirest-n') || {}).textContent === '4');
-  TC.actions.toggleMultiSimile();
-  ok('… switched off: four % bars again', !PL().bars[2].multi && document.querySelectorAll('#score .multisimile').length === 0);
-  TC.actions.undo(); [0, 1, 2, 3].forEach(() => TC.actions.undo());
+  TC.actions.setSimileMode('count');
+  ok('… narrow and counted: 2 3 4 5, narrower than a bar with notes ' + [...document.querySelectorAll('#score .simile-n')].map((t) => t.textContent).join(' ') + ' w ' + Math.round(PL().bars[2].w) + '/' + Math.round(PL().bars[1].w), [...document.querySelectorAll('#score .simile-n')].map((t) => t.textContent).join(' ') === '2 3 4 5' &&
+    PL().bars[2].w < PL().bars[1].w / 2);
+  TC.actions.setSimileMode('single');
+  ok('… each one as it is: no numbers', !document.querySelector('#score .simile-n') && !PL().bars[2].multi);
+  TC.actions.undo(); TC.actions.undo(); [0, 1, 2, 3].forEach(() => TC.actions.undo());
   TC.actions.setBarsPerLine(2);
   const heads = [...document.querySelectorAll('#score .runhead.right')].map((t) => t.textContent);
   ok('running header on every page after the first: ' + heads.join(', '), PL().pages.length > 1 && heads.length === PL().pages.length - 1 && heads[0] === 'Seite 2 / ' + PL().pages.length);

@@ -81,7 +81,7 @@ Formate und MIDI-Werte wie in Guitar Pro.
   „Notenzeilen-Koordinaten“, die Zeilen werden nur verschoben gezeichnet (`TC.render.toLocal`).
 - ⚙ → Seite: **Seitenränder** (10–30 mm, Standard 15) und **Kopf auf Folgeseiten** (Titel · Interpret links, „Seite 2 / 3“ rechts; aus = nur die Seitenzahl unten), mit dem Stück gespeichert.
 - **Mehrtaktpausen** (⚙ → Seite, Standard an): mindestens zwei leere Takte hintereinander werden ein ▬ mit der Anzahl darüber – nur Seitenansicht / PDF. Unterbrochen von Taktart, Tempo, Text, Wiederholung, Klammer, %, neuer Zeile. Leer heißt: in **allen** Spuren keine Note (später mehrere Spuren). Hineinklicken schreibt in den ersten Takt.
-- **%-Takte zusammenfassen** (⚙ → Seite, Standard an): mehrere %-Takte hintereinander werden ein % mit der Anzahl darüber – gleiche Regeln wie bei den Pausen.
+- **%-Takte** (⚙ → Seite): „Jeder einzeln“, „Schmal, durchgezählt (2, 3, 4 …)“ (der wiederholte Takt ist 1; feste schmale Breite, nicht gestreckt) oder „Zusammengefasst: ein % mit Anzahl“ (Standard; gleiche Regeln wie bei den Pausen).
 
 ## Phase 4a – Drummaps und Darstellung (begonnen)
 

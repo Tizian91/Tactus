@@ -11,7 +11,7 @@
  *     tracks: [ Track ],
  *     page:   { barsPerLine: 0 (auto) | 1 … 12, barNumbers: 'system' | 'every' | 'off',
  *               margin: 10 … 30 (mm), header: true (title and page number on the pages after the first),
- *               multiRest: true (empty bars in a row as one multi-bar rest), multiSimile: true (%-bars in a row as one % with the number) }   page view / PDF
+ *               multiRest: true (empty bars in a row as one multi-bar rest), simile: 'combine' (%-bars in a row: one % with the number) | 'count' (each narrow, counted 2, 3 …) | 'single' }   page view / PDF
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
@@ -95,7 +95,8 @@
   TC.MARKS = ['segno', 'coda'];
   TC.ENDS = ['fine', 'toCoda'];
   TC.JUMPS = ['dc', 'dcFine', 'dcCoda', 'ds', 'dsFine', 'dsCoda'];
-  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, multiSimile: true });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine' });
+  TC.SIMILE_MODES = ['single', 'count', 'combine'];
   TC.MARGINS = [10, 12, 15, 20, 25, 30];
   TC.BAR_NUMBERS = ['system', 'every', 'off'];
 
@@ -228,7 +229,8 @@
     if (TC.MARGINS.includes(pg.margin)) doc.page.margin = pg.margin;
     if (pg.header === false) doc.page.header = false;
     if (pg.multiRest === false) doc.page.multiRest = false;
-    if (pg.multiSimile === false) doc.page.multiSimile = false;
+    if (TC.SIMILE_MODES.includes(pg.simile)) doc.page.simile = pg.simile;
+    else if (pg.multiSimile === false) doc.page.simile = 'single'; // older files: a switch
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];
     doc.tracks = tracks.map((t) => {
       const kind = ['drums', 'pitched', 'tab'].includes(t.kind) ? t.kind : 'drums';

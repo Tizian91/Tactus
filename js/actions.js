@@ -623,9 +623,10 @@
     S.doc.page.multiRest = !S.doc.page.multiRest;
     TC.commit();
   };
-  /** Page view / PDF: %-bars in a row as one % with the number of bars. */
-  A.toggleMultiSimile = function () {
-    S.doc.page.multiSimile = !S.doc.page.multiSimile;
+  /** Page view / PDF: %-bars in a row as they are ('single'), narrow and counted ('count') or as one % with the number ('combine'). */
+  A.setSimileMode = function (v) {
+    if (!TC.SIMILE_MODES.includes(v) || S.doc.page.simile === v) return;
+    S.doc.page.simile = v;
     TC.commit();
   };
   A.setBarNumbers = function (mode) {

@@ -148,6 +148,7 @@
   }
 
   const MULTI_W = 13 * SP; // width of a multi-bar rest (before the line is justified)
+  const SIMILE_W = 5 * SP; // width of a narrow, counted %-bar
 
   /**
    * Multi-bar rests: runs of at least two bars without a note in any track, as [first bar, count].
@@ -200,7 +201,15 @@
 
     // page view: empty bars in a row become one multi-bar rest (▬ with the number above)
     // … and %-bars in a row one % with their number
-    (page && doc.page.multiRest ? RD.multiRests(doc, bars) : []).concat(page && doc.page.multiSimile ? RD.multiRests(doc, bars, true) : []).forEach(([a, n]) => {
+    // (or each %-bar narrow, counted: the bar it repeats is 1, then 2, 3 …)
+    if (page && doc.page.simile === 'count') {
+      bars.forEach((b, i) => {
+        if (!b.simile) return;
+        b.simileN = bars[i - 1].simileN ? bars[i - 1].simileN + 1 : 2;
+        b.scale = SIMILE_W / b.L;
+      });
+    }
+    (page && doc.page.multiRest ? RD.multiRests(doc, bars) : []).concat(page && doc.page.simile === 'combine' ? RD.multiRests(doc, bars, true) : []).forEach(([a, n]) => {
       bars[a].multi = n;
       bars[a].scale = MULTI_W / bars[a].L;
       for (let k = a + 1; k < a + n; k++) bars[k].hidden = a;
@@ -227,10 +236,12 @@
       // justify: the notes spread over the whole line; the last line is not stretched more than the one before
       let prev = null;
       lines.forEach((ln, k) => {
-        const fx = ln.reduce((a, b) => a + fixed(b), 0), mv = ln.reduce((a, b) => a + b.L * b.scale, 0);
+        // (counted %-bars keep their narrow width)
+        const fx = ln.reduce((a, b) => a + fixed(b) + (b.simileN ? b.L * b.scale : 0), 0), mv = ln.reduce((a, b) => a + (b.simileN ? 0 : b.L * b.scale), 0);
+        if (!mv) return;
         let k2 = (avail - fx) / mv;
         if (k === lines.length - 1 && k2 > 1) k2 = Math.min(k2, prev || (fx + mv > 0.7 * avail ? k2 : 1));
-        ln.forEach((b) => { b.scale *= k2; });
+        ln.forEach((b) => { if (!b.simileN) b.scale *= k2; });
         prev = k2;
       });
     }
@@ -533,6 +544,7 @@
       }
       if (b.simile) {
         O(b).push(`<text class="mus mid" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(2 * SP)}"></text>`);
+        if (b.simileN) O(b).push(`<text class="simile-n" x="${f(b.x0 + (b.x + b.w - b.x0) / 2)}" y="${f(-1.0 * SP)}">${b.simileN}</text>`);
         continue;
       }
       const used = b.voices.map((items) => items.some((it) => it.kind === 'note'));

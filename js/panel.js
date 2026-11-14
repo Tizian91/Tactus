@@ -329,7 +329,8 @@
       <div class="row"><label>${tr('Margins')}</label><select data-action="setMargin">${margins}</select></div>
       ${check('togglePageHeader', pg.header, tr('Title and page number on the following pages'))}
       ${check('toggleMultiRest', pg.multiRest, tr('Combine empty bars (multi-bar rest)'))}
-      ${check('toggleMultiSimile', pg.multiSimile, tr('Combine repeated bars (% in a row)'))}
+      <div class="row"><label>${tr('%-bars')}</label><select data-action="setSimileMode">${[['single', 'Each one as it is'], ['count', 'Narrow, counted (2, 3, 4 …)'], ['combine', 'One % with the number']]
+        .map(([k, l]) => `<option value="${k}"${k === pg.simile ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select></div>
       <div class="btn-row">
         ${btn('toggleLayout', undefined, tr(S.settings.layout === 'page' ? 'Endless view' : 'Page view'), false)}
         ${btn('print', undefined, tr('PDF / print…'), false, 'Ctrl+P')}

@@ -211,6 +211,8 @@
     const rows = ts.map((t, k) => `<div class="track-item${t.hidden ? ' hidden-track' : ''}">` +
       (many ? btn('toggleTrackHidden', t.id, t.hidden ? '◌' : '◉', false, tr(t.hidden ? 'Hidden – click: show' : 'Shown – click: hide'), 'icon eye') : '') +
       btn('selectTrack', t.id, esc(t.name), t === cur, tr('Write into this track'), 'link') +
+      (many ? btn('toggleMute', t.id, 'M', !!t.mute, tr(t.mute ? 'Muted – click: play' : 'Mute (not played)'), 'icon ms mute') +
+        btn('toggleSolo', t.id, 'S', !!t.solo, tr('Solo: only the solo tracks are played'), 'icon ms solo') : '') +
       btn('renameTrack', t.id, '✎', false, tr('Rename'), 'icon') +
       (many ? btn('moveTrackUp', t.id, '↑', false, tr('Up'), 'icon' + (k ? '' : ' off')) +
         btn('moveTrackDown', t.id, '↓', false, tr('Down'), 'icon' + (k < ts.length - 1 ? '' : ' off')) : '') +
@@ -232,8 +234,35 @@
         <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
       ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}
         <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}
-      ${many ? `<p class="hint tight">${tr('Click into a staff or on a name: you write into that track. Playback and MIDI export play all tracks, hidden ones too.')}</p>` : ''}
+      ${trackSoundRows(cur)}
+      ${many ? `<p class="hint tight">${tr('Click into a staff or on a name: you write into that track. Playback plays all tracks (hidden ones too) except the muted ones.')}</p>` : ''}
     </section>`;
+  }
+
+  /**
+   * Sound of the track being written: its kit profile (keys for MIDI playback and export), and while
+   * playing through MIDI its own output and channel (e.g. one loopMIDI port per drum VST in Cubase).
+   */
+  function trackSoundRows(t) {
+    const scoreP = TC.kits.current(S.doc);
+    const missing = TC.kits.trackMissing(S.doc, t);
+    const profiles = [['', tr('Like the score ({name})', { name: scoreP ? scoreP.name : 'General MIDI' })], ['gm', 'General MIDI (Guitar Pro …)']]
+      .concat(TC.kits.list.map((p) => [p.id, p.name]))
+      .concat(missing ? [[t.profile, t.profileName + ' ' + tr('(missing)')]] : [])
+      .map(([v, l]) => `<option value="${esc(v)}"${v === (t.profile || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    let midi = '';
+    if (TC.midiOut && TC.midiOut.supported() && S.settings.midiOut) {
+      const outs = [['', tr('Like the panel ({name})', { name: S.settings.midiOut })]].concat(TC.midiOut.outputs().map((o) => [o, o]))
+        .concat(t.midiOut && !TC.midiOut.outputs().includes(t.midiOut) ? [[t.midiOut, t.midiOut + ' ' + tr('(missing)')]] : []);
+      const chs = [['', tr('From the kit profile')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
+      const curCh = Number.isInteger(t.midiCh) ? String(t.midiCh + 1) : '';
+      midi = `<div class="row"><label>${tr('MIDI output')}</label><select data-action="setTrackMidiOut">${outs.map(([v, l]) =>
+        `<option value="${esc(v)}"${v === (t.midiOut || '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+        <div class="row"><label>${tr('Channel')}</label><select data-action="setTrackMidiCh">${chs.map(([v, l]) =>
+        `<option value="${v}"${v === curCh ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+    }
+    return `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>${midi}
+      ${S.doc.tracks.length > 1 && !midi && TC.midiOut && TC.midiOut.supported() ? `<p class="hint tight">${tr('Playing through MIDI (Playback → Sound): each track can get its own output and channel here.')}</p>` : ''}`;
   }
 
   /** All tempo changes of the score: click = go to the bar, ✕ = remove the change. */
@@ -307,6 +336,9 @@
     return `<section><h3>${tr('Playback')}</h3>
       ${check('toggleMetronome', st.metronome, tr('Metronome'))}
       ${check('toggleFollowPlay', st.followPlay !== false, tr('The view follows the playback'))}
+      ${st.followPlay !== false ? `<div class="row"><label>${tr('Following')}</label><select data-action="setFollowMode">
+        <option value="jump"${st.followMode !== 'smooth' ? ' selected' : ''}>${tr('Jumping (at the edge)')}</option>
+        <option value="smooth"${st.followMode === 'smooth' ? ' selected' : ''}>${tr('Smooth (glides along)')}</option></select></div>` : ''}
       ${check('toggleCountIn', st.countIn, tr('Count-in (one bar)'))}
       ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
@@ -382,6 +414,43 @@
     </section>`;
   }
 
+  /**
+   * Turning pages: the stage view, and by MIDI from a player of backing tracks (js/remote.js): input,
+   * what a message means (note n = page n, or learnt next / before), channel, the page turning MIDI file.
+   */
+  function turnSection() {
+    const st = S.settings, R = TC.remote;
+    let midi;
+    if (!R || !R.supported()) {
+      midi = `<p class="hint">${tr('Turning pages by MIDI needs Chrome or Edge (also on Android, with a USB MIDI interface) over https.')}</p>`;
+    } else if (!R.inputs().length && !R.active()) {
+      midi = `<div class="btn-row">${btn('remoteInit', undefined, tr('Show MIDI inputs…'), false, tr('The browser asks once whether Tactus may use MIDI'))}</div>
+        ${st.remoteIn ? `<p class="hint warn">${tr('Input "{name}" is not connected.', { name: esc(st.remoteIn) })}</p>` : ''}`;
+    } else {
+      const ins = [['', tr('Off')]].concat(R.inputs().map((n) => [n, n]))
+        .concat(st.remoteIn && !R.inputs().includes(st.remoteIn) ? [[st.remoteIn, st.remoteIn + ' ' + tr('(missing)')]] : []);
+      const chs = [['all', tr('All channels')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
+      const curCh = st.remoteCh === 'all' || st.remoteCh === undefined ? 'all' : String(Number(st.remoteCh) + 1);
+      const opt = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(l)}</option>`).join('');
+      midi = `<div class="row"><label>${tr('MIDI input')}</label><select data-action="setRemoteIn">${opt(ins, st.remoteIn || '')}</select></div>
+        <div class="row"><label>${tr('Message')}</label><select data-action="setRemoteMode">${opt([['page', tr('Note n = page n')], ['step', tr('Learnt: next / page before')]], st.remoteMode === 'step' ? 'step' : 'page')}</select></div>
+        ${st.remoteMode === 'step' ? `<div class="row"><label>${tr('Next page')}</label><span class="muted">${esc(R.describe(st.remoteNext))}</span> ${btn('learnNext', undefined, tr('Learn'), R.isLearning() === 'next')}</div>
+        <div class="row"><label>${tr('Page before')}</label><span class="muted">${esc(R.describe(st.remotePrev))}</span> ${btn('learnPrev', undefined, tr('Learn'), R.isLearning() === 'prev')}</div>`
+          : `<p class="hint tight">${tr('Note 1 = page 1, note 2 = page 2 … (a program change: 0 = page 1). A lost message does not matter: the next one names its page.')}</p>`}
+        <div class="row"><label>${tr('Channel')}</label><select data-action="setRemoteCh">${opt(chs, curCh)}</select></div>`;
+    }
+    const leads = [0, 1, 2].map((n) => [String(n), n ? tr(n === 1 ? '{n} bar before' : '{n} bars before', { n }) : tr('at the new page')]);
+    const lead = String(st.turnLead === undefined ? 1 : st.turnLead);
+    return `<section><h3>${tr('Turning pages')}</h3>
+      <div class="btn-row">${btn('togglePerform', undefined, tr('Stage view'), false, tr('Only the pages, full screen; tap the right / left third, Page Down / Up or MIDI turns (Esc: back)'))}</div>
+      ${midi}
+      <h3 class="sub">${tr('Page turning MIDI file')}</h3>
+      <p class="hint tight">${tr('A MIDI track for your player of backing tracks: a note when a new page comes (note n = page n, channel 16), with the tempo and the repeats of the score. Put it next to the backing tracks; Tactus turns when it hears it.')}</p>
+      <div class="row"><label>${tr('Turn')}</label><select data-action="setTurnLead">${leads.map(([v, l]) => `<option value="${v}"${v === lead ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="btn-row">${btn('exportPageTurns', undefined, tr('Export page turning MIDI…'), false)}</div>
+    </section>`;
+  }
+
   function viewSection() {
     const fill = TC.curTrack().fill;
     const fills = [['beat', 'Up to the end of the beat'], ['next', 'Up to the next note'], ['off', 'As written']];
@@ -421,7 +490,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine])),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh])), TC.kits.list.map((p) => p.id + p.name).join(),
       S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
@@ -435,13 +504,13 @@
     }
     if (dlg) {
       const body = dlg.querySelector('.settings-body');
-      const keyD = JSON.stringify([S.settings, S.doc.page, TC.curTrack().fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length]);
+      const keyD = JSON.stringify([S.settings, S.doc.page, TC.curTrack().fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length, TC.remote && [TC.remote.inputs().join(), TC.remote.isLearning(), TC.remote.active()]]);
       if ((force || keyD !== lastDlg) && !(!force && typing(body))) {
         lastDlg = keyD;
         const scroll = body.scrollTop;
         const open = body.querySelector('details.kit-list[open]') !== null;
         const keys = body.querySelector('details.keys-list[open]') !== null;
-        body.innerHTML = kitSection() + pageSection() + viewSection() + keysSection();
+        body.innerHTML = kitSection() + pageSection() + turnSection() + viewSection() + keysSection();
         if (open) body.querySelector('details.kit-list').open = true;
         if (keys) body.querySelector('details.keys-list').open = true;
         body.scrollTop = scroll;

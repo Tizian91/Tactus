@@ -280,10 +280,19 @@
   // p.subst = { artId: otherArtId | 0 }   chosen by the user: play it as that instrument of the
   // profile, or 0 = not at all. Without a choice the related instrument (js/midi.js FALLBACK).
 
-  /** How often each instrument occurs in the score: Map artId -> count. */
-  K.used = function (doc) {
+  /**
+   * The tracks that play with kit profile p (their own, or the one of the score); p undefined, or a
+   * profile no track uses (checked from the kit profile dialog): all of them.
+   */
+  const tracksOf = (doc, p) => {
+    const list = p === undefined ? [] : doc.tracks.filter((t) => K.ofTrack(doc, t) === p);
+    return list.length ? list : doc.tracks;
+  };
+
+  /** How often each instrument occurs in the score (in the tracks that use profile p): Map artId -> count. */
+  K.used = function (doc, p) {
     const n = new Map();
-    for (const b of doc.tracks.flatMap((t) => t.bars)) for (const v of b.voices) for (const ev of v) {
+    for (const b of tracksOf(doc, p).flatMap((t) => t.bars)) for (const v of b.voices) for (const ev of v) {
       for (const x of ev.notes) n.set(x.art, (n.get(x.art) || 0) + 1);
     }
     return n;
@@ -296,7 +305,7 @@
   K.check = function (doc, p) {
     if (!p) return [];
     const out = [];
-    for (const [art, count] of K.used(doc)) {
+    for (const [art, count] of K.used(doc, p)) {
       if ((p.assign[art] || []).length) continue;
       const a = TC.drums.byId(art);
       if (!a) continue;
@@ -323,9 +332,9 @@
    * In the score: every note of instrument `from` becomes `to` (the notation changes); where the
    * same beat already has `to`, the note goes. Returns how many notes changed.
    */
-  K.replaceInScore = function (doc, from, to) {
+  K.replaceInScore = function (doc, from, to, p) {
     let n = 0;
-    for (const b of doc.tracks.flatMap((t) => t.bars)) for (const v of b.voices) for (const ev of v) {
+    for (const b of tracksOf(doc, p).flatMap((t) => t.bars)) for (const v of b.voices) for (const ev of v) {
       if (!ev.notes.some((x) => x.art === from)) continue;
       const has = b.voices.some((w) => w.some((e) => e.tick === ev.tick && e.notes.some((x) => x.art === to)));
       if (has) ev.notes = ev.notes.filter((x) => x.art !== from);
@@ -333,7 +342,7 @@
       n++;
     }
     // empty beats left behind are dropped
-    for (const b of doc.tracks.flatMap((t) => t.bars)) b.voices = b.voices.map((v) => v.filter((ev) => ev.notes.length));
+    for (const b of tracksOf(doc, p).flatMap((t) => t.bars)) b.voices = b.voices.map((v) => v.filter((ev) => ev.notes.length));
     return n;
   };
 
@@ -366,6 +375,18 @@
     if (!m || (!m.kit && !m.kitName)) return null;
     return K.byId(m.kit) || K.list.find((p) => p.name === m.kitName) || null;
   };
+
+  /**
+   * Kit profile of a track: its own (track.profile: an id, found by name on another computer;
+   * 'gm' = General MIDI), else the one of the score. null = General MIDI.
+   */
+  K.ofTrack = function (doc, track) {
+    if (!track || !track.profile) return K.current(doc);
+    if (track.profile === 'gm') return null;
+    return K.byId(track.profile) || K.list.find((p) => p.name === track.profileName) || null;
+  };
+  /** A track names a kit profile that is not on this computer. */
+  K.trackMissing = (doc, track) => !!track && !!track.profile && track.profile !== 'gm' && !K.ofTrack(doc, track);
 
   K.exportText = () => JSON.stringify({ format: 'tactus-kits', version: 1, profiles: K.list }, null, 1);
   /** Adds the profiles of an exported file (same id: replaced). Returns how many. */
@@ -749,7 +770,7 @@
       if (b.dataset.k === 'replace') {
         const to = K.check(TC.state.doc, p).find((r) => r.art === art);
         if (!to || !to.by) return;
-        const n = K.replaceInScore(TC.state.doc, art, to.by);
+        const n = K.replaceInScore(TC.state.doc, art, to.by, p); // (the tracks that play with this profile)
         TC.score.revoice(TC.state.doc);
         TC.pruneSelection && TC.pruneSelection();
         TC.commit();

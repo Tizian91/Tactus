@@ -409,7 +409,7 @@
   };
 
   RD.draw = function () {
-    stat.innerHTML = RD.content(false);
+    stat.innerHTML = RD.content(false, document.body.classList.contains('perform')); // (stage view: as printed, on its pages)
     RD.applyView();
     RD.drawHover();
   };
@@ -417,7 +417,8 @@
   const TEMPO_W = 7.5 * SP; // room of "♩ = 120" before the text of bar 1
 
   /** The score as SVG markup (view coordinates). print: without grid, selection, page shadows and the "+" box. */
-  RD.content = function (print) {
+  RD.content = function (print, stage) {
+    const plain = print || stage; // no grid, selection, "+" box (stage view: as printed, but on its pages)
     const L = RD.computeLayout();
     const doc = S.doc, page = L.page;
     const out = [];
@@ -474,7 +475,7 @@
     lines[0].push(`<text class="tempo" x="${f(s0.ox + 0.4 * SP)}" y="${f(TEXT_Y)}"><tspan class="mus-sm"></tspan> = ${esc(meta.tempo)}</text>`);
 
     // selected bar, selected instrument's line
-    const R = !print && TC.barRange();
+    const R = !plain && TC.barRange();
     if (R) {
       for (let i = R[0]; i <= R[1]; i++) {
         const b = L.bars[i];
@@ -483,13 +484,13 @@
     }
     // the line of the selected instrument, in the staff being written
     const selArt = TC.drums.byId(S.input.art), cz = L.staves.find((z) => z.track === cur);
-    if (!print && selArt && cz && TC.drums.clickable(cur).has(selArt.id)) {
+    if (!plain && selArt && cz && TC.drums.clickable(cur).has(selArt.id)) {
       const y = cz.dy + stepY(TC.drums.lineOf(selArt, cur));
       L.systems.forEach((s) => lines[s.i].push(rect(s.ox, y - SP / 4, s.end - s.ox, SP / 2, 'line-band')));
     }
 
     // grid (every staff, not in its %-bars)
-    for (const z of print ? [] : L.staves) {
+    for (const z of plain ? [] : L.staves) {
       for (const b of L.bars) {
         if (b.parts[z.k].simile || b.hidden !== undefined) continue;
         const beat = TC.rhythm.beatTicks(b.ts);
@@ -509,7 +510,7 @@
         for (let k = z.one ? 2 : 0; k < (z.one ? 3 : 5); k++) o.push(line(s.ox, k * SP, s.end, k * SP, 'staff'));
         o.push(glyph('', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
         // several staves: the name of the track above its staff (the one being written in colour)
-        if (many) o.push(`<text class="staff-name${z.track === cur && !print ? ' cur' : ''}" x="${f(s.ox)}" y="${f((z.one ? 0.4 : -1.0) * SP)}">${esc(z.track.name)}</text>`);
+        if (many) o.push(`<text class="staff-name${z.track === cur && !plain ? ' cur' : ''}" x="${f(s.ox)}" y="${f((z.one ? 0.4 : -1.0) * SP)}">${esc(z.track.name)}</text>`);
       }
       if (many) {
         // the staves of a line belong together: a line at the left joins them
@@ -557,7 +558,7 @@
       // played more than twice: "3×" above the first staff
       if (b.re > 2) o.push(`<text class="repeat-count" x="${f(end - 0.2 * SP)}" y="${f(-0.8 * SP)}">${b.re}×</text>`);
       // page view (not printed): a manual line break after this bar
-      if (page && !print && doc.bars[lastOf + 1] && doc.bars[lastOf + 1].lineBreak) {
+      if (page && !plain && doc.bars[lastOf + 1] && doc.bars[lastOf + 1].lineBreak) {
         o.push(`<text class="break-mark" x="${f(end + 0.5 * SP)}" y="${f(2.6 * SP)}"><title>${esc(TC.tr('manual line break'))}</title>↵</text>`);
       }
       const lineStart = i === s.first;
@@ -656,7 +657,7 @@
     });
 
     // "+" after the last bar
-    if (!print) {
+    if (!plain) {
       const a = L.add;
       lines[lines.length - 1].push(`<g class="add-bar">${rect(a.x, a.y, a.w, a.h, 'add-box')}` +
         `<text class="add-plus" x="${f(a.x + a.w / 2)}" y="${f(a.y + a.h / 2 + 5)}">+</text></g>`);
@@ -963,6 +964,7 @@
   RD.drawHover = function () {
     const h = S.hover, L = RD.layout;
     if (!L) return;
+    if (document.body.classList.contains('perform')) return void (hov.innerHTML = ''); // stage view: no drum map, no preview
     const out = [], s = hoverLine(h, L);
     // the staff: the one under the pointer (h.trk), else the one being written
     const z = (h && h.trk && L.staves.find((q) => q.track.id === h.trk)) || L.staves.find((q) => q.track === TC.curTrack()) || L.staves[0];
@@ -1049,6 +1051,24 @@
    * Every page of the page view as an SVG of its own (A4) in #print-root, then the browser's print
    * dialog ("Save as PDF"). css/app.css shows only #print-root on paper, in black on white.
    */
+  /**
+   * The page of every bar as in the page view (0 = first page), whatever view is shown - for page
+   * turning (TC.remote, the page turning MIDI file). The shown layout stays as it is.
+   */
+  RD.pagesOfBars = function () {
+    const keep = S.settings.layout, old = RD.layout;
+    S.settings.layout = 'page';
+    try {
+      const L = RD.computeLayout();
+      return L.bars.map((b) => L.systems[b.sys].page || 0);
+    } finally {
+      S.settings.layout = keep;
+      RD.layout = old;
+    }
+  };
+  /** Number of pages of the page view. */
+  RD.pageCount = () => Math.max(0, ...RD.pagesOfBars()) + 1;
+
   RD.print = function () {
     const keep = { layout: S.settings.layout, sel: S.selection, bar: S.selBar };
     S.settings.layout = 'page';

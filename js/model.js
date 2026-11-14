@@ -28,6 +28,7 @@
  *                jump: '' | 'dc' | 'dcFine' | 'dcCoda' | 'ds' | 'dsFine' | 'dsCoda'   at the end: back to bar 1 / 𝄋
  *                jumpRep: false          after the jump the repeats are played again (default: once, last ending) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
+ *                mute, solo, profile, profileName, midiOut, midiCh,
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false } ] }       // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
@@ -160,6 +161,12 @@
       kit: null,         // instruments of its own (ids; e.g. only the snare), null = the kit of the settings
       oneLine: false,    // with instruments of its own: one staff line, every note on it
       hidden: false,     // not shown (still played)
+      mute: false,       // not played (playback; the MIDI export asks for itself)
+      solo: false,       // only the solo tracks are played
+      profile: '',       // kit profile (js/kits.js) for its keys: '' = the one of the score, 'gm' = General MIDI, or an id
+      profileName: '',   // … its name (to find it on another computer)
+      midiOut: '',       // MIDI output while playing ('' = the one chosen in the panel)
+      midiCh: null,      // MIDI channel 0 … 15 while playing (null = the one of the kit profile)
       bars: [],
     };
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
@@ -253,6 +260,12 @@
       if (out.kit && !out.kit.length) out.kit = null;
       out.oneLine = !!t.oneLine && !!out.kit;
       out.hidden = !!t.hidden;
+      out.mute = !!t.mute;
+      out.solo = !!t.solo;
+      if (typeof t.profile === 'string') out.profile = t.profile;
+      out.profileName = str(t.profileName);
+      out.midiOut = str(t.midiOut);
+      out.midiCh = Number.isInteger(t.midiCh) && t.midiCh >= 0 && t.midiCh <= 15 ? t.midiCh : null;
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
         const bar = TC.newTrackBar();

@@ -216,6 +216,8 @@
     }
     if (S.drag) return; // another pointer is busy (pen and finger at once)
     try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
+    // stage view: nothing is written; a tap in the right / left third turns the page, dragging moves it
+    if (A().isPerforming()) return startPan(e);
     clearTimeout(holdTimer);
     // tools (note panel): select / eraser - a pen's eraser end always erases
     const tool = toolOf(e);
@@ -339,6 +341,12 @@
     S.drag = null;
     try { vp.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
     vp.classList.remove('panning');
+    if (A().isPerforming() && d.mode === 'pan' && !cancelled && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < moveMin(e)) {
+      const r = vp.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+      if (x > 2 / 3) A().nextPage();
+      else if (x < 1 / 3) A().prevPage();
+      return;
+    }
     if (!cancelled) {
       if (d.mode === 'aim' && d.t) writeNote(d.t, false);
       else if (d.mode === 'note') d.held ? noteMenu(d, e) : act(d.t, e); // held and released: instruments of the line
@@ -982,6 +990,12 @@
       e.preventDefault();
       return;
     }
+    // pages: Page Down / Up (also what page turning pedals send); stage view: the arrows too, Esc leaves it
+    const stage = A().isPerforming();
+    if (k === 'PageDown' || (stage && (k === 'ArrowRight' || k === 'ArrowDown'))) { A().nextPage(); e.preventDefault(); return; }
+    if (k === 'PageUp' || (stage && (k === 'ArrowLeft' || k === 'ArrowUp'))) { A().prevPage(); e.preventDefault(); return; }
+    if (stage && k === 'Escape') { A().togglePerform(); e.preventDefault(); return; }
+    if (stage) return; // nothing else is written on stage
     if (/^[1-7]$/.test(k)) A().setValue(TC.VALUES[+k - 1]);
     else if (k === '.') A().toggleDotted();
     else if (k === 't' || k === 'T') A().toggleTriplet();

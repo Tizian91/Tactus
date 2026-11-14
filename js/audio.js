@@ -111,14 +111,14 @@
 
   const TOM_HZ = { 50: 190, 48: 160, 47: 135, 45: 115, 41: 92, 43: 82 };
 
-  /** One drum stroke. art: drum map id; vel 0 … 1; choke: stopped cymbal (short). */
-  AU.hit = function (art, t, vel = 0.72, choke = false, dest = null) {
+  /** One drum stroke. art: drum map id; vel 0 … 1; choke: stopped cymbal (short); track: whose kit profile / MIDI output (playing through MIDI). */
+  AU.hit = function (art, t, vel = 0.72, choke = false, dest = null, track = null) {
     if (!ensure()) return;
     const a = TC.drums.byId(art);
     if (!a) return;
     // playback through a MIDI output (Cubase …): the stroke goes there; Tactus' sounds only if wanted
     if (TC.midiOut && TC.midiOut.active()) {
-      TC.midiOut.hit(art, t, vel, ctx);
+      TC.midiOut.hit(art, t, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
     const out = dest || master, v = Math.max(0.05, Math.min(1.2, vel));
@@ -253,17 +253,17 @@
   };
 
   /** Play a note now (when it is written or chosen). */
-  AU.preview = function (note) {
+  AU.preview = function (note, track = TC.curTrack ? TC.curTrack() : null) {
     if (!ensure() || TC.player.playing) return;
     const t = ctx.currentTime + 0.01;
     const vel = TC.timeline.velocity(note);
     const a = TC.drums.byId(note.art);
-    if (note.orn === 'flam') AU.hit(note.art, t, 0.35);
+    if (note.orn === 'flam') AU.hit(note.art, t, 0.35, false, null, track);
     if (note.orn === 'drag') {
-      AU.hit(note.art, t, 0.33);
-      AU.hit(note.art, t + 0.03, 0.38);
+      AU.hit(note.art, t, 0.33, false, null, track);
+      AU.hit(note.art, t + 0.03, 0.38, false, null, track);
     }
-    AU.hit(note.art, t + (note.orn === 'flam' ? 0.03 : note.orn === 'drag' ? 0.06 : 0), vel, a && a.tech === 'choke');
+    AU.hit(note.art, t + (note.orn === 'flam' ? 0.03 : note.orn === 'drag' ? 0.06 : 0), vel, a && a.tech === 'choke', null, track);
   };
 
   // ---- Player ------------------------------------------------------------------------------
@@ -325,7 +325,7 @@
       const when = t0 + at;
       if (when >= ctx.currentTime - 0.01) {
         if (h.click) AU.click(when, h.click, h.vel, bus);
-        else AU.hit(h.art, when, h.vel, h.choke, bus);
+        else AU.hit(h.art, when, h.vel, h.choke, bus, h.trk);
       }
       until = h.t;
       idx++;
@@ -349,35 +349,49 @@
     }
     // "Follow" off: the view stays where it is (to change notes while listening)
     if (!c || S.settings.followPlay === false) return;
-    P.keepInView(c);
+    P.keepInView(c, S.settings.followMode === 'smooth');
   }
 
-  /** Scroll so that the playback cursor c ({ x, y } in the view, from drawCursor) is in view. */
-  P.keepInView = function (c) {
-    // sideways (endless view); page view: its line downwards, and sideways when zoomed in
+  let glideAt = 0; // time of the last smooth step (the glide does not depend on the frame rate)
+
+  /**
+   * Scroll so that the playback cursor c ({ x, y } in the view, from drawCursor) is in view.
+   *   jumping (default)  the view jumps when the cursor reaches the edge (endless view) or a line
+   *                      that is not fully shown (page view)
+   *   smooth             the view glides along: the cursor stays at a third of the width (endless
+   *                      view), the line being played in the upper quarter (page view), so the next
+   *                      one is already in view; a jump back (repeat) glides as well
+   */
+  P.keepInView = function (c, smooth) {
     const vp = document.getElementById('viewport');
-    const v = S.doc.view;
+    const v = S.doc.view, z = v.zoom, SP = TC.render.SP, h = vp.clientHeight, w = vp.clientWidth;
+    const L = TC.render.layout, stack = (L && L.stackH) || 4 * SP; // all staves of a line (several tracks)
+    const sx = v.x + c.x * z;
+    let tx = v.x, ty = v.y;
     if (TC.render.isPage()) {
       // page view: the whole line in view (down / up), and the cursor too when zoomed in (sideways)
-      const SP = TC.render.SP, h = vp.clientHeight, w = vp.clientWidth;
-      const top = v.y + (c.y - 6 * SP) * v.zoom, bottom = v.y + (c.y + 10 * SP) * v.zoom;
-      let moved = false;
-      if (top < 0 || bottom > h) {
-        v.y = Math.min(h * 0.25, h - (16 * SP) * v.zoom) - (c.y - 6 * SP) * v.zoom;
-        moved = true;
-      }
-      const sx = v.x + c.x * v.zoom, wide = TC.render.PAGE_W * v.zoom > w;
-      if (sx < 0 || sx > w || (wide && (sx > w * 0.85 || sx < w * 0.05))) {
-        v.x = w * 0.15 - c.x * v.zoom;
-        moved = true;
-      }
-      if (moved) TC.render.applyView();
-    } else {
-      const sx = v.x + c.x * v.zoom, w = vp.clientWidth;
-      if (sx > w * 0.85 || sx < 0) {
-        v.x = w * 0.15 - c.x * v.zoom;
-        TC.render.applyView();
-      }
+      const top = v.y + (c.y - 6 * SP) * z, bottom = v.y + (c.y + stack + 6 * SP) * z;
+      const want = Math.max(Math.min(h * 0.25, h - (stack + 12 * SP) * z), 0) - (c.y - 6 * SP) * z;
+      if (smooth || top < 0 || bottom > h) ty = want;
+      const wide = TC.render.PAGE_W * z > w;
+      if (smooth && wide) {
+        if (sx > w * 0.4 || sx < w * 0.05) tx = w * 0.4 - c.x * z;
+      } else if (sx < 0 || sx > w || (wide && (sx > w * 0.85 || sx < w * 0.05))) tx = w * 0.15 - c.x * z;
+    } else if (smooth) {
+      if (sx > w / 3 || sx < w * 0.05) tx = w / 3 - c.x * z;
+    } else if (sx > w * 0.85 || sx < 0) tx = w * 0.15 - c.x * z;
+    if (smooth) {
+      // glide: a part of the way each frame (about 90 % in a quarter of a second)
+      const now = performance.now(), dt = glideAt ? Math.min(0.1, (now - glideAt) / 1000) : 1 / 60;
+      glideAt = now;
+      const k = 1 - Math.exp(-dt / 0.1);
+      tx = Math.abs(tx - v.x) < 0.5 ? tx : v.x + (tx - v.x) * k;
+      ty = Math.abs(ty - v.y) < 0.5 ? ty : v.y + (ty - v.y) * k;
+    }
+    if (tx !== v.x || ty !== v.y) {
+      v.x = tx;
+      v.y = ty;
+      TC.render.applyView();
     }
   };
 

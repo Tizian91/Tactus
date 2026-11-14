@@ -610,6 +610,66 @@ setTimeout(() => {
     TC.actions.toggleLayout();
     for (let k = 0; k < 6; k++) TC.actions.undo();
     ok('staves: undo back to one track (' + S.doc.tracks.length + ')', S.doc.tracks.length === 1 && JSON.stringify(S.doc.tracks[0].bars) === drumsBefore);
+    // tracks and MIDI: mute / solo in the panel, the export dialog, the sound rows of a track
+    TC.actions.setArt(38);
+    TC.actions.addTrackFor();
+    const sn3 = TC.curTrack();
+    const msBtn = (a) => document.querySelector(`#panel-settings .track-item [data-action="${a}"][data-value="${sn3.id}"]`);
+    msBtn('toggleMute').click();
+    ok('M: the track is muted, the button lit, not in the playback', sn3.mute && msBtn('toggleMute').classList.contains('active') &&
+      !TC.timeline.build(S.doc).hits.some((h) => h.trk === sn3));
+    msBtn('toggleSolo').click();
+    ok('S: solo, the button lit', sn3.solo && msBtn('toggleSolo').classList.contains('active'));
+    ok('the track being written: a kit profile row', !!document.querySelector('#panel-settings select[data-action="setTrackProfile"]'));
+    TC.actions.exportMidiCurrent();
+    const exd = document.querySelector('.midi-export-backdrop');
+    ok('Ctrl+E with two tracks: the export dialog, a row each, one file per track', !!exd && exd.querySelectorAll('.export-row').length === 2 &&
+      exd.querySelector('select[data-k="mode"]').value === 'files' && /2/.test(exd.querySelector('[data-k="ok"]').textContent));
+    const cb = exd.querySelector('input[data-k="on"]');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+    ok('one track unticked: its drum map greyed, "Export" one file', exd.querySelector('select[data-k="target"]').disabled && !/2/.test(exd.querySelector('[data-k="ok"]').textContent));
+    exd.querySelector('[data-k="close"]').click();
+    ok('export dialog: closed', !document.querySelector('.midi-export-backdrop'));
+    TC.actions.undo(); TC.actions.undo(); TC.actions.undo();
+    ok('tracks and MIDI: undo back to one track', S.doc.tracks.length === 1);
+    // following the playback smoothly: the view glides part of the way, not all at once
+    const vw = S.doc.view, vx0 = vw.x;
+    TC.player.keepInView({ x: 3000, y: 0 }, true);
+    const vx1 = vw.x;
+    TC.player.keepInView({ x: 3000, y: 0 }, false);
+    ok('follow smooth: a part of the way; jumping: all of it (' + [vx0, vx1, vw.x].map(Math.round) + ')', vx1 < vx0 && vw.x < vx1);
+    vw.x = vx0;
+    TC.render.applyView();
+    // stage view: only the pages; Page Down, a tap at the side and MIDI (gotoPage) turn; nothing is written
+    TC.score.insertBars(S.doc, S.doc.bars.length, 40);
+    TC.commit();
+    const wasEndless = !TC.render.isPage();
+    const keepLayout = TC.render.layout;
+    const pob = TC.render.pagesOfBars();
+    ok('pages of the bars (' + (Math.max(...pob) + 1) + ' pages), the view stays as it is', pob.length === S.doc.bars.length && Math.max(...pob) >= 2 && TC.render.layout === keepLayout);
+    TC.actions.togglePerform();
+    const pbar = document.getElementById('perform-bar');
+    ok('stage view: page view, toolbar hidden, "1 / n" (' + (pbar && pbar.textContent) + ')', document.body.classList.contains('perform') && TC.render.isPage() &&
+      getComputedStyle(document.getElementById('toolbar')).display === 'none' && /^‹1 \//.test(pbar.textContent) && TC.actions.currentPage() === 0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+    ok('Page Down: page 2', TC.actions.currentPage() === 1);
+    const notesBefore = JSON.stringify(S.doc.tracks);
+    const vr = vp.getBoundingClientRect(), tap = (x) => {
+      const init = { clientX: vr.left + vr.width * x, clientY: vr.top + vr.height / 2, button: 0, buttons: 1, bubbles: true, pointerId: 3, pointerType: 'touch', isPrimary: true };
+      vp.dispatchEvent(new PointerEvent('pointerdown', init));
+      vp.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, init, { buttons: 0 })));
+    };
+    tap(0.9);
+    ok('a tap in the right third: page 3, no note written', TC.actions.currentPage() === 2 && JSON.stringify(S.doc.tracks) === notesBefore);
+    tap(0.1);
+    ok('a tap in the left third: page 2 again', TC.actions.currentPage() === 1);
+    TC.actions.gotoPage(0);
+    ok('MIDI "page 1" (gotoPage): the first page', TC.actions.currentPage() === 0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    ok('Esc: the stage view ends, the bar goes', !document.body.classList.contains('perform') && !document.getElementById('perform-bar'));
+    if (wasEndless) TC.actions.layout('endless');
+    TC.actions.undo();
     const sk = document.getElementById('status-kit');
     ok('status bar: kit General MIDI for a new score (' + sk.textContent + ')', /General MIDI/.test(sk.textContent));
     const saveKits = TC.kits.save; TC.kits.save = () => true;

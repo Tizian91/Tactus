@@ -58,6 +58,12 @@ window.TC = window.TC || {};
       midiOutSynth: false,  // with a MIDI output: Tactus' sounds as well
       midiLead: 0,          // MIDI output: sent this many ms earlier (the drum VST's own delay)
       midiOutLast: '',      // the MIDI output chosen last (toolbar switch Tactus ↔ MIDI)
+      remoteIn: '',         // page turning by MIDI: this input (js/remote.js), '' = off
+      remoteMode: 'page',   // … 'page' (note n = page n) or 'step' (learnt: next / page before)
+      remoteCh: 'all',      // … only on this channel 0 … 15, or 'all'
+      remoteNext: null,     // … learnt messages { type, ch, d1 } (step)
+      remotePrev: null,
+      turnLead: 1,          // page turning MIDI file: bars before the new page
       samples: false,       // recorded drum sounds (js/samples.js) instead of the synthesized ones
       audioDelay: 0,        // ms the sound is heard later than the browser reports (Bluetooth …): the cursor waits for it
       kitCustom: null,      // ids of the custom kit
@@ -67,6 +73,7 @@ window.TC = window.TC || {};
       sound: true,          // play a note when it is written
       metronome: false,     // click while playing
       followPlay: true,     // the view follows the playback cursor (off: it stays where it is)
+      followMode: 'jump',   // … 'jump' (when the cursor reaches the edge) or 'smooth' (glides along)
       swingMidi: true,      // swing / shuffle of the score also in the MIDI export (off: straight notes)
       countIn: false,       // one bar of clicks before playing
       loop: false,          // playback repeats (the selected bar, or everything)

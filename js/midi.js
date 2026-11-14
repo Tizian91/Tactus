@@ -1,6 +1,6 @@
 'use strict';
 /*
- * MIDI export (Standard MIDI File, type 0, 960 ticks per quarter = Tactus ticks).
+ * MIDI export (Standard MIDI File, type 0 - or type 1, one MIDI track per Tactus track; 960 ticks per quarter = Tactus ticks).
  *
  *   TC.midi.build(doc, target, { straight }) -> { bytes: Uint8Array, replaced: [ {art, by} ], missing: [art] }
  *     straight         true: no swing (otherwise swing / shuffle of the score as heard)
@@ -73,12 +73,30 @@
   const text = (s) => Array.from(unescape(encodeURIComponent(s)), (c) => c.charCodeAt(0)); // UTF-8
   const meta = (type, data) => [0xff, type].concat(vlq(data.length), data);
 
+  /**
+   * The MIDI file of a score.
+   *   target          kit profile (null: General MIDI) - for every track, unless opts.targetOf says otherwise
+   *   opts.tracks     the tracks to write (default: all); opts.targetOf(track): a track's own kit profile
+   *   opts.multi      several tracks: one file of type 1 - a first track with tempo, time signatures and
+   *                   markers, then one MIDI track per Tactus track, named like it (Cubase: one track each);
+   *                   otherwise type 0, everything in one MIDI track
+   *   opts.name       name of the MIDI track (type 0; default: the title of the score)
+   *   opts.straight   no swing
+   *   opts.pageTurns  { pageOf: [page of every bar, 0 = first], lead: bars before (default 1), ch: 0 … 15 }:
+   *                   a page turning track (with opts.tracks = []): note n = page n (note 1 = page 1), as the
+   *                   pages come while playing (repeats, jumps), `lead` bars before the new page begins
+   *                   (TC.remote turns the page when it receives it - e.g. from a player of backing tracks)
+   */
   M.build = function (doc, target, opts = {}) {
     const T = TC.timeline, R = TC.rhythm;
     const report = { replaced: new Map(), missing: new Set() };
-    const ev = []; // { t, order, bytes } order: 0 meta, 1 note off, 2 note on
-    const add = (t, order, bytes) => ev.push({ t: Math.max(0, Math.round(t)), order, bytes });
-    add(0, 0, meta(0x03, text(doc.meta.title || 'Tactus')));
+    const tracks = opts.tracks || doc.tracks;
+    const targetOf = opts.targetOf || (() => target);
+    const metaEv = []; // { t, order, bytes } order: 0 meta, 1 note off, 2 note on
+    const starts = []; // { bar, t } of every played bar (page turns)
+    const noteEv = tracks.map(() => []);
+    const addTo = (list) => (t, order, bytes) => list.push({ t: Math.max(0, Math.round(t)), order, bytes });
+    const add = addTo(metaEv);
 
     let t0 = 0, tempo = null, ts = null, prev = -1;
     // swing / shuffle as heard (opts.straight: the notes on the grid, e.g. to swing them in the DAW)
@@ -101,8 +119,10 @@
       }
       if (h.marker) add(t0, 0, meta(0x06, text(h.marker)));
       const msTicks = (ms) => (ms / 1000) * (bpm / 60) * TC.TPQ; // grace notes: fixed time before the beat
+      starts.push({ bar: bi, t: t0 });
 
-      for (const track of doc.tracks) { // all tracks together, on their keys of the kit profile
+      tracks.forEach((track, ti) => { // every track on the keys of its kit profile
+        const tgt = targetOf(track), put = addTo(noteEv[ti]);
         const src = TC.score.sourceBar(doc, bi, track);
         for (const voice of track.bars[src].voices) {
           const ends = track.kind === 'drums' && R ? R.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
@@ -112,12 +132,12 @@
             for (const n of e.notes) {
               const art = TC.drums.byId(n.art);
               if (!art) continue;
-              const k = keyFor(art, target, report);
+              const k = keyFor(art, tgt, report);
               if (!k) continue;
               const hit = (t, vel) => {
                 const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
-                add(t, 2, [0x90 | k.ch, k.note, v]);
-                add(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
+                put(t, 2, [0x90 | k.ch, k.note, v]);
+                put(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
               };
               const at = t0 + sw(e.tick), vel = T.velocity(n); // swing: an offbeat comes later
               if (n.orn === 'flam') hit(at - msTicks(30), 0.35);
@@ -133,19 +153,47 @@
             }
           }
         }
-      }
+      });
       t0 += L;
     }
-    ev.sort((a, b) => a.t - b.t || a.order - b.order);
-    const data = [];
-    let last = 0;
-    for (const e of ev) {
-      data.push(...vlq(e.t - last), ...e.bytes);
-      last = e.t;
+    // page turns: a note when the played bar is on another page (the first page at the start)
+    const pt = opts.pageTurns;
+    if (pt && starts.length) {
+      const lead = pt.lead === undefined ? 1 : Math.max(0, pt.lead | 0), ch = TC.clamp(pt.ch === undefined ? 15 : pt.ch | 0, 0, 15);
+      const turn = (t, page) => {
+        const n = TC.clamp(page + 1, 1, 127);
+        add(t, 2, [0x90 | ch, n, 100]);
+        add(t + NOTE_LEN, 1, [0x80 | ch, n, 0]);
+      };
+      let last = -1;
+      starts.forEach((s, j) => {
+        const page = pt.pageOf[s.bar] || 0;
+        if (j && page === (pt.pageOf[starts[j - 1].bar] || 0)) return;
+        // `lead` bars earlier, but after the turn before (a page of one bar)
+        const t = j ? Math.max(last + NOTE_LEN + 1, starts[Math.max(0, j - lead)].t) : 0;
+        turn(t, page);
+        last = t;
+      });
     }
-    data.push(...vlq(Math.max(0, t0 - last)), 0xff, 0x2f, 0x00); // end of track at the end of the last bar
-    const head = [0x4d, 0x54, 0x68, 0x64, ...u32(6), 0, 0, 0, 1, (TC.TPQ >> 8) & 255, TC.TPQ & 255];
-    const bytes = new Uint8Array(head.concat([0x4d, 0x54, 0x72, 0x6b], u32(data.length), data));
+    // one MIDI track: its events in time order, ended at the end of the last bar
+    const chunk = (name, events) => {
+      const ev = (name !== null ? [{ t: 0, order: -1, bytes: meta(0x03, text(name)) }] : []).concat(events);
+      ev.sort((a, b) => a.t - b.t || a.order - b.order);
+      const data = [];
+      let last = 0;
+      for (const e of ev) {
+        data.push(...vlq(e.t - last), ...e.bytes);
+        last = e.t;
+      }
+      data.push(...vlq(Math.max(0, t0 - last)), 0xff, 0x2f, 0x00);
+      return [0x4d, 0x54, 0x72, 0x6b].concat(u32(data.length), data);
+    };
+    const multi = !!opts.multi && tracks.length > 0;
+    const chunks = multi
+      ? [chunk(doc.meta.title || 'Tactus', metaEv)].concat(tracks.map((t, ti) => chunk(t.name, noteEv[ti])))
+      : [chunk(opts.name || doc.meta.title || 'Tactus', metaEv.concat(...noteEv))];
+    const head = [0x4d, 0x54, 0x68, 0x64, ...u32(6), 0, multi ? 1 : 0, 0, chunks.length, (TC.TPQ >> 8) & 255, TC.TPQ & 255];
+    const bytes = new Uint8Array(head.concat(...chunks));
     return {
       bytes,
       replaced: [...report.replaced].map(([a, b]) => ({ art: TC.drums.byId(a), by: TC.drums.byId(b) })),
@@ -153,31 +201,48 @@
     };
   };
 
-  /** Reads the note events of a MIDI file made by M.build (for the tests): [ {t, note, vel, ch} ] and metas. */
+  /**
+   * Reads a MIDI file made by M.build (for the tests): { tpq, format, notes: [ {t, note, vel, ch, track} ],
+   * metas, tracks: [ {name, notes} ] } - the notes of all MIDI tracks together, and per track.
+   */
   M.read = function (bytes) {
-    let p = 14 + 8; // header + "MTrk" + length
-    const tpq = (bytes[12] << 8) | bytes[13], notes = [], metas = [];
-    let t = 0, status = 0;
-    const vl = () => {
-      let n = 0, b;
-      do { b = bytes[p++]; n = (n << 7) | (b & 0x7f); } while (b & 0x80);
-      return n;
-    };
-    while (p < bytes.length) {
-      t += vl();
-      let b = bytes[p++];
-      if (b === 0xff) {
-        const type = bytes[p++], len = vl();
-        metas.push({ t, type, data: Array.from(bytes.slice(p, p + len)) });
-        p += len;
-        if (type === 0x2f) break;
-        continue;
+    const tpq = (bytes[12] << 8) | bytes[13], format = (bytes[8] << 8) | bytes[9];
+    const notes = [], metas = [], tracks = [];
+    let p = 14;
+    while (p + 8 <= bytes.length) {
+      const len = (bytes[p + 4] << 24) | (bytes[p + 5] << 16) | (bytes[p + 6] << 8) | bytes[p + 7];
+      const end = p + 8 + len, ti = tracks.length, tk = { name: '', notes: [] };
+      tracks.push(tk);
+      p += 8;
+      let t = 0, status = 0;
+      const vl = () => {
+        let n = 0, b;
+        do { b = bytes[p++]; n = (n << 7) | (b & 0x7f); } while (b & 0x80);
+        return n;
+      };
+      while (p < end) {
+        t += vl();
+        const b = bytes[p++];
+        if (b === 0xff) {
+          const type = bytes[p++], ml = vl();
+          const data = Array.from(bytes.slice(p, p + ml));
+          metas.push({ t, type, data, track: ti });
+          if (type === 0x03) tk.name = decodeURIComponent(escape(String.fromCharCode(...data)));
+          p += ml;
+          continue;
+        }
+        if (b & 0x80) status = b;
+        else p--;
+        const d1 = bytes[p++], d2 = bytes[p++];
+        if ((status & 0xf0) === 0x90 && d2 > 0) {
+          const n = { t, note: d1, vel: d2, ch: status & 15, track: ti };
+          notes.push(n);
+          tk.notes.push(n);
+        }
       }
-      if (b & 0x80) status = b;
-      else p--;
-      const d1 = bytes[p++], d2 = bytes[p++];
-      if ((status & 0xf0) === 0x90 && d2 > 0) notes.push({ t, note: d1, vel: d2, ch: status & 15 });
+      p = end;
     }
-    return { tpq, notes, metas };
+    notes.sort((a, b) => a.t - b.t);
+    return { tpq, format, notes, metas, tracks };
   };
 })(window.TC);

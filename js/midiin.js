@@ -220,6 +220,49 @@
     };
   };
 
+  /**
+   * Several MIDI tracks, each its own Tactus track: parts [{ track: index in midi.tracks, profile, name }].
+   * Every part is read on its own (MI.toScore, with its own drum map); the bars are those of the file,
+   * as long as the longest part. The first part's kit profile becomes the score's, another one the
+   * track's own. Returns { doc, notes, merged, unknown } like MI.toScore.
+   */
+  MI.toScoreMulti = function (midi, parts, opts = {}) {
+    const res = parts.map((p) => MI.toScore(midi, Object.assign({}, opts, { track: p.track, profile: p.profile })));
+    const doc = res[0].doc;
+    const longest = res.reduce((a, r) => (r.doc.bars.length > a.doc.bars.length ? r : a)).doc;
+    while (doc.bars.length < longest.bars.length) {
+      doc.bars.push(TC.clone(longest.bars[doc.bars.length]));
+      doc.tracks[0].bars.push(TC.newTrackBar());
+    }
+    doc.tracks[0].name = parts[0].name || doc.tracks[0].name;
+    res.slice(1).forEach((r, k) => {
+      const p = parts[k + 1], t = TC.newTrack('drums', 0);
+      t.name = p.name || TC.score.freeTrackName(doc, 'Drums');
+      t.bars = doc.bars.map((h, i) => (r.doc.tracks[0].bars[i] ? TC.clone(r.doc.tracks[0].bars[i]) : TC.newTrackBar()));
+      if ((p.profile || null) !== (parts[0].profile || null)) {
+        t.profile = p.profile ? p.profile.id : 'gm';
+        t.profileName = p.profile ? p.profile.name : '';
+      }
+      doc.tracks.push(t);
+      doc.bars.forEach((h, i) => TC.score.fitBar(doc, t, i));
+    });
+    const unknown = new Map();
+    res.forEach((r) => r.unknown.forEach((u) => unknown.set(u.note, (unknown.get(u.note) || 0) + u.count)));
+    return {
+      doc, notes: res.reduce((a, r) => a + r.notes, 0), merged: res.reduce((a, r) => a + r.merged, 0),
+      unknown: [...unknown].map(([note, count]) => ({ note, count })).sort((a, b) => a.note - b.note),
+    };
+  };
+
+  /** The MIDI tracks that look like drums (by name or channel 10); none: the drum track of MI.drumTrack. */
+  MI.drumTracks = function (midi) {
+    const list = midi.tracks.map((t, i) => Object.assign({ i }, t)).filter((t) => t.notes);
+    const drums = list.filter((t) => DRUM_NAME.test(t.name) || t.channels.has(9)).map((t) => t.i);
+    if (drums.length) return drums;
+    const one = MI.drumTrack(midi);
+    return one === null ? [] : [one];
+  };
+
   // ---- dialog -----------------------------------------------------------------------------
 
   /**
@@ -270,11 +313,13 @@
     inp.click();
   };
 
-  /** The drum track of a file: by its name (Drum, EZdrummer, Groove Agent, UJAM …), by channel 10, else the fullest. */
+  /** Names of drum tracks (Drum, EZdrummer, Groove Agent, UJAM …). */
+  const DRUM_NAME = /drum|schlag|ezd|groove ?agent|ujam|beat ?maker|superior|addictive|bfd|perc/i;
+  /** The drum track of a file: by its name, by channel 10, else the fullest. */
   MI.drumTrack = function (midi) {
     const list = midi.tracks.map((t, i) => Object.assign({ i }, t)).filter((t) => t.notes);
     if (list.length <= 1) return list.length ? list[0].i : null;
-    const named = list.filter((t) => /drum|schlag|ezd|groove ?agent|ujam|beat ?maker|superior|addictive|bfd|perc/i.test(t.name));
+    const named = list.filter((t) => DRUM_NAME.test(t.name));
     const ch10 = list.filter((t) => t.channels.has(9));
     const pool = named.length ? named : ch10.length ? ch10 : list;
     return pool.reduce((a, b) => (b.notes > a.notes ? b : a)).i;
@@ -290,7 +335,9 @@
     }
     TC.kits.load();
     const S = TC.state;
-    const track = MI.drumTrack(midi);
+    // the MIDI tracks with notes (tracks of automation only have none and are left out); ticked: the drum tracks
+    const withNotes = midi.tracks.map((t, i) => Object.assign({ i }, t)).filter((t) => t.notes);
+    const trackName = (t) => t.name || tr('Track {n}', { n: t.i + 1 });
     // where it comes from: the kit profile of the open score, else the last import (track names say little:
     // a track called "EZdrummer" may play Groove Agent)
     const cur = TC.kits.current(S.doc);
@@ -298,7 +345,8 @@
     const st = {
       source: cur ? cur.id : S.settings.importKit && TC.kits.byId(S.settings.importKit) ? S.settings.importKit : '',
       grid: S.settings.importGrid || '16t',
-      track: track === null ? 'all' : String(track),
+      sel: new Set(MI.drumTracks(midi)), // the MIDI tracks to take, each becomes a Tactus track
+      src: {},                          // … where each one comes from (kit profile id, '' = General MIDI)
       tempo: fileBpm,
       // into the open score (from a bar on) or as a new score
       target: S.settings.importTarget === 'into' ? 'into' : 'new',
@@ -312,10 +360,18 @@
     document.body.appendChild(root);
     root.addEventListener('pointerdown', (e) => { if (e.target === root) MI.close(); });
 
-    const result = () => {
+    const srcOf = (i) => (st.src[i] !== undefined ? st.src[i] : st.source);
+    const readOpts = () => {
       const g = GRIDS.find((x) => x.key === st.grid) || GRIDS[0];
-      return MI.toScore(midi, { profile: st.source ? TC.kits.byId(st.source) : null, grid: g.grid, triplets: g.triplets,
-        track: st.track === 'all' ? null : +st.track, tempo: st.tempo });
+      return { grid: g.grid, triplets: g.triplets, tempo: st.tempo };
+    };
+    /** The ticked MIDI tracks: [{ track, profile, name }] (a file with one track: that one). */
+    const parts = () => (withNotes.length > 1 ? withNotes.filter((t) => st.sel.has(t.i)) : withNotes)
+      .map((t) => ({ track: t.i, profile: srcOf(t.i) ? TC.kits.byId(srcOf(t.i)) : null, name: withNotes.length > 1 ? trackName(t) : '' }));
+    const result = () => {
+      const ps = parts();
+      if (!ps.length) return MI.toScore(midi, Object.assign(readOpts(), { track: -1 })); // nothing ticked: empty
+      return MI.toScoreMulti(midi, ps, readOpts());
     };
     /** Name of a key in the chosen drum map ("73 Floortom 2 Rimshot"), or just the number. */
     const keyName = (note) => {
@@ -329,16 +385,22 @@
       const sources = [`<option value="">General MIDI (Guitar Pro …)</option>`]
         .concat(TC.kits.list.map((p) => `<option value="${p.id}"${p.id === st.source ? ' selected' : ''}>${esc(tr('Kit profile: {name}', { name: p.name }))}</option>`)).join('');
       const grids = GRIDS.map((g) => `<option value="${g.key}"${g.key === st.grid ? ' selected' : ''}>${esc(tr(g.label))}</option>`).join('');
-      const withNotes = midi.tracks.map((t, i) => Object.assign({ i }, t)).filter((t) => t.notes);
-      const tracks = (withNotes.length > 1 ? [`<option value="all"${st.track === 'all' ? ' selected' : ''}>${tr('All tracks')}</option>`] : [])
-        .concat(withNotes.map((t) => `<option value="${t.i}"${String(t.i) === st.track ? ' selected' : ''}>${esc(t.name || tr('Track {n}', { n: t.i + 1 }))} (${tr('{n} notes', { n: t.notes })})</option>`)).join('');
+      const srcOpts = (v) => [`<option value="">General MIDI (Guitar Pro …)</option>`]
+        .concat(TC.kits.list.map((p) => `<option value="${p.id}"${p.id === v ? ' selected' : ''}>${esc(p.name)}</option>`)).join('');
+      // several tracks: a tick for each (its name, its notes; channel 10 = drums) and where it comes from
+      const tracks = withNotes.map((t) => `<div class="export-row">
+          <label class="check"><input type="checkbox" data-k="sel" data-i="${t.i}"${st.sel.has(t.i) ? ' checked' : ''}> <b>${esc(trackName(t))}</b>
+            <span class="muted">${tr('{n} notes', { n: t.notes })}${t.channels.has(9) ? ' · ' + tr('channel 10') : ''}</span></label>
+          <select data-k="src" data-i="${t.i}"${st.sel.has(t.i) ? '' : ' disabled'}>${srcOpts(srcOf(t.i))}</select></div>`).join('');
       const unk = res.unknown.length
         ? `<p class="hint warn"><b>${tr('Keys without an instrument (left out):')}</b> ${res.unknown.map((u) => esc(keyName(u.note)) + ` (${u.count}×)`).join(', ')}</p>` : '';
       root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Import MIDI')} <a class="help-link" href="hilfe.html#midi-import" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
           <p><b>${esc(fileName)}</b></p>
-          ${withNotes.length > 1 ? `<div class="row"><label>${tr('Track')}</label><select data-k="track">${tracks}</select></div>` : ''}
-          <div class="row"><label>${tr('Comes from')}</label><select data-k="source">${sources}</select></div>
+          ${withNotes.length > 1 ? `<p class="hint tight">${tr('Which tracks to take - each becomes a track of its own - and which drum map each comes from:')}</p>
+          <div class="export-list">${tracks}</div>
+          <div class="row"><label>${tr('All from')}</label><select data-k="source">${sources}</select></div>`
+          : `<div class="row"><label>${tr('Comes from')}</label><select data-k="source">${sources}</select></div>`}
           <div class="row"><label>${tr('Grid')}</label><select data-k="grid">${grids}</select></div>
           <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-k="tempo" value="${st.tempo}"> <span class="muted">BPM${st.tempo !== fileBpm ? ' · ' + tr('in the file: {t}', { t: fileBpm }) : ''}</span></div>
           <p class="hint">${tr('{n} notes in {b} bars.', { n: res.notes, b: res.doc.bars.length })}
@@ -358,11 +420,14 @@
           <p class="hint">${tr('Velocity: soft = ghost note, loud = accent.')}</p>
         </div>
         <footer><span class="grow"></span><button type="button" data-k="close">${tr('Cancel')}</button>
-          <button type="button" class="primary" data-k="ok">${tr('Import')}</button></footer>`;
+          <button type="button" class="primary" data-k="ok"${parts().length ? '' : ' disabled'}>${tr('Import')}</button></footer>`;
     };
     root.addEventListener('change', (e) => {
-      const k = e.target.dataset.k;
-      if (k === 'source' || k === 'grid' || k === 'track') { st[k] = e.target.value; draw(); }
+      const k = e.target.dataset.k, i = Number(e.target.dataset.i);
+      if (k === 'sel') { if (e.target.checked) st.sel.add(i); else st.sel.delete(i); draw(); }
+      if (k === 'src') { st.src[i] = e.target.value; draw(); }
+      if (k === 'source') { st.source = e.target.value; st.src = {}; draw(); } // (every track)
+      if (k === 'grid') { st.grid = e.target.value; draw(); }
       if (k === 'tempo') { st.tempo = TC.clamp(Math.round(Number(e.target.value) || fileBpm), 20, 400); draw(); }
       if (k === 'target') { st.target = e.target.value; draw(); }
       if (k === 'at' || k === 'from' || k === 'to') st[k] = Math.max(1, Math.round(Number(e.target.value) || 1));
@@ -382,7 +447,14 @@
         S.settings.importTarget = 'into';
         TC.saveSettings();
         MI.close();
-        const n = MI.insertInto(S.doc, res.doc, at, from, to, st.takeTs, TC.curTrack());
+        // one MIDI track: into the track being written; several: each into the track of its name (or a new one)
+        const ps = parts();
+        let n = 0;
+        ps.forEach((p) => {
+          const r = MI.toScore(midi, Object.assign(readOpts(), { track: p.track, profile: p.profile }));
+          const into = ps.length === 1 ? TC.curTrack() : S.doc.tracks.find((t) => t.name === p.name) || TC.score.addTrack(S.doc, p.name);
+          n = Math.max(n, MI.insertInto(S.doc, r.doc, at, from, to, st.takeTs, into));
+        });
         S.selection.clear();
         TC.selectBar(at);
         if (n > 1) TC.selectBar(at + n - 1, true);

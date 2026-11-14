@@ -418,6 +418,9 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .track-item button.off { opacity: 0.3; pointer-events: none; }
 .track-item.hidden-track button.link { opacity: 0.5; font-style: italic; }
 .track-item button.eye { padding: 0 4px; }
+.track-item button.ms { padding: 0 5px; font-size: 11px; font-weight: 700; border-radius: 3px; }
+.track-item button.mute.active { background: #c0392b; color: #fff; }
+.track-item button.solo.active { background: #d4a017; color: #fff; }
 
 /* "what the kit profile lacks" */
 .kit-check { max-width: 640px; }
@@ -437,3 +440,15 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .help-link { text-decoration: none; color: var(--accent); font-weight: 400; font-size: 0.9em; margin-left: 4px; }
 .help-link:hover { color: var(--accent-hover); }
 #help-btn { font-weight: 700; min-width: 32px; }
+/* MIDI export: one row per track (tick, name, drum map) */
+.export-list { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.export-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.export-row label.check { flex: 1 1 140px; margin: 0; }
+.export-row select { flex: 1 1 180px; max-width: 100%; }
+/* stage view: only the pages (actions.js togglePerform) */
+body.perform #toolbar, body.perform .panel, body.perform .panel-resizer, body.perform .panel-expand, body.perform #statusbar { display: none !important; }
+body.perform #viewport { position: fixed; inset: 0; z-index: 40; } /* the whole screen (the grid of #app / #main stays as it is) */
+#perform-bar { position: fixed; top: 8px; right: 8px; z-index: 50; display: flex; align-items: center; gap: 6px; padding: 4px 6px;
+  background: var(--panel, #fff); color: var(--text, #222); border: 1px solid var(--border, #ccc); border-radius: 8px; opacity: 0.85; font-size: 14px; }
+#perform-bar button { min-width: 36px; min-height: 32px; font-size: 18px; }
+#perform-bar span { min-width: 56px; text-align: center; }

@@ -250,12 +250,54 @@ Schritte:
    40–160 %, Standard 80 %; unter 60 % können sich volle Drum-Kits berühren) und **Abstand der Zeilen** (Seitenansicht, wo eine
    Zeile umbricht; 40–160 %, Standard 100 %), beide mit dem Stück gespeichert, Bildschirm und PDF.
 3. ✅ Seitenansicht / PDF: in Schritt 2 enthalten
-4. Wiedergabe / MIDI: alle Spuren, Stumm / Solo; MIDI-Export eine Spur je Tactus-Spur oder alles auf Kanal 10; Import je Spur
+4. ✅ Wiedergabe / MIDI pro Spur (zum Ausprobieren):
+   - **M / S** (Stumm / Solo) in der Spurliste; Solo: nur die Solo-Spuren. Gilt fürs Abspielen (auch über MIDI), sofort hörbar.
+   - **Kit-Profil pro Spur** (Panel → Spuren → Kit-Profil): „Wie das Stück“, General MIDI oder ein Profil; gespeichert mit Id und Name.
+     „Was fehlt“ prüft nur die Spuren, die mit dem Profil spielen.
+   - **MIDI-Ausgang und Kanal pro Spur** (nur wenn unter Wiedergabe → Klang ein MIDI-Ausgang gewählt ist): z. B. ein loopMIDI-Port je
+     Drum-VST in Cubase, oder ein Port mit verschiedenen Kanälen für ein VST mit mehreren Kits. Leer = wie im Panel / aus dem Kit-Profil.
+   - **MIDI-Export** (Strg+E): bei mehreren Spuren ein Dialog – Häkchen je Spur, Drum-Map je Spur (vorgewählt: ihr Kit-Profil),
+     „Eine MIDI-Datei pro Spur“ (Standard; „Titel – Spur.mid“, in Chrome / Edge in einen gewählten Ordner, sonst einzelne Downloads)
+     oder „Alle in einer Datei“ (Typ 1, je Tactus-Spur eine benannte MIDI-Spur). Jede Datei mit Tempo, Taktarten, Markern,
+     ausgeschriebenen Wiederholungen.
+   - **MIDI-Import**: Häkchen je MIDI-Spur (Name, Notenzahl, Kanal 10; Spuren ohne Noten wie Automation erscheinen nicht),
+     vorgewählt die Schlagzeugspuren; Drum-Map je Spur („Alle aus“ setzt alle). Neues Stück: jede Spur eine Tactus-Spur mit ihrem
+     Namen; in das offene Stück: eine Spur in die aktive, mehrere in die Spur gleichen Namens (sonst neu).
+5. ✅ **Ansicht folgt beim Abspielen: springend oder flüssig** (Panel → Wiedergabe → Folgen; Einstellung des Browsers): flüssig =
+   Cursor bleibt bei einem Drittel der Breite, Seitenansicht: die gespielte Zeile gleitet ins obere Viertel; Sprünge gleiten mit.
+   Die Seitenansicht berücksichtigt dabei die Höhe aller Notenzeilen.
+
+## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
+
+Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Takt um – Android-Tablet, Chrome, MIDI-USB-C-Interface.
+
+- **Bühnenansicht** (Werkzeugleiste „Bühne“ oder ⚙ → Umblättern): Vollbild, nur die Seiten, eine ganze Seite auf dem Schirm, wie
+  gedruckt (ohne Raster, „+“, Drum-Map). Leiste oben rechts: ‹ Seite n / m › ✕. Tippen ins rechte / linke Drittel blättert, Ziehen
+  verschiebt, zwei Finger zoomen; es wird nichts geschrieben. Esc (oder Vollbild verlassen) beendet sie; gedreht: Seite neu eingepasst.
+- **Bild↓ / Bild↑** blättern immer (auch was Umblätter-Pedale senden), in der Bühnenansicht auch die Pfeiltasten.
+- **MIDI-Eingang** (⚙ → Umblättern, `js/remote.js`, Web MIDI: Chrome / Edge über https): „Note n = Seite n“ (Standard; Program
+  Change 0 = Seite 1; ein verlorener Befehl schadet nicht) oder „Angelernt: nächste / vorige Seite“ (Note, CC – z. B. Pedal –,
+  Program Change); Kanal wählbar. Der Eingang wird beim Start wieder geöffnet.
+- **Umblätter-MIDI exportieren** (Datei-Menü, ⚙ → Umblättern): eine MIDI-Datei mit einer Note pro Seitenwechsel (Note n = Seite n,
+  Kanal 16), 0 / 1 / 2 Takte vorher, mit Tempo, Taktarten und ausgeschriebenen Wiederholungen / Sprüngen – in Cubase als Spur zu den
+  Backing-Tracks legen, mit auf den Player. Seiten wie in der Seitenansicht (auch wenn gerade die Endlos-Ansicht offen ist).
+- Später evtl.: Folgen über MIDI-Clock / Song Position (Cursor läuft mit dem Player).
 
 ## Offen zum Ausprobieren
 
 - ~~Fühlt sich das Raster richtig an?~~ ✅ passt
 - ~~Synthetische Sounds oder echte Samples?~~ ✅ Samples eingebaut und getestet
+- **Umblättern mit dem Cymatic** (wartet auf den MIDI-zu-USB-C-Konverter, kommt im Dezember 2026). Aufbau: Cymatic (Backing-Tracks mit
+  Umblätter-MIDI-Spur) → MIDI-Ausgang → MIDI-USB-C-Konverter → Android-Tablet, Chrome, Tactus über https (GitHub Pages). Prüfen:
+  1. Zeigt Chrome den Konverter unter ⚙ → Umblättern → „MIDI-Eingänge anzeigen…“ an (Erlaubnis-Abfrage)?
+  2. Gibt der Cymatic die MIDI-Spur der Backing-Tracks an seinem MIDI-Ausgang aus (Einstellung am Gerät)?
+  3. Kommt mit „Note n = Seite n“ die richtige Seite, und pünktlich (1 Takt vorher passend, oder 0 / 2 Takte besser)?
+  4. Wiederholungen / Sprünge: blättert es bei der Wiederholung richtig zurück?
+  5. Bühnenansicht auf dem Tablet: ganze Seite lesbar (Hoch- / Querformat), Tippen am Rand, kein Vollbild-Verlust beim Umblättern?
+  6. Bleibt der Eingang nach einem Neustart von Chrome gewählt?
+- Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase)
+- Mehrere Spuren mit MIDI: je Spur eigener loopMIDI-Port / Kanal in Cubase; MIDI-Export „eine Datei pro Spur“ und „alle in einer“
+  in Cubase importieren
 
 ## Wiedergabe über Cubase (Web MIDI) ✅ (getestet)
 

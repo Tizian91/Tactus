@@ -52,6 +52,9 @@
     return out;
   };
 
+  /** Is a track heard? Solo tracks only, if there are any; else every track that is not muted. */
+  T.audible = (doc, track) => (doc.tracks.some((t) => t.solo) ? !!track.solo : !track.mute);
+
   T.build = function (doc, opts = {}) {
     const from = TC.clamp(opts.from || 0, 0, doc.bars.length - 1);
     const to = TC.clamp(opts.to === undefined ? doc.bars.length - 1 : opts.to, from, doc.bars.length - 1);
@@ -71,7 +74,8 @@
     for (const o of TC.score.playBars(doc, from, to)) {
       const bi = o.bar;
       const h = doc.bars[bi], spt = tick(h, T.tempoAt(doc, bi)), L = TC.barTicks(h.ts);
-      for (const track of doc.tracks) { // all tracks together (mute / solo: later)
+      for (const track of doc.tracks) { // all tracks together, but not the muted ones (solo: only those)
+        if (!T.audible(doc, track)) continue;
         const src = TC.score.sourceBar(doc, bi, track);
         for (const voice of track.bars[src].voices) {
           // a roll fills the note as it is shown (rest cleanup, rhythm.js R.ends)
@@ -84,16 +88,16 @@
               const art = TC.drums.byId(n.art);
               if (!art) continue;
               const vel = T.velocity(n), choke = art.tech === 'choke';
-              if (n.orn === 'flam') hits.push({ t: t0 - 0.03, art: n.art, vel: 0.35 });
+              if (n.orn === 'flam') hits.push({ t: t0 - 0.03, art: n.art, vel: 0.35, trk: track });
               if (n.orn === 'drag') {
-                hits.push({ t: t0 - 0.06, art: n.art, vel: 0.33 });
-                hits.push({ t: t0 - 0.03, art: n.art, vel: 0.38 });
+                hits.push({ t: t0 - 0.06, art: n.art, vel: 0.33, trk: track });
+                hits.push({ t: t0 - 0.03, art: n.art, vel: 0.38, trk: track });
               }
-              hits.push({ t: t0, art: n.art, vel, choke, accent: n.accent || 0 });
+              hits.push({ t: t0, art: n.art, vel, choke, accent: n.accent || 0, trk: track });
               if (n.trem) {
                 const step = T.rollStep(dur, n.trem);
                 for (let k = step, j = 1; k < dur - 1; k += step, j++) {
-                  hits.push({ t: t + st(ev.tick + k) * spt, art: n.art, vel: vel * (j % 2 ? 0.7 : 0.8), choke, roll: true });
+                  hits.push({ t: t + st(ev.tick + k) * spt, art: n.art, vel: vel * (j % 2 ? 0.7 : 0.8), choke, roll: true, trk: track });
                 }
               }
             }

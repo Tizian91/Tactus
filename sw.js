@@ -37,6 +37,7 @@ const FILES = [
   'js/midi.js',
   'js/midiin.js',
   'js/midiout.js',
+  'js/remote.js',
   'js/rhythm.js',
   'js/render.js',
   'js/contextmenu.js',

@@ -267,6 +267,41 @@
     fitArt(t);
     TC.commit();
   };
+  /** Mute / solo a track (playback; heard again at once while playing). */
+  A.toggleMute = function (id) {
+    const t = trackOf(id);
+    t.mute = !t.mute;
+    TC.commit();
+  };
+  A.toggleSolo = function (id) {
+    const t = trackOf(id);
+    t.solo = !t.solo;
+    TC.commit();
+  };
+  /**
+   * Kit profile of the track being written: '' = the one of the score, 'gm' = General MIDI, or a
+   * profile id. Its keys are used when playing through MIDI and in the MIDI export.
+   */
+  A.setTrackProfile = function (v) {
+    const t = TC.curTrack();
+    const p = v && v !== 'gm' ? TC.kits.byId(v) : null;
+    t.profile = p ? p.id : v === 'gm' ? 'gm' : '';
+    t.profileName = p ? p.name : '';
+    TC.commit();
+    // instruments of this track the profile has no key for: show them right away
+    if (p && TC.kits.check(S.doc, p).length) TC.kits.openCheck(p);
+  };
+  /** MIDI output of the track being written while playing ('' = the one of the panel). */
+  A.setTrackMidiOut = function (v) {
+    TC.curTrack().midiOut = v || '';
+    TC.commit();
+  };
+  /** MIDI channel of the track being written while playing ('' = the one of its kit profile; 1 … 16). */
+  A.setTrackMidiCh = function (v) {
+    const n = Number(v);
+    TC.curTrack().midiCh = v !== '' && n >= 1 && n <= 16 ? n - 1 : null;
+    TC.commit();
+  };
   /** The next track (status bar, cycles). */
   A.nextTrack = function () {
     const ts = S.doc.tracks, i = ts.indexOf(TC.curTrack());
@@ -637,6 +672,14 @@
     TC.refresh();
     TC.ui.hint(tr(S.settings.followPlay ? 'The view follows the playback' : 'The view stays where it is while playing'));
   };
+  /** How the view follows: 'jump' or 'smooth' (a setting of this browser). */
+  A.setFollowMode = function (m) {
+    if (!['jump', 'smooth'].includes(m)) return;
+    S.settings.followMode = m;
+    S.settings.followPlay = true;
+    TC.saveSettings();
+    TC.refresh();
+  };
   A.toggleCountIn = () => toggleSetting('countIn');
   A.toggleLoop = function () {
     toggleSetting('loop');
@@ -678,6 +721,148 @@
     TC.refresh();
   };
   A.toggleLayout = () => A.layout(S.settings.layout === 'page' ? 'endless' : 'page');
+
+  // ---- Pages: turning, stage view, page turning by MIDI (js/remote.js) -----------------------------
+
+  const performing = () => document.body.classList.contains('perform');
+  /** The page shown (page view): the one at the top of the viewport. */
+  A.currentPage = function () {
+    const L = TC.render.layout;
+    if (!L || !L.page || !L.pages.length) return 0;
+    const v = S.doc.view, top = -v.y / v.zoom + TC.render.PAGE_H / 3;
+    let k = 0;
+    L.pages.forEach((p, i) => { if (p.y <= top) k = i; });
+    return k;
+  };
+  /** Show page k (0 = first) from its top; the view switches to the page view. */
+  A.gotoPage = function (k) {
+    if (!TC.render.isPage()) A.layout('page');
+    const L = TC.render.layout;
+    if (!L || !L.pages.length) return;
+    k = TC.clamp(Math.round(k) || 0, 0, L.pages.length - 1);
+    const vp = document.getElementById('viewport'), v = S.doc.view;
+    const w = vp.clientWidth, h = vp.clientHeight, pw = TC.render.PAGE_W * v.zoom, ph = TC.render.PAGE_H * v.zoom;
+    v.x = pw <= w ? (w - pw) / 2 : Math.min(0, Math.max(w - pw, v.x));
+    v.y = -L.pages[k].y * v.zoom + (performing() && ph <= h ? (h - ph) / 2 : 8);
+    TC.render.applyView();
+    TC.ui.status(tr('Page {k} / {n}', { k: k + 1, n: L.pages.length }));
+    showPerformBar(k, L.pages.length);
+  };
+  /** The next page (d = 1) or the one before (d = -1). */
+  A.turnPage = (d) => A.gotoPage(A.currentPage() + (d < 0 ? -1 : 1));
+  A.nextPage = () => A.turnPage(1);
+  A.prevPage = () => A.turnPage(-1);
+
+  /** The stage view's own bar: page n / m, turning, leaving. */
+  function showPerformBar(k, n) {
+    let bar = document.getElementById('perform-bar');
+    if (!performing()) {
+      if (bar) bar.remove();
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'perform-bar';
+      bar.addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-p]');
+        if (b) A[b.dataset.p]();
+      });
+      document.body.appendChild(bar);
+    }
+    const midi = TC.remote && S.settings.remoteIn ? (TC.remote.active() ? ' · MIDI' : ' · MIDI ⚠') : '';
+    bar.innerHTML = `<button type="button" data-p="prevPage" title="${esc(tr('Page before'))}">‹</button>` +
+      `<span>${k + 1} / ${n}${midi}</span><button type="button" data-p="nextPage" title="${esc(tr('Next page'))}">›</button>` +
+      `<button type="button" data-p="togglePerform" title="${esc(tr('Leave the stage view (Esc)'))}">✕</button>`;
+  }
+  /** The whole page in the viewport (stage view). */
+  function fitPage() {
+    const vp = document.getElementById('viewport'), v = S.doc.view;
+    v.zoom = TC.clamp(Math.min((vp.clientWidth - 8) / TC.render.PAGE_W, (vp.clientHeight - 8) / TC.render.PAGE_H), 0.15, 4);
+  }
+  /**
+   * Stage view: only the pages, full screen, a whole page at a time (on a tablet: tap the right / left
+   * third, or Page Down / Up, or MIDI from a player of backing tracks). Esc leaves it.
+   */
+  A.togglePerform = function () {
+    const on = !performing();
+    const k = TC.render.isPage() ? A.currentPage() : 0;
+    document.body.classList.toggle('perform', on);
+    if (on) {
+      if (TC.player.playing) TC.player.stop();
+      S.selection.clear();
+      TC.selectBar(null);
+      if (!TC.render.isPage()) A.layout('page');
+      fitPage();
+      TC.refresh();
+      A.gotoPage(k);
+      const el = document.documentElement;
+      if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {});
+      if (TC.remote && S.settings.remoteIn) TC.remote.init();
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      showPerformBar();
+      TC.refresh();
+    }
+  };
+  A.isPerforming = performing;
+  if (typeof document !== 'undefined') {
+    // the browser left full screen (Esc, back gesture): the stage view ends too
+    document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && performing()) A.togglePerform(); });
+    // a turned tablet: the whole page again
+    window.addEventListener('resize', () => {
+      if (!performing()) return;
+      const k = A.currentPage();
+      fitPage();
+      TC.refresh();
+      A.gotoPage(k);
+    });
+  }
+
+  /** Page turning by MIDI: the input ('' = off). Asks the browser for MIDI first. */
+  A.setRemoteIn = function (name) {
+    S.settings.remoteIn = name || '';
+    TC.saveSettings();
+    if (TC.remote) TC.remote.init().then(() => { TC.remote.connect(); TC.refresh(); });
+    TC.refresh();
+  };
+  /** Shows the MIDI inputs (asks the browser for MIDI). */
+  A.remoteInit = function () {
+    TC.remote.init().then((ok) => {
+      if (!ok) TC.ui.hint(tr('MIDI is not available (Chrome / Edge, over https, MIDI allowed?)'));
+      TC.refresh();
+    });
+  };
+  A.setRemoteMode = function (m) {
+    S.settings.remoteMode = m === 'step' ? 'step' : 'page';
+    TC.saveSettings();
+    TC.refresh();
+  };
+  A.setRemoteCh = function (v) {
+    S.settings.remoteCh = v === 'all' || v === '' ? 'all' : TC.clamp(Number(v) - 1, 0, 15);
+    TC.saveSettings();
+    TC.refresh();
+  };
+  A.learnNext = () => TC.remote.learn('next');
+  A.learnPrev = () => TC.remote.learn('prev');
+  A.setTurnLead = function (v) {
+    S.settings.turnLead = TC.clamp(Number(v) || 0, 0, 4);
+    TC.saveSettings();
+    TC.refresh();
+  };
+  /**
+   * The page turning MIDI file: a note when a new page comes while playing (note n = page n), `turnLead`
+   * bars before, on channel 16; with tempo, time signatures and the repeats written out like the MIDI
+   * export - put next to the backing tracks (Cubase → player), Tactus turns the pages when it hears it.
+   */
+  A.exportPageTurns = function () {
+    const pageOf = TC.render.pagesOfBars();
+    const n = Math.max(0, ...pageOf) + 1;
+    const name = tr('Page turns');
+    const res = TC.midi.build(S.doc, null, { tracks: [], name, pageTurns: { pageOf, lead: S.settings.turnLead === undefined ? 1 : S.settings.turnLead, ch: 15 } });
+    const file = `${baseName()} – ${cleanName(name)}.mid`;
+    download(res.bytes, file);
+    TC.ui.hint(tr('Page turning MIDI exported ({n} pages): {file}', { n, file }));
+  };
 
   /** PDF / print: the page view on A4 (the browser's print dialog: "Save as PDF"). */
   A.print = function () {
@@ -823,13 +1008,15 @@
       { label: 'PDF / print…', action: A.print, shortcut: 'Ctrl+P' },
       '-',
       { label: 'Import MIDI…', action: A.importMidi },
-      { label: TC.tr('Export MIDI ({name})', { name: kitName() }), action: () => A.exportMidiCurrent(), shortcut: 'Ctrl+E' },
+      { label: S.doc.tracks.length > 1 ? TC.tr('Export MIDI…') : TC.tr('Export MIDI ({name})', { name: kitName() }), action: () => A.exportMidiCurrent(), shortcut: 'Ctrl+E' },
       { label: 'Export MIDI for', submenu: A.midiTargets() },
+      { label: 'Export page turning MIDI…', action: A.exportPageTurns },
     ], r.left, r.bottom + 2);
   };
 
   const curKit = () => { const p = TC.kits.current(S.doc); return p ? p.id : null; };
-  const kitName = () => { const p = TC.kits.current(S.doc); return p ? p.name : 'General MIDI'; };
+  const kitName = () => { const p = TC.kits.ofTrack(S.doc, S.doc.tracks[0]); return p ? p.name : 'General MIDI'; };
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   /** Targets of the MIDI export: General MIDI (also Guitar Pro) and every kit profile. */
   A.midiTargets = function () {
@@ -844,8 +1031,8 @@
   /** MIDI import (js/midiin.js): choose a file, where it comes from and the grid. */
   A.importMidi = () => TC.midiIn.pick();
 
-  /** MIDI export with the score's kit profile (Ctrl+E). */
-  A.exportMidiCurrent = () => A.exportMidi(curKit());
+  /** MIDI export with the kit profile of the track (Ctrl+E); several tracks: the export dialog. */
+  A.exportMidiCurrent = () => A.exportMidi();
 
   /** Kit profile of the score (status bar): which keys the MIDI export uses. Part of the score. */
   A.setKitProfile = function (id) {
@@ -873,24 +1060,153 @@
     TC.menu.open(items, r.left, r.top - 4 - items.length * 30);
   };
 
-  /** Writes the score as a MIDI file (js/midi.js) for General MIDI or a kit profile. */
-  A.exportMidi = function (profileId) {
-    const p = profileId ? TC.kits.byId(profileId) : null;
-    const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
-    const clean = (s) => s.replace(/[\\/:*?"<>|]+/g, '-');
-    const base = clean(S.doc.meta.title || S.file.name.replace(/\.tactus\.json$|\.json$/i, '') || 'Tactus');
+  const cleanName = (s) => s.replace(/[\\/:*?"<>|]+/g, '-');
+  const baseName = () => cleanName(S.doc.meta.title || S.file.name.replace(/\.tactus\.json$|\.json$/i, '') || 'Tactus');
+  /** Hands a file to the browser as a download. */
+  function download(bytes, name) {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([res.bytes], { type: 'audio/midi' }));
-    a.download = base + (p ? ' (' + clean(p.name) + ')' : '') + '.mid';
+    a.href = URL.createObjectURL(new Blob([bytes], { type: 'audio/midi' }));
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  /** What a kit profile lacked in an export, as lines of text. */
+  const lackLines = (res) => {
     const lab = (x) => TC.drums.label(x);
-    const lines = res.replaced.map((r) => TC.tr('{a} played as {b}', { a: lab(r.art), b: lab(r.by) }))
+    return res.replaced.map((r) => TC.tr('{a} played as {b}', { a: lab(r.art), b: lab(r.by) }))
       .concat(res.missing.map((x) => TC.tr('{a}: no key in the profile, left out', { a: lab(x) })));
-    if (lines.length) alert(TC.tr('MIDI exported. The kit profile "{name}" has no key for:', { name: p.name }) + '\n\n' + lines.join('\n'));
-    else TC.ui.status(TC.tr('MIDI exported: {file}', { file: a.download }));
   };
+
+  /**
+   * MIDI export. One track: at once, with the kit profile `profileId` (undefined: the track's own /
+   * the score's). Several tracks: the export dialog (which tracks, which drum map each, one file per
+   * track or all in one); profileId given: preset for every track.
+   */
+  A.exportMidi = function (profileId) {
+    if (S.doc.tracks.length > 1) return A.exportMidiDialog(profileId);
+    const t = S.doc.tracks[0];
+    const p = profileId !== undefined ? (profileId ? TC.kits.byId(profileId) : null) : TC.kits.ofTrack(S.doc, t);
+    const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
+    const name = baseName() + (p ? ' (' + cleanName(p.name) + ')' : '') + '.mid';
+    download(res.bytes, name);
+    const lines = lackLines(res);
+    if (lines.length) alert(TC.tr('MIDI exported. The kit profile "{name}" has no key for:', { name: p.name }) + '\n\n' + lines.join('\n'));
+    else TC.ui.status(TC.tr('MIDI exported: {file}', { file: name }));
+  };
+
+  /**
+   * Export dialog for several tracks: a tick for each track to export, the drum map it is written for
+   * (preset: its kit profile), and one MIDI file per track (each fits its own drum VST in Cubase) or
+   * one file with a MIDI track per Tactus track. Every file has tempo, time signatures, markers and the
+   * repeats written out, so the files lie on top of each other bar by bar.
+   */
+  A.exportMidiDialog = function (preset) {
+    TC.kits.load();
+    const old = document.querySelector('.midi-export-backdrop');
+    if (old) old.remove();
+    const rows = S.doc.tracks.map((t) => {
+      const own = TC.kits.ofTrack(S.doc, t);
+      return { t, on: true, target: preset !== undefined ? preset || 'gm' : own ? own.id : 'gm' };
+    });
+    let mode = S.settings.midiExportMode === 'one' ? 'one' : 'files';
+    const root = document.createElement('div');
+    root.className = 'dialog-backdrop midi-export-backdrop';
+    root.innerHTML = '<div class="dialog midi-dialog" role="dialog" aria-modal="true"></div>';
+    document.body.appendChild(root);
+    const close = () => root.remove();
+    root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });
+    const targets = [['gm', 'General MIDI (Guitar Pro …)']].concat(TC.kits.list.map((p) => [p.id, p.name]));
+    const draw = () => {
+      const list = rows.map((r, k) => `<div class="export-row">
+          <label class="check"><input type="checkbox" data-k="on" data-i="${k}"${r.on ? ' checked' : ''}> <b>${esc(r.t.name)}</b>${r.t.mute ? ` <span class="muted">(${tr('muted')})</span>` : ''}</label>
+          <select data-k="target" data-i="${k}"${r.on ? '' : ' disabled'}>${targets.map(([v, l]) => `<option value="${esc(v)}"${v === r.target ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>
+        </div>`).join('');
+      const n = rows.filter((r) => r.on).length;
+      root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Export MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
+        <div class="kit-body">
+          <p class="hint tight">${tr('Which tracks, and for which drum map (kit profile) each one is written:')}</p>
+          <div class="export-list">${list}</div>
+          <div class="row"><label>${tr('Files')}</label><select data-k="mode">
+            <option value="files"${mode === 'files' ? ' selected' : ''}>${tr('One MIDI file per track')}</option>
+            <option value="one"${mode === 'one' ? ' selected' : ''}>${tr('All in one file (one MIDI track each)')}</option></select></div>
+          <p class="hint">${tr(mode === 'files'
+            ? 'Each track its own file ("Title – Track.mid") for its own drum VST. All files have the tempo, the time signatures and the repeats written out, so they line up in Cubase when imported at the same place.'
+            : 'One file; Cubase makes a track of each MIDI track.')}</p>
+        </div>
+        <footer><span class="grow"></span><button type="button" data-k="close">${tr('Cancel')}</button>
+          <button type="button" class="primary" data-k="ok"${n ? '' : ' disabled'}>${tr(n === 1 || mode === 'one' ? 'Export' : 'Export {n} files', { n })}</button></footer>`;
+    };
+    root.addEventListener('change', (e) => {
+      const el = e.target, k = el.dataset.k, i = Number(el.dataset.i);
+      if (k === 'on') rows[i].on = el.checked;
+      if (k === 'target') rows[i].target = el.value;
+      if (k === 'mode') mode = el.value;
+      draw();
+    });
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-k]');
+      if (!b) return;
+      if (b.dataset.k === 'close') return close();
+      if (b.dataset.k !== 'ok') return;
+      const chosen = rows.filter((r) => r.on);
+      if (!chosen.length) return;
+      S.settings.midiExportMode = mode;
+      TC.saveSettings();
+      close();
+      exportTracks(chosen.map((r) => ({ track: r.t, profile: r.target === 'gm' ? null : TC.kits.byId(r.target) })), mode)
+        .catch(() => TC.ui.status(TC.tr('Export cancelled')));
+    });
+    draw();
+  };
+
+  /** Writes the chosen tracks: [{ track, profile }] - one file each, or all in one (mode 'one'). */
+  async function exportTracks(list, mode) {
+    const opts = { straight: S.settings.swingMidi === false };
+    const base = baseName(), lacks = [];
+    const files = [];
+    if (mode === 'one') {
+      const of = new Map(list.map((x) => [x.track, x.profile]));
+      const res = TC.midi.build(S.doc, null, Object.assign({ tracks: list.map((x) => x.track), targetOf: (t) => of.get(t), multi: true }, opts));
+      files.push({ name: base + '.mid', bytes: res.bytes });
+      const lines = lackLines(res);
+      if (lines.length) lacks.push(lines.join('\n'));
+    } else {
+      for (const x of list) {
+        const res = TC.midi.build(S.doc, x.profile, Object.assign({ tracks: [x.track], name: x.track.name }, opts));
+        files.push({ name: `${base} – ${cleanName(x.track.name)}${x.profile ? ' (' + cleanName(x.profile.name) + ')' : ''}.mid`, bytes: res.bytes });
+        const lines = lackLines(res);
+        if (lines.length) lacks.push(`${x.track.name} (${x.profile.name}):\n` + lines.join('\n'));
+      }
+    }
+    await saveFiles(files);
+    if (lacks.length) alert(TC.tr('MIDI exported. Not every instrument has a key in its kit profile:') + '\n\n' + lacks.join('\n\n'));
+    else TC.ui.status(files.length > 1 ? TC.tr('MIDI exported: {n} files', { n: files.length }) : TC.tr('MIDI exported: {file}', { file: files[0].name }));
+  }
+  /**
+   * Several files: into a folder chosen once (Chrome / Edge), otherwise one download after another
+   * (the browser may ask once whether a page may download several files).
+   */
+  async function saveFiles(files) {
+    if (files.length > 1 && typeof window.showDirectoryPicker === 'function') {
+      try {
+        const dir = await window.showDirectoryPicker({ id: 'tactus-midi', mode: 'readwrite' });
+        for (const f of files) {
+          const h = await dir.getFileHandle(f.name, { create: true });
+          const w = await h.createWritable();
+          await w.write(f.bytes);
+          await w.close();
+        }
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') throw e; // cancelled: nothing is written
+      }
+    }
+    for (let k = 0; k < files.length; k++) {
+      download(files[k].bytes, files[k].name);
+      if (k < files.length - 1) await new Promise((r) => setTimeout(r, 400));
+    }
+  }
   A.zoomMenu = function () {
     const r = document.getElementById('zoom-label').getBoundingClientRect();
     TC.menu.open([

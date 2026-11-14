@@ -48,8 +48,8 @@ module.exports = function (T) {
   T.ok('paste: new ids', tr.bars[2].voices[0][0].notes[0].id !== tr.bars[0].voices[0][0].notes[0].id);
   SC.duplicateBar(d2, 0);
   T.eq('duplicate: 4 bars, bar 2 is the copy', [d2.bars.length, arts(1)], [4, arts(0)]);
-  d2.bars[2].simile = true;
-  d2.bars[3].simile = true;
+  tr.bars[2].simile = true;
+  tr.bars[3].simile = true;
   T.eq('simile bars play the bar before (chains too)', [SC.sourceBar(d2, 2), SC.sourceBar(d2, 3), SC.sourceBar(d2, 1)], [1, 1, 1]);
   T.eq('copying a simile bar copies what it plays', SC.copyBar(d2, 3).tracks[0].voices[0].length, 3);
 
@@ -58,9 +58,26 @@ module.exports = function (T) {
   const back = TC.normalizeDoc(JSON.parse(JSON.stringify(d2)));
   const n = back.tracks[0].bars[1].voices[0].find((e) => e.tick === 1440).notes[0];
   T.eq('flam, roll, sticking are kept', [n.orn, n.trem, n.stick], ['flam', 2, 'L']);
-  T.eq('simile is kept', back.bars.map((h) => h.simile), [false, false, true, true]);
+  T.eq('simile is kept (in the track)', back.tracks[0].bars.map((b) => b.simile), [false, false, true, true]);
+  T.ok('simile is not in the bar header', back.bars.every((h) => !('simile' in h)));
+  const old = TC.normalizeDoc({ bars: [{}, { simile: true }], tracks: [{ kind: 'drums', bars: [{ voices: [] }, { voices: [] }] }, { kind: 'drums', bars: [] }] });
+  T.eq('older files: % in the header becomes % of every track', old.tracks.map((t) => t.bars.map((b) => b.simile)), [[false, true], [false, true]]);
+  // the % belongs to one track: the other track keeps its own notes
+  const d4 = TC.emptyScore(2);
+  d4.tracks.push(TC.newTrack('drums', 2));
+  const [ta, tb] = d4.tracks;
+  SC.place(d4, ta, 0, 0, 0, 960, TC.newDrumNote(38, {}));
+  SC.place(d4, tb, 1, 0, 0, 960, TC.newDrumNote(49, {}));
+  T.eq('% on in one track only', [SC.setSimile(d4, ta, 1, true), ta.bars[1].simile, tb.bars[1].simile, tb.bars[1].voices[0].length], [true, true, false, 1]);
+  T.eq('sourceBar per track', [SC.sourceBar(d4, 1, ta), SC.sourceBar(d4, 1, tb)], [0, 1]);
+  T.eq('copying: the % track gives what it plays, the other its own', SC.copyBar(d4, 1).tracks.map((b) => [b.simile, b.voices[0][0].notes[0].art]), [[false, 38], [false, 49]]);
+  T.eq('% off writes the repeated notes out (new ids)', [SC.setSimile(d4, ta, 1, false), ta.bars[1].simile, ta.bars[1].voices[0][0].notes[0].art, ta.bars[1].voices[0][0].id !== ta.bars[0].voices[0][0].id], [true, false, 38, true]);
+  T.eq('no % in the first bar', SC.setSimile(d4, ta, 0, true), false);
+  SC.setSimile(d4, ta, 1, true);
+  SC.deleteBars(d4, 0, 1);
+  T.eq('deleting bar 1: the new first bar is no % any more', ta.bars[0].simile, false);
   const bad = TC.normalizeDoc({ bars: [{ ts: [7, 8], beam: [3, 3], simile: true }], tracks: [{ kind: 'drums', bars: [{ voices: [[{ tick: 0, dur: 480, notes: [{ art: 38, orn: 'x', trem: 9, stick: 'Q' }] }]] }] }] });
-  T.eq('bad values are dropped', [bad.bars[0].beam, bad.bars[0].simile, bad.tracks[0].bars[0].voices[0][0].notes[0].orn, bad.tracks[0].bars[0].voices[0][0].notes[0].trem, bad.tracks[0].bars[0].voices[0][0].notes[0].stick],
+  T.eq('bad values are dropped', [bad.bars[0].beam, bad.tracks[0].bars[0].simile, bad.tracks[0].bars[0].voices[0][0].notes[0].orn, bad.tracks[0].bars[0].voices[0][0].notes[0].trem, bad.tracks[0].bars[0].voices[0][0].notes[0].stick],
     [null, false, null, 0, '']);
 
   // several bars: copy, paste (new bars at the end), duplicate

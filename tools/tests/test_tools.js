@@ -35,6 +35,6 @@ module.exports = function (T) {
   const n2 = SC.place(d2, t2, 0, 0, 480, 480, TC.newDrumNote(42, {})).note;
   T.ok('to another instrument (all hi-hats -> ride)', SC.moveNotes(d2, [n1.id, n2.id], 0, 51));
   T.eq('… now rides, same times', t2.bars[0].voices[0].map((e) => e.tick + ':' + e.notes[0].art), ['0:51', '480:51']);
-  d2.bars[1].simile = true;
+  d2.tracks[0].bars[1].simile = true;
   T.eq('into a %-bar: nothing moves', SC.moveNotes(d2, [n1.id], 3840), false);
 };

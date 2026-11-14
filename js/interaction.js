@@ -838,7 +838,7 @@
         t = 0;
         continue;
       }
-      if (!S.doc.bars[b].simile) out.push([b, t]);
+      if (!S.doc.tracks[0].bars[b].simile) out.push([b, t]);
       t += step;
     }
     return out;

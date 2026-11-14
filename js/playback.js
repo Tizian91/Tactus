@@ -72,7 +72,7 @@
     for (const o of TC.score.playBars(doc, from, to)) {
       const bi = o.bar;
       const h = doc.bars[bi], spt = tick(h, T.tempoAt(doc, bi)), L = TC.barTicks(h.ts);
-      const src = TC.score.sourceBar(doc, bi);
+      const src = TC.score.sourceBar(doc, bi, track);
       for (const voice of track.bars[src].voices) {
         // a roll fills the note as it is shown (rest cleanup, rhythm.js R.ends)
         const ends = track.kind === 'drums' && TC.rhythm ? TC.rhythm.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;

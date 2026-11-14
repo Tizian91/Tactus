@@ -225,7 +225,7 @@
     doc.bars.splice(3, 0, TC.newBarHeader(), TC.newBarHeader());
     doc.tracks[0].bars.splice(3, 0, TC.newTrackBar(), TC.newTrackBar());
     TC.score.pasteBar(doc, 3, TC.score.copyBar(doc, 1));
-    doc.bars[4].simile = true;
+    doc.tracks[0].bars[4].simile = true;
     // bar 6: snare roll, a drag, crash and kick on 4
     put(5, 0, 1920, 38, { trem: 3 });
     put(5, 1920, 960, 38, { accent: 1, orn: 'drag' });
@@ -292,7 +292,7 @@
     B.rock(1);
     b[1].marker = 'Strophe';
     b[1].repeatStart = true;
-    b[2].simile = b[3].simile = true;
+    B.doc.tracks[0].bars[2].simile = B.doc.tracks[0].bars[3].simile = true;
     B.fill(4, false);
     b[4].volta = [1];
     b[4].repeatEnd = 2;
@@ -302,7 +302,7 @@
     B.ride(6, true);
     b[6].marker = 'Refrain';
     b[6].repeatStart = true;
-    b[7].simile = b[8].simile = true;
+    B.doc.tracks[0].bars[7].simile = B.doc.tracks[0].bars[8].simile = true;
     B.triplets(9);
     b[9].repeatEnd = 3;
     // break: two bars rest (a multi-bar rest on the sheet), then the ending
@@ -318,18 +318,18 @@
     const B = builder(10, 'Beispiel: Sprünge (D.S. al Coda)', 104), b = B.doc.bars;
     B.rock(0, true);
     b[0].marker = 'Intro';
-    b[1].simile = true;
+    B.doc.tracks[0].bars[1].simile = true;
     // verse from the segno; "To Coda" after it
     B.rock(2);
     b[2].marker = 'Strophe';
     b[2].mark = 'segno';
-    b[3].simile = true;
+    B.doc.tracks[0].bars[3].simile = true;
     B.fill(4, false);
     b[4].end = 'toCoda';
     // chorus, then back to the segno
     B.ride(5, true);
     b[5].marker = 'Refrain';
-    b[6].simile = true;
+    B.doc.tracks[0].bars[6].simile = true;
     B.fill(7, true);
     b[7].jump = 'dsCoda';
     // coda

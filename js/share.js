@@ -22,7 +22,7 @@
   // ---- Compact JSON (pure, tested) ----------------------------------------------------------
 
   const NOTE_DEFAULTS = { accent: 0, ghost: false, head: 'auto', vel: null, orn: null, trem: 0, stick: '' };
-  const BAR_DEFAULTS = { tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false,
+  const BAR_DEFAULTS = { tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, lineBreak: false,
     mark: '', end: '', jump: '', jumpRep: false };
 
   /** The score as short JSON text (what the link carries). */
@@ -33,6 +33,7 @@
     d.bars.forEach((h) => strip(h, BAR_DEFAULTS));
     d.tracks.forEach((t) => {
       delete t.id;
+      t.bars.forEach((b) => { if (!b.simile) delete b.simile; });
       t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((e) => {
         delete e.id;
         e.notes.forEach((n) => {

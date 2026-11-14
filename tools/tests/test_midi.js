@@ -15,7 +15,7 @@ module.exports = function (T) {
   put(0, 960, 38, { accent: 1 });
   put(0, 1440, 38, { ghost: true });
   doc.bars[0].marker = 'Intro';
-  doc.bars[1].simile = true; // %: repeats bar 1
+  doc.tracks[0].bars[1].simile = true; // %: repeats bar 1
   doc.bars[2].ts = [3, 4];
   doc.bars[2].tempo = 90;
   put(2, 0, 49, { orn: 'flam' });

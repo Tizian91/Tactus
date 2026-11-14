@@ -102,7 +102,7 @@
       if (h.marker) add(t0, 0, meta(0x06, text(h.marker)));
       const msTicks = (ms) => (ms / 1000) * (bpm / 60) * TC.TPQ; // grace notes: fixed time before the beat
 
-      const src = TC.score.sourceBar(doc, bi);
+      const src = TC.score.sourceBar(doc, bi, track);
       for (const voice of track.bars[src].voices) {
         const ends = track.kind === 'drums' && R ? R.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
         for (const e of voice) {

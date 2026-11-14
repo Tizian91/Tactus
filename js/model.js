@@ -22,13 +22,13 @@
  *                marker: ''               text above the bar (Verse, Chorus …)
  *                lineBreak: false        page view: this bar starts a new line
  *                beam: null | [2, 2, 3]  beam groups in units of the lower number (7/8: eighths), null = default
- *                simile: false           true = "repeat the bar before" (% sign; plays the bar before)
  *                mark: '' | 'segno' | 'coda'   sign at the start: 𝄋 (D.S. jumps here), ⊕ (the coda starts here)
  *                end: '' | 'fine' | 'toCoda'   at the end: Fine (after a jump: the end), To Coda (after a jump: on to ⊕)
  *                jump: '' | 'dc' | 'dcFine' | 'dcCoda' | 'ds' | 'dsFine' | 'dsCoda'   at the end: back to bar 1 / 𝄋
  *                jumpRep: false          after the jump the repeats are played again (default: once, last ending) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill,
- *                bars: [ { voices: [ [Event], [Event] ] } ] }   // bars[i] belongs to header bars[i]
+ *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
+ *                          simile: false } ] }       // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
  *   Note:      drums:   { id, art, accent, ghost, head, vel,
  *                         orn: null | 'flam' | 'drag'   grace notes before the note
@@ -89,7 +89,7 @@
     return base + (pos < half ? (pos * split) / half : split + ((pos - half) * (pair - split)) / half);
   };
 
-  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, simile: false, lineBreak: false,
+  TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, lineBreak: false,
     mark: '', end: '', jump: '', jumpRep: false });
   /** Signs at the start of a bar, at its end, and the jumps back (D.C. / D.S.), see SC.playOrder. */
   TC.MARKS = ['segno', 'coda'];
@@ -142,7 +142,7 @@
     const list = out.filter((g) => key(g) !== key(def));
     return def ? [def].concat(list) : list;
   };
-  TC.newTrackBar = (voices = 2) => ({ voices: Array.from({ length: voices }, () => []) });
+  TC.newTrackBar = (voices = 2) => ({ voices: Array.from({ length: voices }, () => []), simile: false });
 
   TC.newTrack = function (kind = 'drums', bars = 0) {
     const t = {
@@ -214,7 +214,6 @@
         h.volta = TC.cleanVolta(b.volta);
         h.marker = str(b.marker);
         if (Array.isArray(b.beam) && b.beam.every((x) => Number.isInteger(x) && x > 0) && b.beam.reduce((a, c) => a + c, 0) === h.ts[0]) h.beam = b.beam.slice();
-        h.simile = !!b.simile && i > 0;
         h.lineBreak = !!b.lineBreak && i > 0;
         if (TC.MARKS.includes(b.mark)) h.mark = b.mark;
         if (TC.ENDS.includes(b.end)) h.end = b.end;
@@ -244,6 +243,8 @@
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
         const bar = TC.newTrackBar();
+        // "%" of this track (older files: in the bar header, for all tracks)
+        bar.simile = i > 0 && (!!(src && src.simile) || !!(raw.bars[i] && raw.bars[i].simile));
         const voices = src && Array.isArray(src.voices) ? src.voices : [];
         voices.slice(0, 4).forEach((v, vi) => {
           bar.voices[vi] = (Array.isArray(v) ? v : []).map((e) => {
@@ -314,7 +315,10 @@
     count = Math.min(count, doc.bars.length - 1);
     if (count <= 0) return false;
     doc.bars.splice(from, count);
-    doc.tracks.forEach((t) => t.bars.splice(from, count));
+    doc.tracks.forEach((t) => {
+      t.bars.splice(from, count);
+      t.bars[0].simile = false; // the first bar has nothing before it to repeat
+    });
     return true;
   };
 
@@ -496,10 +500,11 @@
     const headers = [], tracks = doc.tracks.map(() => []);
     for (const o of order) {
       const h = TC.clone(doc.bars[o.bar]);
-      Object.assign(h, { repeatStart: false, repeatEnd: 0, volta: null, simile: false, lineBreak: false, mark: '', end: '', jump: '', jumpRep: false });
+      Object.assign(h, { repeatStart: false, repeatEnd: 0, volta: null, lineBreak: false, mark: '', end: '', jump: '', jumpRep: false });
       headers.push(h);
       doc.tracks.forEach((t, k) => {
-        const bar = TC.clone(t.bars[SC.sourceBar(doc, o.bar)]);
+        const bar = TC.clone(t.bars[SC.sourceBar(doc, o.bar, t)]);
+        bar.simile = false;
         bar.voices.forEach((v) => v.forEach((ev) => {
           ev.id = TC.uid('e');
           ev.notes.forEach((n) => { n.id = TC.uid('n'); });
@@ -582,7 +587,7 @@
       const h = SC.findNote(doc, id);
       if (!h) continue;
       const pos = SC.atAbs(doc, SC.absTick(doc, h.bar, h.ev.tick) + delta);
-      if (!pos || doc.bars[pos.bar].simile) return false;
+      if (!pos || track.bars[pos.bar].simile) return false;
       const a = art || h.note.art, key = pos.bar + ':' + pos.tick + ':' + a;
       if (slots.has(key)) return false; // two of them onto one place
       slots.add(key);
@@ -602,24 +607,51 @@
     return true;
   };
 
-  /** The bar whose notes bar `bi` plays: a simile bar ("%") plays the bar before it. */
-  SC.sourceBar = function (doc, bi) {
-    while (bi > 0 && doc.bars[bi].simile) bi--;
+  /**
+   * The bar whose notes bar `bi` of `track` plays: a simile bar ("%") plays the bar before it.
+   * The % belongs to a track: one track can repeat its bar while another plays something new.
+   */
+  SC.sourceBar = function (doc, bi, track = doc.tracks[0]) {
+    while (bi > 0 && track.bars[bi].simile) bi--;
     return bi;
   };
 
-  /** Copy of the notes of a bar (all tracks), for the clipboard. */
+  /**
+   * Switch the "%" of bar `bi` in `track` on (the bar is emptied: it plays the bar before) or
+   * off (the notes it repeated are written out, so they can be changed from there).
+   */
+  SC.setSimile = function (doc, track, bi, on) {
+    if (bi <= 0 || !!track.bars[bi].simile === !!on) return false;
+    if (on) {
+      track.bars[bi] = TC.newTrackBar(track.bars[bi].voices.length);
+      track.bars[bi].simile = true;
+    } else {
+      track.bars[bi] = TC.clone(track.bars[SC.sourceBar(doc, bi, track)]);
+      track.bars[bi].simile = false;
+      track.bars[bi].voices.forEach((v) => v.forEach((ev) => {
+        ev.id = TC.uid('e');
+        ev.notes.forEach((n) => { n.id = TC.uid('n'); });
+      }));
+      SC.fitBar(doc, track, bi);
+    }
+    return true;
+  };
+
+  /** Copy of the notes of a bar (all tracks; a %-bar: what it plays), for the clipboard. */
   SC.copyBar = function (doc, bi) {
     const src = SC.sourceBar(doc, bi);
-    return { ts: doc.bars[src].ts.slice(), tracks: doc.tracks.map((t) => TC.clone(t.bars[src])) };
+    return {
+      ts: doc.bars[src].ts.slice(),
+      tracks: doc.tracks.map((t) => Object.assign(TC.clone(t.bars[SC.sourceBar(doc, bi, t)]), { simile: false })),
+    };
   };
 
   /** Put copied notes into bar `bi` (replaces its notes; new ids; cut to its length). */
   SC.pasteBar = function (doc, bi, clip) {
     if (!clip) return false;
-    doc.bars[bi].simile = false;
     doc.tracks.forEach((t, k) => {
       const bar = TC.clone(clip.tracks[k] || clip.tracks[0]);
+      bar.simile = false;
       bar.voices.forEach((v) => v.forEach((ev) => {
         ev.id = TC.uid('e');
         ev.notes.forEach((n) => { n.id = TC.uid('n'); });

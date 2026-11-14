@@ -168,7 +168,7 @@ Eine Regel für Maus, Stift und Finger:
 - **Mehrere Takte**: Kopieren, Einfügen (ab dem Takt, am Ende kommen Takte dazu), Verdoppeln, Leeren, Löschen wirken auf
   die ausgewählten Takte (Panel, Taktmenü „Takte a–b …“, Strg+C / V / D)
 
-## Werkzeuge ✅
+## Werkzeuge ✅ (getestet)
 
 - Oben im Noten-Panel (Tasten W / V / E): **✏ Schreiben** (wie bisher), **⬚ Auswählen**, **⌫ Radieren**
 - Auswählen: Rahmen auf leerer Fläche ziehen, Shift / Strg + Klick fügt hinzu, eine ausgewählte Note ziehen verschiebt
@@ -190,7 +190,7 @@ Eine Regel für Maus, Stift und Finger:
 - **Einstellungsfenster** (⚙ in der Werkzeugleiste, oder „Weitere Einstellungen…“ unten im Panel): Drum-Kit,
   Darstellung, Kit-Profile, Drum-Map, Seite, Ansicht, Tastenkürzel; Esc / ✕ / Klick daneben schließt es
 
-## Wiederholungen ✅ (zum Ausprobieren)
+## Wiederholungen ✅ (getestet, auch Sprünge)
 
 - Taktmenü → Wiederholung bzw. Takt-Panel: |: Anfang, :| Ende (2×, 3× …), Klammern 1. / 2. (auch über mehrere Takte);
   mehrere Takte ausgewählt: „Takte a–b wiederholen“
@@ -205,7 +205,7 @@ Eine Regel für Maus, Stift und Finger:
   To Coda, Coda) wird im Panel gemeldet. ⓘ „Wie funktionieren Sprünge?“ erklärt es mit Beispielen (`js/help.js`).
   Seitenansicht: die Coda beginnt eine neue Zeile.
 
-## Dropbox ✅ (zum Ausprobieren)
+## Dropbox ✅ (getestet)
 
 - Datei → „Mit Dropbox verbinden…“ (nur online, https): eigene Dropbox-App, nur der App-Ordner
 - Songs: „Aus Dropbox öffnen…“, „In Dropbox speichern (unter…)“; Strg+S speichert einen Dropbox-Song dorthin zurück,
@@ -217,15 +217,33 @@ Eine Regel für Maus, Stift und Finger:
 
 1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
-5. ~~Samples~~ ✅ (zum Ausprobieren)  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
+5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
+9. **Mehrere Spuren** (siehe unten)  10. **MusicXML-Export** (Import in Guitar Pro, MuseScore …; danach mit allen Spuren)
+
+## Mehrere Spuren (als Nächstes)
+
+Vor dem Notensystem: In Partituren bekommen einzelne Schlagzeuginstrumente oft eine eigene Spur (z. B. eine Spur nur mit
+Snare oder Becken). Das Datenmodell kennt schon mehrere Spuren (`doc.tracks`), die Oberfläche zeigt bisher nur `tracks[0]`.
+
+- **Übergeordnet (Taktkopf, gilt für alle Spuren):** Taktart, Tempo, Wiederholungen, Klammern, Segno / Coda / Fine, D.C. / D.S.,
+  Takt-Text, Zeilenumbruch. Abspielfolge einmal für das ganze Stück.
+- **Pro Spur:** Noten, Name, Kit / Instrumente (auch eine Spur mit nur einem Instrument), Kanal, Lautstärke, Pausenbereinigung
+  und der **%-Takt** ✅ (vom Taktkopf in den Spur-Takt verschoben; alte Dateien: ein % im Taktkopf wird % in jeder Spur).
+  Seitenansicht: % mit Anzahl bzw. Mehrtaktpause nur, wenn es für alle Spuren gilt.
+
+Schritte:
+1. Spuren verwalten: hinzufügen, umbenennen, löschen, sortieren; aktive Spur zum Schreiben
+2. Endlos-Ansicht: Spuren untereinander, gemeinsame Taktstriche; Spuren ein- / ausblenden; Kit pro Spur (Einzellinie)
+3. Seitenansicht / PDF: Partitursystem mit Klammer und Spurnamen, ausgeblendete Spuren nicht gedruckt
+4. Wiedergabe / MIDI: alle Spuren, Stumm / Solo; MIDI-Export eine Spur je Tactus-Spur oder alles auf Kanal 10; Import je Spur
 
 ## Offen zum Ausprobieren
 
-- Fühlt sich das Raster richtig an (Breite der Zellen, Einrasten, Vorschau)?
-- Klingen die synthetischen Sounds brauchbar, oder lohnen sich bald echte Samples?
+- ~~Fühlt sich das Raster richtig an?~~ ✅ passt
+- ~~Synthetische Sounds oder echte Samples?~~ ✅ Samples eingebaut und getestet
 
-## Wiedergabe über Cubase (Web MIDI) ✅ (zum Ausprobieren)
+## Wiedergabe über Cubase (Web MIDI) ✅ (getestet)
 
 - Panel → Wiedergabe → **Klang**: „Tactus-Klänge“ oder **„MIDI: <Ausgang>“** (Chrome / Edge; beim ersten Mal fragt der
   Browser). Die Schläge gehen mit den Tasten aus dem **Kit-Profil des Stücks** (ohne Profil: General MIDI, Kanal 10)
@@ -259,7 +277,7 @@ Eine Regel für Maus, Stift und Finger:
   gilt für Abspielen und MIDI-Export. „Im Stück: → …“ schreibt die Noten des Stücks um (ein Rückgängig-Schritt).
 - Toms ohne Taste: das nächstgelegene Tom des Kits
 
-## Aufgenommene Klänge (Samples) ✅ (zum Ausprobieren)
+## Aufgenommene Klänge (Samples) ✅ (getestet)
 
 - Panel → Wiedergabe: **„Aufgenommene Schlagzeug-Klänge (Samples) statt Synthesizer“** – beim ersten Mal ca. 3,4 MB, danach
   offline im eigenen Cache (bleibt über Updates erhalten)

@@ -165,7 +165,7 @@
         ${btn('copyBar', undefined, tr('Copy'), false, (many ? tr('Copy bars {a}–{b}', ab) : tr('Copy bar')) + ' (Ctrl+C)')}
         ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
         ${btn('duplicateBar', undefined, tr('Duplicate'), false, (many ? tr('Duplicate bars {a}–{b}', ab) : tr('Duplicate bar')) + ' (Ctrl+D)')}
-        ${i > 0 ? btn('toggleSimile', undefined, '%', !!h.simile, tr('Repeat the bar before (%)')) : ''}
+        ${i > 0 ? btn('toggleSimile', undefined, '%', !!S.doc.tracks[0].bars[i].simile, tr('Repeat the bar before (%)')) : ''}
       </div>
       <div class="btn-row">
         ${btn('insertBarBefore', undefined, tr('+ before'), false, tr('Insert bar before'))}

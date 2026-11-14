@@ -158,8 +158,8 @@
   RD.multiRests = function (doc, bars, simile = false) {
     const plain = (i) => !doc.bars[i].volta && !(doc.bars[i].repeatEnd > 1) && !doc.bars[i].end && !doc.bars[i].jump;
     // simile: runs of %-bars instead (one % with the number of bars above)
-    const fits = simile ? (i) => i > 0 && !!doc.bars[i].simile && plain(i)
-      : (i) => !doc.bars[i].simile && plain(i) && doc.tracks.every((t) => t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
+    const fits = simile ? (i) => i > 0 && doc.tracks.every((t) => !!t.bars[i].simile) && plain(i) // % in every track
+      : (i) => plain(i) && doc.tracks.every((t) => !t.bars[i].simile && t.bars[i].voices.every((v) => v.every((ev) => !ev.notes.length)));
     const opens = (i) => bars[i].showTs || bars[i].tempo || doc.bars[i].marker || doc.bars[i].repeatStart || doc.bars[i].lineBreak || doc.bars[i].mark;
     const out = [];
     for (let i = 0; i < doc.bars.length;) {
@@ -179,7 +179,7 @@
     const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');
-      const simile = !!h.simile && i > 0; // "%": repeats the bar before, no notes of its own
+      const simile = !!track.bars[i].simile && i > 0; // "%": repeats the bar before, no notes of its own
       const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam, track.fill));
       let finest = L;
       voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); }));

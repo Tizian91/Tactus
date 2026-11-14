@@ -37,7 +37,7 @@ module.exports = function (T) {
   T.eq('roll step: eighth note + 3 strokes = 64ths', TL.rollStep(480, 3), 60);
 
   // %-bar plays the bar before; a bar tempo changes the tempo from there
-  doc.bars[2].simile = true;
+  doc.tracks[0].bars[2].simile = true;
   tl = TL.build(doc, { from: 1, to: 2 });
   const cut = LEAD + 2 - 0.1; // the flam of bar 3 sounds 30 ms before its bar line
   T.eq('%-bar repeats bar 2', tl.hits.filter((h) => h.t >= cut).length, tl.hits.filter((h) => h.t < cut).length);

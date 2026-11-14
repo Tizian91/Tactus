@@ -276,7 +276,6 @@
   A.deleteBar = function (i = curBar()) {
     const [a, b] = rangeAt(i);
     if (!TC.score.deleteBars(S.doc, a, b - a + 1)) return TC.ui.hint(tr('The last bar cannot be deleted'));
-    S.doc.bars[0].simile = false; // the first bar has nothing before it to repeat
     TC.selectBar(Math.min(a, S.doc.bars.length - 1));
     TC.pruneSelection();
     TC.commit();
@@ -383,13 +382,8 @@
    */
   A.toggleSimile = function (i = curBar()) {
     if (i <= 0) return TC.ui.hint(tr('The first bar has no bar before it to repeat'));
-    const h = S.doc.bars[i];
-    if (h.simile) {
-      TC.score.pasteBar(S.doc, i, TC.score.copyBar(S.doc, i - 1));
-    } else {
-      TC.score.clearBar(S.doc, i);
-      h.simile = true;
-    }
+    const track = S.doc.tracks[0]; // the % belongs to a track (later: the track being written)
+    TC.score.setSimile(S.doc, track, i, !track.bars[i].simile);
     TC.selectBar(i);
     TC.pruneSelection();
     TC.commit();
@@ -930,7 +924,7 @@
       { label: many ? tr('Copy bars {a}–{b}', ab) : 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
       { label: clipN > 1 ? tr('Paste {n} bars from here', { n: clipN }) : 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
       { label: many ? tr('Duplicate bars {a}–{b}', ab) : 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
-      { label: 'Repeat the bar before (%)', checked: !!h.simile, action: () => A.toggleSimile(i), disabled: i === 0 },
+      { label: 'Repeat the bar before (%)', checked: !!S.doc.tracks[0].bars[i].simile, action: () => A.toggleSimile(i), disabled: i === 0 },
       '-',
       { label: TC.tr('Tempo from here…') + (i > 0 && h.tempo ? ` (${h.tempo})` : ''), action: () => A.editBarTempo(i) },
       { label: 'Text above the bar…', action: () => A.editMarker(i) },

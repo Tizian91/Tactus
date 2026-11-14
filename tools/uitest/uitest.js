@@ -144,7 +144,7 @@ setTimeout(() => {
   TC.actions.pasteBar(7);
   ok('paste: bar 8 = bar 6', voice(7, 0).join() === voice(5, 0).join());
   TC.actions.toggleSimile(6);
-  ok('% bar: flagged and empty', S.doc.bars[6].simile && voice(6, 0).length === 0 && document.querySelector('#score .static').innerHTML.includes(''));
+  ok('% bar: flagged and empty', S.doc.tracks[0].bars[6].simile && voice(6, 0).length === 0 && document.querySelector('#score .static').innerHTML.includes(''));
   click(6, 960, 3);
   ok('click into a % bar writes nothing', voice(6, 0).length === 0);
   TC.actions.toggleSimile(6);

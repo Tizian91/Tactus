@@ -467,6 +467,14 @@
   A.toggleSound = () => toggleSetting('sound');
   A.toggleMetronome = () => toggleSetting('metronome');
   A.toggleMidiSynth = () => toggleSetting('midiOutSynth');
+  /** Recorded drum sounds instead of the synthesizer (loaded the first time). */
+  A.toggleSamples = function () {
+    toggleSetting('samples');
+    const ctx = S.settings.samples && TC.audio.context();
+    if (ctx && TC.samples.state() !== 'ready') {
+      TC.samples.load(ctx).then((ok) => TC.ui.hint(tr(ok ? 'Recorded drum sounds ready' : 'The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.')));
+    }
+  };
   /** Lead of the MIDI output in ms (the drum VST's delay is made up for). */
   A.setMidiLead = function (ms) {
     S.settings.midiLead = TC.clamp(Math.round(Number(ms) || 0), 0, 500);

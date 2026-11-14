@@ -116,6 +116,11 @@
       if (!S.settings.midiOutSynth) return;
     }
     const out = dest || master, v = Math.max(0.05, Math.min(1.2, vel));
+    // recorded sounds (js/samples.js) when switched on and loaded; else the synth below
+    if (S.settings.samples && TC.samples) {
+      if (TC.samples.play(ctx, a.id, t, v, choke, out)) return;
+      if (TC.samples.state() === 'off') TC.samples.load(ctx);
+    }
     const cut = (d) => (choke ? Math.min(d, 0.12) : d);
     switch (a.id) {
       case 36: case 35: // kick

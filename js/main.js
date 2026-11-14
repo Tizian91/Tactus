@@ -94,6 +94,8 @@
     TC.storage.loadSettings();
     TC.kits.load();
     if (S.settings.midiOut && TC.midiOut.supported()) TC.midiOut.init(); // the chosen MIDI output again (permission is remembered)
+    // recorded sounds switched on: load them with the first touch (the browser allows sound only then)
+    document.addEventListener('pointerdown', () => { if (S.settings.samples && TC.samples.state() === 'off') TC.samples.load(TC.audio.context()); }, { once: true, capture: true });
     // a MIDI file dropped on the window: import it
     window.addEventListener('dragover', (e) => {
       if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault();

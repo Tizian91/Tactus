@@ -506,6 +506,13 @@ setTimeout(() => {
     ok('stems low: kick down again, choice of toms shown', voice(0, 1).join() === '0:480:36' && !!document.querySelector('.settings-dialog .stem-toms'));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     ok('settings window: Escape closes it', !TC.panel.isSettingsOpen() && !document.querySelector('.settings-dialog'));
+    // recorded sounds: switch in the panel; here (file://) they cannot load, the synth plays on
+    TC.actions.toggleSamples();
+    ok('samples: switched on in the panel, credits shown', S.settings.samples && !!document.querySelector('#panel-settings input[data-action="toggleSamples"]:checked') &&
+      /MuldjordKit/.test(document.getElementById('panel-settings').textContent));
+    TC.audio.preview(TC.newDrumNote(38, {}));
+    ok('samples not loaded yet: a written note still sounds (synth), no error', TC.samples.state() !== 'ready');
+    TC.actions.toggleSamples();
     // tempo changes listed in the panel: click goes to the bar, ✕ removes the change
     TC.actions.setBarTempo(140, 1);
     const ti = document.querySelector('#panel-settings .tempo-item [data-action="gotoBar"]');

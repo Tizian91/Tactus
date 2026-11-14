@@ -216,7 +216,7 @@ Eine Regel für Maus, Stift und Finger:
 
 1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
-5. Samples aus freien Bibliotheken (Lizenz prüfen), umschaltbar  6. Vorlagen für kostenlose VSTs (MT Power Drum Kit 2, SSD 5.5 Free; Groove Agent SE = GM)
+5. ~~Samples~~ ✅ (zum Ausprobieren)  6. Vorlagen für kostenlose VSTs (MT Power Drum Kit 2, SSD 5.5 Free; Groove Agent SE = GM)
 7. Drummap-Export für weitere DAWs (Reaper-Notennamen, Studio-One-Pitchlist – Formate erst prüfen)  8. Handbuch / Hilfeseite mit ⓘ-Links
 
 ## Offen zum Ausprobieren
@@ -257,3 +257,15 @@ Eine Regel für Maus, Stift und Finger:
   Profils, eine freie Taste des VSTs (wird Taste des Instruments) oder „Nicht spielen“ – gespeichert im Profil (`subst`),
   gilt für Abspielen und MIDI-Export. „Im Stück: → …“ schreibt die Noten des Stücks um (ein Rückgängig-Schritt).
 - Toms ohne Taste: das nächstgelegene Tom des Kits
+
+## Aufgenommene Klänge (Samples) ✅ (zum Ausprobieren)
+
+- Panel → Wiedergabe: **„Aufgenommene Schlagzeug-Klänge (Samples) statt Synthesizer“** – beim ersten Mal ca. 3,4 MB, danach
+  offline im eigenen Cache (bleibt über Updates erhalten)
+- Quellen: **MuldjordKit** (Lars Muldjord, CC BY 4.0: Bassdrum, Snare, Hi-Hat zu / offen, 4 Toms, 2 Crashes, China, 2 Rides
+  mit Glocke) und **Virtuosity Drums** (Versilian Studios, CC0: Rimshot, Sidestick, Hi-Hat Pedal / halb / Splash, Cowbell,
+  Claves, Tamburin, Shaker). Namensnennung im Panel, `samples/LICENSE.md`, README
+- 3 Aufnahmen pro Klang (leise / mittel / laut): Ghost nimmt die leise, Akzent die laute; ein geschlossenes Hi-Hat stoppt das
+  offene; abgestoppte Becken kurz. Ohne Aufnahme (Klatschen, Reverse-Becken): Synthesizer
+- `tools/build_samples.sh` baut `samples/*.flac` aus den Originalen (`samples-src/`, nicht im Repo; braucht ffmpeg)
+- Später evtl.: mehrere Aufnahmen pro Stufe (Round Robin) gegen den „Maschinengewehr“-Effekt bei Wirbeln

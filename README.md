@@ -136,8 +136,12 @@ A score is saved as readable JSON (`*.tactus.json`); see the comment at the top 
 - Drum articulations (lines, MIDI notes, noteheads) as used by Guitar Pro 7/8, taken from the open source
   project [alphaTab](https://github.com/CoderLine/alphaTab).
 - Building blocks (undo, panel, menus, theme, offline app) from MindMapper.
+- Drum samples (`samples/`, optional, switched on in the panel): **MuldjordKit** by Lars Muldjord
+  (FreePats version), CC BY 4.0, and **Virtuosity Drums** by Versilian Studios, CC0 – see
+  `samples/LICENSE.md`; built with `tools/build_samples.sh`.
 
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE.md): free to use, change and share for any **noncommercial**
 purpose. Commercial use needs the author's permission.
+The drum samples in `samples/` keep their own licenses (CC BY 4.0 / CC0, see `samples/LICENSE.md`).

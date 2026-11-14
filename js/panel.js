@@ -276,7 +276,7 @@
       ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
       <div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="1" step="0.05" value="${st.volume}" data-volume></div>
-      ${soundRow()}
+      ${soundRow()}${samplesRow()}
       <p class="hint">${tr('Space: play / stop · plays from the selected bar.')}</p>
     </section>`;
   }
@@ -301,6 +301,17 @@
       more += check('toggleMidiSynth', !!st.midiOutSynth, tr('Tactus sounds as well'));
     }
     return `<div class="row"><label>${tr('Sound')}</label><select data-action="setMidiOut">${opts}</select></div>${more}`;
+  }
+
+  /** Tactus' own sounds: synthesized or recorded (js/samples.js). */
+  function samplesRow() {
+    const st = S.settings;
+    if (st.midiOut && !st.midiOutSynth && TC.midiOut && TC.midiOut.active()) return '';
+    const sm = TC.samples, state = sm ? sm.state() : 'off';
+    const note = !st.samples ? '' : state === 'loading' ? `<p class="hint tight">${tr('Loading the recordings… (about 3.5 MB, once)')}</p>`
+      : state === 'failed' ? `<p class="hint warn tight">${tr('The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.')}</p>` : '';
+    const credit = st.samples ? `<p class="hint tight">${tr('Recordings: MuldjordKit by Lars Muldjord (CC BY 4.0) and Virtuosity Drums by Versilian Studios (CC0).')}</p>` : '';
+    return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit;
   }
 
   function pageSection() {
@@ -380,7 +391,7 @@
       notesRoot.scrollTop = scroll;
     }
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      S.settings, !!S.clipboard, S.doc.bars.length, S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;

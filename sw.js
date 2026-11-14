@@ -6,7 +6,8 @@
  * Network first: online you always get the current files, the cache is only the offline copy.
  * New file in index.html? Add it to FILES, so it is there offline from the start.
  */
-const CACHE = 'tactus-v44';
+const CACHE = 'tactus-v45';
+const SAMPLES = 'tactus-samples-v1'; // samples/*.flac (new version only when the recordings change)
 const FILES = [
   './',
   'index.html',
@@ -35,6 +36,7 @@ const FILES = [
   'js/dropbox.js',
   'js/share.js',
   'js/help.js',
+  'js/samples.js',
   'js/main.js',
 ];
 
@@ -46,13 +48,21 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys()
-    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== SAMPLES).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  // recorded drum sounds: from their own cache once loaded (they do not change; kept across updates)
+  if (/\/samples\/[^/]+\.flac$/.test(new URL(req.url).pathname)) {
+    e.respondWith(caches.open(SAMPLES).then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) c.put(req, res.clone());
+      return res;
+    }))));
+    return;
+  }
   e.respondWith(fetch(req)
     .then((res) => {
       if (res.ok) {

@@ -13,3 +13,6 @@ desktop.ini
 # Personal Cubase drum maps
 drummaps/
 samples-src/
+
+# Import tests (exports of other programs, generated variants)
+xmltest/

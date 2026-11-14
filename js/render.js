@@ -578,7 +578,9 @@
       if (b.mark) {
         const prev = L.bars[i - 1], gap = prev && prev.sys === b.sys && (prev.end || prev.jump) ? 1.2 * SP : 0; // clear of "D.S. al Coda" before it
         const x = b.x + 0.2 * SP + gap + (i === 0 ? TEMPO_W + swingW : b.tempo ? TEMPO_W : 0) + (b.marker ? markerW(b.marker) + 0.6 * SP : 0);
-        o.push(`<text class="mus-sm jump-sign" x="${f(x)}" y="${f(TEXT_Y + 0.3 * SP)}"><title>${esc(TC.tr(b.mark === 'segno' ? 'Segno' : 'Coda'))}</title>${b.mark === 'segno' ? '' : ''}</text>`);
+        // 𝄋 / ⊕, doubled for Segno Segno / Double Coda
+        const g = /^segno/.test(b.mark) ? '' : '', n = b.mark === 'segnoSegno' || b.mark === 'doubleCoda' ? 2 : 1;
+        o.push(`<text class="mus-sm jump-sign" x="${f(x)}" y="${f(TEXT_Y + 0.3 * SP)}"><title>${esc(TC.tr(RD.markName(b.mark)))}</title>${n > 1 ? g + `<tspan dx="${f(0.3 * SP)}">${g}</tspan>` : g}</text>`);
       }
       // at the end of the bar: D.C. / D.S. …, Fine, To Coda ⊕ (right-aligned, the jump rightmost)
       let ex = end - 0.3 * SP;
@@ -588,9 +590,10 @@
         ex -= jumpW(t) + 0.8 * SP;
       }
       if (b.end === 'fine') o.push(`<text class="jump-text" x="${f(ex)}" y="${f(TEXT_Y)}">Fine</text>`);
-      if (b.end === 'toCoda') {
-        o.push(`<text class="mus-sm jump-sign end" x="${f(ex)}" y="${f(TEXT_Y + 0.3 * SP)}">${''}</text>` +
-          `<text class="jump-text" x="${f(ex - 2.3 * SP)}" y="${f(TEXT_Y)}">To Coda</text>`);
+      if (b.end === 'toCoda' || b.end === 'toDoubleCoda') {
+        const two = b.end === 'toDoubleCoda'; // To Coda ⊕⊕: on to the double coda
+        o.push(`<text class="mus-sm jump-sign end" x="${f(ex)}" y="${f(TEXT_Y + 0.3 * SP)}">${two ? '' : ''}</text>` +
+          `<text class="jump-text" x="${f(ex - (two ? 4.6 : 2.3) * SP)}" y="${f(TEXT_Y)}">To Coda</text>`);
       }
     });
 
@@ -674,7 +677,14 @@
   /** Width of a jump text (13 px bold italic). */
   const jumpW = (s) => s.length * 7.2;
   /** "D.S. al Coda" … as written above the bar. */
-  RD.jumpText = (j) => ({ dc: 'D.C.', dcFine: 'D.C. al Fine', dcCoda: 'D.C. al Coda', ds: 'D.S.', dsFine: 'D.S. al Fine', dsCoda: 'D.S. al Coda' })[j] || '';
+  RD.jumpText = (j) => {
+    if (!j) return '';
+    const J = TC.jumpInfo(j);
+    const head = J.to === 'start' ? 'D.C.' : J.to === 'segnoSegno' ? 'D.S.S.' : 'D.S.';
+    return head + ({ fine: ' al Fine', coda: ' al Coda', doubleCoda: ' al Double Coda' }[J.al] || '');
+  };
+  /** Name of a sign at the start of a bar. */
+  RD.markName = (m) => ({ segno: 'Segno', segnoSegno: 'Segno Segno', coda: 'Coda', doubleCoda: 'Double Coda' })[m] || '';
 
   /** One voice of one bar: rests, heads, stems, flags, beams, dots, accents, tuplets. */
   function drawVoice(out, b, items, vi, used, track) {

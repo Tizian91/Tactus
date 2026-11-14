@@ -191,8 +191,9 @@
         <select data-action="setVolta" title="${esc(tr('Ending (1st / 2nd time bar)'))}">${TC.actions.VOLTAS.map(([v, l]) =>
           `<option value="${v}"${(h.volta || []).join(',') === v ? ' selected' : ''}>${v ? '⌐ ' + l : '⌐ –'}</option>`).join('')}</select></div>
       ${R && R[1] > R[0] ? `<div class="btn-row">${btn('repeatSelection', 2, tr('Repeat bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }))}</div>` : ''}
-      <div class="row"><label>${tr('Sign')}</label>${sel('setMark', [['', '–'], ['segno', '𝄋 Segno (D.S. jumps here)'], ['coda', '⊕ Coda (the coda starts here)']], h.mark)}</div>
-      <div class="row"><label>${tr('At the end')}</label>${sel('setEnd', [['', '–'], ['fine', 'Fine'], ['toCoda', 'To Coda ⊕']], h.end)}</div>
+      <div class="row"><label>${tr('Sign')}</label>${sel('setMark', [['', '–'], ['segno', '𝄋 Segno (D.S. jumps here)'], ['segnoSegno', '𝄋𝄋 Segno Segno (D.S.S. jumps here)'],
+        ['coda', '⊕ Coda (the coda starts here)'], ['doubleCoda', '⊕⊕ Double Coda (the double coda starts here)']], h.mark)}</div>
+      <div class="row"><label>${tr('At the end')}</label>${sel('setEnd', [['', '–'], ['fine', 'Fine'], ['toCoda', 'To Coda ⊕'], ['toDoubleCoda', 'To Coda ⊕⊕ (Double Coda)']], h.end)}</div>
       <div class="row"><label>${tr('Jump')}</label>${sel('setJump', TC.actions.JUMP_LABELS, h.jump)}</div>
       ${h.jump ? check('toggleJumpRep', !!h.jumpRep, tr('Play the repeats after the jump (con rip.)')) : ''}
       ${problems.map((p) => `<p class="hint warn tight">${tr('Bar {n}', { n: p.bar + 1 })}: ${esc(TC.actions.jumpProblemText(p))}</p>`).join('')}

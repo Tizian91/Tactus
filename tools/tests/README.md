@@ -28,6 +28,7 @@ Die erste Zeile der Ausgabe lautet `ALL OK: … passed` oder `FAILED: …`, daru
 | `test_tracks_midi.js` | Spuren und MIDI: Stumm / Solo, Kit-Profil pro Spur (eigenes, wie das Stück, General MIDI, nicht vorhanden), MIDI-Export einzeln pro Spur und alle in einer Datei (Typ 1, benannte Spuren), Import mehrerer Spuren als eigene Tactus-Spuren mit eigener Drum-Map, Speichern |
 | `test_pages.js` | Umblättern: Umblätter-MIDI (Note n = Seite n, Kanal 16, Takte vorher, Seite aus einem Takt, Wiederholungen, Tempo), eingehende MIDI-Befehle (Note, Program Change, Kanalfilter, angelernte Note / Pedal-CC) |
 | `test_musicxml.js` | MusicXML-Export: wohlgeformt, jede Stimme füllt ihren Takt, Parts / Instrumente (GM-Tasten), Notenköpfe, Ghost, Akzent, Flam / Drag, Wirbel, Sticking, Triolen, Balken, Wiederholungen, Klammern, Sprünge, Takt-Texte, Tempo, %-Takte, einlinige Spuren |
+| `test_jumps.js` | Sprünge wie in Guitar Pro: Segno Segno, Double Coda, D.S.S., „al Double Coda“ (Abspielfolge, was fehlt, Speichern), MusicXML mit `segno2` / `coda2`, Export für Guitar Pro (ausgeschrieben, Tempo an jeder Stelle) |
 | `test_swing.js` | Swing / Shuffle: Zeitpunkte (Achtel, Sechzehntel, Triolen bleiben), Wiedergabe, MIDI mit und ohne Swing, Laden |
 | `test_share.js` | Teilen-Link: kompaktes JSON ohne Ids / Ansicht / Standardwerte, beim Laden dieselben Noten, Takte, Wiederholungen, Tempo |
 | `test_cubase.js` | Cubase-Drummaps (`.drm`): lesen, Instrumente an den Namen erkennen (Pattern-Tasten auslassen), auf die Tactus-Darstellung umschreiben, Klänge (INote / ONote) bleiben |

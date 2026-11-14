@@ -51,6 +51,17 @@
 
   X.build = function (doc, opts = {}) {
     const tracks = opts.tracks || doc.tracks;
+    // how signs and jumps are written (Guitar Pro reads them its own way - still being tried out):
+    //   direction: <sound> inside the <direction> (standard)   measure: <sound> in the bar itself
+    //   sign: To Coda with the coda sign as well               gp: the words of Guitar Pro (Da Coda, Dal Segno al Coda …)
+    const J = Object.assign({ direction: true, measure: false, sign: true, gp: false }, opts.jumps);
+    // (Segno Segno / Double Coda: their own names segno2 / coda2, so a jump finds its sign)
+    const SOUND = { segno: 'segno', segnoSegno: 'segno2', coda: 'coda', doubleCoda: 'coda2' };
+    const jumpText = (j) => {
+      const I = TC.jumpInfo(j);
+      const head = J.gp ? { start: 'Da Capo', segno: 'Dal Segno', segnoSegno: 'Dal Segno Segno' }[I.to] : { start: 'D.C.', segno: 'D.S.', segnoSegno: 'D.S.S.' }[I.to];
+      return head + ({ fine: ' al Fine', coda: ' al Coda', doubleCoda: ' al Double Coda' }[I.al] || '');
+    };
     const D = TC.drums, R = TC.rhythm;
     const meta = doc.meta || {};
     const o = [];
@@ -112,13 +123,17 @@
         // above the bar (the first part carries them, as usual): tempo (first bar, changes), swing, bar text, segno / coda
         if (k === 0) {
           const above = (inner, sound = '') => o.push(`<direction placement="above"><direction-type>${inner}</direction-type>${sound}</direction>`);
+          const sign = (symbol, sound) => {
+            above(symbol, J.direction ? `<sound ${sound}/>` : '');
+            if (J.measure) o.push(`<sound ${sound}/>`);
+          };
           const bpm = i === 0 ? meta.tempo : h.tempo && h.tempo !== run ? h.tempo : null;
           if (h.tempo) run = h.tempo;
           if (bpm) above(`<metronome><beat-unit>quarter</beat-unit><per-minute>${bpm}</per-minute></metronome>`, `<sound tempo="${bpm}"/>`);
           if (i === 0 && swing) above(`<words>${esc(swing + (meta.swingUnit === 16 ? ' (16)' : ''))}</words>`);
           if (h.marker) above(`<rehearsal>${esc(h.marker)}</rehearsal>`);
-          if (h.mark === 'segno') above('<segno/>', '<sound segno="segno"/>');
-          if (h.mark === 'coda') above('<coda/>', '<sound coda="coda"/>');
+          if (/^segno/.test(h.mark)) sign(h.mark === 'segnoSegno' ? '<segno/><segno/>' : '<segno/>', `segno="${SOUND[h.mark]}"`);
+          if (h.mark === 'coda' || h.mark === 'doubleCoda') sign(h.mark === 'doubleCoda' ? '<coda/><coda/>' : '<coda/>', `coda="${SOUND[h.mark]}"`);
         }
 
         // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice
@@ -190,13 +205,19 @@
           }
         });
 
-        // at the end of the bar: Fine, To Coda, D.C. / D.S.
-        const end = (words, sound) => o.push(`<direction placement="above"><direction-type><words>${esc(words)}</words></direction-type><sound ${sound}/></direction>`);
+        // at the end of the bar: Fine, To Coda, D.C. / D.S. (the text, a sign if it has one - To Coda ⊕ -, its <sound>)
+        const end = (words, sound, sign = '') => {
+          const sd = J.direction ? `<sound ${sound}/>` : '';
+          o.push(`<direction placement="above"><direction-type><words>${esc(words)}</words></direction-type>` +
+            (sign && J.sign ? `<direction-type>${sign}</direction-type>` : '') + sd + '</direction>');
+          if (J.measure) o.push(`<sound ${sound}/>`);
+        };
         if (k === 0 && h.end === 'fine') end('Fine', 'fine="yes"');
-        if (k === 0 && h.end === 'toCoda') end('To Coda', 'tocoda="coda"');
+        if (k === 0 && h.end === 'toCoda') end(J.gp ? 'Da Coda' : 'To Coda', 'tocoda="coda"', '<coda/>');
+        if (k === 0 && h.end === 'toDoubleCoda') end(J.gp ? 'Da Double Coda' : 'To Coda', 'tocoda="coda2"', '<coda/><coda/>');
         if (k === 0 && h.jump) {
-          const txt = { dc: 'D.C.', dcFine: 'D.C. al Fine', dcCoda: 'D.C. al Coda', ds: 'D.S.', dsFine: 'D.S. al Fine', dsCoda: 'D.S. al Coda' }[h.jump];
-          end(txt, h.jump.startsWith('dc') ? 'dacapo="yes"' : 'dalsegno="segno"');
+          const I = TC.jumpInfo(h.jump);
+          end(jumpText(h.jump), I.to === 'start' ? 'dacapo="yes"' : `dalsegno="${SOUND[I.to]}"`);
         }
         // right bar line: :| (n times), the end of an ending, the final bar
         const vEnd = h.volta && vkey(bars[i + 1]) !== vkey(h);

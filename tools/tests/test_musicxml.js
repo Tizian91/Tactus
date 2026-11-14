@@ -99,5 +99,24 @@ module.exports = function (T) {
     /<staff-lines>1<\/staff-lines>/.test(s1) && /<display-step>B<\/display-step><display-octave>4<\/display-octave>/.test(s1) &&
     /<repeat direction="forward"\/>/.test(measures(parts[1])[1]) && !/<rehearsal>/.test(parts[1].body));
   T.ok('an empty voice is left out (no second voice in the snare track)', !/<voice>2<\/voice>/.test(parts[1].body));
+  // D.S. al Coda: segno, To Coda (text + coda sign), the jump, the coda - each <sound> in the direction and in the bar
+  const j = TC.emptyScore(4);
+  j.bars[0].mark = 'segno';
+  j.bars[1].end = 'toCoda';
+  j.bars[2].jump = 'dsCoda';
+  j.bars[3].mark = 'coda';
+  const bars = (opts) => [...X.build(j, opts).matchAll(/<measure number="\d+">([\s\S]*?)<\/measure>/g)].map((m) => m[1]);
+  let jm = bars();
+  T.ok('To Coda: the text and the coda sign, tocoda in the direction (not in the bar)',
+    /<words>To Coda<\/words><\/direction-type><direction-type><coda\/><\/direction-type><sound tocoda="coda"\/><\/direction>/.test(jm[1]) && !/<\/direction>\s*<sound tocoda/.test(jm[1]));
+  T.ok('D.S. al Coda: the text, dalsegno in the direction', /<words>D\.S\. al Coda<\/words><\/direction-type><sound dalsegno="segno"\/><\/direction>/.test(jm[2]));
+  T.ok('segno and coda: the sign, its sound in the direction', /<segno\/><\/direction-type><sound segno="segno"\/><\/direction>/.test(jm[0]) &&
+    /<coda\/><\/direction-type><sound coda="coda"\/><\/direction>/.test(jm[3]));
+  jm = bars({ jumps: { direction: false, measure: true } });
+  T.ok('variant "in the bar": no jump sound in the directions, one in the bar', !/<sound (segno|coda|tocoda|dalsegno|dacapo|fine)[^>]*\/><\/direction>/.test(jm.join('')) &&
+    /<\/direction>\s*<sound dalsegno="segno"\/>/.test(jm[2]) && /<\/direction>\s*<sound segno="segno"\/>/.test(jm[0]));
+  jm = bars({ jumps: { direction: false, gp: true } });
+  T.ok('variant "Guitar Pro words, no sound": Da Coda, Dal Segno al Coda, no <sound> for jumps', /<words>Da Coda<\/words>/.test(jm[1]) &&
+    /<words>Dal Segno al Coda<\/words>/.test(jm[2]) && !/<sound (segno|coda|tocoda|dalsegno)/.test(jm.join('')));
   T.eq('staff positions (treble-like: top line F5, middle line B4, below the staff C4)', [0, 4, 10, -2].map((l) => X.display(l)).map((p) => p.step + p.octave), ['F5', 'B4', 'C4', 'A5']);
 };

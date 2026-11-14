@@ -235,7 +235,7 @@ Eine Regel für Maus, Stift und Finger:
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
-9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (zum Ausprobieren in Guitar Pro / MuseScore, siehe unten)
+9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (in Guitar Pro getestet, siehe unten)
 11. **Melodien** (Notensystem mit Tonleiter, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
@@ -284,7 +284,7 @@ Schritte:
    Cursor bleibt bei einem Drittel der Breite, Seitenansicht: die gespielte Zeile gleitet ins obere Viertel; Sprünge gleiten mit.
    Die Seitenansicht berücksichtigt dabei die Höhe aller Notenzeilen.
 
-## MusicXML-Export ✅ (zum Ausprobieren)
+## MusicXML-Export ✅ (in Guitar Pro getestet)
 
 - Datei → **„MusicXML exportieren (Guitar Pro, MuseScore …)“** (`js/musicxml.js`, MusicXML 3.1 partwise, `Titel.musicxml`).
 - Jede Spur ein Part (Schlagzeug-Notensystem, einlinige Spuren mit einer Linie); jedes Instrument nennt seine General-MIDI-Taste
@@ -294,7 +294,19 @@ Schritte:
   unter der Note), %-Takte (Taktwiederholung, Noten für die Wiedergabe mitgeschrieben), Taktarten, Tempo und Tempowechsel, Swing
   als Text, Takt-Texte (Studierzeichen), |: :| n×, Klammern 1. / 2., Segno / Coda / Fine / To Coda / D.C. / D.S. (mit `<sound>`
   für die Wiedergabe), Zeilenumbrüche. Texte und Tempo in der ersten Spur, Wiederholungen in allen.
-- **Offen zum Ausprobieren:** Import in Guitar Pro 8 (Instrumente richtig? Notenköpfe? Sprünge?) und MuseScore 4.
+- **Getestet:** Import in Guitar Pro – Noten, Notenköpfe, Wiederholungen funktionieren sauber. **Nicht getestet:** MuseScore (nicht
+  vorhanden), Sibelius, Dorico.
+- **Sprünge und Guitar Pro** (getestet mit 4 Schreibweisen, `tools/xml_variants.js`): Guitar Pro übernimmt aus MusicXML kein D.S. /
+  D.C. / Fine und kein „al Coda“, die Ziele (Segno, Coda) bleiben leer; nur To Coda kommt an (springt dann zu früh). Grund: MusicXML
+  kennt kein „al Coda / al Fine“ und keine Doppelzeichen als eigene Art, Guitar Pro errät sie beim Import nicht (alphaTab ebenso,
+  PR #2929). Guitar Pro schreibt beim eigenen MusicXML-Export weder Noten noch Sprünge. Daher:
+  - Datei → **„MusicXML für Guitar Pro exportieren (Wiederholungen ausgeschrieben)“**: alle Takte in der gespielten Reihenfolge
+    (Kopie, `TC.score.unfold`; Tempo an jeder Stelle richtig, auch nach D.C. zurück vor einen Tempowechsel) – spielt in Guitar Pro richtig.
+  - Der normale MusicXML-Export bleibt beim Standard (Text, Zeichen, `<sound>` in der Anweisung) – für MuseScore & Co.
+  - Saubere Sprungzeichen in Guitar Pro gibt es erst mit einem `.gp`-Export (Phase 7).
+- **Sprünge wie in Guitar Pro** ✅: zusätzlich 𝄋𝄋 Segno Segno, ⊕⊕ Double Coda, „To Coda ⊕⊕“, D.S.S. (Dal Segno Segno) und jeweils
+  „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
+  `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
 
 ## Phase 5 – Melodien (Idee, noch nicht begonnen)
 

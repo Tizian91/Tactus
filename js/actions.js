@@ -869,11 +869,24 @@
    * (values, triplets, beams, noteheads, ghost notes, accents, flams, rolls, repeats, endings, jumps).
    */
   A.exportMusicXml = function () {
-    const d = new Date(), pad = (n) => String(n).padStart(2, '0');
-    const xml = TC.musicxml.build(S.doc, { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` });
+    const xml = TC.musicxml.build(S.doc, { date: today() });
     const file = baseName() + '.musicxml';
     download(new TextEncoder().encode(xml), file, 'application/vnd.recordare.musicxml+xml');
     TC.ui.hint(tr('MusicXML exported: {file}', { file }));
+  };
+  const today = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+  /**
+   * MusicXML for Guitar Pro: its import takes no D.S. / D.C. / Fine and no "al Coda" (MusicXML cannot say
+   * "al Coda", Guitar Pro does not guess it) - so the repeats and jumps are written out: every bar in the
+   * order it is played (TC.score.unfold on a copy), and Guitar Pro plays it right. The score stays as it is.
+   */
+  A.exportMusicXmlGp = function () {
+    const copy = TC.normalizeDoc(TC.clone(S.doc));
+    const n = TC.score.unfold(copy);
+    const xml = TC.musicxml.build(copy, { date: today() });
+    const file = baseName() + ' (Guitar Pro).musicxml';
+    download(new TextEncoder().encode(xml), file, 'application/vnd.recordare.musicxml+xml');
+    TC.ui.hint(tr('MusicXML for Guitar Pro exported ({n} bars, repeats and jumps written out): {file}', { n, file }));
   };
 
   /** PDF / print: the page view on A4 (the browser's print dialog: "Save as PDF"). */
@@ -1024,6 +1037,7 @@
       { label: 'Export MIDI for', submenu: A.midiTargets() },
       { label: 'Export page turning MIDI…', action: A.exportPageTurns },
       { label: 'Export MusicXML (Guitar Pro, MuseScore …)', action: A.exportMusicXml },
+      { label: 'Export MusicXML for Guitar Pro (repeats written out)', action: A.exportMusicXmlGp },
     ], r.left, r.bottom + 2);
   };
 
@@ -1294,9 +1308,12 @@
     TC.commit();
   };
   A.jumpProblemText = (p) => tr({ noSegno: 'D.S.: no 𝄋 Segno in the score yet (bar menu or panel)', noFine: 'al Fine: no bar with Fine yet',
-    noToCoda: 'al Coda: no bar with "To Coda" yet', noCoda: 'al Coda: no bar with ⊕ Coda (start of the coda) yet' }[p.problem]);
-  const JUMP_LABELS = [['', '–'], ['dc', 'D.C. (from the start)'], ['dcFine', 'D.C. al Fine'], ['dcCoda', 'D.C. al Coda'],
-    ['ds', 'D.S. (from 𝄋)'], ['dsFine', 'D.S. al Fine'], ['dsCoda', 'D.S. al Coda']];
+    noToCoda: 'al Coda: no bar with "To Coda" yet', noCoda: 'al Coda: no bar with ⊕ Coda (start of the coda) yet',
+    noSegnoSegno: 'D.S.S.: no 𝄋𝄋 Segno Segno in the score yet', noToDoubleCoda: 'al Double Coda: no bar with "To Coda ⊕⊕" yet',
+    noDoubleCoda: 'al Double Coda: no bar with ⊕⊕ Double Coda yet' }[p.problem]);
+  const JUMP_LABELS = [['', '–'], ['dc', 'D.C. (from the start)'], ['dcFine', 'D.C. al Fine'], ['dcCoda', 'D.C. al Coda'], ['dcDoubleCoda', 'D.C. al Double Coda'],
+    ['ds', 'D.S. (from 𝄋)'], ['dsFine', 'D.S. al Fine'], ['dsCoda', 'D.S. al Coda'], ['dsDoubleCoda', 'D.S. al Double Coda'],
+    ['dss', 'D.S.S. (from 𝄋𝄋)'], ['dssFine', 'D.S.S. al Fine'], ['dssCoda', 'D.S.S. al Coda'], ['dssDoubleCoda', 'D.S.S. al Double Coda']];
   A.JUMP_LABELS = JUMP_LABELS;
 
   /** The manual (hilfe.html) in its own tab, at a chapter (anchor). */

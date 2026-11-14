@@ -94,9 +94,16 @@
   TC.newBarHeader = (ts) => ({ ts: ts ? ts.slice() : [4, 4], tempo: null, repeatStart: false, repeatEnd: 0, volta: null, marker: '', beam: null, lineBreak: false,
     mark: '', end: '', jump: '', jumpRep: false });
   /** Signs at the start of a bar, at its end, and the jumps back (D.C. / D.S.), see SC.playOrder. */
-  TC.MARKS = ['segno', 'coda'];
-  TC.ENDS = ['fine', 'toCoda'];
-  TC.JUMPS = ['dc', 'dcFine', 'dcCoda', 'ds', 'dsFine', 'dsCoda'];
+  // signs and jumps as in Guitar Pro: targets (𝄋 Segno, 𝄋𝄋 Segno Segno, ⊕ Coda, ⊕⊕ Double Coda, Fine) and jumps
+  // (Da Capo / Dal Segno / Dal Segno Segno, each alone or "al Fine / al Coda / al Double Coda"; To Coda, To Double Coda)
+  TC.MARKS = ['segno', 'segnoSegno', 'coda', 'doubleCoda'];
+  TC.ENDS = ['fine', 'toCoda', 'toDoubleCoda'];
+  TC.JUMPS = ['dc', 'dcFine', 'dcCoda', 'dcDoubleCoda', 'ds', 'dsFine', 'dsCoda', 'dsDoubleCoda', 'dss', 'dssFine', 'dssCoda', 'dssDoubleCoda'];
+  /** What a jump does: { to: 'start' | 'segno' | 'segnoSegno', al: null | 'fine' | 'coda' | 'doubleCoda' }. */
+  TC.jumpInfo = (j) => ({
+    to: /^dss/.test(j) ? 'segnoSegno' : /^ds/.test(j) ? 'segno' : 'start',
+    al: /DoubleCoda$/.test(j) ? 'doubleCoda' : /Coda$/.test(j) ? 'coda' : /Fine$/.test(j) ? 'fine' : null,
+  });
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 });
   // space between the staves of several tracks / between the lines of the page view, % of the basic space
   TC.STAFF_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
@@ -449,6 +456,7 @@
    *                  After it the repeats are played once and the last ending is taken (jumpRep: as at first);
    *                  "al Fine": it ends after the Fine bar, "al Coda": at To Coda on to the ⊕ bar.
    *                  Fine and To Coda count only after the jump.
+   *   D.S.S.        the same, back to the 𝄋𝄋 bar (Segno Segno); "al Double Coda": at To Double Coda on to the ⊕⊕ bar
    */
   SC.playOrder = function (doc) {
     const bars = doc.bars, out = [], jumps = new Map(), taken = new Set();
@@ -482,13 +490,14 @@
       out.push(via ? { bar: i, pass, n: out.length + 1, via } : { bar: i, pass, n: out.length + 1 });
       via = null;
       lastVolta = !!volta;
-      // after a jump: Fine ends, To Coda goes on to the coda
-      if (after && after.fine && h.end === 'fine') break;
-      if (after && after.coda && h.end === 'toCoda') {
-        let c = bars.findIndex((b, k) => k > i && b.mark === 'coda');
-        if (c < 0) c = bars.findIndex((b) => b.mark === 'coda');
+      // after a jump: Fine ends, To Coda goes on to the coda (To Double Coda: to the double coda)
+      if (after && after.al === 'fine' && h.end === 'fine') break;
+      const target = after && after.al === 'coda' && h.end === 'toCoda' ? 'coda' : after && after.al === 'doubleCoda' && h.end === 'toDoubleCoda' ? 'doubleCoda' : null;
+      if (target) {
+        let c = bars.findIndex((b, k) => k > i && b.mark === target);
+        if (c < 0) c = bars.findIndex((b) => b.mark === target);
         if (c < 0) break; // no coda: the end
-        after.coda = false;
+        after.al = null;
         i = start = c;
         pass = 1;
         jumps.clear();
@@ -508,17 +517,17 @@
         start = i + 1;
         pass = 1;
       }
-      // D.C. / D.S. (each one once)
+      // D.C. / D.S. / D.S.S. (each one once)
       if (h.jump && !taken.has(i)) {
         taken.add(i);
-        const ds = h.jump.startsWith('ds');
-        const segno = bars.findIndex((b) => b.mark === 'segno');
-        after = { fine: /Fine$/.test(h.jump), coda: /Coda$/.test(h.jump), rep: !!h.jumpRep };
-        i = start = ds && segno >= 0 ? segno : 0;
+        const J = TC.jumpInfo(h.jump);
+        const segno = J.to === 'start' ? -1 : bars.findIndex((b) => b.mark === J.to);
+        after = { al: J.al, rep: !!h.jumpRep };
+        i = start = segno >= 0 ? segno : 0;
         pass = 1;
         jumps.clear();
         lastVolta = false;
-        via = ds ? 'ds' : 'dc';
+        via = J.to === 'start' ? 'dc' : 'ds';
         continue;
       }
       i++;
@@ -532,10 +541,14 @@
     const out = [];
     doc.bars.forEach((b, i) => {
       if (!b.jump) return;
-      if (b.jump.startsWith('ds') && !has('mark', 'segno')) out.push({ bar: i, problem: 'noSegno' });
-      if (/Fine$/.test(b.jump) && !has('end', 'fine')) out.push({ bar: i, problem: 'noFine' });
-      if (/Coda$/.test(b.jump) && !has('end', 'toCoda')) out.push({ bar: i, problem: 'noToCoda' });
-      if (/Coda$/.test(b.jump) && !has('mark', 'coda')) out.push({ bar: i, problem: 'noCoda' });
+      const J = TC.jumpInfo(b.jump);
+      if (J.to === 'segno' && !has('mark', 'segno')) out.push({ bar: i, problem: 'noSegno' });
+      if (J.to === 'segnoSegno' && !has('mark', 'segnoSegno')) out.push({ bar: i, problem: 'noSegnoSegno' });
+      if (J.al === 'fine' && !has('end', 'fine')) out.push({ bar: i, problem: 'noFine' });
+      if (J.al === 'coda' && !has('end', 'toCoda')) out.push({ bar: i, problem: 'noToCoda' });
+      if (J.al === 'coda' && !has('mark', 'coda')) out.push({ bar: i, problem: 'noCoda' });
+      if (J.al === 'doubleCoda' && !has('end', 'toDoubleCoda')) out.push({ bar: i, problem: 'noToDoubleCoda' });
+      if (J.al === 'doubleCoda' && !has('mark', 'doubleCoda')) out.push({ bar: i, problem: 'noDoubleCoda' });
     });
     return out;
   };
@@ -571,9 +584,15 @@
   SC.unfold = function (doc) {
     const order = SC.playOrder(doc);
     const headers = [], tracks = doc.tracks.map(() => []);
+    // the tempo each written bar is played in (a jump back to before a tempo change takes the tempo there)
+    let run = doc.meta.tempo;
+    const tempoOf = doc.bars.map((b) => (run = b.tempo || run));
+    let prevTempo = doc.meta.tempo;
     for (const o of order) {
       const h = TC.clone(doc.bars[o.bar]);
       Object.assign(h, { repeatStart: false, repeatEnd: 0, volta: null, lineBreak: false, mark: '', end: '', jump: '', jumpRep: false });
+      h.tempo = headers.length && tempoOf[o.bar] !== prevTempo ? tempoOf[o.bar] : headers.length ? null : h.tempo;
+      prevTempo = tempoOf[o.bar];
       headers.push(h);
       doc.tracks.forEach((t, k) => {
         const bar = TC.clone(t.bars[SC.sourceBar(doc, o.bar, t)]);

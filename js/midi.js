@@ -40,7 +40,7 @@
     const map = TC.kits.map(target), by = new Map(map.entries.map((e) => [e.inote, e]));
     const pick = (id) => {
       const n = (target.assign[id] || [])[0];
-      return n === undefined ? null : { note: n, ch: (by.get(n) || {}).channel || 0 };
+      return n === undefined ? null : { note: n, ch: TC.kits.channel(by.get(n)) };
     };
     let k = pick(art.id);
     if (k) return k;

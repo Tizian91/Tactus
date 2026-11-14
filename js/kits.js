@@ -81,7 +81,9 @@
   };
 
   /** A key without a real name ("", "-", Cubase's "Sound 12"). */
-  K.noName = (e) => !e.name || e.name.trim() === '-' || /^sound \d+$/i.test(e.name);
+  K.noName = (e) => !e.name || /^-+$/.test(e.name.trim()) || /^sound \d+$/i.test(e.name);
+  /** MIDI channel of a key: -1 in a drum map means "the track's channel" - drums: channel 10 (9). */
+  K.channel = (e) => (e && e.channel >= 0 && e.channel <= 15 ? e.channel : 9);
 
   /**
    * Keys of a profile's drum map that can be chosen (in Cubase's order): named ones, and unnamed
@@ -109,6 +111,31 @@
     }
     return { id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, mapName: name,
       drm: C.blank(name), assign, blank: true };
+  };
+
+  /**
+   * Ready-made profiles for free drum VSTs (keys taken from the makers' key charts; no file of the
+   * maker is shipped). Kit profiles → "New from template…".
+   */
+  K.TEMPLATES = [
+    { id: 'gm', name: 'General MIDI (Groove Agent SE, Windows …)', gm: true },
+    {
+      id: 'mt-power-drum-kit-2', name: 'MT Power Drum Kit 2',
+      // Manda Audio, free; Kick 36, Snare 38 (+39, 40), Side-stick 37, Toms Hi 48 (+50) / Mid 45 (+47) / Low 41 (+43),
+      // Hi-hat closed 42 (+62, 63) / half 44 (+61) / open 46 (+60) / pedal 65, Crash R (main) 57 / choked 58, Crash L 49,
+      // Splash 55, China 52, Ride 51 / bell 53
+      assign: { 36: [36], 38: [38, 39, 40], 37: [37], 48: [48, 50], 47: [45, 47], 43: [41, 43],
+        42: [42, 62, 63], 92: [44, 61], 46: [46, 60], 44: [65], 49: [57], 97: [58], 57: [49], 55: [55], 52: [52], 51: [51], 53: [53] },
+    },
+  ];
+  /** A new profile from a template (its own id; the drum map for Cubase is made from the instruments). */
+  K.fromTemplate = function (id) {
+    const t = K.TEMPLATES.find((x) => x.id === id);
+    if (!t) return null;
+    const q = K.blank(t.name, !!t.gm);
+    if (t.assign) q.assign = JSON.parse(JSON.stringify(t.assign));
+    q.template = t.id;
+    return q;
   };
 
   /** Assignment guessed from the key names (and known misleading names of a map). */
@@ -370,7 +397,7 @@
   function audition(p, note) {
     const e = K.map(p).entries.find((x) => x.inote === note);
     if (TC.midiOut && TC.midiOut.active()) {
-      TC.midiOut.sendKey(note, e ? e.channel : 9);
+      TC.midiOut.sendKey(note, K.channel(e));
       return;
     }
     const art = K.artOfKey(p, note);
@@ -394,7 +421,7 @@
       body = `<div class="kit-empty"><p>${tr('No kit profile yet.')}</p>
         <p class="hint">${tr('Load the Cubase drum map of your drum VST (.drm). Tactus guesses from the key names which key is which instrument; you only correct what does not fit.')}</p>
         <p class="hint">${tr('No drum map from the maker? Start without one: General MIDI is filled in, you check each key by ear (▶) and correct it.')}</p>
-        <button type="button" data-k="new">${tr('Load drum map…')}</button> <button type="button" data-k="blank">${tr('New without drum map…')}</button></div>`;
+        <button type="button" data-k="new">${tr('Load drum map…')}</button> <button type="button" data-k="blank">${tr('New without drum map…')}</button> <button type="button" data-k="template">${tr('New from template…')}</button></div>`;
     } else if (view === 'keys') {
       // one row per key, in the order of the maker's key chart: key, ▶, which instrument
       const artOpts = (sel) => `<option value="">—</option>` + K.rows().map((a) =>
@@ -439,6 +466,7 @@
         ${K.list.length ? `<select data-k="pick">${opts}</select>` : ''}
         <button type="button" data-k="new">${tr('New from drum map…')}</button>
         <button type="button" data-k="blank">${tr('New without drum map…')}</button>
+        <button type="button" data-k="template">${tr('New from template…')}</button>
         ${p && TC.state.doc && K.current(TC.state.doc) !== p ? `<button type="button" data-k="use" class="primary">${tr('Use for this score')}</button>` : p ? `<span class="muted">✓ ${tr('used by this score')}</span>` : ''}
         ${p ? `<button type="button" data-k="copy">${tr('Copy')}</button><button type="button" data-k="rename">${tr('Rename…')}</button><button type="button" class="danger" data-k="delete">${tr('Delete')}</button>` : ''}
       </div>
@@ -511,6 +539,18 @@
         cur = q.id;
         view = 'keys';
         changed();
+        break;
+      }
+      case 'template': {
+        // free drum VSTs: a profile with the keys already set
+        const r = b.getBoundingClientRect();
+        TC.menu.open(K.TEMPLATES.map((t) => ({ label: t.name, action: () => {
+          const q = K.fromTemplate(t.id);
+          K.list.push(q);
+          cur = q.id;
+          view = 'arts';
+          changed();
+        } })), r.left, r.bottom + 2);
         break;
       }
       case 'play':

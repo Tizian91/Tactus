@@ -111,10 +111,13 @@
 
   /** Which instrument an entry is, from its name (falls back to the technique for unnamed hi-hats). */
   C.roleOf = function (e) {
-    const n = e.name.toLowerCase().replace(/hi-hat|hi hat/g, 'hihat').replace(/\s+/g, ' ').trim();
-    if (!n || n === '-' || /^sound \d+$/.test(n)) return null;
-    // pattern / style keys of UJAM and Groove Agent (Intro, Kick A …): no display note, no instrument
-    if (e.display === 0 && e.inote !== 0 && !e.instrument) return null;
+    // "(Snare)": a second key of the same sound (MT Power Drum Kit)
+    const n = e.name.toLowerCase().replace(/hi-hat|hi hat/g, 'hihat').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!n || /^-+$/.test(n) || /^sound \d+$/.test(n)) return null;
+    // pattern / style keys of UJAM and Groove Agent (Intro, Kick A, Fill 2 …): no display note, no instrument,
+    // a section name or a letter at the end (other keys without a display note are instruments, e.g. "Hi-Hat Pedal")
+    if (e.display === 0 && e.inote !== 0 && !e.instrument &&
+      (/\b(intro|verse|chorus|bridge|fill|ending|outro|break|style|pattern|groove|stop|part|var)\b/.test(n) || /\s[a-h]\d?$/.test(n) || !/kick|bass ?drum|snare|hihat|tom|crash|ride|chin[ae]|splash|cowbell|clap|stick|shaker|tamb/.test(n))) return null;
     const tom = (role) => {
       if (/rim ?shot/.test(n)) return role + ':rimshot';
       if (/rim only|rim click/.test(n)) return role + ':rim';
@@ -127,6 +130,9 @@
     if (cym) return ['crash1', 'ride', 'crash2'][cym[1] - 1];
     const t = /^tom ([lmh])\b/.exec(n);
     if (t) return { l: 'tomLow', m: 'tomMid', h: 'tomHigh' }[t[1]];
+    // "Tom Hi / Mid / Low" (MT Power Drum Kit)
+    const t2 = /^tom (hi|high|mid|middle|lo|low)\b/.exec(n);
+    if (t2) return tom(/^h/.test(t2[1]) ? 'tomHigh' : /^m/.test(t2[1]) ? 'tomMid' : 'tomLow');
     const fx = /^fx ([12])\b/.exec(n);
     if (fx) return fx[1] === '1' ? 'clapPerc' : 'tambourine';
     if (/^snare 2$/.test(n)) return 'snare2';
@@ -136,7 +142,7 @@
       if (/open/.test(n)) return /open (tip |edge )?[01]\b/.test(n) ? 'hhHalf' : 'hhOpen';
       return 'hhClosed';
     }
-    if (/side ?stick/.test(n)) return 'sidestick';
+    if (/side[ -]?stick|cross ?stick/.test(n)) return 'sidestick';
     if (/snares off|clap/.test(n)) return 'clap';
     if (/shaker/.test(n)) return 'shaker';
     if (/tambourine|tamburin/.test(n)) return 'tambourine';

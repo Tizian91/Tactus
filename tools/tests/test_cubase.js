@@ -49,4 +49,10 @@ ${[item(20, 20, 0, 0, 'Intro'), item(28, 28, 0, 0, 'Kick A'), item(36, 36, 62, 0
   const role = (name) => C.roleOf({ name, inote: 50, display: 50, instrument: '' });
   T.eq('BeatMaker slots', ['Kick 1', 'Kick 2', 'Snare 2', 'Snare 3, Clap', 'HiHat 1', 'HiHat 2', 'HiHat 3', 'Tom L', 'Tom H, Fx, Perc', 'FX 1, Bass, Perc', 'FX 2, Perc', 'Cym 1', 'Cym 2', 'Cym 3', 'Verse 1', 'Fill 2'].map(role),
     ['kick', 'kick2', 'snare2', 'clap', 'hhClosed', 'hhHalf', 'hhOpen', 'tomLow', 'tomHigh', 'clapPerc', 'tambourine', 'crash1', 'ride', 'crash2', null, null]);
+  // MT Power Drum Kit 2: hyphen, "Tom Hi", second keys in brackets, keys without a display note that are instruments
+  const noDisp = (name) => C.roleOf({ name, inote: 60, display: 0, instrument: '' });
+  T.eq('MT Power Drum Kit names', ['SIDE-STICK', 'TOM HI', 'TOM MID', 'TOM LOW', '(Tom Low)', '(Snare)', 'CRASH R (main Crash) ', 'CRASH L'].map(role),
+    ['sidestick', 'tomHigh', 'tomMid', 'tomLow', 'tomLow', 'snare', 'crash1', 'crash2']);
+  T.eq('no display note: an instrument name counts, pattern keys do not', ['Hi-Hat Pedal', 'CRASH R CHOKED', 'Kick A', 'Intro', 'Fill 2', '---'].map(noDisp),
+    ['hhPedal', 'crash1:muted', null, null, null, null]);
 };

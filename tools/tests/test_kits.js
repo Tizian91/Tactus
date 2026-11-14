@@ -114,4 +114,14 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   K.list = [];
   K.load();
   T.eq('saved in the browser and loaded again', K.list.length, 2);
+
+  // templates for free drum VSTs
+  const mt = K.fromTemplate('mt-power-drum-kit-2');
+  T.ok('template: only known instruments, every key once', Object.keys(mt.assign).every((id) => TC.drums.byId(+id)) &&
+    new Set(Object.values(mt.assign).flat()).size === Object.values(mt.assign).flat().length);
+  T.eq('template: MT Power Drum Kit keys (kick, snare, pedal, main crash)', [mt.assign[36], mt.assign[38][0], mt.assign[44], mt.assign[49]], [[36], 38, [65], [57]]);
+  const mtDrm = C.parse(K.toDrm(mt));
+  T.eq('template: drum map for Cubase with named keys', ['36', '57', '65'].map((n) => mtDrm.entries.find((e) => e.inote === +n).name), ['Kick', 'Crash high', 'Pedal hi-hat']);
+  T.eq('template General MIDI: GM keys', K.fromTemplate('gm').assign[38], [38]);
+  T.eq('drum map channel -1 ("the track\'s channel") plays on channel 10', [K.channel({ channel: -1 }), K.channel({ channel: 3 }), K.channel(null)], [9, 3, 9]);
 };

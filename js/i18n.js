@@ -47,6 +47,7 @@
     'Which key of your drum VST is which instrument; drum maps for Cubase': 'Welche Taste deines Drum-VSTs welches Instrument ist; Drummaps für Cubase',
     'Kit profiles': 'Kit-Profile',
     'Kit profiles…': 'Kit-Profile…',
+    'New from template…': 'Neu aus Vorlage…',
     'Automatic: {x}': 'Automatisch: {x}',
     'not played': 'nicht gespielt',
     'Play as': 'Spielen als',

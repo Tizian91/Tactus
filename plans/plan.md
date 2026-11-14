@@ -217,7 +217,7 @@ Eine Regel für Maus, Stift und Finger:
 
 1. ~~Kopf auf Folgeseiten, Seitenränder~~ ✅  2. ~~Mehrtaktpausen~~ ✅  3. ~~Tempo-Übersicht, Klang-Umschalter, Profil-Prüfung~~ ✅
 4. ~~Wiederholungen & Sprünge (D.S. / D.C. / Coda / Fine)~~ ✅
-5. ~~Samples~~ ✅ (zum Ausprobieren)  6. Vorlagen für kostenlose VSTs (MT Power Drum Kit 2, SSD 5.5 Free; Groove Agent SE = GM)
+5. ~~Samples~~ ✅ (zum Ausprobieren)  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. Drummap-Export für weitere DAWs (Reaper-Notennamen, Studio-One-Pitchlist – Formate erst prüfen)  8. Handbuch / Hilfeseite mit ⓘ-Links
 
 ## Offen zum Ausprobieren
@@ -270,3 +270,11 @@ Eine Regel für Maus, Stift und Finger:
   offene; abgestoppte Becken kurz. Ohne Aufnahme (Klatschen, Reverse-Becken): Synthesizer
 - `tools/build_samples.sh` baut `samples/*.flac` aus den Originalen (`samples-src/`, nicht im Repo; braucht ffmpeg)
 - Später evtl.: mehrere Aufnahmen pro Stufe (Round Robin) gegen den „Maschinengewehr“-Effekt bei Wirbeln
+
+## Vorlagen für kostenlose Drum-VSTs ✅ (zum Ausprobieren)
+
+- Kit-Profile → **„Neu aus Vorlage…“**: „MT Power Drum Kit 2“ (Manda Audio, kostenlos) und „General MIDI (Groove Agent SE, …)“.
+  Die Vorlage enthält nur Tastennummern (aus der Hersteller-Map übernommen, deren Datei wird nicht mitgeliefert);
+  „Drummap für Cubase speichern“ erzeugt die Cubase-Map mit der Tactus-Notation.
+- Drummap-Erkennung robuster: „SIDE-STICK“, „Tom Hi / Mid / Low“, Zweittasten in Klammern „(Snare)“, Instrument-Tasten
+  ohne Anzeigenote („Hi-Hat Pedal“), „---“ = ohne Name; Kanal −1 („Kanal der Spur“) spielt auf Kanal 10.

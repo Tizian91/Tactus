@@ -640,6 +640,13 @@ setTimeout(() => {
             sel.value = '48';
             sel.dispatchEvent(new Event('change', { bubbles: true }));
             ok('key view: key 47 becomes tom 2', TC.kits.list.find((q) => q.name === 'Test-Kit').assign[48].includes(47));
+            document.querySelector('.kit-dialog [data-k="template"]').click();
+            const tm = [...document.querySelectorAll('#context-menu .menu-label')].find((x) => x.textContent === 'MT Power Drum Kit 2');
+            ok('templates: menu with MT Power Drum Kit 2', !!tm);
+            tm.closest('[data-path]').click();
+            ok('template chosen: a new profile with its keys, shown in the dialog', TC.kits.list.some((q) => q.template === 'mt-power-drum-kit-2' && q.assign[44][0] === 65) &&
+              document.querySelector('.kit-dialog select[data-k="pick"]').selectedOptions[0].textContent === 'MT Power Drum Kit 2');
+            TC.kits.list = TC.kits.list.filter((q) => q.template !== 'mt-power-drum-kit-2');
             TC.kits.close();
             TC.kits.list = TC.kits.list.filter((q) => q.name !== 'Test-Kit');
             TC.kits.save = realSave;

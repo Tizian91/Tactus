@@ -136,7 +136,7 @@
       }
     }
     if (!I.locked(e) || isMelody(track)) {
-      const head = RD.headAt(p);
+      const head = RD.headAt(p, e && e.pointerType === 'touch' ? RD.fingerReach(p) : null); // (a finger reaches further)
       if (head) return { kind: 'head', bar: head.bar, head, tick: head.tick, line: head.line };
     }
     return placeAt(p, e) || { kind: 'bar', bar: bar.i };
@@ -234,6 +234,15 @@
   const moveMin = (e) => (e.pointerType === 'touch' ? 10 : 6); // px before a press becomes a drag
   const fingerWrites = (e) => e.pointerType !== 'touch' || S.settings.fingerWrites !== false;
   const moved = (d, e) => Math.hypot(e.clientX - d.sx, e.clientY - d.sy) >= moveMin(e);
+  /**
+   * A finger / pen on a note has gone up / down by more than half a line - on a phone the lines lie closer
+   * together than the drag threshold, so one line up would else count as holding the note.
+   */
+  function stepped(d, e) {
+    if (e.pointerType === 'mouse' || d.row || d.pos0 === null || d.pos0 === undefined) return false;
+    const q = I.toLocal(e.clientX, e.clientY);
+    return !!q && Math.abs(TC.render.posAt(q.y) - d.pos0) >= 0.6 && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) >= 3;
+  }
 
   function onPointerDown(e) {
     vp.focus({ preventScroll: true });
@@ -281,7 +290,7 @@
     if (t && t.kind === 'head' && fingerWrites(e)) {
       const hit = TC.score.findNote(S.doc, t.head.id);
       if (!hit) return;
-      S.drag = Object.assign(base, { mode: 'note', t, hit, row: !touch && (e.ctrlKey || e.metaKey) });
+      S.drag = Object.assign(base, { mode: 'note', t, hit, row: !touch && (e.ctrlKey || e.metaKey), pos0: p ? TC.render.posAt(p.y) : null });
       holdTimer = setTimeout(armRow, NOTE_HOLD_MS);
       return;
     }
@@ -334,7 +343,7 @@
       case 'move': return moveMove(e);
       case 'write': return dragWrite(e);
       case 'note':
-        if (!moved(d, e)) return;
+        if (!moved(d, e) && !stepped(d, e)) return;
         clearTimeout(holdTimer);
         // held (or Ctrl): the first movement decides - sideways a row, up / down the strength
         // (melody: up / down ♯ / ♭, sideways its length)
@@ -348,7 +357,7 @@
       case 'erase': return eraseMove(e);
       case 'rect': return rectMove(e);
       case 'sel':
-        if (!moved(d, e)) return;
+        if (!moved(d, e) && !stepped(d, e)) return;
         clearTimeout(holdTimer);
         d.mode = 'smove';
         return selMove(e);
@@ -889,9 +898,9 @@
   // select
 
   function startSelect(e) {
-    const p = I.toLocal(e.clientX, e.clientY), head = p && TC.render.headAt(p);
+    const p = I.toLocal(e.clientX, e.clientY), head = p && TC.render.headAt(p, e.pointerType === 'touch' ? TC.render.fingerReach(p) : null);
     const add = !!(e.shiftKey || e.ctrlKey || e.metaKey);
-    const base = { id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e, add };
+    const base = { id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e, add, pos0: p ? TC.render.posAt(p.y) : null };
     if (head) {
       const hit = TC.score.findNote(S.doc, head.id);
       if (!hit) return;

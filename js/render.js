@@ -460,17 +460,29 @@
   RD.posAt = (y) => y / (SP / 2);
 
   /** The drawn notehead nearest to a point in staff coordinates (within reach, on the staff of p.track), or null. */
-  RD.headAt = function (p) {
-    let best = null, bd = 0.85 * SP;
+  RD.headAt = function (p, reach) {
+    // reach: { rx, ry } - how far from a head (world units) it is still hit; default for mouse and pen
+    const rx = reach ? reach.rx : 0.85 * SP / 0.8, ry = reach ? reach.ry : 0.85 * SP;
+    let best = null, bd = 1;
     for (const h of RD.layout ? RD.layout.heads : []) {
       if (p.track && h.track !== p.track) continue;
-      const d = Math.hypot((p.x - h.x) * 0.8, p.y - h.y);
+      const d = Math.hypot((p.x - h.x) / rx, (p.y - h.y) / ry); // < 1: inside the ellipse
       if (d < bd) {
         bd = d;
         best = h;
       }
     }
     return best;
+  };
+  /**
+   * The reach of a finger on a head at point p (staff coordinates): wider than with a mouse - sideways about
+   * 26 px on the screen, but never more than half a grid cell (the next place stays free to write); up / down
+   * a little more, but under two lines (a third above a note can still be added as a chord).
+   */
+  RD.fingerReach = function (p) {
+    const zoom = (S.doc.view && S.doc.view.zoom) || 1, b = RD.layout && RD.barAt(p.x);
+    const cell = b ? RD.layout.grid * b.scale : 3 * SP;
+    return { rx: Math.max(0.85 * SP / 0.8, Math.min(26 / zoom, cell / 2)), ry: Math.max(0.85 * SP, Math.min(16 / zoom, 0.95 * SP)) };
   };
 
   // ---- Drawing --------------------------------------------------------------------------

@@ -46,7 +46,7 @@ Song-Datenbanken.
 | **2: Notenblatt** | Seitenansicht A4 mit Zeilen- und Seitenumbruch, Kopf mit Titel / Interpret / Tempo, **PDF** über den Druckdialog (wie MindMapper `printPages`), Takt-Texte, Taktnummern, Velocity, Wiederholungen | ✅ Seitenansicht + PDF (Velocity, Wiederholungen offen) |
 | **3: Wiedergabe** | Web Audio: synthetisierte Schlagzeugklänge (später eingebettete Samples), mitlaufender Cursor, Metronom, Schleife, Tempo | ✅ Grundfunktion fertig (Samples später) |
 | **4: Teilen & Austausch** | ~~GitHub Pages~~ ✅ (https://tizian91.github.io/Tactus/), Teilen per Link (Stück komprimiert im `#`-Teil der Adresse), MIDI-Export, MusicXML-Export (Import in Guitar Pro) | |
-| **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | |
+| **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | ✅ Melodie-Spur (Schritt A), weiter mit Stufenakkorden, Klaviersystem, Liedtext – siehe „Phase 5 – Melodien“ |
 | **6: Tabulatur** | Saiten / Bünde, Stimmungen, Tabulatur unter dem Notensystem, Bend / Slide | |
 | **7: Extras** | .gp-Export (Guitar Pro 7/8), MIDI-Eingang (Aufnahme), Kopieren / Einfügen von Takten, Volta-Klammern | |
 
@@ -308,7 +308,7 @@ Schritte:
   „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
   `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
 
-## Phase 5 – Melodien (geplant, noch nicht begonnen)
+## Phase 5 – Melodien (Schritt A ✅ – als Nächstes: Schritt B)
 
 Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben eine **Gesangsmelodie aus dem Kopf** schnell als Noten
 festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Einspielen (dafür gibt es die DAW).
@@ -316,7 +316,38 @@ festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Eins
 **Leitlinie:** Eine neue Spur „Melodie“ geht sofort ohne Einrichtung (Violinschlüssel, C-Dur, weicher Klang). Tonleiter, Schlüssel,
 Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der Anschlag Feinschliff.
 
-**Schon da:** Spur-Arten `pitched` / `tab` und `note.pitch` im Datenmodell (`js/model.js`), Haltebögen für Nicht-Schlagzeug in
+**Reihenfolge:** A ✅ → **B Stufenakkorde** → E Klaviersystem → C Liedtext → D Komfort.
+
+### Stand 2026-11-15 (für die Weiterarbeit)
+
+- **Schritt A ist fertig und online** (gepusht, GitHub Pages). Der Nutzer testet auf Tablet / Handy; Rückmeldung zu den Fingern
+  und zu den Klängen steht noch aus (siehe „Offen zum Ausprobieren“).
+- **Nach dem ersten Test auf dem Tablet / Handy behoben:**
+  - Noten-Panel der Melodie: die Akzent-Knöpfe waren leer (Notenschrift-Zeichen beim Kopieren verloren – Zeichen der Notenschrift
+    immer als `\uE…` schreiben), Akzent auch für die nächsten Noten, Knopf „⁀ Haltebogen zur nächsten Note“ bei ausgewählter Note.
+  - Synth: eine kurze Note wartet nicht mehr auf ein langsames Einschwingen (eine Flächen-Achtel schwoll nach ihrem Ende an und
+    brach ab); jeder der 21 Klänge hat eigene Einstellungen (`SOUND` in `js/audio.js`: Filterschwung, Vibrato) – Klänge einer
+    Gruppe klangen vorher gleich.
+  - Notenwert / Punktiert / Triole mit Auswahl ändern **nur die ausgewählten Noten** (wie Akzent und Instrument; vorher auch die
+    Einstellung für die nächsten Noten – wirkte, als merke sich eine Position die Länge). Das Panel zeigt den Wert der Auswahl.
+  - Finger (Handy): Fangbereich einer Note größer (seitlich ~26 px, höchstens eine halbe Rasterzelle; hoch / runter knapp unter zwei
+    Linien, damit eine Terz als Akkordton setzbar bleibt; `RD.fingerReach`); eine halbe Linie hoch / runter verschiebt schon
+    (`stepped` in `js/interaction.js` – die Linien liegen auf dem Handy enger als die 10-px-Ziehschwelle). **Falls das nicht reicht:**
+    Regel umdrehen – nah an einer Note gewinnt beim Finger immer die Note, neue Noten nur auf freien Stellen.
+- **Wo was steht:** `js/pitch.js` (Tonleitern, Linien, Vorzeichen, Schreibweise, Schlüssel, Stimmlagen, `spellBar`), `js/model.js`
+  (Melodie-Spur, `scaleAt` / `setScale`, Ketten: `tiedFrom` / `tiedTo` / `nextNote` / `tieChain` / `tiedOn` / `setMelodyLength` /
+  `melodyRoom`, `TC.MELODY_SOUNDS` / `soundFamily`, `valueOfTicks`), `js/render.js` (`pitchInfo`, Vorzeichen, `drawPitchMap`,
+  `tieArc`, Längen-Vorschau), `js/interaction.js` (Melodie-Gesten: `pitchAt`, `aimMelody`, `dragLength`, `beginAlter` / `beginLen`,
+  `melodyMenu`), `js/audio.js` (`FAMILY`, `SOUND`, `AU.tone`), `js/panel.js` (`melodyNoteSection`, `melodyTrackRows`),
+  `js/storage.js` (`melodyDoc`), Handbuch Kapitel 8.
+- **Tests:** `tools/tests/test_pitch.js`, `test_melody.js`, `test_ties.js` (zusammen 546 Prüfungen grün, Lauf siehe
+  `tools/tests/README.md`; VS Code liegt hier unter `H:\Programmierung\Microsoft VS Code\Code.exe`), Klick-Test `tools/uitest` (231 ok).
+- **Ausprobieren ohne Hände:** Szenen-Skript wie `tools/help/shots.js` + Kopie von `tools/uitest/index.html`, Edge headless
+  (`--virtual-time-budget`, Screenshot / `--dump-dom`). Klänge messen: `OfflineAudioContext` statt `AudioContext` unterschieben und
+  per DevTools-Protokoll (`--remote-debugging-port`, eigenes `--user-data-dir`, nur diese Edge-Prozesse beenden) auslesen – mit
+  virtueller Zeit rendert der Offline-Puffer nicht.
+
+**Schon da (vor Phase 5):** Spur-Arten `pitched` / `tab` und `note.pitch` im Datenmodell (`js/model.js`), Haltebögen für Nicht-Schlagzeug in
 `rhythm.js`, Kanal / Programm / MIDI-Ausgang pro Spur.
 
 ### Entscheidungen
@@ -359,7 +390,7 @@ gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synt
    angebunden = klingt weiter, nur wenn davor derselbe Ton bis zum Taktende klang (Wiederholung springt zurück: neu angeschlagen).
    Teil der Kette auf anderen Ton: der Bogen löst sich. Kein Bogen in einen %-Takt.
 2. ✅ **Verlängern stoppt an der nächsten Note** (gebaut: Strich in der Vorschau, Statuszeile „bis zur nächsten Note“, Länge als „1 Takt + 2 Viertel“; nicht überschreiben, nicht schieben) – die Vorschau zeigt die Grenze.
-3. ✅ **Klang wählen** (Panel „Klang“: 21 Klänge in 6 Gruppen = GM-Programm, `TC.MELODY_SOUNDS`; der Tactus-Synth spielt 13 Familien – Klavier klingt aus, Streicher / Fläche schwellen an …; beim Wählen hörbar).
+3. ✅ **Klang wählen** (Panel „Klang“: 21 Klänge in 6 Gruppen = GM-Programm, `TC.MELODY_SOUNDS`; der Tactus-Synth spielt 13 Familien – Klavier klingt aus, Streicher / Fläche schwellen an …; dazu eigene Einstellungen je Klang (Filterschwung, Vibrato); beim Wählen hörbar).
 4. ✅ **Oktaven und Tastatur:** Noten-Panel „Oktave höher / tiefer“; ↑ ↓ nächste Linie (Ton der Tonleiter), Alt+↑ ↓ Halbton, Strg+↑ ↓
    Oktave (angebundene Noten wandern mit); Auswahl-Werkzeug verschiebt Melodie-Noten auch in der Höhe (nach Linien). **Zurückgestellt:**
    Notennamen per Buchstabe (A–G) – die Buchstaben sind belegt (A Akzent, G Ghost, E Radierer, C / F Crash / Standtom …).
@@ -504,6 +535,13 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase)
 - Mehrere Spuren mit MIDI: je Spur eigener loopMIDI-Port / Kanal in Cubase; MIDI-Export „eine Datei pro Spur“ und „alle in einer“
   in Cubase importieren
+- **Melodie auf Tablet / Handy** (Rückmeldung steht aus):
+  1. Note antippen statt versehentlich eine neue setzen – reicht der größere Fangbereich? (sonst: „Note gewinnt“, siehe Stand Phase 5)
+  2. Eine Linie hoch / runter ziehen, ohne dass es als Halten zählt?
+  3. Seitlich ziehen für die Länge, über den Taktstrich (Haltebogen); halten + hoch / runter für ♯ / ♭
+  4. Klingen die 21 Klänge brauchbar und unterscheidbar (v. a. Gitarren, Bässe, Fläche bei kurzen Noten)?
+- **MusicXML mit Melodie in Guitar Pro** (bisher nur automatisch geprüft): Tonhöhen, Tonart, Schlüssel (auch Tenor), Haltebögen
+  über den Taktstrich, Programm
 
 ## Wiedergabe über Cubase (Web MIDI) ✅ (getestet)
 

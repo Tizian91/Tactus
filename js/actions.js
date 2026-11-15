@@ -12,29 +12,63 @@
   // ---- Input (what the next click writes) ---------------------------------------------
 
   /** Note value 1 … 64. With notes selected: they get the new length. */
+  // Note value, dotted, triplet: with notes selected they change the selected notes only (starting from the
+  // value of the first one), otherwise they are the setting for the next notes - like accent and instrument.
   A.setValue = function (v) {
     v = Number(v);
     if (!TC.VALUES.includes(v)) return;
+    if (S.selection.size) {
+      const cur = selectedValue();
+      return setSelectedValue({ value: v, dotted: cur.dotted, triplet: cur.triplet && v > 1 });
+    }
     S.input.value = v;
     if (S.input.value <= 1) S.input.triplet = false;
-    applyDurationToSelection();
     TC.refresh();
   };
   A.toggleDotted = function () {
+    if (S.selection.size) {
+      const cur = selectedValue();
+      return setSelectedValue({ value: cur.value, dotted: !cur.dotted, triplet: false });
+    }
     S.input.dotted = !S.input.dotted;
     if (S.input.dotted) S.input.triplet = false;
-    applyDurationToSelection();
     TC.refresh();
   };
   A.toggleTriplet = function () {
+    if (S.selection.size) {
+      const cur = selectedValue();
+      return setSelectedValue({ value: cur.value, dotted: false, triplet: !cur.triplet && cur.value > 1 });
+    }
     S.input.triplet = !S.input.triplet;
     if (S.input.triplet) S.input.dotted = false;
-    applyDurationToSelection();
     TC.refresh();
   };
-  function applyDurationToSelection() {
-    if (!S.selection.size) return;
-    TC.score.setDuration(S.doc, selectedIds(), TC.inputTicks(S.input));
+  /**
+   * The value of the first selected note ({ value, dotted, triplet }; a melody note: its tied chain as a whole),
+   * or - if its length is no single note value - the setting for the next notes.
+   */
+  function selectedValue() {
+    const id = selectedIds()[0], h = id && TC.score.findNote(S.doc, id);
+    if (!h) return { value: S.input.value, dotted: !!S.input.dotted, triplet: !!S.input.triplet };
+    const ticks = h.note.pitch !== undefined ? TC.score.chainTicks(TC.score.tieChain(S.doc, id)) : h.ev.dur;
+    return TC.valueOfTicks(ticks) || { value: S.input.value, dotted: !!S.input.dotted, triplet: !!S.input.triplet };
+  }
+  TC.actions.selectedValue = selectedValue;
+  /** The selected notes get this value (melody: a tied chain as a whole, tied on over the bar line if it needs to). */
+  function setSelectedValue(v) {
+    const ticks = TC.inputTicks(v), drums = [], seen = new Set();
+    for (const id of selectedIds()) {
+      const ch = TC.score.tieChain(S.doc, id), h = ch[0];
+      if (!h) continue;
+      if (h.note.pitch === undefined) {
+        drums.push(id);
+        continue;
+      }
+      if (seen.has(h.ev)) continue; // (a chord: once)
+      seen.add(h.ev);
+      TC.score.setMelodyLength(S.doc, h.track, h.bar, h.voice, h.ev, ticks);
+    }
+    if (drums.length) TC.score.setDuration(S.doc, drums, ticks);
     TC.commit();
   }
 

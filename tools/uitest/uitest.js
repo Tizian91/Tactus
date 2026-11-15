@@ -140,6 +140,19 @@ setTimeout(() => {
   drawRow(9, [320, 640, 960, 1280, 1600, 1920, 2240, 2560], -1);
   TC.actions.toggleTriplet();
   ok('drag triplet eighths (3/4): 9 ' + voice(9, 0).length, voice(9, 0).length === 9 && voice(9, 0).every((s) => s.split(':')[1] === '320'));
+  {
+    // a note selected: the value buttons change it only, the setting for the next notes stays
+    const v9 = S.doc.tracks[0].bars[9].voices[0], last = v9[v9.length - 1], before = JSON.stringify(S.input);
+    S.selection = new Set([last.notes[0].id]);
+    TC.actions.setValue(32);
+    TC.actions.toggleDotted();
+    const now = S.doc.tracks[0].bars[9].voices[0].slice(-1)[0];
+    ok('selected note: value buttons change it only (dotted 32nd = ' + now.dur + '), the next notes keep theirs', now.dur === 180 && JSON.stringify(S.input) === before);
+    TC.actions.undo();
+    TC.actions.undo();
+    S.selection.clear();
+    TC.refresh();
+  }
   // copy / paste / simile
   TC.actions.copyBar(5);
   TC.actions.pasteBar(7);

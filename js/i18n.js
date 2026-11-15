@@ -418,6 +418,7 @@
     'Triplet (T)': 'Triole (T)',
     'Click grid': 'Klick-Raster',
     'changes the selected notes': 'ändert die ausgewählten Noten',
+    'the buttons change only the selected notes': 'die Knöpfe ändern nur die ausgewählten Noten',
     Instrument: 'Instrument',
     "A click on another line writes that line's instrument.": 'Ein Klick auf eine andere Linie setzt das Instrument dieser Linie.',
     'As the drum map': 'Wie in der Drum-Map',

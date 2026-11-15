@@ -60,6 +60,16 @@
     else if (inp.dotted) t *= 1.5;
     return t;
   };
+  /** The note value of a length in ticks: { value, dotted, triplet }, or null when it is no single value (e.g. a tied one). */
+  TC.valueOfTicks = function (ticks) {
+    for (const value of TC.VALUES) {
+      for (const [dotted, triplet] of [[false, false], [true, false], [false, true]]) {
+        if (triplet && value <= 1) continue;
+        if (TC.inputTicks({ value, dotted, triplet }) === ticks) return { value, dotted, triplet };
+      }
+    }
+    return null;
+  };
   /** Grid of the clickable positions for the input settings. */
   TC.gridTicks = (inp) => {
     const t = TC.valueTicks(inp.value);

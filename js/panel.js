@@ -60,18 +60,20 @@
   }
 
   function valueSection() {
-    const inp = S.input;
+    // notes selected: their value (the buttons change them only); otherwise the setting for the next notes
+    const sel = S.selection.size ? TC.actions.selectedValue() : null;
+    const inp = sel || S.input, inpNext = S.input;
     const vals = TC.VALUES.map((v, k) => btn('setValue', v, `<span class="mus-btn">${NOTE_GLYPH[v]}</span>`, inp.value === v,
       `${tr(VALUE_NAME[v])} (${k + 1})`)).join('');
-    const grid = TC.gridTicks(inp);
-    const gridName = inp.triplet ? `1/${inp.value} ${tr('triplet')}` : inp.dotted ? `1/${inp.value * 2}` : `1/${inp.value}`;
+    const grid = TC.gridTicks(inpNext);
+    const gridName = inpNext.triplet ? `1/${inpNext.value} ${tr('triplet')}` : inpNext.dotted ? `1/${inpNext.value * 2}` : `1/${inpNext.value}`;
     return `<section><h3>${tr('Note value')}</h3>
       <div class="values">${vals}</div>
       <div class="btn-row two">
         ${btn('toggleDotted', undefined, `<span class="mus-btn sm"></span> ${tr('Dotted')}`, inp.dotted, tr('Dotted (.)'))}
         ${btn('toggleTriplet', undefined, `<b>3</b>&nbsp;${tr('Triplet')}`, inp.triplet, tr('Triplet (T)'))}
       </div>
-      <p class="hint">${tr('Click grid')}: <b>${gridName}</b> (${grid} ticks)${S.selection.size ? ' · ' + tr('changes the selected notes') : ''}</p>
+      <p class="hint">${tr('Click grid')}: <b>${gridName}</b> (${grid} ticks)${S.selection.size ? ' · ' + tr('the buttons change only the selected notes') : ''}</p>
     </section>`;
   }
 
@@ -529,7 +531,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

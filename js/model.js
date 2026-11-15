@@ -863,6 +863,78 @@
   };
 
   /**
+   * Time signature of bar `bi` alone, and the music after it moves along (e.g. a MIDI import without its time
+   * signature change: a 2/4 bar written into 4/4 bars). All notes and chord symbols from bar bi on keep their
+   * order and distance and are put into the bars again: a shorter bar pulls them forward, a longer one pushes them
+   * back (a bar is added at the end when the last one runs over). The following bars keep their time signatures; bar signs
+   * (repeats, texts, tempo) stay with their bars. %-bars from here on are written out first. A melody note that
+   * now crosses a bar line is split and tied, a drum note is cut at it.
+   */
+  SC.setTimeSigShift = function (doc, bi, ts) {
+    if (!validTs(ts) || !doc.bars[bi]) return false;
+    if (doc.bars[bi].ts.join('/') === ts.join('/')) return true;
+    const start = SC.absTick(doc, bi, 0);
+    doc.tracks.forEach((t) => { for (let i = Math.max(1, bi); i < doc.bars.length; i++) if (t.bars[i].simile) SC.setSimile(doc, t, i, false); });
+    // everything from bar bi on, counted from its start
+    let end = 0;
+    const evs = doc.tracks.map((t) => {
+      const list = [];
+      for (let i = bi; i < doc.bars.length; i++) {
+        const off = SC.absTick(doc, i, 0) - start;
+        t.bars[i].voices.forEach((v, vi) => v.forEach((ev) => {
+          list.push({ vi, at: off + ev.tick, ev });
+          end = Math.max(end, off + ev.tick + ev.dur);
+        }));
+        t.bars[i].voices = t.bars[i].voices.map(() => []);
+      }
+      return list;
+    });
+    const chords = [];
+    for (let i = bi; i < doc.bars.length; i++) {
+      const off = SC.absTick(doc, i, 0) - start;
+      (doc.bars[i].chords || []).forEach((c) => chords.push(Object.assign({}, c, { t: off + c.t })));
+      delete doc.bars[i].chords;
+    }
+    doc.bars[bi].ts = ts.slice();
+    doc.bars[bi].beam = null;
+    // room for all of it (the bars added at the end are like the last one)
+    const room = () => SC.absTick(doc, doc.bars.length, 0) - start;
+    while (room() < end) SC.insertBars(doc, doc.bars.length, 1, doc.bars[doc.bars.length - 1].ts);
+    const where = (abs) => SC.atAbs(doc, start + abs);
+    doc.tracks.forEach((t, k) => evs[k].forEach(({ vi, at, ev }) => {
+      let dur = ev.dur, first = true;
+      while (dur > 0) {
+        const p = where(at);
+        if (!p) break;
+        const L = TC.barTicks(doc.bars[p.bar].ts), d = Math.min(dur, L - p.tick);
+        const bar = t.bars[p.bar];
+        while (bar.voices.length <= vi) bar.voices.push([]);
+        const notes = first ? ev.notes : ev.notes.filter((n) => n.pitch !== undefined).map((n) => Object.assign(TC.clone(n), { id: TC.uid('n'), tie: true }));
+        if (notes.length) bar.voices[vi].push(Object.assign({}, ev, { id: first ? ev.id : TC.uid('e'), tick: p.tick, dur: d, notes }));
+        if (!notes.length || t.kind === 'drums') break; // (drums: cut at the bar line)
+        first = false;
+        at += d;
+        dur -= d;
+      }
+    }));
+    chords.forEach((c) => {
+      const p = where(c.t);
+      if (!p) return;
+      const h = doc.bars[p.bar];
+      h.chords = (h.chords || []).concat(Object.assign({}, c, { t: p.tick }));
+    });
+    for (let i = bi; i < doc.bars.length; i++) {
+      if (doc.bars[i].chords) {
+        const ch = cleanChords(doc.bars[i].chords, TC.barTicks(doc.bars[i].ts));
+        if (ch) doc.bars[i].chords = ch;
+        else delete doc.bars[i].chords;
+      }
+      doc.tracks.forEach((t) => SC.fitBar(doc, t, i));
+    }
+    return true;
+  };
+
+  /**
    * Beam groups from bar `bi` on (like the time signature: up to the next bar with another
    * time signature or other groups). groups: null = default.
    */

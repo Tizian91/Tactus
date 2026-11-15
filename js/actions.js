@@ -633,16 +633,26 @@
     const v = prompt(tr('Tempo from bar {n} (quarter notes per minute) – empty: as before', { n: i + 1 }), i === 0 ? S.doc.meta.tempo : S.doc.bars[i].tempo || '');
     if (v !== null) A.setBarTempo(v, i);
   };
-  /** Time signature "n/d" from bar i on (onlyThis: this bar alone). */
-  A.setTimeSig = function (value, i = curBar(), onlyThis = false) {
+  /**
+   * Time signature "n/d" from bar i on. mode: 'from' (up to the next change), 'only' (this bar alone),
+   * 'shift' (this bar alone, the notes after it move along); default: the choice in the bar panel.
+   */
+  A.setTimeSig = function (value, i = curBar(), mode = S.tsMode || 'from') {
     const m = /^(\d+)\s*\/\s*(\d+)$/.exec(String(value));
-    if (!m || !TC.score.setTimeSig(S.doc, i, [+m[1], +m[2]], onlyThis)) return TC.ui.hint(tr('Invalid time signature'));
+    const ts = m && [+m[1], +m[2]];
+    const ok = m && (mode === 'shift' ? TC.score.setTimeSigShift(S.doc, i, ts) : TC.score.setTimeSig(S.doc, i, ts, mode === 'only' || mode === true));
+    if (!ok) return TC.ui.hint(tr('Invalid time signature'));
     TC.pruneSelection();
     TC.commit();
   };
-  A.customTimeSig = function (i = curBar()) {
+  A.customTimeSig = function (i = curBar(), mode) {
     const v = prompt(tr('Time signature (e.g. 7/8, 11/16)'), S.doc.bars[i].ts.join('/'));
-    if (v) A.setTimeSig(v, i);
+    if (v) A.setTimeSig(v, i, mode);
+  };
+  /** How a time signature chosen in the bar panel applies: 'from' | 'only' | 'shift'. */
+  A.setTsMode = function (mode) {
+    S.tsMode = ['from', 'only', 'shift'].includes(mode) ? mode : 'from';
+    TC.refresh();
   };
   /** Beam groups "2+2+3" from bar i on ('default': as usual for the time signature). */
   A.setBeam = function (value, i = curBar()) {
@@ -1786,9 +1796,9 @@
     const play = multi && i >= R[0] && i <= R[1]
       ? { label: tr('Play bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }), action: () => TC.player.play(), shortcut: tr('Space') }
       : { label: 'Play from here', action: () => TC.player.play(i), shortcut: tr('Space') };
-    const sigs = TC.TIME_SIGS.map((ts) => ({
-      label: ts.join('/'), checked: h.ts.join('/') === ts.join('/'), action: () => A.setTimeSig(ts.join('/'), i),
-    }));
+    const sigs = (mode) => TC.TIME_SIGS.map((ts) => ({
+      label: ts.join('/'), checked: h.ts.join('/') === ts.join('/'), action: () => A.setTimeSig(ts.join('/'), i, mode),
+    })).concat(['-', { label: 'Other…', action: () => A.customTimeSig(i, mode) }]);
     const groups = TC.beamChoices(h.ts);
     const cur = (TC.beamGroups(h.ts, h.beam) || []).join('+');
     const beamItems = groups.map((g, k) => ({
@@ -1796,7 +1806,9 @@
       action: () => A.setBeam(k === 0 ? 'default' : g.join('+'), i),
     }));
     TC.menu.open([
-      { label: 'Time signature from here', submenu: sigs.concat(['-', { label: 'Other…', action: () => A.customTimeSig(i) }]) },
+      { label: 'Time signature from here', submenu: sigs('from') },
+      { label: 'Time signature of this bar only', submenu: sigs('only') },
+      { label: 'Time signature of this bar, the notes after it move along', submenu: sigs('shift') },
       beamItems.length ? { label: 'Beam groups', submenu: beamItems } : null,
       { label: 'Repeat & jump', submenu: repeatItems(i) },
       '-',

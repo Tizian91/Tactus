@@ -236,6 +236,8 @@ setTimeout(() => {
     TC.timeline.build(S.doc, { from: 1, to: 4 }).bars.map((b) => b.bar + 1).join(' ') === '2 3 4 5 2 3 4');
   TC.actions.barMenu(1, 300, 300);
   ok('bar menu: Repeat submenu', /Wiederholung beginnt hier/.test(document.getElementById('context-menu').textContent));
+  ok('bar menu: time signature of this bar only / notes move along', /Taktart nur für diesen Takt/.test(document.getElementById('context-menu').textContent) && /Noten danach rücken nach/.test(document.getElementById('context-menu').textContent));
+  ok('bar panel: "Gilt" choice', !!document.querySelector('#panel-settings select[data-action="setTsMode"]'));
   TC.menu.close();
   ok('panel: repeat controls', !!document.querySelector('#panel-settings select[data-action="setRepeatEnd"]') && !!document.querySelector('#panel-settings select[data-action="setVolta"]'));
   TC.actions.undo(); TC.actions.undo();

@@ -364,7 +364,7 @@ gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synt
 5. Handbuch-Kapitel „Melodie schreiben“, Beispielstück mit Melodie.
 
 **Entschieden:** Gesang ist einstimmig; zwei Sänger = zwei Spuren. Akkorde (gleicher Anfang, gleiche Länge) gehen in einer Stimme;
-zeitlich versetzt Überlappendes braucht eine zweite Stimme oder Haltebögen (siehe „Später“).
+zeitlich versetzt Überlappendes: klassisch mit einer zweiten Stimme, von Tactus automatisch angelegt (siehe „Später“).
 
 1. **Spur-Art Melodie** („+ Melodie“ in der Spurliste): Schlüssel (Violin, Violin 8 unten, Bass), Stimmlage (Sopran, Alt, Tenor,
    Bariton / Bass – setzt Schlüssel und Tonumfang), Tonleiter, Klang.
@@ -463,8 +463,12 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 
 - Bass / Gitarre mit Tabulatur (Phase 6), MIDI-Import von Melodien (Quantisieren, Schreibweise),
   Bindebögen / Artikulation, evtl. Vorsingen (Mikrofon erkennt die Tonhöhe).
-- **Unter einer Note durchziehen** (langes C unter einem D): automatisch geteilt und angebunden (`C ⁀ C+D`) oder automatisch eine
-  zweite Stimme (Hälse unten). **Stimme 2** in einer Notenzeile (Schalter „Stimme 1 / 2“) – nur wenn gebraucht.
+- **Eine Note länger klingen lassen als die folgenden** (langes C unter einem D) – **entschieden: klassisch mit zwei Stimmen**.
+  Wird eine Note über folgende Noten hinweg verlängert, legt Tactus sie **automatisch in Stimme 2** (Hals nach unten, echte lange
+  Note), die Melodie bleibt in Stimme 1; ohne Überlappung bleibt alles in einer Stimme. Schalter „Stimme 1 / 2“ im Panel nur zum
+  selbst Bestimmen. (Nicht mit Haltebögen `C ⁀ C+D` – unruhig, die Linie ist nicht mehr zu sehen.) Bis dahin stoppt die Note an
+  der nächsten.
+- **Klavier: Pedal-Zeichen** (*Ped.* … ✱) und *l.v.* („klingen lassen“) – die Noten bleiben kurz geschrieben, das Zeichen hält sie.
 - **Sehr niedrige Priorität:** Schritt-Eingabe per MIDI-Keyboard (dafür gibt es die DAW).
 
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)

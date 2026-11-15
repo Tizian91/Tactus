@@ -259,6 +259,23 @@
   };
 
   /** Positions of all bars and lines, the notation items of every voice. */
+  /**
+   * The scale written above the music (key signatures do not tell most of them): at bar 1 for every melody staff, and
+   * where a melody track changes its scale ("d-Moll"; several melody staves: "Vocals: d-Moll · Bass: D-Dorisch").
+   */
+  function scaleText(doc, parts, i) {
+    if (doc.page.scaleNames === false || !TC.pitch) return '';
+    const mel = parts.filter((p) => p.pitch), de = TC.getLang && TC.getLang() === 'de', P = TC.pitch;
+    const out = [];
+    mel.forEach((p) => {
+      const sc = p.pitch.scale, prev = i > 0 ? TC.score.scaleAt(p.track, i - 1) : null;
+      if (prev && prev.l === sc.l && prev.a === sc.a && prev.id === sc.id) return;
+      const name = P.scaleTitle(sc, de);
+      if (name) out.push(mel.length > 1 ? `${p.track.name}: ${name}` : name);
+    });
+    return out.join(' · ');
+  }
+
   RD.computeLayout = function () {
     const doc = S.doc, cur = TC.curTrack(), page = RD.isPage(), MARGIN = margin();
     const grid = TC.gridTicks(S.input);
@@ -285,7 +302,7 @@
       // simile / voices: of the track being written; allSimile: "%" in every staff (one % with a number)
       return { i, L, ts: h.ts, beam: h.beam, simile: own.simile, allSimile: parts.every((p) => p.simile), parts, scale, showTs, rs, re, volta: h.volta || null,
         ksW, accW, tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0) + ksW + accW, voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '',
-        chords: TC.pitch ? TC.score.chordsIn(doc, i) : [] };
+        chords: TC.pitch ? TC.score.chordsIn(doc, i) : [], scaleText: scaleText(doc, parts, i) };
     });
     const sv = staves(tracks, bars), lastSv = sv[sv.length - 1];
     const stackH = lastSv.dy + 4 * SP; // top line of the first staff to the bottom line of the last one
@@ -374,7 +391,7 @@
       }
       s.end = ux;
       if (page) {
-        const text = k === 0 || ln.some((b) => b.marker || b.tempo || b.mark || b.end || b.jump); // the first line carries the tempo
+        const text = k === 0 || ln.some((b) => b.marker || b.tempo || b.mark || b.end || b.jump || b.scaleText); // the first line carries the tempo
         const under = S.settings.showCounts || ln.some((b) => hasSticking(b.parts[lastSv.k])); // (of the lowest staff)
         // the space between two lines (above the first staff, below the last one): ⚙ → Page, % of the basic space
         const lg = (doc.page.lineGap || 100) / 100;
@@ -763,6 +780,12 @@
         // 𝄋 / ⊕, doubled for Segno Segno / Double Coda
         const g = /^segno/.test(b.mark) ? '' : '', n = b.mark === 'segnoSegno' || b.mark === 'doubleCoda' ? 2 : 1;
         o.push(`<text class="mus-sm jump-sign" x="${f(x)}" y="${f(TEXT_Y + 0.3 * SP)}"><title>${esc(TC.tr(RD.markName(b.mark)))}</title>${n > 1 ? g + `<tspan dx="${f(0.3 * SP)}">${g}</tspan>` : g}</text>`);
+      }
+      // the scale (bar 1, a change): after tempo, text and 𝄋 / ⊕
+      if (b.scaleText) {
+        const x = b.x + 0.2 * SP + (i === 0 ? TEMPO_W + swingW : b.tempo ? TEMPO_W : 0) + (b.marker ? markerW(b.marker) + 0.6 * SP : 0) +
+          (b.mark ? (b.mark === 'segnoSegno' || b.mark === 'doubleCoda' ? 3.6 : 2.2) * SP : 0);
+        o.push(`<text class="scale-name" x="${f(x)}" y="${f(TEXT_Y)}">${esc(b.scaleText)}</text>`);
       }
       // at the end of the bar: D.C. / D.S. …, Fine, To Coda ⊕ (right-aligned, the jump rightmost)
       let ex = end - 0.3 * SP;

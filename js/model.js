@@ -133,7 +133,7 @@
   });
   TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, guide: 'mark', midiOut: '', midiCh: 14 });
   TC.GUIDES = ['off', 'mark', 'lock'];
-  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true });
   // space between the staves of several tracks / between the lines of the page view, % of the basic space
   TC.STAFF_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
   TC.LINE_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
@@ -356,6 +356,7 @@
     if (TC.LINE_GAPS.includes(pg.lineGap)) doc.page.lineGap = pg.lineGap;
     if (pg.header === false) doc.page.header = false;
     if (pg.multiRest === false) doc.page.multiRest = false;
+    if (pg.scaleNames === false) doc.page.scaleNames = false;
     if (TC.SIMILE_MODES.includes(pg.simile)) doc.page.simile = pg.simile;
     else if (pg.multiSimile === false) doc.page.simile = 'single'; // older files: a switch
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];

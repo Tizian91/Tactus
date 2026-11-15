@@ -264,6 +264,7 @@ details > summary { list-style-position: outside; }
 .score .title { font-size: 26px; font-weight: 600; fill: var(--text); }
 .score .subtitle { font-size: 14px; fill: var(--label); }
 .score .tempo { font-size: 13px; font-weight: 600; fill: var(--text); }
+.score .scale-name { font-size: 13px; font-style: italic; fill: var(--text); } /* "d-Moll", "In-Sen auf D" above the music */
 .score .tuplet { font-size: 30px; }
 .score .note.sel .mus, .score .note.sel .stem { fill: var(--accent); stroke: var(--accent); }
 .score .note .hsel { fill: var(--accent); }

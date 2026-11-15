@@ -70,6 +70,7 @@ module.exports = function (T) {
   T.eq('lock: A line is no chord tone of E7', P.guideTone(33, am, e7, 'lock').chord, false);
   T.eq('off: just the scale', P.guideTone(32, am, e7, 'off'), { pitch: 67, dia: 32, a: 0, in: true, chord: false });
   T.eq('the root: every E line is marked as root of E7, the third (G♯) is not', [P.guideTone(30, am, e7, 'mark').root, P.guideTone(37, am, e7, 'mark').root, P.guideTone(23, am, e7, 'lock').root, P.guideTone(32, am, e7, 'lock').root, P.guideTone(33, am, e7, 'mark').root], [true, true, true, false, false]);
+  T.eq('scale names on the sheet', [[{ l: 1, a: 0, id: 'minor' }, true], [{ l: 3, a: 1, id: 'minor' }, true], [{ l: 1, a: 0, id: 'dorian' }, true], [{ l: 1, a: 0, id: 'inSen' }, true], [{ l: 0, a: 0, id: 'wholeTone' }, true], [{ l: 1, a: 0, id: 'major' }, true], [{ l: 1, a: 0, id: 'harmMinor' }, true], [{ l: 1, a: 0, id: 'minor' }, false], [{ l: 1, a: 0, id: 'inSen' }, false], [{ l: 0, a: 0, id: 'chromatic' }, true]].map(([s, de]) => P.scaleTitle(s, de)), ['d-Moll', 'fis-Moll', 'D-Dorisch', 'In-Sen auf D', 'Ganzton auf C', 'D-Dur', 'd-Moll harmonisch', 'D minor', 'In-Sen on D', null]);
   const isC = (l) => [0, 2, 4].includes(((l % 7) + 7) % 7); // lines 0, 2, 4, 7 … hold chord tones
   T.eq('nearest chord tone: on one; one step off; equally near: the lower, or from the side it comes from',
     [P.lockedLine(2, isC), P.lockedLine(5, isC), P.lockedLine(3, isC), P.lockedLine(3, isC, 1), P.lockedLine(3, isC, 6)], [2, 4, 4, 2, 4]);

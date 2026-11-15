@@ -574,6 +574,7 @@
       <div class="row"><label>${tr('Line spacing')}</label><select data-action="setLineGap">${gapOpts(TC.LINE_GAPS, pg.lineGap || 100, 100)}</select></div>
       <p class="hint tight">${tr('Space between the lines of the page view, where a line breaks (PDF too).')}</p>
       ${check('togglePageHeader', pg.header, tr('Title and page number on the following pages'))}
+      ${S.doc.tracks.some((t) => t.kind === 'pitched') ? check('toggleScaleNames', pg.scaleNames !== false, tr('Write the scale above the music ("D minor", "In-Sen on D")')) : ''}
       ${check('toggleMultiRest', pg.multiRest, tr('Combine empty bars (multi-bar rest)'))}
       <div class="row"><label>${tr('%-bars')}</label><select data-action="setSimileMode">${[['single', 'Each one as it is'], ['count', 'Narrow, counted (2, 3, 4 …)'], ['combine', 'One % with the number']]
         .map(([k, l]) => `<option value="${k}"${k === pg.simile ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select></div>

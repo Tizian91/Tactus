@@ -1356,6 +1356,11 @@
     TC.commit();
   };
   /** Title and "Page 2 / 3" at the top of the pages after the first (else only the number at the bottom). */
+  /** The scale written above the music (bar 1, changes). */
+  A.toggleScaleNames = function () {
+    S.doc.page.scaleNames = S.doc.page.scaleNames === false;
+    TC.commit();
+  };
   A.togglePageHeader = function () {
     S.doc.page.header = !S.doc.page.header;
     TC.commit();

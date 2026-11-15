@@ -453,6 +453,7 @@
     'To the start': 'Zum Anfang',
     'Time signature from here': 'Taktart ab hier',
     'Click': 'Klick',
+    'Write the scale above the music ("D minor", "In-Sen on D")': 'Tonleiter über die Noten schreiben („d-Moll“, „In-Sen auf D“)',
     'Screen on': 'Bildschirm an',
     'Keeps the screen of a tablet or phone from turning off': 'Verhindert, dass der Bildschirm von Tablet oder Handy ausgeht',
     'while playing and on stage': 'beim Abspielen und auf der Bühne',

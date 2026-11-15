@@ -303,6 +303,20 @@
     const s = P.scaleById(scale.id), root = P.name(scale.l, scale.a, de);
     return de ? `${root}-${s.de}` : `${root} ${s.en}`;
   };
+  /**
+   * The name of a scale as written above the music ("d-Moll", "D-Dorisch", "In-Sen auf D" / "D minor", "D Dorian",
+   * "In-Sen on D"); null for the free chromatic one (no scale to name).
+   */
+  P.scaleTitle = function (scale, de) {
+    const s = P.scaleById(scale.id), root = P.name(scale.l, scale.a, de);
+    if (s.free) return null;
+    const minor = ['minor', 'harmMinor', 'melMinor'].includes(s.id), r = de && minor ? root.toLowerCase() : root; // (German: minor keys in small letters)
+    const SHORT = { major: ['major', 'Dur'], minor: ['minor', 'Moll'], harmMinor: ['harmonic minor', 'Moll harmonisch'], melMinor: ['melodic minor', 'Moll melodisch'],
+      harmMajor: ['harmonic major', 'Dur harmonisch'] };
+    if (SHORT[s.id]) return de ? `${r}-${SHORT[s.id][1]}` : `${r} ${SHORT[s.id][0]}`;
+    if (s.group === 'modes') return de ? `${r}-${s.de}` : `${r} ${s.en}`;
+    return de ? `${s.de} auf ${r}` : `${s.en} on ${r}`;
+  };
   /** The 12 roots offered: [pc, label]. */
   P.ROOTS = [[0, 'C'], [1, 'C♯ / D♭'], [2, 'D'], [3, 'D♯ / E♭'], [4, 'E'], [5, 'F'], [6, 'F♯ / G♭'], [7, 'G'], [8, 'G♯ / A♭'], [9, 'A'], [10, 'A♯ / B♭'], [11, 'B']];
   P.ROOTS_DE = [[0, 'C'], [1, 'Cis / Des'], [2, 'D'], [3, 'Dis / Es'], [4, 'E'], [5, 'F'], [6, 'Fis / Ges'], [7, 'G'], [8, 'Gis / As'], [9, 'A'], [10, 'Ais / B'], [11, 'H']];

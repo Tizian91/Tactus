@@ -295,10 +295,12 @@
         const vEnd = h.volta && vkey(bars[i + 1]) !== vkey(h);
         const closed = vEnd && (h.repeatEnd > 1 || (bars[i + 1] && bars[i + 1].volta));
         const last = i === bars.length - 1;
-        if (h.repeatEnd > 1 || vEnd || last) {
-          o.push('<barline location="right">' + (h.repeatEnd > 1 || last ? '<bar-style>light-heavy</bar-style>' : '') +
+        // an ending going back without a :| of its own (a later ending waits): written with :|, as other programs need it
+        const back = h.repeatEnd > 1 || TC.score.endingGoesBack(doc, i);
+        if (back || vEnd || last) {
+          o.push('<barline location="right">' + (back || last ? '<bar-style>light-heavy</bar-style>' : '') +
             (vEnd ? `<ending number="${h.volta.join(', ')}" type="${closed ? 'stop' : 'discontinue'}"/>` : '') +
-            (h.repeatEnd > 1 ? `<repeat direction="backward"${h.repeatEnd > 2 ? ` times="${h.repeatEnd}"` : ''}/>` : '') + '</barline>');
+            (back ? `<repeat direction="backward"${h.repeatEnd > 2 ? ` times="${h.repeatEnd}"` : ''}/>` : '') + '</barline>');
         }
         o.push('</measure>');
       });

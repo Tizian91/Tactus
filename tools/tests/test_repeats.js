@@ -95,4 +95,16 @@ module.exports = function (T) {
   T.eq('loading: signs and jumps kept, bad ones dropped', jl.bars.map((h) => [h.mark, h.end, h.jump, h.jumpRep]),
     [['segno', '', '', false], ['', 'toCoda', '', false], ['', '', 'dsCoda', true]]);
   T.eq('unfold: jumps written out too', [SC.unfold(jd), SC.hasRepeats(jd)], [14, false]);
+
+  // an ending without :| while a later ending waits goes back (1.–2. :| 4×, 3. without :|, 4.)
+  const four = score(5, (b) => { b[0].repeatStart = true; b[1].volta = [1, 2]; b[1].repeatEnd = 4; b[2].volta = [3]; b[3].volta = [4]; });
+  T.eq('1.–2. :| 4×, 3., 4.: four passes, the 4th ending is played', order(four), "1 2 1' 2' 1'' 3'' 1''' 4''' 5");
+  T.ok('the 3rd ending goes back, the 4th not', SC.endingGoesBack(four, 2) && !SC.endingGoesBack(four, 3) && !SC.endingGoesBack(four, 1));
+  T.eq('[1] :|, [2] as before (no extra pass)', order(score(4, (b) => { b[0].repeatStart = true; b[1].volta = [1]; b[1].repeatEnd = 2; b[2].volta = [2]; })), "1 2 1' 3' 4");
+  T.eq('a forgotten :| after the 1st ending: still back to |:', order(score(4, (b) => { b[0].repeatStart = true; b[1].volta = [1]; b[2].volta = [2]; })), "1 2 1' 3' 4");
+  T.eq('a two-bar 3rd ending goes back after its last bar', order(score(6, (b) => { b[0].repeatStart = true; b[1].volta = [1, 2]; b[1].repeatEnd = 4; b[2].volta = [3]; b[3].volta = [3]; b[4].volta = [4]; })),
+    "1 2 1' 2' 1'' 3'' 4'' 1''' 5''' 6");
+  T.eq('the standard way: :| at the end of the 3rd ending too - the same four passes', order(score(5, (b) => { b[0].repeatStart = true; b[1].volta = [1, 2]; b[1].repeatEnd = 4; b[2].volta = [3]; b[2].repeatEnd = 2; b[3].volta = [4]; })),
+    "1 2 1' 2' 1'' 3'' 1''' 4''' 5");
+  T.eq('[1, 2] :| 3× without a later ending: still three times through', order(score(4, (b) => { b[0].repeatStart = true; b[1].volta = [1, 2]; b[1].repeatEnd = 3; })), "1 2 1' 2' 1'' 3'' 4''");
 };

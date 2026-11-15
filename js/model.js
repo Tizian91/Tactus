@@ -894,6 +894,21 @@
    *                  Fine and To Coda count only after the jump.
    *   D.S.S.        the same, back to the 𝄋𝄋 bar (Segno Segno); "al Double Coda": at To Double Coda on to the ⊕⊕ bar
    */
+  /**
+   * Does bar i - the last bar of an ending, without a repeat end of its own - go back to the repeat start after
+   * pass `pass` (default: its last pass)? Yes, if a later ending of the same group waits for a later pass: it could
+   * not be reached otherwise (written in many scores: 1.–2. :| 4×, 3. without :|, 4.).
+   */
+  SC.endingGoesBack = function (doc, i, pass) {
+    const bars = doc.bars, h = bars[i];
+    if (!h || !h.volta || !h.volta.length || h.repeatEnd > 1) return false;
+    const nx = bars[i + 1];
+    if (nx && nx.volta && nx.volta.join() === h.volta.join()) return false; // (not its last bar)
+    if (pass === undefined) pass = Math.max(...h.volta);
+    for (let j = i + 1; j < bars.length && bars[j].volta && bars[j].volta.length; j++) if (Math.max(...bars[j].volta) > pass) return true;
+    return false;
+  };
+
   SC.playOrder = function (doc) {
     const bars = doc.bars, out = [], jumps = new Map(), taken = new Set();
     let i = 0, start = 0, pass = 1, back = false, lastVolta = false;
@@ -916,6 +931,7 @@
         } else if (!volta && lastVolta && pass > 1) {
           start = i; // after the last ending: a new section
           pass = 1;
+          jumps.clear(); // (a :| n× inside earlier endings may not have counted all its passes)
         }
       }
       back = false;
@@ -942,9 +958,11 @@
       }
       if (h.repeatEnd > 1 && !once()) {
         const done = jumps.get(i) || 0;
-        if (done + 1 < h.repeatEnd) {
+        // in an ending the passes go on counting (a :| at the end of the 3rd ending: on to the 4th pass), and it goes
+        // back while a later ending waits
+        if (done + 1 < h.repeatEnd || (volta && lastEnding(i) > pass)) {
           jumps.set(i, done + 1);
-          pass = done + 2;
+          pass = volta ? pass + 1 : done + 2;
           i = start;
           back = true;
           continue;
@@ -952,6 +970,12 @@
         jumps.delete(i);
         start = i + 1;
         pass = 1;
+      } else if (volta && !once() && SC.endingGoesBack(doc, i, pass)) {
+        // the end of an ending without :| while a later ending still waits (1.-2. :| 4×, then 3., then 4.): back to |:
+        pass++;
+        i = start;
+        back = true;
+        continue;
       }
       // D.C. / D.S. / D.S.S. (each one once)
       if (h.jump && !taken.has(i)) {

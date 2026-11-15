@@ -276,7 +276,8 @@
       parts.forEach((p) => p.voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); })));
       // endless: a finer click grid widens the bar; page: the notes alone decide (as printed)
       const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
-      const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : 0;
+      // (an ending going back without a :| of its own - a later ending waits: drawn with :|, js/model.js SC.endingGoesBack)
+      const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : TC.score.endingGoesBack(doc, i) ? 2 : 0;
       const own = parts.find((p) => p.track === cur) || parts[0];
       // melody staves: a new key signature at this bar (the width of the widest), an accidental on beat 1
       const ksW = i > 0 ? Math.max(0, ...parts.map((p) => (p.pitch && p.pitch.change ? keyWidth(p.pitch.change) : 0))) : 0;

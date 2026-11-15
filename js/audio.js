@@ -264,7 +264,7 @@
    */
   const FAMILY = {
     voice: { osc: [['triangle', -4, 0.8], ['sawtooth', 5, 0.18]], attack: 0.04, sus: 0.75, tau: 0.15, rel: 0.12, cut: 4, gain: 0.22 },
-    piano: { osc: [['triangle', 0, 0.85], ['sine', 1200, 0.18], ['sawtooth', 0, 0.06]], attack: 0.004, sus: 0, tau: 0.55, rel: 0.12, cut: 7, gain: 0.3 },
+    piano: { osc: [['triangle', 0, 0.75], ['sine', 1200, 0.18], ['sawtooth', 0, 0.2]], attack: 0.004, sus: 0, tau: 0.55, rel: 0.12, cut: 7, fenv: { from: 14, to: 4, tau: 0.3 }, gain: 0.3 },
     epiano: { osc: [['sine', 0, 0.9], ['sine', 1200, 0.14], ['triangle', 2400, 0.04]], attack: 0.005, sus: 0.1, tau: 0.7, rel: 0.2, cut: 6, gain: 0.3 },
     organ: { osc: [['sine', 0, 0.5], ['sine', 1200, 0.35], ['square', 1902, 0.08]], attack: 0.01, sus: 1, tau: 0.05, rel: 0.05, cut: 8, gain: 0.18 },
     guitar: { osc: [['sawtooth', 0, 0.45], ['triangle', 3, 0.55]], attack: 0.003, sus: 0, tau: 0.45, rel: 0.1, cut: 3.5, gain: 0.28 },
@@ -278,37 +278,87 @@
     pad: { osc: [['sawtooth', -8, 0.4], ['sawtooth', 8, 0.4], ['triangle', 0, 0.3]], attack: 0.4, sus: 0.9, tau: 0.3, rel: 0.6, cut: 2, gain: 0.15 },
   };
 
+  /**
+   * Each offered sound (TC.MELODY_SOUNDS, by General MIDI program) its own settings on top of its family,
+   * so the sounds of one group differ: fenv = filter sweep { from, to, tau } (times the pitch: a plucked string
+   * gets darker), vib = vibrato [rate Hz, depth cents, delay s].
+   */
+  const SOUND = {
+    53: { vib: [5, 12, 0.25] },                                                                       // voice (oohs)
+    52: { osc: [['sawtooth', -10, 0.35], ['sawtooth', 10, 0.35], ['triangle', 0, 0.4]], attack: 0.12, sus: 0.85, cut: 2.5, gain: 0.14, vib: [4.5, 8, 0.2] }, // choir
+    // guitars: nylon soft, dark and short · steel bright and shimmering, rings long · clean electric round and held
+    24: { osc: [['triangle', 0, 0.9], ['sine', 0, 0.3]], attack: 0.01, sus: 0, tau: 0.3, fenv: { from: 3, to: 1.2, tau: 0.08 }, gain: 0.36 },  // nylon
+    25: { osc: [['sawtooth', -6, 0.45], ['sawtooth', 6, 0.45], ['sawtooth', 1200, 0.12]], attack: 0.002, sus: 0, tau: 1.1, fenv: { from: 18, to: 5, tau: 0.35 }, gain: 0.3 }, // steel
+    27: { osc: [['square', 0, 0.45], ['sine', 0, 0.5]], attack: 0.004, sus: 0.55, tau: 0.25, fenv: { from: 5, to: 2.5, tau: 0.15 }, vib: [6, 6, 0.4], gain: 0.2 }, // clean electric
+    29: { vib: [5.5, 10, 0.3] },                                                                      // overdrive
+    33: { fenv: { from: 9, to: 2.5, tau: 0.12 } },                                                    // electric bass
+    32: { osc: [['sine', 0, 0.9], ['triangle', 0, 0.3]], attack: 0.03, sus: 0.25, tau: 0.8, cut: 2, gain: 0.42 }, // double bass
+    38: { osc: [['sawtooth', 0, 0.7], ['square', -1200, 0.4]], attack: 0.005, sus: 0.6, tau: 0.3, cut: 2, fenv: { from: 10, to: 2, tau: 0.12 }, gain: 0.18 }, // synth bass
+    48: { vib: [5, 6, 0.3] },                                                                         // strings
+    40: { osc: [['sawtooth', 0, 0.8], ['sawtooth', 3, 0.2]], attack: 0.08, sus: 0.9, cut: 5, vib: [6, 18, 0.25], gain: 0.15 }, // violin
+    42: { osc: [['sawtooth', 0, 0.8], ['triangle', 0, 0.3]], attack: 0.1, sus: 0.9, cut: 2.5, vib: [5, 15, 0.3], gain: 0.2 }, // cello
+    56: { fenv: { from: 1.5, to: 5, tau: 0.08 } },                                                    // trumpet: opens up
+    65: { vib: [5, 10, 0.3] },                                                                        // alto sax
+    73: { vib: [5, 8, 0.3] },                                                                         // flute
+    80: { osc: [['square', -5, 0.5], ['square', 5, 0.4]], cut: 6 },                                   // lead square
+    81: { osc: [['sawtooth', -7, 0.5], ['sawtooth', 7, 0.5]], cut: 8, gain: 0.12 },                   // lead saw
+  };
+
   AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
     if (!ensure()) return;
     if (TC.midiOut && TC.midiOut.active()) {
       TC.midiOut.note(pitch, t, dur, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
-    const F = FAMILY[TC.soundFamily(track ? track.program : TC.MELODY_PROGRAM)] || FAMILY.voice;
+    const prog = track ? track.program : TC.MELODY_PROGRAM;
+    const F = Object.assign({}, FAMILY[TC.soundFamily(prog)] || FAMILY.voice, SOUND[prog] || {});
     const out = dest || master, hz = 440 * Math.pow(2, (pitch - 69) / 12);
     const v = Math.max(0.05, Math.min(1.2, vel)) * F.gain;
-    const end = t + Math.max(0.08, dur), rel = F.rel;
+    dur = Math.max(0.08, dur);
+    const end = t + dur, rel = F.rel;
+    // a short note does not wait for a slow attack (a pad's eighth would else swell after its end and break off)
+    const att = Math.min(F.attack, dur * 0.6), top = t + att;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(v, t + F.attack);                     // attack
-    g.gain.setTargetAtTime(Math.max(0.0001, v * F.sus), t + F.attack, F.tau); // settles (or dies away: a struck string)
-    g.gain.setTargetAtTime(0.0001, end, rel / 3);                          // release
+    g.gain.linearRampToValueAtTime(v, top);                                      // attack
+    if (end > top + 0.005) g.gain.setTargetAtTime(Math.max(0.0001, v * F.sus), top, F.tau); // settles (or dies away: a struck string)
+    g.gain.setTargetAtTime(0.0001, Math.max(end, top), rel / 3);                 // release (never before the attack is done)
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = Math.min(12000, hz * F.cut + 400);
+    const cut = (k) => Math.min(12000, hz * k + 400);
+    if (F.fenv) {
+      lp.frequency.setValueAtTime(cut(F.fenv.from), t);
+      lp.frequency.setTargetAtTime(cut(F.fenv.to), t + 0.005, F.fenv.tau);
+    } else lp.frequency.value = cut(F.cut);
     lp.Q.value = 0.8;
     lp.connect(g);
     g.connect(out);
+    const stop = Math.max(end, top) + rel * 2 + 0.05;
+    let lfo = null;
+    if (F.vib && dur > F.vib[2]) {
+      // vibrato: a slow wave on the detune of every oscillator, fading in after its delay
+      lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = F.vib[0];
+      depth.gain.setValueAtTime(0, t);
+      depth.gain.setValueAtTime(0, t + F.vib[2]);
+      depth.gain.linearRampToValueAtTime(F.vib[1], t + F.vib[2] + 0.25);
+      lfo.connect(depth);
+      lfo.start(t);
+      lfo.stop(stop);
+      lfo.depth = depth;
+    }
     for (const [type, det, amp] of F.osc) {
       const o = ctx.createOscillator(), og = ctx.createGain();
       o.type = type;
       o.frequency.value = hz;
       o.detune.value = det;
+      if (lfo) lfo.depth.connect(o.detune);
       og.gain.value = amp;
       o.connect(og);
       og.connect(lp);
       o.start(t);
-      o.stop(end + rel * 2 + 0.05);
+      o.stop(stop);
     }
   };
 

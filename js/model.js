@@ -13,6 +13,12 @@
  *               margin: 10 … 30 (mm), header: true (title and page number on the pages after the first),
  *               multiRest: true (empty bars in a row as one multi-bar rest), simile: 'combine' (%-bars in a row: one % with the number) | 'count' (each narrow, counted 2, 3 …) | 'single',
  *               staffGap: 80 (space between the staves of several tracks, %), lineGap: 100 (between the lines of the page view, %) }   page view / PDF
+ *     harmony: { key: { l, a, id }       scale of the chords when there is no melody track (js/pitch.js)
+ *                pad: true               the chords sound along softly when playing
+ *                vol: 60                 … this loud (0 … 100)
+ *                guide: 'mark'           writing a melody: 'off' | 'mark' (the chord tones marked) | 'lock' (only chord tones)
+ *                midiOut: ''             the pad plays on Tactus' synth ('') or on this MIDI output (e.g. a synth VST) …
+ *                midiCh: 14 }            … on this channel (0 … 15; 14 = channel 15)
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
  *   }
  *
@@ -26,7 +32,13 @@
  *                mark: '' | 'segno' | 'coda'   sign at the start: 𝄋 (D.S. jumps here), ⊕ (the coda starts here)
  *                end: '' | 'fine' | 'toCoda'   at the end: Fine (after a jump: the end), To Coda (after a jump: on to ⊕)
  *                jump: '' | 'dc' | 'dcFine' | 'dcCoda' | 'ds' | 'dsFine' | 'dsCoda'   at the end: back to bar 1 / 𝄋
- *                jumpRep: false          after the jump the repeats are played again (default: once, last ending) }
+ *                jumpRep: false          after the jump the repeats are played again (default: once, last ending)
+ *                chords: [ { t, deg, sev } | { t, name } ]   (only when set) chord symbols, for all tracks: from tick t
+ *                                        on up to the next one; deg: scale-degree chord 1 … 7 of the scale that applies
+ *                                        here (SC.harmonyScale: it follows a change of scale), sev: seventh chord;
+ *                                        name: typed, as plain text (js/pitch.js P.chordText: "F#m7", "Bb/D")
+ *                guide: 'off' | 'mark' | 'lock'   (only when set) writing a melody from this bar on: chord tones
+ *                                        marked / only chord tones; not set = as before (harmony.guide) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
  *                mute, solo, profile, profileName, midiOut, midiCh,
  *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass', scale: { l, a, id } (js/pitch.js),
@@ -119,6 +131,8 @@
     to: /^dss/.test(j) ? 'segnoSegno' : /^ds/.test(j) ? 'segno' : 'start',
     al: /DoubleCoda$/.test(j) ? 'doubleCoda' : /Coda$/.test(j) ? 'coda' : /Fine$/.test(j) ? 'fine' : null,
   });
+  TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, guide: 'mark', midiOut: '', midiCh: 14 });
+  TC.GUIDES = ['off', 'mark', 'lock'];
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100 });
   // space between the staves of several tracks / between the lines of the page view, % of the basic space
   TC.STAFF_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
@@ -246,7 +260,7 @@
   TC.DEFAULT_ZOOM = 1.6;
 
   TC.emptyScore = function (barCount = 8) {
-    const doc = { app: 'Tactus', version: 1, meta: TC.emptyMeta(), bars: [], tracks: [], page: TC.newPage(), view: { x: 40, y: 220, zoom: TC.DEFAULT_ZOOM } };
+    const doc = { app: 'Tactus', version: 1, meta: TC.emptyMeta(), bars: [], tracks: [], page: TC.newPage(), harmony: TC.newHarmony(), view: { x: 40, y: 220, zoom: TC.DEFAULT_ZOOM } };
     for (let i = 0; i < barCount; i++) doc.bars.push(TC.newBarHeader());
     doc.tracks.push(TC.newTrack('drums', barCount));
     return doc;
@@ -280,6 +294,21 @@
     return out;
   }
 
+  /** Chord symbols of a bar: sorted by tick, one per tick, inside the bar; null if none. */
+  function cleanChords(list, L) {
+    if (!Array.isArray(list)) return null;
+    const out = new Map();
+    for (const c of list) {
+      if (!c || typeof c !== 'object') continue;
+      const t = Math.round(num(c.t, 0));
+      if (t < 0 || t >= L) continue;
+      if (Number.isInteger(c.deg) && c.deg >= 1 && c.deg <= 7) out.set(t, c.sev ? { t, deg: c.deg, sev: true } : { t, deg: c.deg });
+      else if (typeof c.name === 'string' && c.name.trim()) out.set(t, { t, name: c.name.trim().slice(0, 16) });
+    }
+    return out.size ? [...out.values()].sort((a, b) => a.t - b.t) : null;
+  }
+  TC.cleanChords = cleanChords;
+
   /** Bring any parsed JSON into the current shape (missing parts get defaults, bad parts are dropped). */
   TC.normalizeDoc = function (raw) {
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.bars)) throw new Error('Not a Tactus file');
@@ -305,10 +334,20 @@
         if (TC.MARKS.includes(b.mark)) h.mark = b.mark;
         if (TC.ENDS.includes(b.end)) h.end = b.end;
         if (TC.JUMPS.includes(b.jump)) { h.jump = b.jump; h.jumpRep = !!b.jumpRep; }
+        const ch = cleanChords(b.chords, TC.barTicks(h.ts));
+        if (ch) h.chords = ch;
+        if (TC.GUIDES.includes(b.guide)) h.guide = b.guide;
       }
       return h;
     });
     if (!doc.bars.length) doc.bars.push(TC.newBarHeader());
+    const hm = raw.harmony && typeof raw.harmony === 'object' ? raw.harmony : {};
+    if (TC.pitch) doc.harmony.key = TC.pitch.cleanScale(hm.key);
+    if (hm.pad === false) doc.harmony.pad = false;
+    doc.harmony.vol = TC.clamp(Math.round(num(hm.vol, 60)), 0, 100);
+    if (TC.GUIDES.includes(hm.guide)) doc.harmony.guide = hm.guide;
+    doc.harmony.midiOut = str(hm.midiOut);
+    if (Number.isInteger(hm.midiCh) && hm.midiCh >= 0 && hm.midiCh <= 15) doc.harmony.midiCh = hm.midiCh;
     const pg = raw.page && typeof raw.page === 'object' ? raw.page : {};
     if (Number.isInteger(pg.barsPerLine) && pg.barsPerLine >= 0 && pg.barsPerLine <= 12) doc.page.barsPerLine = pg.barsPerLine;
     if (TC.BAR_NUMBERS.includes(pg.barNumbers)) doc.page.barNumbers = pg.barNumbers;
@@ -438,6 +477,76 @@
       const b = track.bars[i];
       if (b.scale && same(b.scale, SC.scaleAt(track, i - 1))) b.scale = null;
     }
+  };
+
+  // ---- Chord symbols (bar headers: for all tracks) --------------------------------------------------
+
+  /** The melody track whose scale the chords follow: the one being written if it is a melody, else the first one; or null. */
+  SC.harmonyTrack = function (doc, prefer) {
+    if (prefer && prefer.kind === 'pitched' && doc.tracks.includes(prefer)) return prefer;
+    return doc.tracks.find((t) => t.kind === 'pitched') || null;
+  };
+  /** The scale the chords of bar bi are built on: of the melody track (SC.harmonyTrack), else the key of the score. */
+  SC.harmonyScale = function (doc, bi, prefer) {
+    const t = SC.harmonyTrack(doc, prefer);
+    if (t) return SC.scaleAt(t, bi);
+    return (doc.harmony && doc.harmony.key) || { l: 0, a: 0, id: 'major' };
+  };
+  /** A chord symbol entry ({ t, deg, sev } | { t, name }) as a chord (js/pitch.js), or null. */
+  SC.chordOf = function (doc, bi, c, prefer) {
+    const P = TC.pitch;
+    if (!c || !P) return null;
+    if (c.deg) {
+      const ch = P.degreeChord(SC.harmonyScale(doc, bi, prefer), c.deg, !!c.sev);
+      return ch || P.degreeChord(SC.harmonyScale(doc, bi, prefer), 1, !!c.sev); // (blues has no ii: its I)
+    }
+    return c.name ? P.parseChord(c.name, false) : null;
+  };
+  /** The chord symbols of bar bi as chords: [{ t, c (entry), ch (chord) }]. */
+  SC.chordsIn = function (doc, bi, prefer) {
+    const h = doc.bars[bi];
+    return h && h.chords ? h.chords.map((c) => ({ t: c.t, c, ch: SC.chordOf(doc, bi, c, prefer) })).filter((x) => x.ch) : [];
+  };
+  /**
+   * The chord that sounds at (bar bi, tick): the last one written up to there - also in the bars before
+   * (in written order). { bar, t, c, ch } or null.
+   */
+  SC.chordAt = function (doc, bi, tick, prefer) {
+    for (let i = Math.min(bi, doc.bars.length - 1); i >= 0; i--) {
+      const list = SC.chordsIn(doc, i, prefer).filter((x) => i < bi || x.t <= tick);
+      if (list.length) return Object.assign({ bar: i }, list[list.length - 1]);
+    }
+    return null;
+  };
+  /** Set the chord symbol at (bar bi, tick t) - entry { deg, sev } or { name } - or remove it (null). */
+  SC.setChord = function (doc, bi, t, entry) {
+    const h = doc.bars[bi];
+    if (!h) return false;
+    const list = (h.chords || []).filter((c) => c.t !== t);
+    if (entry) list.push(Object.assign({ t }, entry));
+    const clean = cleanChords(list, TC.barTicks(h.ts));
+    if (clean) h.chords = clean;
+    else delete h.chords;
+    return true;
+  };
+  /**
+   * The places a chord may stand in bar bi: every step of `grid` ticks (the note value of the panel, like the click
+   * grid: eighths -> 1 + 2 + …), without a grid its beats (6/8: the dotted quarters; odd meters: the beam groups);
+   * a chord already standing elsewhere keeps its place in the list.
+   */
+  SC.chordSlots = function (doc, bi, grid) {
+    const h = doc.bars[bi];
+    if (!h) return [0];
+    const L = TC.barTicks(h.ts), out = new Set();
+    if (grid > 0) for (let t = 0; t < L; t += grid) out.add(Math.round(t));
+    else (TC.timeline ? TC.timeline.clickTicks(h) : [0]).forEach((t) => out.add(t));
+    (h.chords || []).forEach((c) => out.add(c.t));
+    return [...out].sort((a, b) => a - b);
+  };
+  /** How chords guide writing a melody in bar bi: 'off' | 'mark' | 'lock' (a bar's own setting holds from it on). */
+  SC.guideAt = function (doc, bi) {
+    for (let i = Math.min(bi, doc.bars.length - 1); i >= 0; i--) if (doc.bars[i].guide) return doc.bars[i].guide;
+    return (doc.harmony && doc.harmony.guide) || 'mark';
   };
 
   // ---- Melody: ties (a note tied on from the one before it - also across the bar line) -------------
@@ -621,6 +730,7 @@
     do {
       if (doc.bars[i].ts.join('/') !== ts.join('/')) doc.bars[i].beam = null;
       doc.bars[i].ts = ts.slice();
+      if (doc.bars[i].chords) SC.setChord(doc, i, -1, null); // (chords past the new end go)
       doc.tracks.forEach((t) => SC.fitBar(doc, t, i));
       i++;
     } while (!onlyThis && i < doc.bars.length && doc.bars[i].ts.join('/') === old);
@@ -952,6 +1062,7 @@
     return {
       ts: doc.bars[src].ts.slice(),
       tracks: doc.tracks.map((t) => Object.assign(TC.clone(t.bars[SC.sourceBar(doc, bi, t)]), { simile: false })),
+      chords: doc.bars[bi].chords ? TC.clone(doc.bars[bi].chords) : null, // (the chord symbols go along)
     };
   };
 
@@ -975,6 +1086,12 @@
       t.bars[bi] = keepScale(bar, t.bars[bi]);
       SC.fitBar(doc, t, bi);
     });
+    // all tracks pasted: the chord symbols of the copy too (into one track only: the chords stay)
+    if (!only && clip.chords !== undefined) {
+      const ch = cleanChords(clip.chords, TC.barTicks(doc.bars[bi].ts));
+      if (ch) doc.bars[bi].chords = ch;
+      else delete doc.bars[bi].chords;
+    }
     return true;
   };
 

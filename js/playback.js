@@ -21,6 +21,18 @@
   const T = (TC.timeline = {});
   const PLAIN = [3840, 1920, 960, 480, 240, 120, 60];
   T.LEAD = 0.1;
+  /** The chord pad plays like a track of its own: a warm pad (General MIDI 89), on channel 15. */
+  T.CHORD_TRACK = { id: 'chords', name: 'Chords', kind: 'pitched', program: 89, channel: 14, synthOnly: true };
+  /**
+   * The chord pad of a score as a track: Tactus' synth (default - a drum VST taking every channel would play
+   * the chords as drum hits), or its own MIDI output and channel (harmony.midiOut / midiCh, e.g. a synth VST).
+   */
+  T.chordTrack = function (doc) {
+    const h = (doc && doc.harmony) || {};
+    if (!h.midiOut) return T.CHORD_TRACK;
+    const ch = Number.isInteger(h.midiCh) ? h.midiCh : 14;
+    return Object.assign({}, T.CHORD_TRACK, { synthOnly: false, ownPort: true, midiOut: h.midiOut, midiCh: ch, channel: ch });
+  };
 
   /** Tempo (quarters per minute) that applies in bar bi. */
   T.tempoAt = function (doc, bi) {
@@ -71,6 +83,10 @@
     }
     const start = t;
     const sounding = new Map(); // melody: the last tone of each track and pitch (a tied note lengthens it)
+    // the chord pad: on, heard (not while tracks play solo), and there are chords
+    const pad = !!(doc.harmony && doc.harmony.pad && doc.harmony.vol > 0 && TC.pitch && !doc.tracks.some((x) => x.solo) && doc.bars.some((x) => x.chords));
+    let padNow = null; // the chord sounding: { key, end, hits }
+    const chordTrk = T.chordTrack(doc);
     const sw = doc.meta.swing || 50, su = doc.meta.swingUnit || 8, st = (k) => TC.swingTick(k, sw, su); // swing / shuffle
     // repeats and endings written out (model.js playOrder): the same order as the MIDI export
     for (const o of TC.score.playBars(doc, from, to)) {
@@ -119,6 +135,28 @@
             }
           }
         }
+      }
+      if (pad) {
+        // chord symbols: a soft pad from each chord to the next one (a chord going on over the bar line is held);
+        // a bar without a chord at its start goes on with the chord written before it
+        const list = TC.score.chordsIn(doc, bi);
+        if (!list.length || list[0].t > 0) {
+          const before = TC.score.chordAt(doc, bi, 0);
+          if (before) list.unshift({ t: 0, ch: before.ch });
+        }
+        list.forEach((x, k) => {
+          const a = t + st(x.t) * spt, b = t + (k + 1 < list.length ? st(list[k + 1].t) : L) * spt;
+          const key = TC.pitch.chordText(x.ch);
+          if (padNow && padNow.key === key && Math.abs(padNow.end - a) < 1e-6) {
+            padNow.end = b;
+            padNow.hits.forEach((p) => { p.dur = Math.max(0.05, b - p.t - 0.02); p.end = b; });
+            return;
+          }
+          const v = TC.pitch.chordVoicing(x.ch), vel = (doc.harmony.vol / 100) * 0.6;
+          const hs = [v.bass].concat(v.tones).map((pitch, j) => ({ t: a, pitch, dur: Math.max(0.05, b - a - 0.02), vel: j ? vel : vel * 1.2, trk: chordTrk, end: b, chord: true }));
+          hits.push(...hs);
+          padNow = { key, end: b, hits: hs };
+        });
       }
       if (opts.metronome) T.clickTicks(h).forEach((k, i) => hits.push({ t: t + k * spt, click: i === 0 ? 2 : 1, vel: 0.8 }));
       bars.push({ bar: bi, pass: o.pass, n: o.n, t0: t, t1: t + L * spt, spt, ts: h.ts });

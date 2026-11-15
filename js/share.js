@@ -30,6 +30,7 @@
   SH.pack = function (doc) {
     const d = JSON.parse(JSON.stringify(doc));
     delete d.view;
+    if (d.harmony && JSON.stringify(d.harmony) === JSON.stringify(TC.newHarmony())) delete d.harmony;
     const strip = (o, defs) => Object.keys(defs).forEach((k) => { if (JSON.stringify(o[k]) === JSON.stringify(defs[k])) delete o[k]; });
     d.bars.forEach((h) => strip(h, BAR_DEFAULTS));
     d.tracks.forEach((t) => {

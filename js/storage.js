@@ -374,6 +374,9 @@
       if (r.ev && len > r.ev.dur) SC.setMelodyLength(doc, mel, bar, 0, r.ev, len);
     }
     doc.bars[0].marker = 'Strophe';
+    // chord symbols: scale degrees of A minor (Am, Dm, C), and E7 typed (its G♯ is the leading tone of the melody)
+    [[0, 0, { deg: 1 }], [1, 0, { deg: 4 }], [1, 1920, { deg: 1 }], [2, 0, { deg: 3 }], [3, 0, { name: 'E7' }], [3, 1920, { deg: 1 }]]
+      .forEach(([bar, t, c]) => SC.setChord(doc, bar, t, c));
     return doc;
   };
 

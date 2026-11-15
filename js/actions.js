@@ -1047,6 +1047,144 @@
     TC.render.print();
   };
 
+  // ---- Chord symbols (for all tracks; js/pitch.js, model.js SC.setChord) -------------------------
+
+  const de = () => TC.getLang() === 'de';
+  /** Where the next chord goes in bar i: the place chosen in the panel (a beat of the bar), else the bar start. */
+  const chordGrid = () => TC.gridTicks(S.input); // (the places follow the note value of the panel)
+  const chordTick = (i) => (TC.score.chordSlots(S.doc, i, chordGrid()).includes(S.chordSlot) ? S.chordSlot : 0);
+  const chordHint = (i, t) => {
+    const x = TC.score.chordsIn(S.doc, i).find((c) => c.t === t);
+    const where = tr('Bar {n}', { n: i + 1 }) + (t ? ', ' + TC.rhythm.countLabel(t, S.doc.bars[i].ts) : '');
+    TC.ui.hint(x ? `${where}: ${TC.pitch.chordName(x.ch, de())}` : `${where}: ${tr('no chord')}`);
+  };
+  /** The scale-degree chord `deg` (1 …; seventh chord if switched on in the panel) at the chosen place of bar i. */
+  A.setChordDeg = function (deg, i = curBar(), t = chordTick(i)) {
+    deg = Number(deg);
+    const entry = S.settings.chordSev ? { deg, sev: true } : { deg };
+    const old = (S.doc.bars[i].chords || []).find((c) => c.t === t);
+    if (old && old.deg === deg && !!old.sev === !!entry.sev) return chordHint(i, t);
+    TC.score.setChord(S.doc, i, t, entry);
+    TC.commit();
+    chordHint(i, t);
+    if (TC.player.playing) return;
+    const ch = TC.score.chordOf(S.doc, i, entry);
+    if (ch) A.previewChord(ch);
+  };
+  /** A chord as typed (C7, Fadd9, G/B …) at the chosen place of bar i; empty: removes it. */
+  A.typeChord = function (text, i = curBar(), t = chordTick(i)) {
+    if (!String(text || '').trim()) return A.clearChord(t, i);
+    const ch = TC.pitch.parseChord(text, de());
+    if (!ch) return TC.ui.hint(tr('No chord found in "{s}" - it starts with its root: C, F#m7, Bb/D …', { s: text }));
+    TC.score.setChord(S.doc, i, t, { name: TC.pitch.chordText(ch) });
+    TC.commit();
+    chordHint(i, t);
+    A.previewChord(ch);
+  };
+  A.editChord = function (i = curBar(), t = chordTick(i)) {
+    const x = TC.score.chordsIn(S.doc, i).find((c) => c.t === t);
+    const v = prompt(tr('Chord in bar {n} (e.g. Am, F#m7, C/G) – empty: remove', { n: i + 1 }), x ? TC.pitch.chordName(x.ch, de()).replace(/♯/g, '#').replace(/♭/g, 'b') : '');
+    if (v !== null) A.typeChord(v, i, t);
+  };
+  /** Remove the chord at tick t of bar i (default: the chosen place). */
+  A.clearChord = function (t, i = curBar()) {
+    t = t === undefined ? chordTick(i) : Number(t);
+    if (!(S.doc.bars[i].chords || []).some((c) => c.t === t)) return;
+    TC.score.setChord(S.doc, i, t, null);
+    TC.commit();
+    chordHint(i, t);
+  };
+  /** Remove every chord of the selected bars. */
+  A.clearBarChords = function (i = curBar()) {
+    const [a, b] = rangeAt(i);
+    let any = false;
+    for (let k = a; k <= b; k++) if (S.doc.bars[k].chords) { delete S.doc.bars[k].chords; any = true; }
+    if (any) TC.commit();
+  };
+  /** Where the next chord goes in the selected bar: a beat (tick). */
+  A.setChordSlot = function (t) {
+    S.chordSlot = Number(t) || 0;
+    TC.refresh();
+  };
+  /** Triads or seventh chords in the chord bar of the panel (a setting of this browser). */
+  A.toggleChordSev = function () {
+    S.settings.chordSev = !S.settings.chordSev;
+    TC.saveSettings();
+    TC.refresh();
+  };
+  /** The chords sound along when playing (a soft pad), and how loud. */
+  A.toggleChordPad = function () {
+    S.doc.harmony.pad = !S.doc.harmony.pad;
+    TC.commit();
+  };
+  /** Where the chords sound: '' Tactus' synth, else a MIDI output (e.g. a synth VST); and its channel (1 … 16). */
+  A.setChordOut = function (v) {
+    S.doc.harmony.midiOut = v || '';
+    TC.commit();
+  };
+  A.setChordCh = function (v) {
+    const n = Number(v);
+    if (n >= 1 && n <= 16) S.doc.harmony.midiCh = n - 1;
+    TC.commit();
+  };
+  A.setChordVol = function (v) {
+    const n = TC.clamp(Math.round(Number(v) || 0), 0, 100);
+    if (n === S.doc.harmony.vol) return;
+    S.doc.harmony.vol = n;
+    TC.commit({ merge: true });
+  };
+  /** The key of the chords when there is no melody track: root (pitch class) or kind of scale. */
+  A.setHarmonyKey = function (what, value) {
+    const P = TC.pitch, cur = S.doc.harmony.key;
+    const id = what === 'id' ? value : cur.id, pc = what === 'root' ? Number(value) : P.pc(cur.l, cur.a);
+    const root = P.bestRoot(pc, id);
+    S.doc.harmony.key = { l: root.l, a: root.a, id };
+    TC.commit();
+    TC.ui.hint(tr('Chords in {name}', { name: P.scaleName(S.doc.harmony.key, de()) }));
+  };
+  A.setHarmonyKeyRoot = (pc) => A.setHarmonyKey('root', pc);
+  A.setHarmonyKeyId = (id) => A.setHarmonyKey('id', id);
+  /**
+   * How the chords help writing a melody, from bar i on (bar 1: the whole score): 'off', 'mark' (the chord tones
+   * marked), 'lock' (only chord tones). A change that ends up like the setting before it is removed.
+   */
+  A.setGuide = function (v, i = curBar()) {
+    if (!TC.GUIDES.includes(v)) return;
+    if (i <= 0) {
+      S.doc.harmony.guide = v;
+      delete S.doc.bars[0].guide;
+    } else S.doc.bars[i].guide = v;
+    for (let k = 1; k < S.doc.bars.length; k++) {
+      const g = S.doc.bars[k].guide;
+      if (g) {
+        delete S.doc.bars[k].guide;
+        if (TC.score.guideAt(S.doc, k) !== g) S.doc.bars[k].guide = g;
+      }
+    }
+    TC.commit();
+    TC.ui.hint((i > 0 ? tr('From bar {n}', { n: i + 1 }) + ': ' : '') + tr(GUIDE_NAMES[v]));
+  };
+  const GUIDE_NAMES = { off: 'Chords: no help', mark: 'Chord tones marked', lock: 'Only chord tones' };
+  A.GUIDE_NAMES = GUIDE_NAMES;
+  /** Hear a scale: up an octave and back to the root (the melody track's at the selected bar, else the key of the chords). */
+  A.previewScale = function () {
+    if (!TC.audio.context() || TC.player.playing) return;
+    const t = TC.curTrack(), bi = S.selBar !== null ? S.selBar : 0, P = TC.pitch;
+    const sc = t.kind === 'pitched' ? TC.score.scaleAt(t, bi) : TC.score.harmonyScale(S.doc, bi);
+    const pc = P.pc(sc.l, sc.a), root = 60 + (pc > 7 ? pc - 12 : pc); // (around middle C)
+    const iv = P.scaleById(sc.id).iv, up = iv.map((i) => root + i).concat(root + 12);
+    const seq = up.concat(up.slice(0, -1).reverse());
+    const now = TC.audio.now() + 0.05, step = 0.22;
+    seq.forEach((p, k) => TC.audio.tone(p, now + k * step, k === seq.length - 1 ? 0.6 : step * 0.9, 0.7, null, t.kind === 'pitched' ? t : null));
+    TC.ui.hint(P.scaleName(sc, de()));
+  };
+  /** Play a chord now (when it is chosen). */
+  A.previewChord = function (ch) {
+    if (!TC.audio || !TC.audio.context() || TC.player.playing) return;
+    const v = TC.pitch.chordVoicing(ch), t = TC.audio.now() + 0.01;
+    [v.bass].concat(v.tones).forEach((p) => TC.audio.tone(p, t, 0.9, 0.5, null, TC.timeline.chordTrack(S.doc)));
+  };
+
   // ---- Page: bar text, line breaks, bars per line, bar numbers --------------------------------
 
   /** Text above bar i (Verse, Chorus, Fill …); empty removes it. */
@@ -1263,7 +1401,8 @@
    * track or all in one); profileId given: preset for every track.
    */
   A.exportMidi = function (profileId) {
-    if (S.doc.tracks.length > 1) return A.exportMidiDialog(profileId);
+    // several tracks, or chord symbols (a MIDI track / file of their own): the dialog
+    if (S.doc.tracks.length > 1 || S.doc.bars.some((h) => h.chords)) return A.exportMidiDialog(profileId);
     const t = S.doc.tracks[0];
     const p = profileId !== undefined ? (profileId ? TC.kits.byId(profileId) : null) : TC.kits.ofTrack(S.doc, t);
     const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
@@ -1289,6 +1428,9 @@
       return { t, on: true, target: preset !== undefined ? preset || 'gm' : own ? own.id : 'gm' };
     });
     let mode = S.settings.midiExportMode === 'one' ? 'one' : 'files';
+    // chord symbols: a pad of their own (own file, or own MIDI track)
+    const hasChords = S.doc.bars.some((h) => h.chords);
+    let chords = hasChords && S.settings.midiChords !== false;
     const root = document.createElement('div');
     root.className = 'dialog-backdrop midi-export-backdrop';
     root.innerHTML = '<div class="dialog midi-dialog" role="dialog" aria-modal="true"></div>';
@@ -1300,8 +1442,9 @@
       const list = rows.map((r, k) => `<div class="export-row">
           <label class="check"><input type="checkbox" data-k="on" data-i="${k}"${r.on ? ' checked' : ''}> <b>${esc(r.t.name)}</b>${r.t.mute ? ` <span class="muted">(${tr('muted')})</span>` : ''}</label>
           <select data-k="target" data-i="${k}"${r.on ? '' : ' disabled'}>${targets.map(([v, l]) => `<option value="${esc(v)}"${v === r.target ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>
-        </div>`).join('');
-      const n = rows.filter((r) => r.on).length;
+        </div>`).join('') + (hasChords ? `<div class="export-row">
+          <label class="check"><input type="checkbox" data-k="chords"${chords ? ' checked' : ''}> <b>${tr('Chords')}</b> <span class="muted">(${tr('a pad on channel 15, the names as text')})</span></label></div>` : '');
+      const n = rows.filter((r) => r.on).length + (chords ? 1 : 0);
       root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Export MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
           <p class="hint tight">${tr('Which tracks, and for which drum map (kit profile) each one is written:')}</p>
@@ -1321,6 +1464,7 @@
       if (k === 'on') rows[i].on = el.checked;
       if (k === 'target') rows[i].target = el.value;
       if (k === 'mode') mode = el.value;
+      if (k === 'chords') chords = el.checked;
       draw();
     });
     root.addEventListener('click', (e) => {
@@ -1329,24 +1473,25 @@
       if (b.dataset.k === 'close') return close();
       if (b.dataset.k !== 'ok') return;
       const chosen = rows.filter((r) => r.on);
-      if (!chosen.length) return;
+      if (!chosen.length && !chords) return;
       S.settings.midiExportMode = mode;
+      if (hasChords) S.settings.midiChords = chords;
       TC.saveSettings();
       close();
-      exportTracks(chosen.map((r) => ({ track: r.t, profile: r.target === 'gm' ? null : TC.kits.byId(r.target) })), mode)
+      exportTracks(chosen.map((r) => ({ track: r.t, profile: r.target === 'gm' ? null : TC.kits.byId(r.target) })), mode, chords)
         .catch(() => TC.ui.status(TC.tr('Export cancelled')));
     });
     draw();
   };
 
   /** Writes the chosen tracks: [{ track, profile }] - one file each, or all in one (mode 'one'). */
-  async function exportTracks(list, mode) {
+  async function exportTracks(list, mode, chords) {
     const opts = { straight: S.settings.swingMidi === false };
     const base = baseName(), lacks = [];
     const files = [];
     if (mode === 'one') {
       const of = new Map(list.map((x) => [x.track, x.profile]));
-      const res = TC.midi.build(S.doc, null, Object.assign({ tracks: list.map((x) => x.track), targetOf: (t) => of.get(t), multi: true }, opts));
+      const res = TC.midi.build(S.doc, null, Object.assign({ tracks: list.map((x) => x.track), targetOf: (t) => of.get(t), multi: true, chords }, opts));
       files.push({ name: base + '.mid', bytes: res.bytes });
       const lines = lackLines(res);
       if (lines.length) lacks.push(lines.join('\n'));
@@ -1357,6 +1502,7 @@
         const lines = lackLines(res);
         if (lines.length) lacks.push(`${x.track.name} (${x.profile.name}):\n` + lines.join('\n'));
       }
+      if (chords) files.push({ name: `${base} – ${cleanName(tr('Chords'))}.mid`, bytes: TC.midi.build(S.doc, null, Object.assign({ tracks: [], chords: true, name: tr('Chords') }, opts)).bytes });
     }
     await saveFiles(files);
     if (lacks.length) alert(TC.tr('MIDI exported. Not every instrument has a key in its kit profile:') + '\n\n' + lacks.join('\n\n'));
@@ -1518,6 +1664,19 @@
     TC.ui.hint(a === b ? tr('Bar {n} selected', { n: a + 1 }) : tr('Bars {a}–{b} selected', { a: a + 1, b: b + 1 }));
   };
 
+  /** Bar menu → Chord: the scale-degree chords for the start of bar i, typing one, removing. */
+  function chordItems(i) {
+    const P = TC.pitch, sc = TC.score.harmonyScale(S.doc, i), sev = !!S.settings.chordSev;
+    const cur = (S.doc.bars[i].chords || []).find((c) => c.t === 0);
+    const items = P.degreeChords(sc, sev).map((c) => ({
+      label: `${P.chordName(c, de())}   ${c.roman}`, checked: !!(cur && cur.deg === c.deg && !!cur.sev === sev),
+      action: () => A.setChordDeg(c.deg, i, 0),
+    }));
+    return items.concat(['-', { label: 'Type a chord…', action: () => A.editChord(i, 0) },
+      { label: 'Seventh chords', checked: sev, action: A.toggleChordSev },
+      { label: 'Remove the chords of this bar', action: () => A.clearBarChords(i), disabled: !S.doc.bars[i].chords }]);
+  }
+
   /** Right-click / long press on bar i; before: the bar selected until then (offers "bars before … to i"). */
   A.barMenu = function (i, x, y, before) {
     const h = S.doc.bars[i];
@@ -1556,6 +1715,7 @@
       '-',
       { label: TC.tr('Tempo from here…') + (i > 0 && h.tempo ? ` (${h.tempo})` : ''), action: () => A.editBarTempo(i) },
       { label: 'Text above the bar…', action: () => A.editMarker(i) },
+      { label: 'Chord', submenu: chordItems(i) },
       { label: 'Line break after this bar', checked: !!(S.doc.bars[i + 1] && S.doc.bars[i + 1].lineBreak), action: () => A.toggleBreakAfter(i), disabled: i === S.doc.bars.length - 1 },
       { label: 'New line from this bar', checked: !!h.lineBreak, action: () => A.toggleLineBreak(i), disabled: i === 0 },
       '-',

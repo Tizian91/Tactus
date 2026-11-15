@@ -170,6 +170,13 @@
     </section>`;
   }
 
+  /** A scale in a list: its name, a second name (Aeolian, Gypsy minor …) and how it sounds. */
+  const scaleLabel = (s) => {
+    const al = (s.alias || []).filter((x, k) => k % 2 === (de() ? 1 : 0))[0];
+    const d = s.desc ? (de() ? s.desc[1] : s.desc[0]) : '';
+    return (de() ? s.de : s.en) + (al && !d.toLowerCase().includes(al.toLowerCase()) ? ' / ' + al : '') + (d ? ' – ' + d : '');
+  };
+
   /**
    * Melody track being written: voice, clef, scale (from the selected bar on: root and kind, grouped).
    */
@@ -180,7 +187,7 @@
     const clefs = Object.keys(P.CLEFS).map((k) => opt(k, de() ? P.CLEFS[k].de : P.CLEFS[k].en, t.clef === k)).join('');
     const roots = (de() ? P.ROOTS_DE : P.ROOTS).map(([v, l]) => opt(v, l, v === pc)).join('');
     const scales = P.GROUPS.map(([g, en, dname]) => `<optgroup label="${esc(de() ? dname : en)}">` +
-      P.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, (de() ? s.de : s.en) + (s.desc ? ' – ' + (de() ? s.desc[1] : s.desc[0]) : ''), s.id === sc.id)).join('') + '</optgroup>').join('');
+      P.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, scaleLabel(s), s.id === sc.id)).join('') + '</optgroup>').join('');
     const change = bi > 0 && t.bars[bi] && t.bars[bi].scale;
     const listed = TC.MELODY_SOUNDS.some(([, , l]) => l.some(([p]) => p === t.program));
     const sounds = (listed ? '' : opt(t.program, TC.soundName(t.program, de()), true)) + TC.MELODY_SOUNDS.map(([en, dname, list]) =>
@@ -189,7 +196,7 @@
       <div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>
       <div class="row"><label>${tr('Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>
       <div class="row"><label>${tr('Scale')}</label><select data-action="setTrackScaleRoot" class="narrow">${roots}</select>
-        <select data-action="setTrackScaleId">${scales}</select></div>
+        <select data-action="setTrackScaleId">${scales}</select>${btn('previewScale', undefined, '▶', false, tr('Hear the scale'), 'icon')}</div>
       <p class="hint tight">${esc(P.scaleName(sc, de()))}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
       ${change ? `<div class="btn-row">${btn('clearScaleChange', undefined, tr('Remove the change'), false, tr('The scale before it goes on'))}</div>` : ''}`;
   }
@@ -236,6 +243,70 @@
         ${btn('clearBar', undefined, tr('Clear'), false, many ? tr('Clear bars {a}–{b}', ab) : tr('Clear bar'))}
         ${btn('deleteBar', undefined, tr('Delete'), false, many ? tr('Delete bars {a}–{b}', ab) : tr('Delete bar'), 'danger')}
       </div></section>`;
+  }
+
+  /**
+   * Chord symbols of the selected bar (for all tracks): where (a beat), the scale-degree chords of the scale
+   * that applies here (tap = set), seventh chords, typing one; the key (without a melody track); the pad.
+   */
+  function chordSection() {
+    const i = S.selBar, Pi = TC.pitch;
+    // where the pad sounds: Tactus' synth (default), or a MIDI output of its own (a synth VST) with a channel
+    const hm = S.doc.harmony, MO = TC.midiOut;
+    const outs = MO && MO.supported() ? MO.outputs().slice() : [];
+    if (hm.midiOut && !outs.includes(hm.midiOut)) outs.push(hm.midiOut);
+    const outRow = hm.pad && outs.length ? `<div class="row"><label>${tr('Sound')}</label><select data-action="setChordOut">
+        <option value=""${hm.midiOut ? '' : ' selected'}>${tr('Tactus sounds')}</option>${outs.map((o) =>
+          `<option value="${esc(o)}"${o === hm.midiOut ? ' selected' : ''}>MIDI: ${esc(o)}${MO.connected(o) ? '' : ' ' + tr('(missing)')}</option>`).join('')}</select></div>
+      ${hm.midiOut ? `<div class="row"><label>${tr('Channel')}</label><select data-action="setChordCh" class="narrow">${Array.from({ length: 16 }, (_, k) =>
+          `<option value="${k + 1}"${k === hm.midiCh ? ' selected' : ''}>${k + 1}</option>`).join('')}</select></div>
+        <p class="hint tight">${tr('Choose the output of a synth VST - not the one of the drum VST: it would play the chords as drum hits.')}</p>` : ''}` : '';
+    const pad = `${check('toggleChordPad', !!hm.pad, tr('Play the chords along (soft pad)'))}
+      ${hm.pad ? `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="100" step="5" data-chordvol value="${hm.vol}"></div>` : ''}
+      ${outRow}`;
+    if (i === null || !S.doc.bars[i]) {
+      return `<section><h3>${tr('Chords')}</h3><p class="hint">${tr('Tap a bar (above or below the lines): set its chords here.')}</p>${pad}</section>`;
+    }
+    const sc = TC.score.harmonyScale(S.doc, i), sev = !!S.settings.chordSev, list = TC.score.chordsIn(S.doc, i);
+    const ts = S.doc.bars[i].ts, slots = TC.score.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
+    const at = (t) => list.find((x) => x.t === t), here = at(slot);
+    const name = (ch) => Pi.chordName(ch, de());
+    // where: the places of the click grid (note value of the panel: eighths 1 + 2 + …), each with its chord;
+    // more than 8: two rows (sixteenths)
+    const short = (t) => { const c = TC.rhythm.countLabel(t, ts).split(' '); return c.length > 1 ? c[1] : c[0]; }; // 1 · e · + · a
+    const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((t) =>
+      btn('setChordSlot', t, `<small>${esc(short(t))}</small>${at(t) ? esc(name(at(t).ch)) : '·'}`, t === slot, TC.rhythm.countLabel(t, ts), TC.rhythm.countLabel(t, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>
+      <p class="hint tight">${tr('Places in the bar: like the click grid (note value in the note panel).')}</p>` : '';
+    const borrow = Pi.borrowsChords(sc);
+    const chords = Pi.degreeChords(sc, sev).map((c) => btn('setChordDeg', c.deg, `<b>${esc(name(c))}</b><small>${esc(c.roman)}</small>`,
+      !!(here && here.c.deg === c.deg && !!here.c.sev === sev), borrow && !c.inScale ? tr('Not only tones of the scale') : '', 'chord-btn' + (borrow && !c.inScale ? ' pale' : ''))).join('');
+    const typed = here && !here.c.deg ? name(here.ch).replace(/♯/g, '#').replace(/♭/g, 'b') : '';
+    const mt = TC.score.harmonyTrack(S.doc);
+    let key;
+    if (mt) {
+      // writing a melody: chord tones marked / only chord tones (from this bar on)
+      const g = TC.score.guideAt(S.doc, i), A = TC.actions;
+      key = `<p class="hint tight">${esc(tr('Chords of {scale} (scale of "{track}" in bar {n})', { scale: Pi.scaleName(sc, de()), track: mt.name, n: i + 1 }))}</p>
+        <div class="row"><label>${tr('Melody')}</label><select data-action="setGuide">${TC.GUIDES.map((v) =>
+          `<option value="${v}"${v === g ? ' selected' : ''}>${esc(tr(A.GUIDE_NAMES[v]))}</option>`).join('')}</select></div>
+        <p class="hint tight">${tr(g === 'lock' ? 'Tapping a line writes the nearest chord tone; hold + up / down still leaves it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')}${i > 0 ? ' ' + esc(tr('Applies from bar {n} on.', { n: i + 1 })) : ''}</p>`;
+    }
+    else {
+      const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`, pc = Pi.pc(sc.l, sc.a);
+      const roots = (de() ? Pi.ROOTS_DE : Pi.ROOTS).map(([v, l]) => opt(v, l, v === pc)).join('');
+      const scales = Pi.GROUPS.map(([g, en, dname]) => `<optgroup label="${esc(de() ? dname : en)}">` +
+        Pi.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, scaleLabel(s), s.id === sc.id)).join('') + '</optgroup>').join('');
+      key = `<div class="row"><label>${tr('Musical key')}</label><select data-action="setHarmonyKeyRoot" class="narrow">${roots}</select>
+        <select data-action="setHarmonyKeyId">${scales}</select>${btn('previewScale', undefined, '▶', false, tr('Hear the scale'), 'icon')}</div>`;
+    }
+    return `<section><h3>${tr('Chords')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
+      ${where}
+      <div class="chord-pal">${chords}</div>
+      <div class="btn-row">${btn('toggleChordSev', undefined, '7 ' + tr('Seventh chords'), sev, tr('Four-note chords: Cmaj7, Dm7, G7 …'))}
+        ${here ? btn('clearChord', slot, '✕ ' + tr('Remove'), false, tr('Remove this chord')) : ''}</div>
+      <div class="row"><label>${tr('Own')}</label><input type="text" data-chord maxlength="16" value="${esc(typed)}" placeholder="${esc(tr('e.g. C7, Fadd9, G/B'))}"></div>
+      ${key}
+      ${pad}</section>`;
   }
 
   /** Repeats and jumps of the selected bar: |: :| endings, 𝄋 / ⊕, Fine / To Coda, D.C. / D.S. */
@@ -558,13 +629,13 @@
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
       cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program])), cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
-      S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing; the rest is in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + repeatSection() + playSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + chordSection() + repeatSection() + playSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
@@ -642,6 +713,11 @@
     } else if (el.matches('input[data-marker]')) {
       el.blur();
       TC.actions.setMarker(el.value);
+    } else if (el.matches('input[data-chord]')) {
+      el.blur();
+      TC.actions.typeChord(el.value);
+    } else if (el.matches('input[data-chordvol]')) {
+      TC.actions.setChordVol(el.value);
     } else if (el.matches('input[data-meta]')) {
       const k = el.dataset.meta;
       S.doc.meta[k] = k === 'tempo' ? TC.clamp(Math.round(Number(el.value) || 120), 20, 400) : el.value;
@@ -719,7 +795,7 @@
       root.addEventListener('click', onClick);
       root.addEventListener('change', onChange);
       root.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && e.target.matches('input[data-meta], input[data-bartempo]')) e.target.blur();
+        if (e.key === 'Enter' && e.target.matches('input[data-meta], input[data-bartempo], input[data-chord]')) e.target.blur();
       });
     }
     document.querySelectorAll('.panel-expand').forEach((b) => b.addEventListener('click', () => {

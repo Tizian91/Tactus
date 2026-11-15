@@ -814,6 +814,16 @@ setTimeout(() => {
             });
           }).catch((e) => ok('MIDI output: ' + e.message, false));
         }).then(() => {
+          // chord symbols: a tap in the chord bar of the panel, typed, shown above the staff, removed (undo restores)
+          TC.selectBar(0);
+          TC.panel.update(true);
+          const cb = document.querySelector('#panel-settings .chord-btn');
+          if (cb) cb.click();
+          ok('chords: the chord bar of the panel sets a chord above bar 1', !!cb && !!S.doc.bars[0].chords && !!document.querySelector('.chord-sym'));
+          TC.actions.typeChord('F#m7/C#', 0, 0);
+          ok('chords: a typed chord is shown', [...document.querySelectorAll('.chord-sym')].some((e) => e.textContent === 'F♯m7/C♯'));
+          TC.actions.clearBarChords(0);
+          ok('chords: removed', !S.doc.bars[0].chords && !document.querySelector('.chord-sym'));
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');
           pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';

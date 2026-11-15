@@ -130,6 +130,7 @@
   const PAGE_QUARTER = 5.5 * SP;  // page view: width of a quarter at the least
   const PAGE_NOTE = 1.7 * SP;     // … and of the shortest note of a bar
   const TEXT_Y = -7.6 * SP;       // bar text (Verse, Chorus …) and the tempo
+  const CHORD_Y = -4.4 * SP;      // chord symbols (higher above high notes)
   const SYS_GAP = 30 * SP;        // staff coordinates between two lines
 
   RD.isPage = () => S.settings.layout === 'page';
@@ -282,7 +283,8 @@
       const accW = parts.some((p) => p.pitch && p.pitch.accAt0) ? ACC_ROOM : 0;
       // simile / voices: of the track being written; allSimile: "%" in every staff (one % with a number)
       return { i, L, ts: h.ts, beam: h.beam, simile: own.simile, allSimile: parts.every((p) => p.simile), parts, scale, showTs, rs, re, volta: h.volta || null,
-        ksW, accW, tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0) + ksW + accW, voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '' };
+        ksW, accW, tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0) + ksW + accW, voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '',
+        chords: TC.pitch ? TC.score.chordsIn(doc, i) : [] };
     });
     const sv = staves(tracks, bars), lastSv = sv[sv.length - 1];
     const stackH = lastSv.dy + 4 * SP; // top line of the first staff to the bottom line of the last one
@@ -375,7 +377,7 @@
         const under = S.settings.showCounts || ln.some((b) => hasSticking(b.parts[lastSv.k])); // (of the lowest staff)
         // the space between two lines (above the first staff, below the last one): ⚙ → Page, % of the basic space
         const lg = (doc.page.lineGap || 100) / 100;
-        s.above = (text ? 9.8 : 7.2) * SP * lg;
+        s.above = ((text ? 9.8 : 7.2) + (ln.some((b) => b.chords.length) ? 2.2 : 0)) * SP * lg; // (chord symbols: a row more)
         if (k === 0) s.above = Math.max(s.above, 9.8 * SP); // (the first line: room for the tempo under the title)
         s.below = staffBelow(under) * lg;
         const h = s.above + stackH + s.below;
@@ -574,6 +576,7 @@
     }
 
     // grid (every staff, not in its %-bars)
+    const hasChords = doc.bars.some((h) => h.chords);
     for (const z of plain ? [] : L.staves) {
       for (const b of L.bars) {
         if (b.parts[z.k].simile || b.hidden !== undefined) continue;
@@ -583,6 +586,23 @@
           for (let l = -3; l <= 11; l++) {
             if (!TC.pitch.lineTone(TC.pitch.diaAt(l, z.track.clef), pi.scale).in) OS(b, z).push(rect(b.x0, stepY(l) - SP / 4, b.x + b.w - b.x0, SP / 2, 'line-out'));
           }
+        }
+        // chord symbols, writing a melody (the track being written): the chord tones marked; locked: the other lines pale
+        const guide = pi && z.track === cur && hasChords ? TC.score.guideAt(doc, b.i) : 'off';
+        if (guide !== 'off') {
+          const segs = b.chords.slice();
+          if (!segs.length || segs[0].t > 0) {
+            const before = TC.score.chordAt(doc, b.i, 0);
+            if (before) segs.unshift({ t: 0, ch: before.ch });
+          }
+          segs.forEach((x, k) => {
+            const x1 = k ? RD.tickX(b, x.t) - 0.5 * SP : b.x0, x2 = k + 1 < segs.length ? RD.tickX(b, segs[k + 1].t) - 0.5 * SP : b.x + b.w;
+            for (let l = -3; l <= 11; l++) {
+              const g = TC.pitch.guideTone(TC.pitch.diaAt(l, z.track.clef), pi.scale, x.ch, guide);
+              if (g.chord) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-chord'));
+              else if (guide === 'lock') OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-out'));
+            }
+          });
         }
         const beat = TC.rhythm.beatTicks(b.ts);
         const G = TC.rhythm.groupSpans(b.ts, b.beam);
@@ -735,6 +755,25 @@
     }
     staffNow = null;
 
+    // chord symbols above the first staff: one row per line, above its highest note (as in a lead sheet)
+    const chordRow = new Map();
+    L.systems.forEach((s) => {
+      let top = 0, any = false;
+      for (let i = s.first; i <= s.last; i++) {
+        top = Math.min(top, L.bars[i].top || 0);
+        if (L.bars[i].chords.length && L.bars[i].hidden === undefined) any = true;
+      }
+      if (any) chordRow.set(s.i, Math.min(CHORD_Y, top - 1.1 * SP));
+    });
+    L.bars.forEach((b, i) => {
+      if (!b.chords.length || b.hidden !== undefined) return;
+      const y = chordRow.get(b.sys);
+      b.chords.forEach((x) => {
+        const name = TC.pitch.chordName(x.ch, TC.getLang && TC.getLang() === 'de');
+        O(b).push(`<text class="chord-sym" data-bar="${i}" data-t="${x.t}" x="${f(RD.tickX(b, x.t) - 0.4 * SP)}" y="${f(y)}">${esc(name)}</text>`);
+      });
+    });
+
     // endings (1. / 2.): a bracket over the bars of one ending, per line; open at the right after the last one
     const vkey = (b) => (b && b.volta ? b.volta.join(',') : '');
     L.bars.forEach((b, i) => {
@@ -751,7 +790,9 @@
       while (z + 1 < L.bars.length && L.bars[z + 1].volta && L.bars[z + 1].sys === b.sys) z++;
       let top = 0;
       for (let k = a; k <= z; k++) top = Math.min(top, L.bars[k].top || 0);
-      const VY = Math.min(VOLTA_Y, top - 1.7 * SP);
+      // (chord symbols on this line: the bracket above them, its "1." clear of a chord at the bar start)
+      const cy = chordRow.get(b.sys);
+      const VY = Math.min(VOLTA_Y, top - 1.7 * SP, cy !== undefined ? cy - 2.6 * SP : Infinity);
       let d = `M${f(x1)},${f(VY + (startsHere ? hook : 0))} L${f(x1)},${f(VY)} L${f(x2)},${f(VY)}`;
       if (more || last.re) d += ` L${f(x2)},${f(VY + hook)}`;
       O(b).push(`<path class="volta" d="${d}"/>`);

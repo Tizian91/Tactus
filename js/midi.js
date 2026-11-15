@@ -104,6 +104,10 @@
       if (track.kind === 'pitched') addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
     });
 
+    // chord symbols (opts.chords): a MIDI track of their own, a pad on channel 15
+    const chordEv = [], CHORD_CH = Number.isInteger(doc.harmony && doc.harmony.midiCh) ? doc.harmony.midiCh : TC.timeline.CHORD_TRACK.channel;
+    let chordNow = null;
+    if (opts.chords) chordEv.push({ t: 0, order: 0, bytes: [0xc0 | CHORD_CH, TC.timeline.CHORD_TRACK.program] });
     let t0 = 0, tempo = null, ts = null, prev = -1;
     // swing / shuffle as heard (opts.straight: the notes on the grid, e.g. to swing them in the DAW)
     const sw = (k) => (opts.straight ? k : Math.round(TC.swingTick(k, doc.meta.swing || 50, doc.meta.swingUnit || 8)));
@@ -176,6 +180,32 @@
           }
         }
       });
+      if (opts.chords && TC.pitch) {
+        // chord symbols: the chord held from its place to the next one (over the bar line when it goes on), its name as text
+        const list = TC.score.chordsIn(doc, bi);
+        if (!list.length || list[0].t > 0) {
+          const before = TC.score.chordAt(doc, bi, 0);
+          if (before) list.unshift({ t: 0, ch: before.ch, carry: true });
+        }
+        list.forEach((x, k) => {
+          const a = t0 + sw(x.t), b = t0 + (k + 1 < list.length ? sw(list[k + 1].t) : L);
+          const key = TC.pitch.chordText(x.ch);
+          if (chordNow && chordNow.key === key && chordNow.end === a) {
+            chordNow.end = b;
+            chordNow.offs.forEach((e) => { e.t = Math.round(b - 10); });
+            return;
+          }
+          const v = TC.pitch.chordVoicing(x.ch), ch = CHORD_CH;
+          chordEv.push({ t: Math.round(a), order: 0, bytes: meta(0x01, text(TC.pitch.chordName(x.ch))) });
+          const offs = [v.bass].concat(v.tones).map((p) => {
+            chordEv.push({ t: Math.round(a), order: 2, bytes: [0x90 | ch, p, 80] });
+            const off = { t: Math.round(b - 10), order: 1, bytes: [0x80 | ch, p, 0] };
+            chordEv.push(off);
+            return off;
+          });
+          chordNow = { key, end: b, offs };
+        });
+      }
       t0 += L;
     }
     // page turns: a note when the played bar is on another page (the first page at the start)
@@ -211,9 +241,10 @@
       return [0x4d, 0x54, 0x72, 0x6b].concat(u32(data.length), data);
     };
     const multi = !!opts.multi && tracks.length > 0;
+    const chordName = TC.tr ? TC.tr('Chords') : 'Chords';
     const chunks = multi
-      ? [chunk(doc.meta.title || 'Tactus', metaEv)].concat(tracks.map((t, ti) => chunk(t.name, noteEv[ti])))
-      : [chunk(opts.name || doc.meta.title || 'Tactus', metaEv.concat(...noteEv))];
+      ? [chunk(doc.meta.title || 'Tactus', metaEv)].concat(tracks.map((t, ti) => chunk(t.name, noteEv[ti])), opts.chords ? [chunk(chordName, chordEv)] : [])
+      : [chunk(opts.name || doc.meta.title || 'Tactus', metaEv.concat(...noteEv, chordEv))];
     const head = [0x4d, 0x54, 0x68, 0x64, ...u32(6), 0, multi ? 1 : 0, 0, chunks.length, (TC.TPQ >> 8) & 255, TC.TPQ & 255];
     const bytes = new Uint8Array(head.concat(...chunks));
     return {

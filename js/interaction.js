@@ -63,13 +63,18 @@
    * Melody: the tone at staff point p in bar bi - the tone of the scale on the nearest line / space:
    * { line, pitch, dia, a, pale (outside the scale), acc (the sign it is written with, null: none) }.
    */
-  function pitchAt(p, track, bi) {
-    const RD = TC.render, P = TC.pitch, l = Math.round(RD.posAt(p.y));
-    if (l < RD.LINE_MIN || l > RD.LINE_MAX) return null;
-    const scale = TC.score.scaleAt(track, bi), t = P.lineTone(P.diaAt(l, track.clef), scale);
+  function pitchAt(p, track, bi, tick, from) {
+    const RD = TC.render, P = TC.pitch, raw = Math.round(RD.posAt(p.y));
+    if (raw < RD.LINE_MIN || raw > RD.LINE_MAX) return null;
+    const scale = TC.score.scaleAt(track, bi);
+    // chord symbols: locked - only chord tones (the nearest one; dragging: from the side it comes from); marked - just said
+    const guide = TC.score.guideAt(S.doc, bi), at = tick !== undefined && guide !== 'off' ? TC.score.chordAt(S.doc, bi, tick) : null;
+    const tone = (l) => P.guideTone(P.diaAt(l, track.clef), scale, at && at.ch, guide);
+    const l = at && guide === 'lock' ? P.lockedLine(raw, (k) => tone(k).chord, from) : raw;
+    const t = tone(l);
     if (t.pitch < 0 || t.pitch > 127) return null;
     const sig = P.sigAlter(P.fifths(scale), ((t.dia % 7) + 7) % 7);
-    return { line: l, pitch: t.pitch, dia: t.dia, a: t.a, pale: !t.in, acc: t.a !== sig ? t.a : null };
+    return { line: l, raw, pitch: t.pitch, dia: t.dia, a: t.a, pale: !t.in, acc: t.a !== sig ? t.a : null, chord: at && t.chord ? P.chordName(at.ch, de()) : '' };
   }
   /** Name of a melody note ("F♯4" / "Fis4"). */
   function toneName(n, track, bi) {
@@ -78,7 +83,7 @@
   }
   /** What a target writes / is: instrument or tone name (short: for the label at the note). */
   function targetName(t, short) {
-    if (t.pitch !== undefined) return TC.pitch.fullName(t.dia, t.a, de()) + (t.pale ? ' · ' + tr('outside the scale') : '');
+    if (t.pitch !== undefined) return TC.pitch.fullName(t.dia, t.a, de()) + (t.pale ? ' · ' + tr('outside the scale') : '') + (t.chord && !short ? ' · ' + tr('in {chord}', { chord: t.chord }) : '');
     return TC.drums.label(t.art, short);
   }
   /** Name of the note of a hit (findNote). */
@@ -88,7 +93,7 @@
    * Where a note would go at point p: { kind: 'place', bar, tick, line, art, lock } or null
    * (beside the lines, bar start, %-bar). keepArt: the instrument stays (lock, moving with lock).
    */
-  function placeAt(p, e, keepArt) {
+  function placeAt(p, e, keepArt, free) {
     const RD = TC.render;
     if (!p || p.x < p.sys.ox) return null;
     if (p.y < RD.stepY(RD.LINE_MIN) - 5 || p.y > RD.stepY(RD.LINE_MAX) + 5) return null;
@@ -98,8 +103,9 @@
     if (!bar || RD.simileAt(bar, track) || p.x < bar.x0) return null;
     if (isMelody(track)) {
       // melody: every line and space (and the ledger lines around) holds a tone of the scale
-      const pt = pitchAt(p, track, bar.i);
-      return pt && Object.assign({ kind: 'place', bar: bar.i, tick: RD.snapTick(bar, p.x), track, len: TC.inputTicks(S.input) }, pt);
+      // (free: moving a note - the chords do not lock it)
+      const tick = RD.snapTick(bar, p.x), pt = pitchAt(p, track, bar.i, free ? undefined : tick, S.drag && S.drag.t ? S.drag.t.raw : undefined);
+      return pt && Object.assign({ kind: 'place', bar: bar.i, tick, track, len: TC.inputTicks(S.input) }, pt);
     }
     const near = lineArt(p);
     if (!near) return null; // beside the lines (also with the lock): that is where bars are chosen
@@ -512,7 +518,7 @@
   function aimMelody(e) {
     const d = S.drag, RD = TC.render, p = I.toLocal(e.clientX, e.clientY);
     const start = d.start || (d.start = { bar: d.t.bar, tick: d.t.tick });
-    const track = TC.curTrack(), pt = p && (!p.track || p.track === track) ? pitchAt(p, track, start.bar) : null;
+    const track = TC.curTrack(), pt = p && (!p.track || p.track === track) ? pitchAt(p, track, start.bar, start.tick, d.t ? d.t.raw : undefined) : null;
     if (!pt) {
       if (d.t) {
         d.t = null;
@@ -685,7 +691,7 @@
   /** Melody: a note being dragged - sideways in time, up / down to the tone of the scale on that line. */
   function moveMelody(e) {
     const d = S.drag, n = d.hit.note;
-    let to = placeAt(I.toLocal(e.clientX, e.clientY), e);
+    let to = placeAt(I.toLocal(e.clientX, e.clientY), e, null, true);
     if (to && to.track !== d.hit.track) to = null;
     if (to && d.to && to.bar === d.to.bar && to.tick === d.to.tick && to.pitch === d.to.pitch) return;
     const newSound = to && (!d.to || to.pitch !== d.to.pitch);

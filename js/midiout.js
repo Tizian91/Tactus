@@ -49,6 +49,9 @@
   /** A track's own output is chosen but not connected. */
   MO.trackMissing = (track) => !!(track && track.midiOut && access && !byName(track.midiOut));
 
+  /** Is a MIDI output of this name connected? */
+  MO.connected = (name) => !!byName(name);
+
   /** Playback goes to a MIDI output (chosen and connected). */
   MO.active = () => !!port();
   /** The chosen output is not there (not connected, or MIDI not allowed yet). */

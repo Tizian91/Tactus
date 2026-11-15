@@ -60,6 +60,19 @@
     return out;
   }
 
+  /** A chord symbol (js/pitch.js) as <harmony>, at tick t of the bar. */
+  function harmonyXml(ch, t) {
+    const P = TC.pitch, q = P.qual(ch.q);
+    const step = (r) => 'CDEFGAB'[r.l];
+    const kind = q ? q.xml : 'other', text = P.chordName(Object.assign({}, ch, { root: { l: 0, a: 0 }, bass: null })).slice(1);
+    const deg = (q && q.deg ? q.deg : []).map(([v, a, ty]) => `<degree><degree-value>${v}</degree-value><degree-alter>${a}</degree-alter><degree-type>${ty}</degree-type></degree>`).join('');
+    return '<harmony>' + `<root><root-step>${step(ch.root)}</root-step>${ch.root.a ? `<root-alter>${ch.root.a}</root-alter>` : ''}</root>` +
+      `<kind text="${esc(text)}">${kind}</kind>` +
+      (ch.bass ? `<bass><bass-step>${step(ch.bass)}</bass-step>${ch.bass.a ? `<bass-alter>${ch.bass.a}</bass-alter>` : ''}</bass>` : '') +
+      deg + (t ? `<offset>${t}</offset>` : '') + '</harmony>';
+  }
+  X.harmonyXml = harmonyXml;
+
   X.build = function (doc, opts = {}) {
     const tracks = opts.tracks || doc.tracks;
     // how signs and jumps are written (Guitar Pro reads them its own way - still being tried out):
@@ -114,6 +127,10 @@
     const vkey = (h) => (h && h.volta ? h.volta.join(',') : '');
     const swing = (meta.swing || 50) !== 50 && TC.render && TC.render.swingName ? (TC.tr ? TC.tr(TC.render.swingName(meta.swing)) : TC.render.swingName(meta.swing)) : '';
 
+    // chord symbols: over the melody track whose scale they follow, else over the first part
+    const ht = TC.pitch ? TC.score.harmonyTrack(doc) : null;
+    const chordPart = TC.pitch ? (ht && tracks.includes(ht) ? ht : tracks.find((x) => x.kind === 'pitched') || tracks[0]) : null;
+
     tracks.forEach((t, k) => {
       o.push(`<part id="${pid(k)}">`);
       const one = D.oneLine(t);
@@ -159,6 +176,8 @@
           if (/^segno/.test(h.mark)) sign(h.mark === 'segnoSegno' ? '<segno/><segno/>' : '<segno/>', `segno="${SOUND[h.mark]}"`);
           if (h.mark === 'coda' || h.mark === 'doubleCoda') sign(h.mark === 'doubleCoda' ? '<coda/><coda/>' : '<coda/>', `coda="${SOUND[h.mark]}"`);
         }
+        // chord symbols: over the melody track the chords follow (else the first part), each at its place in the bar
+        if (t === chordPart) TC.score.chordsIn(doc, i).forEach((x) => o.push(harmonyXml(x.ch, x.t)));
 
         // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice
         const src = TC.score.sourceBar(doc, i, t);

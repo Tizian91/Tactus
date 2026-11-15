@@ -306,7 +306,9 @@
 
   AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
     if (!ensure()) return;
-    if (TC.midiOut && TC.midiOut.active()) {
+    // the chord pad: its own MIDI output only (if connected; else here), never the drums' output
+    const toMidi = TC.midiOut && (track && track.ownPort ? TC.midiOut.connected(track.midiOut) : TC.midiOut.active() && !(track && track.synthOnly));
+    if (toMidi) {
       TC.midiOut.note(pitch, t, dur, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
@@ -417,7 +419,8 @@
       if (idx < 0) idx = tl.hits.length;
     }
     // MIDI output with a lead (settings.midiLead): its strokes are handed over that much earlier
-    const lead = TC.midiOut && TC.midiOut.active() ? TC.midiOut.lead() : 0;
+    const chordOut = S.doc.harmony && S.doc.harmony.pad && S.doc.harmony.midiOut && TC.midiOut && TC.midiOut.connected(S.doc.harmony.midiOut);
+    const lead = TC.midiOut && (TC.midiOut.active() || chordOut) ? TC.midiOut.lead() : 0;
     const horizon = ctx.currentTime - t0 + AHEAD + lead;
     for (;;) {
       if (idx >= tl.hits.length) {

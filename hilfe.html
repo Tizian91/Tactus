@@ -32,7 +32,7 @@
     <li><a href="#takte">7. Takte und Form</a>
       <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
     <li><a href="#melodie">8. Melodie schreiben</a>
-      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li></ol></li>
+      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li></ol></li>
     <li><a href="#notenblatt">9. Notenblatt und PDF</a></li>
     <li><a href="#wiedergabe">10. Wiedergabe und Klang</a>
       <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
@@ -369,10 +369,40 @@ Tonhöhe.</p>
     harmonisch –, steht direkt an der Note.</li>
   <li>Tonleitern mit weniger als 7 Tönen (Pentatonik, Blues …): die Stellen <b>außerhalb</b> sind blass hinterlegt, setzen aber trotzdem
     ihren Ton. Die Blue Note im Blues liegt auf derselben Linie wie die Quinte – Note halten und runter.</li>
+  <li><b>▶</b> neben der Auswahl spielt die Tonleiter einmal hoch und runter – wählen nach Gehör, ganz ohne Theorie.</li>
 </ul>
+
+<h3 id="akkorde">Akkorde</h3>
+<p>Akkordsymbole gehören zum ganzen Song: sie stehen einmal über der obersten Notenzeile und gelten für alle Spuren – auch ganz ohne
+Melodie, nur mit Schlagzeug. Takt antippen (über oder unter den Linien), dann im Panel <span class="ui">Takt · Stück → Akkorde</span>:</p>
+<ul>
+  <li>Die Knöpfe sind die <b>Stufenakkorde</b> der Tonleiter, die in diesem Takt gilt (C-Dur: C · Dm · Em · F · G · Am · H°), darunter
+    klein die Stufe (I ii iii …). Tippen setzt den Akkord und lässt ihn kurz klingen. <span class="ui">7 Vierklänge</span> macht daraus
+    Cmaj7, Dm7, G7 … Pentatonik & Co. nehmen die Akkorde ihrer 7-Ton-Tonleiter; Akkorde, die nur aus ihren eigenen Tönen bestehen,
+    sind kräftig, die anderen blass. Blues: I7 · IV7 · V7.</li>
+  <li><b>Wo im Takt:</b> die kleinen Knöpfe oben wählen die Stelle – wie das Klick-Raster: bei Vierteln 1 2 3 4, bei Achteln 1 und 2 und …, bei Sechzehnteln 1 e und a … (zwei Reihen). So geht auch ein vorgezogener Akkord auf „4 und“. Ein Akkord gilt bis zum
+    nächsten, auch über viele Takte.</li>
+  <li><b>Eigener Akkord:</b> eintippen, z. B. <code>C7</code>, <code>Fadd9</code>, <code>G/H</code>, <code>F#m7b5</code>
+    (deutsch: <code>H</code> = H, <code>B</code> = B♭, auch <code>Fis</code>, <code>Es</code>).</li>
+  <li>Aus den Knöpfen gesetzt merkt sich Tactus die <b>Stufe</b>: wechselt die Tonleiter (C-Dur → D-Dur), wird aus Dm automatisch Em.
+    Eingetippte Akkorde bleiben, wie sie sind. Ohne Melodie-Spur wählst du die <span class="ui">Tonart</span> direkt im Panel.</li>
+  <li>Auch im Taktmenü (rechte Maustaste / Finger halten neben den Linien): <span class="ui">Akkord</span>.</li>
+  <li><b>Mitspielen:</b> beim Abspielen klingt ein weicher Akkord-Teppich (abschaltbar, eigene Lautstärke) – Songschreiben auch ganz ohne Melodie.
+    Standard ist der Tactus-Klang, auch wenn das Schlagzeug über MIDI läuft. Wer ein Synth-VST hat, wählt darunter unter <span class="ui">Klang</span> dessen MIDI-Ausgang und einen Kanal (Standard 15) – nicht den Ausgang des Drum-VSTs, das würde die Akkorde als Schläge spielen.</li>
+</ul>
+<p><b>Beim Schreiben der Melodie</b> helfen die Akkorde (Panel, Zeile <span class="ui">Melodie</span>, gilt ab dem gewählten Takt):</p>
+<ul>
+  <li><span class="ui">Akkordtöne zeigen</span> (Standard): die Töne des gerade klingenden Akkords sind blau hinterlegt, gesetzt wird jeder Ton.</li>
+  <li><span class="ui">Nur Akkordtöne</span>: die anderen Linien sind blass, Tippen dort setzt den nächsten Akkordton (gleich weit: beim Ziehen
+    von der Seite, aus der du kommst, sonst der tiefere). Bei E7 in a-Moll setzt die G-Linie das Gis. Bewusst abweichen geht weiter:
+    Note halten, hoch / runter. Verschieben einer Note ist nicht gesperrt.</li>
+  <li><span class="ui">Akkorde: keine Hilfe</span>: nur die Tonleiter.</li>
+</ul>
+<p><b>Export:</b> MusicXML schreibt die Akkordsymbole (Guitar Pro, MuseScore zeigen sie über der Melodie). Beim <span class="ui">MIDI exportieren</span>
+gibt es eine Zeile <span class="ui">Akkorde</span>: eine eigene Datei bzw. MIDI-Spur mit einer Fläche auf Kanal 15 und den Akkordnamen als Text.</p>
 <p><b>Klang und Export:</b> Die Melodie spielt mit dem Tactus-Synthesizer oder über MIDI auf jedem Instrument-VST (Kanal und Klang der
 Spur). <span class="ui">MIDI exportieren</span> und <span class="ui">MusicXML</span> nehmen Tonhöhen, Tonart, Schlüssel und Haltebögen mit.</p>
-<figure><img src="help/img/bspmelodie.png" alt="Beispiel Melodie: Gesang in a-Moll über einem Groove, mit Haltebogen und Gis"><figcaption>Gesang in a-Moll über einem Groove: Haltebogen über den Taktstrich, das Gis als bewusster Halbton.</figcaption></figure>
+<figure><img src="help/img/bspmelodie.png" alt="Beispiel Melodie: Gesang in a-Moll über einem Groove, mit Haltebogen und Gis"><figcaption>Gesang in a-Moll über einem Groove: Haltebogen über den Taktstrich, das Gis als bewusster Halbton, darüber die Akkorde (Am · Dm · C · E7); die Akkordtöne sind auf den Linien hinterlegt.</figcaption></figure>
 <p><a class="open" href="index.html?beispiel=melodie">▶ Beispiel im Programm öffnen: Melodie</a> – abspielen, dann selbst eine Note halten und hoch ziehen.</p>
 
 <!-- ================================================================================= -->

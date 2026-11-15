@@ -216,6 +216,34 @@
     const x = P.lineMap(scale)[mod(dia, 7)];
     return { pitch: P.pitchOf(dia, x.a), dia, a: x.a, in: x.in };
   };
+  /**
+   * The tone of a place while a chord sounds (writing a melody): guide 'mark' - the tone of the scale, chord: is it
+   * a chord tone; 'lock' - a line of a chord tone's letter writes that chord tone (E7 in A minor: G♯ on the G line),
+   * the other lines chord: false (P.lockedLine finds the nearest chord tone). { pitch, dia, a, in, chord }.
+   */
+  P.guideTone = function (dia, scale, ch, guide) {
+    const t = P.lineTone(dia, scale);
+    if (!ch || !guide || guide === 'off') return Object.assign(t, { chord: false });
+    if (guide === 'lock') {
+      const ct = P.chordTones(ch).find((x) => x.l === mod(dia, 7));
+      return ct ? { pitch: P.pitchOf(dia, ct.a), dia, a: ct.a, in: true, chord: true } : Object.assign(t, { chord: false });
+    }
+    return Object.assign(t, { chord: P.chordPcs(ch).includes(mod(t.pitch, 12)) });
+  };
+  /**
+   * Chords locked: the nearest line (staff step) with a chord tone to line l. Equally near: from - the line coming
+   * from (dragging: the side it comes from), else the lower one. isChord(line) says whether a line holds one.
+   */
+  P.lockedLine = function (l, isChord, from) {
+    if (isChord(l)) return l;
+    for (let k = 1; k <= 7; k++) {
+      const up = isChord(l - k), down = isChord(l + k);
+      if (up && down) return from !== undefined && from < l ? l - k : l + k; // (larger steps are lower)
+      if (up) return l - k;
+      if (down) return l + k;
+    }
+    return l;
+  };
 
   /**
    * Accidentals of the notes of one bar, in time order: [{ dia, a, cont }] -> the sign each needs
@@ -274,6 +302,201 @@
   /** The 12 roots offered: [pc, label]. */
   P.ROOTS = [[0, 'C'], [1, 'C♯ / D♭'], [2, 'D'], [3, 'D♯ / E♭'], [4, 'E'], [5, 'F'], [6, 'F♯ / G♭'], [7, 'G'], [8, 'G♯ / A♭'], [9, 'A'], [10, 'A♯ / B♭'], [11, 'B']];
   P.ROOTS_DE = [[0, 'C'], [1, 'Cis / Des'], [2, 'D'], [3, 'Dis / Es'], [4, 'E'], [5, 'F'], [6, 'Fis / Ges'], [7, 'G'], [8, 'Gis / As'], [9, 'A'], [10, 'Ais / B'], [11, 'H']];
+
+  // ---- Chords ----------------------------------------------------------------------------------
+  //
+  // A chord: { root: { l, a }, q: quality id (P.QUALS), bass: { l, a } | null, sfx?: own suffix as typed }.
+  // Scale-degree chords: on every degree of the scale the tones a third apart are stacked (every second
+  // tone) - a triad, or with sev a seventh chord. Scales with fewer tones take the chords of their
+  // 7-tone scale (and mark those made only of their own tones), blues: I7 · IV7 · V7, whole tone: C+ D+ …
+
+  /**
+   * Chord qualities: iv semitones above the root, sym as written after the root, xml: MusicXML <kind>
+   * (deg: added / altered degrees [value, alter, type]), alias: how it may be typed (♭ / ♯ as b / #).
+   */
+  P.QUALS = [
+    { id: 'maj', iv: [0, 4, 7], sym: '', xml: 'major', alias: ['', 'maj', 'M', 'dur'] },
+    { id: 'm', iv: [0, 3, 7], sym: 'm', xml: 'minor', alias: ['m', 'min', 'mi', '-', 'moll'] },
+    { id: 'dim', iv: [0, 3, 6], sym: '°', xml: 'diminished', alias: ['dim', '°', 'o'] },
+    { id: 'aug', iv: [0, 4, 8], sym: '+', xml: 'augmented', alias: ['aug', '+', '#5', '(#5)'] },
+    { id: 'b5', iv: [0, 4, 6], sym: '(♭5)', xml: 'major', deg: [[5, -1, 'alter']], alias: ['b5', '(b5)', '-5'] },
+    { id: 'sus2', iv: [0, 2, 7], sym: 'sus2', xml: 'suspended-second', alias: ['sus2'] },
+    { id: 'sus4', iv: [0, 5, 7], sym: 'sus4', xml: 'suspended-fourth', alias: ['sus4', 'sus'] },
+    { id: '5', iv: [0, 7], sym: '5', xml: 'power', alias: ['5'] },
+    { id: '7', iv: [0, 4, 7, 10], sym: '7', xml: 'dominant', alias: ['7', 'dom7'] },
+    { id: 'maj7', iv: [0, 4, 7, 11], sym: 'maj7', xml: 'major-seventh', alias: ['maj7', 'M7', 'Δ', 'Δ7', 'j7', 'ma7'] },
+    { id: 'm7', iv: [0, 3, 7, 10], sym: 'm7', xml: 'minor-seventh', alias: ['m7', 'min7', 'mi7', '-7'] },
+    { id: 'm7b5', iv: [0, 3, 6, 10], sym: 'm7♭5', xml: 'half-diminished', alias: ['m7b5', 'ø', 'ø7', '-7b5', 'min7b5'] },
+    { id: 'dim7', iv: [0, 3, 6, 9], sym: '°7', xml: 'diminished-seventh', alias: ['dim7', '°7', 'o7'] },
+    { id: 'mMaj7', iv: [0, 3, 7, 11], sym: 'm(maj7)', xml: 'major-minor', alias: ['m(maj7)', 'mmaj7', 'mMaj7', 'm(M7)', 'mM7', '-maj7'] },
+    { id: 'augMaj7', iv: [0, 4, 8, 11], sym: '+maj7', xml: 'major-seventh', deg: [[5, 1, 'alter']], alias: ['+maj7', 'augmaj7', 'maj7#5', 'maj7(#5)'] },
+    { id: 'aug7', iv: [0, 4, 8, 10], sym: '+7', xml: 'augmented-seventh', alias: ['+7', 'aug7', '7#5', '7(#5)'] },
+    { id: '7b5', iv: [0, 4, 6, 10], sym: '7♭5', xml: 'dominant', deg: [[5, -1, 'alter']], alias: ['7b5', '7(b5)'] },
+    { id: 'maj7b5', iv: [0, 4, 6, 11], sym: 'maj7♭5', xml: 'major-seventh', deg: [[5, -1, 'alter']], alias: ['maj7b5', 'maj7(b5)'] },
+    { id: '7sus4', iv: [0, 5, 7, 10], sym: '7sus4', xml: 'suspended-fourth', deg: [[7, -1, 'add']], alias: ['7sus4', '7sus'] },
+    { id: '6', iv: [0, 4, 7, 9], sym: '6', xml: 'major-sixth', alias: ['6'] },
+    { id: 'm6', iv: [0, 3, 7, 9], sym: 'm6', xml: 'minor-sixth', alias: ['m6', '-6'] },
+    { id: 'add9', iv: [0, 4, 7, 14], sym: 'add9', xml: 'major', deg: [[9, 0, 'add']], alias: ['add9', 'add2', '(add9)'] },
+    { id: 'madd9', iv: [0, 3, 7, 14], sym: 'madd9', xml: 'minor', deg: [[9, 0, 'add']], alias: ['madd9', 'm(add9)', 'madd2'] },
+    { id: '9', iv: [0, 4, 7, 10, 14], sym: '9', xml: 'dominant-ninth', alias: ['9'] },
+    { id: 'maj9', iv: [0, 4, 7, 11, 14], sym: 'maj9', xml: 'major-ninth', alias: ['maj9', 'M9', 'Δ9'] },
+    { id: 'm9', iv: [0, 3, 7, 10, 14], sym: 'm9', xml: 'minor-ninth', alias: ['m9', '-9'] },
+  ];
+  const qById = new Map(P.QUALS.map((q) => [q.id, q]));
+  const qByAlias = new Map();
+  P.QUALS.forEach((q) => q.alias.forEach((s) => { if (!qByAlias.has(s)) qByAlias.set(s, q); }));
+  P.qual = (id) => qById.get(id) || null;
+  const sameIv = (a, b) => a.length === b.length && a.every((x, k) => x === b[k]);
+  /** The quality with these semitones above the root, or null. */
+  const qualOf = (iv) => P.QUALS.find((q) => sameIv(q.iv, iv)) || null;
+
+  /** Pitch classes of a chord (root first; an odd chord of an exotic scale keeps its own tones in ch.iv). */
+  P.chordPcs = function (ch) {
+    const r = P.pc(ch.root.l, ch.root.a), q = P.qual(ch.q);
+    return (q ? q.iv : ch.iv || [0, 4, 7]).map((i) => mod(r + i, 12));
+  };
+
+  /**
+   * The tones of a chord as spelled: [{ l, a }] (E7: E G♯ B D) - each on the letter of its step above the root
+   * (third, fifth, seventh …; a diminished seventh on the seventh's letter). Writing a melody with the chord
+   * locked, a line of such a letter writes this tone.
+   */
+  P.chordTones = function (ch) {
+    const q = P.qual(ch.q), iv = q ? q.iv : ch.iv || [0, 4, 7], r = P.pc(ch.root.l, ch.root.a);
+    const STEP = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: ch.q === 'dim7' ? 6 : 5, 10: 6, 11: 6, 13: 1, 14: 1, 15: 1 };
+    const out = new Map();
+    for (const i of iv) {
+      const l = (ch.root.l + (STEP[i] !== undefined ? STEP[i] : 0)) % 7;
+      if (!out.has(l)) out.set(l, { l, a: near(r + i - NAT[l]) });
+    }
+    if (ch.bass && !out.has(ch.bass.l)) out.set(ch.bass.l, { l: ch.bass.l, a: ch.bass.a });
+    return [...out.values()];
+  };
+
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+  /**
+   * The chord on degree `deg` (1 …) of a scale: { deg, root, q, roman, inScale } (iv: its semitones if
+   * no quality fits); null if the scale has no such degree. sev: a seventh chord.
+   */
+  P.degreeChord = function (scale, deg, sev) {
+    const s = P.scaleById(scale.id), rootPc = P.pc(scale.l, scale.a);
+    const k = deg - 1;
+    if (s.chords === 'blues') { // blues: dominant sevenths on I, IV, V
+      if (![0, 3, 4].includes(k)) return null;
+      const iv = [0, 2, 4, 5, 7, 9, 11][k], l = (scale.l + k) % 7;
+      return { deg, root: { l, a: near(rootPc + iv - NAT[l]) }, q: '7', roman: ROMAN[k] + '7', inScale: false };
+    }
+    const own = s.iv.length === 7 || s.id === 'wholeTone' ? s.iv : P.scaleById(s.parent).iv;
+    if (k < 0 || k >= own.length) return null;
+    const n = own.length;
+    // the tones a third apart: every second tone of the scale (above the root of the degree)
+    const at = (j) => own[(k + j) % n] + 12 * Math.floor((k + j) / n) - own[k];
+    let iv;
+    if (s.id === 'wholeTone') iv = sev ? [0, 4, 8, 10] : [0, 4, 8]; // (6 tones: every second one is a major third)
+    else iv = (sev ? [0, 2, 4, 6] : [0, 2, 4]).map(at);
+    const l = (scale.l + k) % 7, pc = mod(rootPc + own[k], 12);
+    const root = { l, a: near(pc - NAT[l]) };
+    const q = qualOf(iv);
+    const ch = { deg, root, q: q ? q.id : null, roman: '' };
+    if (!q) ch.iv = iv;
+    // Roman numeral: small for a minor third; ° diminished, + augmented; ♭ / ♯ where the root differs from major
+    const minor = iv[1] === 3 || iv[1] === 2;
+    const off = near(own[k] - [0, 2, 4, 5, 7, 9, 11][k]);
+    const rsym = { dim: '°', aug: '+', maj7: 'maj7', '7': '7', m7: '7', m7b5: 'ø7', dim7: '°7', mMaj7: '(maj7)', augMaj7: '+maj7', aug7: '+7', b5: '(♭5)', '7b5': '7♭5', maj7b5: 'maj7♭5' }[ch.q] || (q ? '' : '?');
+    ch.roman = (off > 0 ? '♯' : off < 0 ? '♭' : '') + (minor ? ROMAN[k].toLowerCase() : ROMAN[k]) + rsym;
+    const pcs = P.pcs(scale);
+    ch.inScale = P.chordPcs(ch).every((x) => pcs.has(x));
+    return ch;
+  };
+  /** All scale-degree chords of a scale (blues: 3, whole tone: 6, else 7). */
+  P.degreeChords = function (scale, sev) {
+    const out = [];
+    for (let d = 1; d <= 7; d++) {
+      const c = P.degreeChord(scale, d, sev);
+      if (c) out.push(c);
+    }
+    return out;
+  };
+  /** Does the scale take the chords of another scale (fewer than 7 tones): then mark those of its own tones. */
+  P.borrowsChords = (scale) => { const s = P.scaleById(scale.id); return !!s.parent && s.chords !== 'blues' && !s.free; };
+
+  /** Root name for chord symbols: C, F♯, B♭ (German: H, and B for B♭). */
+  P.chordRoot = function (r, de) {
+    if (de && r.l === 6) return { 0: 'H', '-1': 'B', 1: 'H♯', '-2': 'B♭' }[r.a] || 'H';
+    return P.name(r.l, r.a, false);
+  };
+  /** The name of a chord as written above the staff ("F♯m7", "C/G"). */
+  P.chordName = function (ch, de) {
+    if (!ch) return '';
+    const q = P.qual(ch.q);
+    const sfx = ch.sfx !== undefined ? ch.sfx : q ? q.sym : '(' + (ch.iv || []).slice(1).join(',') + ')';
+    return P.chordRoot(ch.root, de) + sfx + (ch.bass ? '/' + P.chordRoot(ch.bass, de) : '');
+  };
+  /** The chord as plain text to keep (language-free, ♯ / ♭ as # / b): "F#m7", "Bb/D". */
+  P.chordText = function (ch) {
+    const r = (x) => LETTERS[x.l] + (x.a > 0 ? '#'.repeat(x.a) : 'b'.repeat(-x.a));
+    const q = P.qual(ch.q);
+    const sfx = (ch.sfx !== undefined ? ch.sfx : q ? q.sym : '').replace(/♭/g, 'b').replace(/♯/g, '#');
+    return r(ch.root) + sfx + (ch.bass ? '/' + r(ch.bass) : '');
+  };
+
+  /** A root as typed: C, F#, Fis, Bb, Es, H (German: B = B♭) -> { l, a, len } or null. */
+  function parseRoot(s, de) {
+    const m = /^([A-Ha-h])(is|es|s|##|#|♯|bb|b|♭)?/.exec(s);
+    if (!m) return null;
+    let L = m[1].toUpperCase(), acc = m[2] || '';
+    // "Es" / "As" are German (E♭ / A♭); a lone "s" after other letters is not an accidental
+    if (acc === 's' && L !== 'E' && L !== 'A') acc = '';
+    let a = { '': 0, '#': 1, '♯': 1, is: 1, '##': 2, b: -1, '♭': -1, es: -1, s: -1, bb: -2 }[acc];
+    if (L === 'H') L = 'B';
+    else if (L === 'B' && de && !acc) a = -1; // German: B = B♭
+    const len = m[1].length + acc.length;
+    // "Bm" / "Bes": fine; "b" alone after a letter: a flat ("Eb"), unless it starts a word ("Ebadd9" stays E♭ add9)
+    return { l: LETTERS.indexOf(L), a, len };
+  }
+  /**
+   * A chord as typed ("Am", "F#m7", "Bb/D", "Cmaj7", German "Fis-Moll" style "fism" is not read) -> chord,
+   * or null if no root is found. An unknown suffix is kept as typed (sfx), sounding like the longest
+   * known start of it (else major).
+   */
+  P.parseChord = function (text, de) {
+    let s = String(text || '').trim().replace(/\s+/g, '');
+    if (!s) return null;
+    let bass = null;
+    const slash = s.lastIndexOf('/');
+    if (slash > 0) {
+      const b = parseRoot(s.slice(slash + 1), de);
+      if (b && b.len === s.length - slash - 1) {
+        bass = { l: b.l, a: b.a };
+        s = s.slice(0, slash);
+      }
+    }
+    const r = parseRoot(s, de);
+    if (!r) return null;
+    const rest = s.slice(r.len), norm = rest.replace(/♭/g, 'b').replace(/♯/g, '#');
+    const root = { l: r.l, a: r.a };
+    let q = qByAlias.get(norm) || qByAlias.get(norm.toLowerCase());
+    if (norm === 'M') q = qById.get('maj');
+    if (q) return { root, q: q.id, bass };
+    // unknown: the longest known start decides how it sounds, the text stays as typed
+    let best = qById.get('maj');
+    for (let n = norm.length; n > 0; n--) {
+      const k = qByAlias.get(norm.slice(0, n));
+      if (k) { best = k; break; }
+    }
+    return { root, q: best.id, bass, sfx: rest.replace(/b(?=\d)/g, '♭').replace(/#(?=\d)/g, '♯') };
+  };
+
+  /**
+   * Pitches to play a chord softly: the bass (root or the slash bass) in the low octave, the tones close
+   * together around the middle (MIDI 55 … 66), so changing chords move little. { bass, tones }.
+   */
+  P.chordVoicing = function (ch) {
+    const pcs = P.chordPcs(ch);
+    const b = ch.bass ? P.pc(ch.bass.l, ch.bass.a) : pcs[0];
+    const tones = [...new Set(pcs)].map((pc) => 55 + mod(pc - 55, 12)).sort((x, y) => x - y);
+    return { bass: 36 + mod(b - 36, 12), tones };
+  };
 
   // ---- Clefs and voices ----------------------------------------------------------------------
 

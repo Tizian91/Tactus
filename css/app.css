@@ -209,6 +209,14 @@ label.check.small { font-size: 12px; color: var(--label); }
 .mus-btn.sm { font-size: 18px; top: 3px; }
 .values { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .values button { padding: 10px 0 8px; height: 40px; }
+/* chord symbols (panel "Bar · score" → Chords): the places in the bar, the scale-degree chords */
+.chord-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 3px; margin-bottom: 6px; }
+.chord-slots button { padding: 3px 2px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chord-slots button small, .chord-btn small { color: var(--muted); font-size: 10px; }
+.chord-pal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 6px; }
+.chord-btn { display: flex; flex-direction: column; align-items: center; padding: 5px 0 3px; min-height: 40px; line-height: 1.15; }
+.chord-btn b { font-size: 14px; white-space: nowrap; }
+.chord-btn.pale { opacity: 0.5; }
 
 .arts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 2px 0 4px; }
 .arts button.art { display: flex; align-items: center; gap: 6px; padding: 4px 6px; min-height: 34px; text-align: left; min-width: 0; }
@@ -270,6 +278,7 @@ details > summary { list-style-position: outside; }
 .score .dm-label.pale { opacity: 0.4; font-weight: 400; }
 .score .dm-lead.pale { opacity: 0.4; }
 .score .line-out { fill: var(--label); opacity: 0.07; }
+.score .line-chord { fill: var(--accent, #2b6cde); opacity: 0.16; }
 .score .len-bar { fill: var(--accent); opacity: 0.18; }
 .score .len-stop { fill: var(--accent); opacity: 0.9; }
 .score .dm-lead { fill: none; stroke: var(--muted); stroke-width: 0.5; stroke-dasharray: 1 2; opacity: 0.7; }
@@ -347,6 +356,7 @@ details > summary { list-style-position: outside; }
 .score .multirest-n { font-size: 20px; font-weight: 700; text-anchor: middle; fill: var(--ink); }
 .score .marker-box { fill: none; stroke: var(--ink); stroke-width: 1.1; }
 .score .marker-text { font-size: 12px; font-weight: 700; fill: var(--ink); }
+.score .chord-sym { font-size: 15px; font-weight: 700; fill: var(--ink); }
 
 /* PDF / print: only the pages (TC.render.print), black on white */
 #print-root { display: none; }
@@ -457,3 +467,5 @@ body.perform #viewport { position: fixed; inset: 0; z-index: 40; } /* the whole 
   background: var(--panel, #fff); color: var(--text, #222); border: 1px solid var(--border, #ccc); border-radius: 8px; opacity: 0.85; font-size: 14px; }
 #perform-bar button { min-width: 36px; min-height: 32px; font-size: 18px; }
 #perform-bar span { min-width: 56px; text-align: center; }
+.chord-slots button.off-beat:not(.active) { background: var(--panel-bg, transparent); opacity: 0.85; }
+.chord-slots button { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }

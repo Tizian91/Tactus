@@ -46,7 +46,7 @@ Song-Datenbanken.
 | **2: Notenblatt** | Seitenansicht A4 mit Zeilen- und Seitenumbruch, Kopf mit Titel / Interpret / Tempo, **PDF** über den Druckdialog (wie MindMapper `printPages`), Takt-Texte, Taktnummern, Velocity, Wiederholungen | ✅ Seitenansicht + PDF (Velocity, Wiederholungen offen) |
 | **3: Wiedergabe** | Web Audio: synthetisierte Schlagzeugklänge (später eingebettete Samples), mitlaufender Cursor, Metronom, Schleife, Tempo | ✅ Grundfunktion fertig (Samples später) |
 | **4: Teilen & Austausch** | ~~GitHub Pages~~ ✅ (https://tizian91.github.io/Tactus/), Teilen per Link (Stück komprimiert im `#`-Teil der Adresse), MIDI-Export, MusicXML-Export (Import in Guitar Pro) | |
-| **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | ✅ Melodie-Spur (Schritt A), weiter mit Stufenakkorden, Klaviersystem, Liedtext – siehe „Phase 5 – Melodien“ |
+| **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | ✅ Melodie-Spur (Schritt A), ✅ Stufenakkorde (Schritt B), weiter mit Klaviersystem, Liedtext – siehe „Phase 5 – Melodien“ |
 | **6: Tabulatur** | Saiten / Bünde, Stimmungen, Tabulatur unter dem Notensystem, Bend / Slide | |
 | **7: Extras** | .gp-Export (Guitar Pro 7/8), MIDI-Eingang (Aufnahme), Kopieren / Einfügen von Takten, Volta-Klammern | |
 
@@ -236,7 +236,7 @@ Eine Regel für Maus, Stift und Finger:
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
 9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (in Guitar Pro getestet, siehe unten)
-11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ → B → E → C → D, siehe „Phase 5 – Melodien“)
+11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ → B ✅ → E → C → D, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
 
@@ -308,7 +308,7 @@ Schritte:
   „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
   `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
 
-## Phase 5 – Melodien (Schritt A ✅ – als Nächstes: Schritt B)
+## Phase 5 – Melodien (Schritt A ✅, Schritt B ✅ – als Nächstes: Schritt E Klaviersystem)
 
 Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben eine **Gesangsmelodie aus dem Kopf** schnell als Noten
 festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Einspielen (dafür gibt es die DAW).
@@ -316,7 +316,35 @@ festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Eins
 **Leitlinie:** Eine neue Spur „Melodie“ geht sofort ohne Einrichtung (Violinschlüssel, C-Dur, weicher Klang). Tonleiter, Schlüssel,
 Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der Anschlag Feinschliff.
 
-**Reihenfolge:** A ✅ → **B Stufenakkorde** → E Klaviersystem → C Liedtext → D Komfort.
+**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → **E Klaviersystem** → C Liedtext → D Komfort.
+
+### Stand nach Schritt B (2026-11-15, noch nicht committet / nicht online)
+
+- **Gebaut:** Stufenakkorde und Akkordsymbole (siehe „Schritt B“ unten, Abschnitt „Gebaut“). Tests: `test_chords.js`,
+  `test_chordsyms.js` (zusammen mit allen anderen 625 Prüfungen grün), Klick-Test 234 ok (3 neue für Akkorde).
+- **Wo was steht:** `js/pitch.js` (`P.QUALS`, `degreeChord(s)`, `chordName` / `chordText` / `parseChord`, `chordVoicing`,
+  `chordTones`, `guideTone`, `lockedLine`), `js/model.js` (`bar.chords`, `bar.guide`, `doc.harmony`, `SC.harmonyTrack` /
+  `harmonyScale` / `chordOf` / `chordsIn` / `chordAt` / `setChord` / `chordSlots` / `guideAt`), `js/render.js` (Akkordzeile über
+  der ersten Notenzeile, Klammern 1./2. darüber, Markierung `line-chord`), `js/interaction.js` (`pitchAt` mit Akkord-Sperre;
+  Verschieben ist frei), `js/playback.js` (`T.CHORD_TRACK`, Fläche), `js/midi.js` (`opts.chords`), `js/musicxml.js`
+  (`harmonyXml`), `js/panel.js` (`chordSection`), `js/actions.js` (Akkord-Aktionen, Taktmenü „Akkord“, Export-Dialog),
+  Handbuch Kapitel 8 „Akkorde“, Beispiel „Melodie“ mit Akkorden.
+- **Entschieden beim Bauen (zum Prüfen):**
+  - Stufenakkorde richten sich nach der **ersten Melodie-Spur** (immer dieselbe, damit die Namen nicht beim Spurwechsel
+    springen); ohne Melodie-Spur nach der **Tonart des Stücks** (`doc.harmony.key`, Panel „Tonart“).
+  - Akkordnamen: englische Buchstaben mit ♯ / ♭; in deutscher Oberfläche **H** und **B** (= B♭). Eingetippt wird in der
+    Sprache der Oberfläche gelesen, gespeichert sprachfrei (`F#m7`, `Bb/D`).
+  - Stellen im Takt = das Klick-Raster (Notenwert im Panel: Achtel 1 + 2 + …, Sechzehntel in zwei Reihen); ein Akkord an einer
+    anderen Stelle bleibt in der Liste. Ohne Raster (Tests): die Schläge.
+  - Natürliches Moll gibt als V. Stufe **Em** (nicht E); wer E / E7 will, tippt es ein (oder nimmt harmonisch Moll).
+  - Der Akkord-Teppich spielt standardmäßig mit dem Tactus-Synth (ein Drum-VST im Omni-Modus würde ihn als Schläge spielen);
+    wahlweise eigener MIDI-Ausgang + Kanal (Panel → Akkorde → Klang, `harmony.midiOut` / `midiCh`, z. B. ein Synth-VST; fehlt
+    der Ausgang, spielt Tactus selbst). Er schweigt, wenn eine Spur auf Solo steht. MIDI-Export: sobald Akkorde da sind, öffnet sich der
+    Export-Dialog (auch bei einer Spur) mit der Zeile „Akkorde“ (eigene Datei bzw. eigene MIDI-Spur, Kanal 15).
+  - Kopieren / Einfügen ganzer Takte nimmt die Akkorde mit (als Stufe: im Ziel-Takt gilt dessen Tonleiter).
+- **Noch nicht gemacht (aus dem Plan für B):** Noten, die nach einem Akkordwechsel nicht mehr passen, markieren / „auf Akkordtöne
+  setzen“; Antippen eines Akkordsymbols direkt im Notenblatt (bisher: Takt antippen → Panel, oder Taktmenü). Möglicher
+  Feinschliff: in der Seitenansicht liegen bei Akkorden + Klammer + Takt-Text drei Reihen eng übereinander.
 
 ### Stand 2026-11-15 (für die Weiterarbeit)
 
@@ -414,7 +442,16 @@ zeitlich versetzt Überlappendes: klassisch mit einer zweiten Stimme, von Tactus
 5. **Austausch:** MIDI-Export mit Programmwechsel, MusicXML mit Tonhöhe, Tonart (inkl. Modus), Schlüssel; Teilen per Link.
    Bestehendes läuft weiter: Kopieren / Einfügen, %-Takte, Mehrtaktpausen, Wiederholungen / Sprünge, Stumm / Solo.
 
-### Schritt B – Tonleitern und Stufenakkorde (QOL, Wunsch)
+### Schritt B – Tonleitern und Stufenakkorde ✅ (zum Ausprobieren)
+
+**Gebaut (2026-11-15):** Panel „Takt · Stück“ → **Akkorde** (für den ausgewählten Takt): Stelle wählen (wie das Klick-Raster, z. B. „4 und“), Knöpfe mit den
+Stufenakkorden der Tonleiter an dieser Stelle (Name + Stufe, blass = nicht nur Töne einer Pentatonik o. ä.), „7 Vierklänge“,
+„Entfernen“, eigener Akkord zum Eintippen, Tonart (ohne Melodie-Spur), „Melodie: Akkordtöne zeigen / Nur Akkordtöne / keine Hilfe“
+(ab diesem Takt), „Akkorde mitspielen“ + Lautstärke. Taktmenü → **Akkord** (Stufenakkorde, eintippen, Vierklänge, entfernen).
+Akkordsymbole über der obersten Notenzeile (über hohen Noten höher, Klammern 1./2. darüber), auch in Seitenansicht / PDF.
+Wiedergabe: weiche Fläche (GM 89), gehalten bis zum nächsten Akkord. MIDI-Export: Akkord-Spur / -Datei (Kanal 15, Namen als
+Text), MusicXML `<harmony>` (mit `<offset>`, Grundton, Art, Bass, Zusatztöne). Teilen-Link, Speichern, Kopieren / Einfügen.
+Tonleitern: **▶** zum Vorhören, Zweitnamen in der Auswahl (Äolisch, Ionisch, Spanisch …).
 
 - **Tonleiter-Auswahl pro Spur** (Töne ab C):
 
@@ -541,7 +578,14 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   3. Seitlich ziehen für die Länge, über den Taktstrich (Haltebogen); halten + hoch / runter für ♯ / ♭
   4. Klingen die 21 Klänge brauchbar und unterscheidbar (v. a. Gitarren, Bässe, Fläche bei kurzen Noten)?
 - **MusicXML mit Melodie in Guitar Pro** (bisher nur automatisch geprüft): Tonhöhen, Tonart, Schlüssel (auch Tenor), Haltebögen
-  über den Taktstrich, Programm
+  über den Taktstrich, Programm; **Akkordsymbole** (`<harmony>`, auch auf Schlag 3, Schrägstrich-Akkorde, m7♭5)
+- **Akkorde (Schritt B)** zum Ausprobieren:
+  1. Akkorde setzen auf dem Tablet: Takt antippen, Panel-Knöpfe – schnell genug? Fehlt das direkte Antippen des Symbols?
+  2. Klingt der Akkord-Teppich passend (Lautstärke, Lage, zu weich / zu laut neben Schlagzeug und Melodie)?
+  3. „Nur Akkordtöne“: fühlt sich der Sprung zum nächsten Akkordton richtig an (auch beim Ziehen)? Ist die Markierung bei
+     „Akkordtöne zeigen“ hilfreich oder zu unruhig?
+  4. Namen in der deutschen Oberfläche (H / B) so gewollt?
+  5. MIDI-Export mit Akkordspur in Cubase (eigene Datei, Kanal 15, Textereignisse)
 
 ## Wiedergabe über Cubase (Web MIDI) ✅ (getestet)
 

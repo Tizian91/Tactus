@@ -224,11 +224,15 @@
   P.guideTone = function (dia, scale, ch, guide) {
     const t = P.lineTone(dia, scale);
     if (!ch || !guide || guide === 'off') return Object.assign(t, { chord: false });
+    const root = P.pc(ch.root.l, ch.root.a); // (root: the tone the chord is built on - marked stronger)
     if (guide === 'lock') {
       const ct = P.chordTones(ch).find((x) => x.l === mod(dia, 7));
-      return ct ? { pitch: P.pitchOf(dia, ct.a), dia, a: ct.a, in: true, chord: true } : Object.assign(t, { chord: false });
+      if (!ct) return Object.assign(t, { chord: false });
+      const pitch = P.pitchOf(dia, ct.a);
+      return { pitch, dia, a: ct.a, in: true, chord: true, root: mod(pitch, 12) === root };
     }
-    return Object.assign(t, { chord: P.chordPcs(ch).includes(mod(t.pitch, 12)) });
+    const chord = P.chordPcs(ch).includes(mod(t.pitch, 12));
+    return Object.assign(t, { chord, root: chord && mod(t.pitch, 12) === root });
   };
   /**
    * Chords locked: the nearest line (staff step) with a chord tone to line l. Equally near: from - the line coming

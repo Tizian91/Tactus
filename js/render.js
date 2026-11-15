@@ -662,7 +662,7 @@
             const x1 = k ? RD.tickX(b, x.t) - 0.5 * SP : b.x0, x2 = k + 1 < segs.length ? RD.tickX(b, segs[k + 1].t) - 0.5 * SP : b.x + b.w;
             for (let l = -3; l <= 11; l++) {
               const g = TC.pitch.guideTone(TC.pitch.diaAt(l, z.track.clef), pi.scale, x.ch, guide);
-              if (g.chord) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-chord'));
+              if (g.chord) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, g.root ? 'line-chord line-root' : 'line-chord'));
               else if (guide === 'lock') OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-out'));
             }
           });

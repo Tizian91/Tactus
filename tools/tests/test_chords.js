@@ -69,6 +69,7 @@ module.exports = function (T) {
   T.eq('lock: G line writes G♯ (chord tone of E7)', [P.guideTone(32, am, e7, 'lock').pitch, P.guideTone(32, am, e7, 'lock').chord], [68, true]);
   T.eq('lock: A line is no chord tone of E7', P.guideTone(33, am, e7, 'lock').chord, false);
   T.eq('off: just the scale', P.guideTone(32, am, e7, 'off'), { pitch: 67, dia: 32, a: 0, in: true, chord: false });
+  T.eq('the root: every E line is marked as root of E7, the third (G♯) is not', [P.guideTone(30, am, e7, 'mark').root, P.guideTone(37, am, e7, 'mark').root, P.guideTone(23, am, e7, 'lock').root, P.guideTone(32, am, e7, 'lock').root, P.guideTone(33, am, e7, 'mark').root], [true, true, true, false, false]);
   const isC = (l) => [0, 2, 4].includes(((l % 7) + 7) % 7); // lines 0, 2, 4, 7 … hold chord tones
   T.eq('nearest chord tone: on one; one step off; equally near: the lower, or from the side it comes from',
     [P.lockedLine(2, isC), P.lockedLine(5, isC), P.lockedLine(3, isC), P.lockedLine(3, isC, 1), P.lockedLine(3, isC, 6)], [2, 4, 4, 2, 4]);

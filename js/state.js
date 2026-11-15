@@ -72,6 +72,7 @@ window.TC = window.TC || {};
       showCounts: false,    // counting (1 e + a) under the staff
       sound: true,          // play a note when it is written
       metronome: false,     // click while playing
+      clickVol: 1,          // loudness of the click (metronome, count-in): 0 … 2, 1 = as it was
       followPlay: true,     // the view follows the playback cursor (off: it stays where it is)
       followMode: 'jump',   // … 'jump' (when the cursor reaches the edge) or 'smooth' (glides along)
       swingMidi: true,      // swing / shuffle of the score also in the MIDI export (off: straight notes)

@@ -503,6 +503,7 @@
     const st = S.settings;
     return `<section><h3>${tr('Playback')}</h3>
       ${check('toggleMetronome', st.metronome, tr('Metronome'))}
+      <div class="row"><label>${tr('Click')}</label><input type="range" min="0" max="2" step="0.05" value="${Number.isFinite(st.clickVol) ? st.clickVol : 1}" data-clickvol title="${tr('Loudness of the metronome and the count-in')}"></div>
       ${check('toggleFollowPlay', st.followPlay !== false, tr('The view follows the playback'))}
       ${st.followPlay !== false ? `<div class="row"><label>${tr('Following')}</label><select data-action="setFollowMode">
         <option value="jump"${st.followMode !== 'smooth' ? ' selected' : ''}>${tr('Jumping (at the edge)')}</option>
@@ -737,6 +738,8 @@
       TC.actions.setMidiLead(el.value);
     } else if (el.matches('input[data-audiodelay]')) {
       TC.actions.setAudioDelay(el.value);
+    } else if (el.matches('input[data-clickvol]')) {
+      TC.actions.setClickVol(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
     } else if (el.matches('input[data-bartempo]')) {

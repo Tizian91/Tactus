@@ -944,6 +944,13 @@
   };
   A.togglePlay = () => TC.player.toggle();
   A.stop = () => TC.player.stop();
+  /** Loudness of the click (metronome, count-in), 0 … 2. */
+  A.setClickVol = function (v) {
+    S.settings.clickVol = TC.clamp(Number(v) || 0, 0, 2);
+    TC.saveSettings();
+    const c = !TC.player.playing && TC.audio.context();
+    if (c) TC.audio.click(c.currentTime + 0.03, 2); // (hear it)
+  };
   A.setVolume = function (v) {
     S.settings.volume = TC.clamp(Number(v), 0, 1);
     TC.audio.setVolume(S.settings.volume);

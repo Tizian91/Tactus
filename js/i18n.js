@@ -452,6 +452,8 @@
     'Zoom out': 'Verkleinern',
     'To the start': 'Zum Anfang',
     'Time signature from here': 'Taktart ab hier',
+    'Click': 'Klick',
+    'Loudness of the metronome and the count-in': 'Lautstärke von Metronom und Einzähler',
     'Time signature of this bar only': 'Taktart nur für diesen Takt',
     'Time signature of this bar, the notes after it move along': 'Taktart nur für diesen Takt, die Noten danach rücken nach',
     'Applies': 'Gilt',

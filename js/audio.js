@@ -247,7 +247,9 @@
     const o = ctx.createOscillator();
     o.type = 'sine';
     o.frequency.value = strong === 2 ? 1760 : 1320;
-    o.connect(env(dest || master, t, 0.45 * vel, 0.035));
+    const k = TC.state.settings.clickVol, loud = Number.isFinite(k) ? TC.clamp(k, 0, 2) : 1; // (the setting in the panel)
+    if (loud <= 0) return;
+    o.connect(env(dest || master, t, 0.45 * vel * loud, 0.035));
     o.start(t);
     o.stop(t + 0.06);
   };

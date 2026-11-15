@@ -96,6 +96,19 @@ module.exports = function (T) {
   // saving: the tie flag stays (melody), drums never get one
   const back = TC.normalizeDoc(JSON.parse(JSON.stringify(doc)));
   T.eq('saved and loaded: tied notes', back.tracks[1].bars[1].voices[0][0].notes[0].tie, true);
+  // a tie after a rest (eighths tapped on the beats): the note fills the rest, then it is tied
+  const dr = TC.emptyScore(2);
+  TC.state.doc = dr;
+  const mr = SC.addTrack(dr, 'M', null, 'pitched');
+  const pr = (bi, tick, dur, pitch) => SC.place(dr, mr, bi, 0, tick, dur, TC.newPitchNote(pitch, null, {}));
+  const e1 = pr(0, 0, 480, 67), e2 = pr(0, 960, 480, 67);
+  const tt = SC.tieTarget(dr, mr, 0, 0, e1.ev, e1.note);
+  T.eq('tie target after a rest: the next G, 480 ticks of rest', [tt.note === e2.note, tt.gap], [true, 480]);
+  const e3 = pr(0, 2880, 480, 64), e4 = pr(1, 0, 480, 64);
+  T.eq('… over the bar line (rest at the end of the bar)', [SC.tieTarget(dr, mr, 0, 0, e3.ev, e3.note).note === e4.note, SC.tieTarget(dr, mr, 0, 0, e3.ev, e3.note).gap], [true, 480]);
+  pr(0, 1920, 480, 60);
+  T.eq('… not past another note', SC.tieTarget(dr, mr, 0, 0, e2.ev, e2.note), null);
+  T.eq('… not to another tone', SC.tieTarget(dr, mr, 0, 0, e1.ev, TC.newPitchNote(65, null, {})), null);
   const drums = TC.normalizeDoc({ bars: [{}], tracks: [{ kind: 'drums', bars: [{ voices: [[{ tick: 0, dur: 960, notes: [{ art: 38, tie: true }] }]] }] }] });
   T.eq('drum notes: no tie', drums.tracks[0].bars[0].voices[0][0].notes[0].tie, undefined);
 };

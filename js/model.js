@@ -714,6 +714,26 @@
     const note = next && next.notes.find((x) => x.pitch === n.pitch);
     return note ? { bar: nb, ev: next, note } : null;
   };
+  /**
+   * What a tie from note `n` could go to: the next note of its voice, if it is the same tone - right after it, or after
+   * a rest (only rests between, in this bar; the next bar: its note on beat 1). { bar, ev, note, gap: ticks of rest
+   * between (0: right after it) }, or null.
+   */
+  SC.tieTarget = function (doc, track, bi, vi, ev, n) {
+    const right = SC.nextNote(doc, track, bi, vi, ev, n);
+    if (right) return Object.assign(right, { gap: 0 });
+    if (n.pitch === undefined || track.bars[bi].simile) return null;
+    const L = TC.barTicks(doc.bars[bi].ts), end = ev.tick + ev.dur;
+    const later = (track.bars[bi].voices[vi] || []).filter((e) => e.tick >= end).sort((a, b) => a.tick - b.tick)[0];
+    let nb = bi, next = later;
+    if (!later) {
+      if (bi + 1 >= track.bars.length || track.bars[bi + 1].simile) return null;
+      nb = bi + 1;
+      next = (track.bars[nb].voices[vi] || []).find((e) => e.tick === 0);
+    }
+    const note = next && next.notes.find((x) => x.pitch === n.pitch);
+    return note ? { bar: nb, ev: next, note, gap: (nb === bi ? next.tick : L) - end } : null;
+  };
   /** The whole chain of tied notes a note belongs to, from its first one: [{ note, ev, bar, voice, track }]. */
   SC.tieChain = function (doc, id) {
     const h = SC.findNote(doc, id);

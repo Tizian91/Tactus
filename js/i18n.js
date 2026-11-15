@@ -262,8 +262,8 @@
     '↑ ↓: next line (tone of the scale) · Alt+↑ ↓: semitone · Ctrl+↑ ↓: octave': '↑ ↓: nächste Linie (Ton der Tonleiter) · Alt+↑ ↓: Halbton · Strg+↑ ↓: Oktave',
     'Tie to the next note': 'Haltebogen zur nächsten Note',
     'The next note (the same tone) is not struck again': 'Die nächste Note (derselbe Ton) wird nicht neu angeschlagen',
-    'Tie: only to the same tone right after it - or drag the note longer over the bar line.':
-      'Haltebogen: nur zu demselben Ton direkt danach – oder die Note über den Taktstrich länger ziehen.',
+    'Tie: only to the same tone right after it - or drag the note longer over the bar line.': // (also after a rest: the note fills it)
+      'Haltebogen: nur zu demselben Ton als nächster Note (direkt danach oder nach einer Pause) – oder die Note über den Taktstrich länger ziehen.',
     'A track only for the selected instrument, on one line': 'Eine Spur nur für das gewählte Instrument, auf einer Notenlinie',
     'Hidden – click: show': 'Ausgeblendet – Klick: einblenden',
     'Shown – click: hide': 'Eingeblendet – Klick: ausblenden',
@@ -453,6 +453,8 @@
     'To the start': 'Zum Anfang',
     'Time signature from here': 'Taktart ab hier',
     'Click': 'Klick',
+    'Tie to the next note (fills the rest)': 'Haltebogen zur nächsten Note (füllt die Pause)',
+    'This note becomes longer up to the next one (the same tone), which is not struck again': 'Diese Note wird bis zur nächsten (gleicher Ton) verlängert, die nicht neu angeschlagen wird',
     'Write the scale above the music ("D minor", "In-Sen on D")': 'Tonleiter über die Noten schreiben („d-Moll“, „In-Sen auf D“)',
     'Screen on': 'Bildschirm an',
     'Keeps the screen of a tablet or phone from turning off': 'Verhindert, dass der Bildschirm von Tablet oder Handy ausgeht',

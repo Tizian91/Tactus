@@ -1123,11 +1123,13 @@
       { label: '♭ ' + tr('a semitone lower'), action: choose(() => A().alterSelection(-1)) },
     ];
     if (alt) items.push({ label: tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) }), action: choose(() => A().respell()) });
-    // a tie to the next note, when it is the same tone and starts where this one ends (also in the next bar)
-    const next = TC.score.nextNote(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev, n);
+    // a tie to the next note, when it is the same tone and starts where this one ends (also in the next bar) - or after
+    // a rest: this note then fills it
+    const next = TC.score.tieTarget(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev, n);
     if (next) {
-      items.push({ label: '⁀ ' + tr('Tie to the next note'), checked: !!next.note.tie, action: () => {
-        next.note.tie = !next.note.tie;
+      items.push({ label: '⁀ ' + tr(next.gap ? 'Tie to the next note (fills the rest)' : 'Tie to the next note'), checked: !next.gap && !!next.note.tie, action: () => {
+        if (next.gap) d.hit.ev.dur += next.gap;
+        next.note.tie = next.gap ? true : !next.note.tie;
         if (!next.note.tie) delete next.note.tie;
         TC.commit();
       } });

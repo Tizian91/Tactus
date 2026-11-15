@@ -152,8 +152,9 @@
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
     // a tie to the next note: only to the same tone right after it
-    const next = TC.score.nextNote(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note);
-    const tie = next ? btn('toggleTie', undefined, '⁀ ' + tr('Tie to the next note'), !!next.note.tie, tr('The next note (the same tone) is not struck again'))
+    const next = TC.score.tieTarget(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note);
+    const tie = next && next.gap ? btn('toggleTie', undefined, '⁀ ' + tr('Tie to the next note (fills the rest)'), false, tr('This note becomes longer up to the next one (the same tone), which is not struck again'))
+      : next ? btn('toggleTie', undefined, '⁀ ' + tr('Tie to the next note'), !!next.note.tie, tr('The next note (the same tone) is not struck again'))
       : `<p class="hint tight">${tr('Tie: only to the same tone right after it - or drag the note longer over the bar line.')}</p>`;
     return `<section class="has-sel"><h3>${esc(tr('Selected notes ({n})', { n: S.selection.size }))}</h3>
       <p class="hint tight"><b>${esc(P.fullName(sp.dia, sp.a, de()))}</b></p>
@@ -652,7 +653,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.note.pitch !== undefined && (TC.score.nextNote(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note) || { note: {} }).note.tie, S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.tieTarget(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note) || {}, ['gap', 'note', 'tie']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

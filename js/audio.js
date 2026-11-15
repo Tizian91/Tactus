@@ -18,7 +18,7 @@
 (function (TC) {
   const S = TC.state;
   const AU = (TC.audio = {});
-  let ctx = null, master = null, noise = null;
+  let ctx = null, master = null, noise = null, clickOut = null;
 
   function ensure() {
     if (ctx) {
@@ -35,6 +35,13 @@
     master.gain.value = S.settings.volume === undefined ? 0.8 : S.settings.volume;
     master.connect(comp);
     comp.connect(ctx.destination);
+    // the click: its own way out - not under the volume slider, not pressed down by the compressor of the drums
+    clickOut = ctx.createGain();
+    const ccomp = ctx.createDynamicsCompressor();
+    ccomp.threshold.value = -3;
+    ccomp.ratio.value = 12;
+    clickOut.connect(ccomp);
+    ccomp.connect(ctx.destination);
     // two seconds of white noise, shared by all noisy sounds
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
@@ -241,17 +248,34 @@
     }
   };
 
-  /** Metronome click (2 = first beat of the bar). */
+  /** Where the clicks of a run go: a gain on the click's own output (stop() fades it). */
+  AU.clickBus = function () {
+    if (!ensure()) return null;
+    const g = ctx.createGain();
+    g.connect(clickOut);
+    return g;
+  };
+  /**
+   * Metronome click (2 = first beat of the bar): a sine with a little bite (a short triangle an octave up), on its
+   * own output - its loudness is the click slider alone (0 … 2), not the volume slider.
+   */
   AU.click = function (t, strong, vel = 0.8, dest = null) {
     if (!ensure()) return;
+    const k = S.settings.clickVol, loud = Number.isFinite(k) ? TC.clamp(k, 0, 2) : 1;
+    if (loud <= 0) return;
+    const f = strong === 2 ? 1760 : 1320, out = dest || clickOut;
     const o = ctx.createOscillator();
     o.type = 'sine';
-    o.frequency.value = strong === 2 ? 1760 : 1320;
-    const k = TC.state.settings.clickVol, loud = Number.isFinite(k) ? TC.clamp(k, 0, 2) : 1; // (the setting in the panel)
-    if (loud <= 0) return;
-    o.connect(env(dest || master, t, 0.45 * vel * loud, 0.035));
+    o.frequency.value = f;
+    o.connect(env(out, t, 0.9 * vel * loud, 0.045));
+    const b = ctx.createOscillator();
+    b.type = 'triangle';
+    b.frequency.value = f * 2;
+    b.connect(env(out, t, 0.35 * vel * loud, 0.012));
     o.start(t);
-    o.stop(t + 0.06);
+    b.start(t);
+    o.stop(t + 0.08);
+    b.stop(t + 0.03);
   };
 
   /**
@@ -390,7 +414,7 @@
 
   const P = (TC.player = { playing: false });
   const AHEAD = 0.15;
-  let shownN = 0, tl = null, idx = 0, t0 = 0, timer = 0, raf = 0, rev = -1, tempo = 0, range = null, loopLen = 0, lap = 0, until = -1, bus = null;
+  let shownN = 0, tl = null, idx = 0, t0 = 0, timer = 0, raf = 0, rev = -1, tempo = 0, range = null, loopLen = 0, lap = 0, until = -1, bus = null, cbus = null;
   // ran to the end without loop: the next start (without a new bar chosen) is from bar 1, the whole piece
   let endedSel = null;
   const selKey = () => [S.selBar, S.selBarEnd].join();
@@ -445,7 +469,7 @@
       if (at > horizon) break;
       const when = t0 + at;
       if (when >= ctx.currentTime - 0.01) {
-        if (h.click) AU.click(when, h.click, h.vel, bus);
+        if (h.click) AU.click(when, h.click, h.vel, cbus);
         else if (h.pitch !== undefined) AU.tone(h.pitch, when, h.dur, h.vel, bus, h.trk);
         else AU.hit(h.art, when, h.vel, h.choke, bus, h.trk);
       }
@@ -545,6 +569,7 @@
     t0 = ctx.currentTime + 0.05 + (TC.midiOut && TC.midiOut.active() ? TC.midiOut.lead() : 0); // room for the MIDI lead
     bus = ctx.createGain(); // this run's own output: stop() fades it without touching the next run
     bus.connect(master);
+    cbus = AU.clickBus(); // (the clicks: their own output, not under the volume slider)
     P.playing = true;
     schedule();
     timer = setInterval(schedule, 25);
@@ -566,6 +591,13 @@
       b.gain.linearRampToValueAtTime(0, now + 0.04);
       setTimeout(() => b.disconnect(), 400);
       bus = null;
+    }
+    if (cbus) {
+      const c = cbus, now = ctx.currentTime;
+      c.gain.setValueAtTime(1, now);
+      c.gain.linearRampToValueAtTime(0, now + 0.04);
+      setTimeout(() => c.disconnect(), 400);
+      cbus = null;
     }
     if (!quiet) TC.refresh();
   };

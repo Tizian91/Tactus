@@ -236,7 +236,7 @@ Eine Regel für Maus, Stift und Finger:
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
 9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (in Guitar Pro getestet, siehe unten)
-11. **Melodien** (Notensystem mit Tonleiter, siehe „Phase 5 – Melodien“)
+11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Liedtext; Schritte A–D, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
 
@@ -308,21 +308,124 @@ Schritte:
   „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
   `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
 
-## Phase 5 – Melodien (Idee, noch nicht begonnen)
+## Phase 5 – Melodien (geplant, noch nicht begonnen)
 
-Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben schnell eine Melodie festhalten – im Tactus-Stil oft
-einfacher als in der DAW.
+Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben eine **Gesangsmelodie aus dem Kopf** schnell als Noten
+festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Einspielen (dafür gibt es die DAW).
 
-- **Notenschlüssel und Tonleiter definieren** (Violin- / Bassschlüssel; Grundton + Tonleiter: Dur, Moll, Pentatonik, Blues …;
-  daraus die Vorzeichen am Zeilenanfang).
-- **Tippen auf Linie / Zwischenraum setzt den Ton der Tonleiter** an dieser Stelle – man spielt nicht aus Versehen „falsch“.
-  Bei Tonleitern mit weniger als 7 Tönen (Pentatonik): Magnet zum nächsten Ton der Tonleiter (wie die Linien beim Schlagzeug).
-- **Außerhalb der Tonleiter ist eine bewusste Entscheidung:** Note gedrückt halten, dann hoch / runter = erhöhen / erniedrigen
-  (♯ / ♭, Anzeige wie beim Anschlag-Balken), Esc nimmt es zurück. (Beim Schlagzeug bleibt hoch / runter der Anschlag; bei
-  Melodie-Spuren dann über das Notenmenü.)
-- Dazu nötig: Spur-Art „Melodie“ (Instrument, Schlüssel, Tonleiter), Tonhöhen im Datenmodell, Vorzeichen und Hilfslinien im
-  Notenbild, Haltebögen über Taktgrenzen (rhythm.js kann das schon für Nicht-Schlagzeug), Klang (einfacher Synth / Samples),
-  MIDI mit Kanal und Programm, MusicXML mit Tonhöhen. Später: Akkorde, Klaviersystem (zwei Zeilen), Tabulatur (Phase 6).
+**Leitlinie:** Eine neue Spur „Melodie“ geht sofort ohne Einrichtung (Violinschlüssel, C-Dur, weicher Klang). Tonleiter, Schlüssel,
+Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der Anschlag Feinschliff.
+
+**Schon da:** Spur-Arten `pitched` / `tab` und `note.pitch` im Datenmodell (`js/model.js`), Haltebögen für Nicht-Schlagzeug in
+`rhythm.js`, Kanal / Programm / MIDI-Ausgang pro Spur.
+
+### Entscheidungen
+
+- **Gesten auf Melodie-Spuren:** Note halten, dann **hoch / runter = ♯ / ♭** (Halbton; Anzeige wie beim Anschlag-Balken, Esc nimmt es
+  zurück). Der **Anschlag** wandert ins Notenmenü (halten + loslassen). Beim Schlagzeug bleibt alles wie es ist.
+- **Tonleiter pro Spur** (Grundton + Tonleiter), wechselbar ab einem Takt. **Die Tonleiter bestimmt, welcher Ton auf einer
+  Linie liegt – sie sperrt nichts.** Wer abweichen will, erhöht / erniedrigt selbst (halten + hoch / runter).
+  - Vorzeichen am Zeilenanfang sind nur die Darstellung, immer übliche: Kirchentonarten die der Dur-Tonart, aus der sie stammen
+    (D-Dorisch = keine), alle anderen die von Dur oder Moll (je nach Terz). Was darin fehlt (A-Harmonisch-Moll: G♯), setzt Tactus
+    automatisch an die Note. Keine gemischten Vorzeichen (liest Guitar Pro nicht).
+  - Tonleitern mit weniger als 7 Tönen (Pentatonik, Hirajoshi, In-Sen): die Linien außerhalb der Tonleiter sind **blass**, setzen
+    aber ihren Ton (der verwandten 7-Ton-Tonleiter). Blues: die Blue Note (Ges in C) liegt auf derselben Linie wie G → erniedrigen.
+  - **Vorzeichen im Takt:** Tippen setzt immer den Ton der Tonleiter, auch wenn vorher im Takt auf dieser Linie erniedrigt wurde
+    (Tactus zeichnet dann ♮). Die Vorschau zeigt den Ton vor dem Loslassen.
+  - **Tonleiterwechsel:** bestehende Noten behalten ihre Tonhöhe (nur neu gezeichnet), neue folgen der neuen Tonleiter.
+- **Akkordsymbole gehören zum Song**, nicht zu einer Spur: einmal über der obersten Zeile, gelten für alle Spuren (wie Takt-Text /
+  Tempo). Ein Akkord gilt **ab seiner Stelle bis zum nächsten** (Standard Taktanfang, wahlweise eine zweite Stelle, z. B. Taktmitte).
+  Angeboten werden die Stufenakkorde der Tonleiter, die **an dieser Stelle** in der aktiven Melodie-Spur gilt (Takt 17 nach Wechsel
+  zu D-Dur → D, Em, F♯m …); frei eintippen geht immer.
+- **Gespeichert wird der klingende Ton** (MIDI-Nummer) plus Schreibweise (F♯ oder G♭); ohne Angabe aus der Tonleiter abgeleitet.
+  Tenor-Schlüssel (Violin 8 unten) zeichnet eine Oktave höher, als er klingt.
+- **Echte Notenlängen:** Die Pausenbereinigung bleibt beim Schlagzeug; bei Melodien zählen Länge, Pausen und Haltebögen.
+
+### Schritt A – Einstimmige Gesangsmelodie
+
+1. **Spur-Art Melodie** („+ Melodie“ in der Spurliste): Schlüssel (Violin, Violin 8 unten, Bass), Stimmlage (Sopran, Alt, Tenor,
+   Bariton / Bass – setzt Schlüssel und Tonumfang), Tonleiter, Klang.
+2. **Notenbild:** Hilfslinien, Vorzeichen (gelten bis Taktende, Auflösungszeichen), Vorzeichen am Zeilenanfang und bei Wechsel,
+   Halsrichtung nach Lage, Haltebögen über Taktgrenzen, Akkorde in einer Stimme (Sekunden versetzt); Notenzeilen so hoch wie
+   nötig (Abstände der Spuren und Seitenansicht berücksichtigen das).
+3. **Eingabe:** Tippen auf Linie / Zwischenraum setzt den **Ton der Tonleiter** – man setzt nicht aus Versehen „falsch“
+   (siehe Entscheidungen; keine Sperre). Halten + hoch / runter = ♯ / ♭.
+   **Vorhören:** beim Zielen klingt der Ton unter dem Zeiger / Finger. Oktave: Hilfslinien darüber / darunter plus Oktav-Schalter
+   im Panel. Tastatur: A–G setzt, ↑ ↓ Halbton, Strg+↑ ↓ Oktave. Notenmenü: Anschlag, enharmonisch umdeuten (F♯ ↔ G♭).
+   Zu klären beim Bauen: wie man eine Note verlängert (Notenwert wählen wie bisher; evtl. halten + seitwärts = Länge statt Reihe).
+4. **Klang:** einfacher Synth („Stimme“ / weicher Lead, Klavier); über MIDI jedes VST mit Kanal und Programm.
+5. **Austausch:** MIDI-Export mit Programmwechsel, MusicXML mit Tonhöhe, Tonart (inkl. Modus), Schlüssel; Teilen per Link.
+   Bestehendes läuft weiter: Kopieren / Einfügen, %-Takte, Mehrtaktpausen, Wiederholungen / Sprünge, Stumm / Solo.
+
+### Schritt B – Tonleitern und Stufenakkorde (QOL, Wunsch)
+
+- **Tonleiter-Auswahl pro Spur** (Töne ab C):
+
+  | Gruppe | Tonleiter | Töne ab C | Stufenakkorde / Hinweis |
+  |---|---|---|---|
+  | **Häufig** (immer sichtbar) | Dur (= Ionisch) | C D E F G A H | normal |
+  | | Moll (natürlich, = Äolisch) | C D Es F G As B | normal |
+  | | Dur-Pentatonik | C D E G A | von Dur |
+  | | Moll-Pentatonik | C Es F G B | von Moll |
+  | | Blues (Moll-Blues) | C Es F Ges G B | I7 · IV7 · V7 |
+  | **Moll-Varianten** | Harmonisch Moll | C D Es F G As H | klassisch, „orientalisch“ |
+  | | Melodisch Moll | C D Es F G A H | Jazz, weich |
+  | **Kirchentonarten** | Dorisch | C D Es F G A B | Moll mit heller Sexte |
+  | | Phrygisch | C Des Es F G As B | dunkel, spanisch, Metal |
+  | | Lydisch | C D E Fis G A H | schwebend, Filmmusik |
+  | | Mixolydisch | C D E F G A B | Rock, Blues-Rock |
+  | | Lokrisch | C Des Es F Ges As B | sehr instabil |
+  | **Weitere** (ausklappbar) | Dur-Blues | C D Es E G A | I7 · IV7 · V7; Country, Boogie |
+  | | Phrygisch-Dominant | C Des E F G As B | Flamenco, Klezmer, Metal |
+  | | Harmonisch Dur | C D E F G As H | Dur mit Moll-Färbung |
+  | | Lydisch-Dominant | C D E Fis G A B | Jazz |
+  | | Ungarisch Moll | C D Es Fis G As H | Zigeunermoll |
+  | | Doppelt harmonisch | C Des E F G As H | arabisch / byzantinisch |
+  | | Alteriert | C Des Es E Ges As B | Jazz über Dominanten |
+  | | Ganzton | C D E Fis Gis Ais | nur übermäßige Akkorde (C+, D+ …) |
+  | | Hirajoshi | C D Es G As | japanisch; von Moll |
+  | | In-Sen | C Des F G B | japanisch; von Phrygisch |
+  | **Chromatisch** | frei | alle 12 | keine blassen Linien; Vorzeichen / Akkorde von Dur auf dem Grundton |
+
+  Vorerst nicht: Vermindert (8 Töne passen nicht auf 7 Linien). Jede Tonleiter mit **▶ Vorhören** und einem Satz zum Klang
+  (wählen nach Gefühl, ohne Theorie); Suche findet auch Zweitnamen (Äolisch, Ionisch, Zigeunermoll, Spanisch).
+- **Stufenakkorde zu jeder Tonleiter:** auf jeder Stufe Terzen aus der Tonleiter geschichtet (jeder zweite Ton) → Dreiklang oder
+  Vierklang, mit Stufe (I ii iii IV V vi vii°) und Name (C, Dm, Em … / Cmaj7, Dm7 …). Exotische 7-Ton-Tonleitern ergeben auch
+  übermäßige / verminderte Akkorde – gewollt, das ist ihr Klang.
+  - Weniger als 7 Töne (Pentatonik, Hirajoshi, In-Sen): Terzen schichten geht nicht (Lücken ungleich → Quarten, sus-Klänge),
+    daher die Akkorde der verwandten 7-Ton-Tonleiter; Akkorde **nur aus Tönen der Tonleiter** markiert (A-Moll-Pentatonik: Am, C).
+  - Blues (Moll / Dur): I7 · IV7 · V7 (in A: A7, D7, E7).
+- **Akkorde setzen:** Auswahlleiste der Stufenakkorde (Panel, Taktmenü); Tippen setzt das Symbol an die Stelle. Frei eintippbar
+  (C7, Fadd9, G/B). **Gespeichert:** aus der Leiste als **Stufe** (ii – wird beim Tonleiterwechsel C → D-Dur von Dm zu Em),
+  eingetippt als Name. **Beim Abspielen klingt ein einfacher Akkord-Teppich** mit (abschaltbar, eigene Lautstärke) –
+  Songschreiben auch ganz ohne Melodie.
+- **Akkord beim Schreiben der Melodie**, drei Stufen (pro Takt einstellbar, Standard fürs Stück):
+  - **Aus:** nur die Tonleiter
+  - **Hervorheben (Standard):** die Töne des gerade klingenden Akkords sind auf den Linien markiert, gesetzt wird jeder Ton
+  - **Sperren:** nur Akkordtöne; die anderen Linien blass, Tippen dort springt zum nächsten Akkordton (gleich weit: beim Ziehen
+    die Richtung, aus der man kommt, beim Tippen der tiefere; die Vorschau zeigt es). Halten + hoch / runter geht weiter (bewusst
+    abweichen). Gilt ab der Stelle des Akkords bis zum nächsten.
+  - Akkord ändern, wenn schon Noten da sind: Noten bleiben, was nicht passt, wird markiert (evtl. Angebot „auf Akkordtöne setzen“).
+  - Die Sperre wirkt nur beim Setzen auf Melodie-Spuren (später evtl. Bass: Grundtöne).
+- Export: MIDI (Akkorde als eigene Spur, abschaltbar), MusicXML `<harmony>`.
+
+### Schritt C – Liedtext
+
+- Silben unter den Noten: Note antippen → Text, Leertaste / Tab springt zur nächsten Note, „-“ verbindet Silben, „_“ für Melismen.
+- Mehrere Strophen (Zeilen) untereinander; MusicXML `<lyric>`, MIDI als Lyric-Events.
+
+### Schritt D – Komfort
+
+- **Transponieren** (Auswahl / Spur) in Halbtönen und **Tonleiter wechseln, Melodie folgt stufenweise** (C-Dur → A-Moll).
+- **Stufen-Hilfe** unter den Noten (1 2 3 … oder do re mi), abschaltbar wie die Zählhilfe.
+- **Tonumfang:** Noten außerhalb der gewählten Stimmlage rot markiert.
+- **Rhythmus übernehmen:** Rhythmus einer anderen Spur (z. B. Bassdrum) in die Melodie-Spur einfügen, nur die Töne fehlen dann.
+
+### Später
+
+- Bass / Gitarre mit Tabulatur (Phase 6), Klaviersystem (zwei Zeilen), MIDI-Import von Melodien (Quantisieren, Schreibweise),
+  Bindebögen / Artikulation, evtl. Vorsingen (Mikrofon erkennt die Tonhöhe).
+- **Sehr niedrige Priorität:** Schritt-Eingabe per MIDI-Keyboard (dafür gibt es die DAW).
 
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 
@@ -400,7 +503,9 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - 3 Aufnahmen pro Klang (leise / mittel / laut): Ghost nimmt die leise, Akzent die laute; ein geschlossenes Hi-Hat stoppt das
   offene; abgestoppte Becken kurz. Ohne Aufnahme (Klatschen, Reverse-Becken): Synthesizer
 - `tools/build_samples.sh` baut `samples/*.flac` aus den Originalen (`samples-src/`, nicht im Repo; braucht ffmpeg)
-- Später evtl.: mehrere Aufnahmen pro Stufe (Round Robin) gegen den „Maschinengewehr“-Effekt bei Wirbeln
+- **Sehr niedrige Priorität:** mehrere Aufnahmen pro Stufe (Round Robin) gegen den „Maschinengewehr“-Effekt bei Wirbeln – wer
+  das braucht, spielt über MIDI ein Drum-VST (macht Round Robin selbst); kostenlose Samples dafür sind rar, evtl. später eigene
+  Aufnahmen am eigenen Set
 
 ## Vorlagen für kostenlose Drum-VSTs ✅ (zum Ausprobieren)
 

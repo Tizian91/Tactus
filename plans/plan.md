@@ -236,7 +236,7 @@ Eine Regel für Maus, Stift und Finger:
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
 9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (in Guitar Pro getestet, siehe unten)
-11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Liedtext; Schritte A–D, siehe „Phase 5 – Melodien“)
+11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ (Rest offen) → B → E → C → D, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
 
@@ -351,8 +351,20 @@ Note ziehen = verschieben, halten + hoch / runter = ♯ / ♭, halten + seitlich
 „Schreiben als …“ / Anschlag / Löschen; ↑ ↓ = nächste Linie), Panel (Stimmlage, Schlüssel, Grundton + Tonleiter gruppiert, ab dem
 gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synth, über MIDI mit Kanal und Programm), MIDI-Export
 (Programmwechsel, Notenlänge), MusicXML (Tonhöhe, Tonart mit Modus, Schlüssel inkl. Tenor, Vorzeichen, Haltebögen), Teilen-Link.
-**Noch offen aus A:** Haltebögen über Taktgrenzen (eine Note endet bisher am Taktende), Oktav-Schalter und Tastatur A–G,
-Tonumfang-Warnung (Stimmlage ist gespeichert, Warnung kommt mit Schritt D), Handbuch-Kapitel, Stimmlagen-Klang (nur ein Synth).
+**Noch offen aus A (Reihenfolge):**
+1. **Haltebögen über Taktgrenzen** (entschieden, wie Guitar Pro / MusicXML): jeder Takt behält seine Noten, der Rest im nächsten
+   Takt ist eine echte Note „angebunden“ (`note.tie`). Über den Taktstrich ziehen legt die Kette an (auch über mehrere Takte, Status
+   zeigt die Gesamtlänge); ♯ / ♭, Verschieben, Löschen wirken auf die ganze Kette; Notenmenü „Haltebogen zur nächsten Note“
+   (gleicher Ton) an / aus. Bogen über den Taktstrich, beim Zeilenumbruch halber Bogen am Zeilenende und -anfang. Wiedergabe / MIDI:
+   angebunden = klingt weiter, nur wenn davor derselbe Ton bis zum Taktende klang (Wiederholung springt zurück: neu angeschlagen).
+   Teil der Kette auf anderen Ton: der Bogen löst sich. Kein Bogen in einen %-Takt.
+2. **Verlängern stoppt an der nächsten Note** (entschieden; nicht überschreiben, nicht schieben) – die Vorschau zeigt die Grenze.
+3. **Klang wählen** (Panel: Gesang / Klavier / Lead … = GM-Programm), Synth je Familie.
+4. Oktav-Schalter, Tastatur (A–G setzt, ↑ ↓ Halbton, Strg+↑ ↓ Oktave), Höhe verschieben mit dem Auswahl-Werkzeug.
+5. Handbuch-Kapitel „Melodie schreiben“, Beispielstück mit Melodie.
+
+**Entschieden:** Gesang ist einstimmig; zwei Sänger = zwei Spuren. Akkorde (gleicher Anfang, gleiche Länge) gehen in einer Stimme;
+zeitlich versetzt Überlappendes braucht eine zweite Stimme oder Haltebögen (siehe „Später“).
 
 1. **Spur-Art Melodie** („+ Melodie“ in der Spurliste): Schlüssel (Violin, Violin 8 unten, Bass), Stimmlage (Sopran, Alt, Tenor,
    Bariton / Bass – setzt Schlüssel und Tonumfang), Tonleiter, Klang.
@@ -420,11 +432,25 @@ Tonumfang-Warnung (Stimmlage ist gespeichert, Warnung kommt mit Schritt D), Hand
   - Akkord ändern, wenn schon Noten da sind: Noten bleiben, was nicht passt, wird markiert (evtl. Angebot „auf Akkordtöne setzen“).
   - Die Sperre wirkt nur beim Setzen auf Melodie-Spuren (später evtl. Bass: Grundtöne).
 - Export: MIDI (Akkorde als eigene Spur, abschaltbar), MusicXML `<harmony>`.
+- Die Akkordsymbole gelten für alle Spuren (Melodie, Klaviersystem, Schlagzeug); Hervorheben / Sperren wirkt beim Setzen in
+  Melodie-Spuren und in beiden Zeilen eines Klaviersystems.
+
+### Schritt E – Klaviersystem (wichtig, nach B)
+
+Ein Instrument, zwei Notenzeilen: oben Violinschlüssel (rechte Hand), unten Bassschlüssel (linke Hand), links eine geschweifte
+Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile hat ihren eigenen Rhythmus.
+
+- Eine Melodie-Spur bekommt **„Zwei Notenzeilen (Klavier)“**; intern eigene Stimmen je Hand (wie Guitar Pro). Tippen in die obere /
+  untere Zeile schreibt in dieselbe Spur, in die jeweilige Hand. Tonleiter, Stumm / Solo, Ausblenden gelten fürs ganze Instrument.
+- **Akkord per Tipp in die linke Hand** (Stufenakkorde aus B): „Am“ setzt A-C-E in die untere Zeile (Lage wählbar).
+- Export: MusicXML ein Part mit `<staves>2</staves>` (Guitar Pro / MuseScore erkennen ein Klavier), MIDI eine Spur.
+- Bis dahin: zwei Melodie-Spuren „Klavier rechts / links“ (Violin- / Bassschlüssel) gehen schon.
 
 ### Schritt C – Liedtext
 
 - Silben unter den Noten: Note antippen → Text, Leertaste / Tab springt zur nächsten Note, „-“ verbindet Silben, „_“ für Melismen.
 - Mehrere Strophen (Zeilen) untereinander; MusicXML `<lyric>`, MIDI als Lyric-Events.
+- **Auch im Klaviersystem:** Text an den Noten der rechten Hand, gezeichnet zwischen den beiden Zeilen (wie in Klavier-Gesang-Noten).
 
 ### Schritt D – Komfort
 
@@ -435,8 +461,10 @@ Tonumfang-Warnung (Stimmlage ist gespeichert, Warnung kommt mit Schritt D), Hand
 
 ### Später
 
-- Bass / Gitarre mit Tabulatur (Phase 6), Klaviersystem (zwei Zeilen), MIDI-Import von Melodien (Quantisieren, Schreibweise),
+- Bass / Gitarre mit Tabulatur (Phase 6), MIDI-Import von Melodien (Quantisieren, Schreibweise),
   Bindebögen / Artikulation, evtl. Vorsingen (Mikrofon erkennt die Tonhöhe).
+- **Unter einer Note durchziehen** (langes C unter einem D): automatisch geteilt und angebunden (`C ⁀ C+D`) oder automatisch eine
+  zweite Stimme (Hälse unten). **Stimme 2** in einer Notenzeile (Schalter „Stimme 1 / 2“) – nur wenn gebraucht.
 - **Sehr niedrige Priorität:** Schritt-Eingabe per MIDI-Keyboard (dafür gibt es die DAW).
 
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)

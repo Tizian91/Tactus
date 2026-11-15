@@ -342,7 +342,7 @@
         const v = S.doc.view;
         v.x = d.vx + e.clientX - d.sx;
         v.y = d.vy + e.clientY - d.sy;
-        TC.render.applyView();
+        TC.render.moveView();
         return;
       }
       case 'aim': return aimMove(e);
@@ -460,7 +460,7 @@
     v.zoom = z;
     v.x = (a.x + b.x) / 2 - r.left - wx * z;
     v.y = (a.y + b.y) / 2 - r.top - wy * z;
-    TC.render.applyView();
+    TC.render.moveView();
     TC.ui.updateZoom();
   }
 
@@ -1213,10 +1213,10 @@
       // page view: the pages run downwards (Shift: sideways)
       S.doc.view.y -= dy;
       S.doc.view.x -= dx;
-      TC.render.applyView();
+      TC.render.moveView();
     } else {
       S.doc.view.x -= dx + dy; // the endless staff runs sideways (Shift: up / down)
-      TC.render.applyView();
+      TC.render.moveView();
     }
     lastMove = e;
     if (!raf) raf = requestAnimationFrame(updateHover);

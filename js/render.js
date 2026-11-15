@@ -490,9 +490,44 @@
 
   // ---- Drawing --------------------------------------------------------------------------
 
+  // ---- Moving the view -------------------------------------------------------------------
+  // #score is one picture the browser keeps as a layer of its own (will-change: transform), larger than the
+  // viewport by a margin all around. Panning, pinching, scrolling and the gliding view only move and scale that
+  // layer (a CSS transform: nothing is drawn again - smooth also on slow tablets). The picture is drawn for the new
+  // place (the SVG transform of #world) once the movement rests, or when it went beyond the margin.
+  let shown = null, settle = 0;
+
+  /** Draw the view where S.doc.view says (at once). */
   RD.applyView = function () {
-    const v = S.doc.view;
-    world.setAttribute('transform', `translate(${f(v.x)},${f(v.y)}) scale(${v.zoom})`);
+    clearTimeout(settle);
+    const v = S.doc.view, vp = svg.parentElement, w = vp.clientWidth, h = vp.clientHeight;
+    const mx = Math.min(1600, w), my = Math.min(1600, h);
+    if (!shown || shown.w !== w || shown.h !== h) {
+      svg.style.left = -mx + 'px';
+      svg.style.top = -my + 'px';
+      svg.style.width = w + 2 * mx + 'px';
+      svg.style.height = h + 2 * my + 'px';
+    }
+    world.setAttribute('transform', `translate(${f(v.x + mx)},${f(v.y + my)}) scale(${v.zoom})`);
+    svg.style.transform = '';
+    shown = { x: v.x, y: v.y, zoom: v.zoom, w, h, mx, my };
+  };
+
+  /**
+   * The view is being moved (finger, mouse wheel, pinch, gliding cursor): move the picture as it is; it is
+   * drawn anew when nothing moved for a moment, or when the visible part would leave it.
+   */
+  RD.moveView = function () {
+    const v = S.doc.view, vp = svg.parentElement, w = vp.clientWidth, h = vp.clientHeight, c = shown;
+    if (!c || c.w !== w || c.h !== h) return RD.applyView();
+    const k = v.zoom / c.zoom;
+    const tx = v.x + c.mx - k * (c.mx + c.x), ty = v.y + c.my - k * (c.my + c.y);
+    // the visible part, in the picture: it must lie inside it
+    const x0 = (c.mx - tx) / k, x1 = (w + c.mx - tx) / k, y0 = (c.my - ty) / k, y1 = (h + c.my - ty) / k;
+    if (k < 0.6 || k > 1.6 || x0 < 0 || y0 < 0 || x1 > w + 2 * c.mx || y1 > h + 2 * c.my) return RD.applyView();
+    svg.style.transform = k === 1 ? `translate(${f(tx)}px,${f(ty)}px)` : `translate(${f(tx)}px,${f(ty)}px) scale(${k})`;
+    clearTimeout(settle);
+    settle = setTimeout(RD.applyView, 200);
   };
 
   RD.draw = function () {
@@ -523,7 +558,7 @@
     if (page) {
       const n = L.pages.length;
       L.pages.forEach((pg, k) => {
-        if (!print) out.push(rect(0, pg.y, PAGE_W, PAGE_H, 'page'));
+        if (!print) out.push(rect(1.5, pg.y + 3, PAGE_W, PAGE_H, 'page-shadow'), rect(0, pg.y, PAGE_W, PAGE_H, 'page'));
         if (k === 0) return;
         if (doc.page.header) {
           // running header in the top margin: title · artist left, "Page 2 / 3" right

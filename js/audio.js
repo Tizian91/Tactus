@@ -537,7 +537,8 @@
     if (tx !== v.x || ty !== v.y) {
       v.x = tx;
       v.y = ty;
-      TC.render.applyView();
+      if (smooth) TC.render.moveView(); // (gliding: the picture moves, drawn anew now and then)
+      else TC.render.applyView();
     }
   };
 

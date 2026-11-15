@@ -661,10 +661,12 @@
       for (const b of L.bars) {
         if (b.parts[z.k].simile || b.hidden !== undefined) continue;
         // melody: the places outside the scale (pentatonic, blues …) are marked pale - they still write their tone
-        const pi = b.parts[z.k].pitch;
+        const pi = b.parts[z.k].pitch, outside = new Set();
         if (pi && TC.pitch.lineMap(pi.scale).some((x) => !x.in)) {
           for (let l = -3; l <= 11; l++) {
-            if (!TC.pitch.lineTone(TC.pitch.diaAt(l, z.track.clef), pi.scale).in) OS(b, z).push(rect(b.x0, stepY(l) - SP / 4, b.x + b.w - b.x0, SP / 2, 'line-out'));
+            if (TC.pitch.lineTone(TC.pitch.diaAt(l, z.track.clef), pi.scale).in) continue;
+            outside.add(l);
+            OS(b, z).push(rect(b.x0, stepY(l) - SP / 4, b.x + b.w - b.x0, SP / 2, 'line-out'));
           }
         }
         // chord symbols, writing a melody (the track being written): the chord tones marked; locked: the other lines pale
@@ -680,7 +682,7 @@
             for (let l = -3; l <= 11; l++) {
               const g = TC.pitch.guideTone(TC.pitch.diaAt(l, z.track.clef), pi.scale, x.ch, guide);
               if (g.chord) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, g.root ? 'line-chord line-root' : 'line-chord'));
-              else if (guide === 'lock') OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-out'));
+              else if (guide === 'lock' && !outside.has(l)) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-out')); // (pale once: not twice where the scale has it already)
             }
           });
         }

@@ -944,6 +944,12 @@
   };
   A.togglePlay = () => TC.player.toggle();
   A.stop = () => TC.player.stop();
+  /** Keep the screen on: 'play' | 'always' | 'off' (a setting of this browser). */
+  A.setWake = function (m) {
+    S.settings.wake = ['play', 'always', 'off'].includes(m) ? m : 'play';
+    TC.saveSettings();
+    TC.refresh();
+  };
   /** Loudness of the click (metronome, count-in), 0 … 2. */
   A.setClickVol = function (v) {
     S.settings.clickVol = TC.clamp(Number(v) || 0, 0, 2);

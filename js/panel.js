@@ -512,6 +512,8 @@
       ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
       <div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="1" step="0.05" value="${st.volume}" data-volume></div>
+      ${TC.wake.supported() ? `<div class="row"><label>${tr('Screen on')}</label><select data-action="setWake" title="${tr('Keeps the screen of a tablet or phone from turning off')}">${[['play', 'while playing and on stage'], ['always', 'while Tactus is open'], ['off', 'as the device does it']].map(([v, l]) =>
+        `<option value="${v}"${(st.wake || 'play') === v ? ' selected' : ''}>${tr(l)}</option>`).join('')}</select></div>` : ''}
       ${soundRow()}${samplesRow()}
       <p class="hint">${tr('Space: play / stop · plays from the selected bar.')}</p>
     </section>`;

@@ -43,6 +43,7 @@
     const play = document.getElementById('play-btn');
     play.textContent = TC.player.playing ? '■' : '▶';
     play.classList.toggle('active', TC.player.playing);
+    TC.wake.update(); // (keep the screen on while playing / on stage)
     document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
     document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
     document.getElementById('follow-btn').classList.toggle('active', S.settings.followPlay !== false);

@@ -371,6 +371,15 @@
     t.clef = clef;
     TC.commit();
   };
+  /** Melody track: its sound (General MIDI program; Tactus' synth plays its family). Played at once. */
+  A.setTrackProgram = function (p) {
+    const t = TC.curTrack();
+    p = Number(p);
+    if (t.kind !== 'pitched' || !Number.isInteger(p) || p < 0 || p > 127) return;
+    t.program = p;
+    TC.commit();
+    if (S.settings.sound) TC.audio.previewTone(t.clef === 'bass' ? 48 : t.clef === 'treble8' ? 60 : 67, t);
+  };
   /** Melody track: voice (range; sets the clef that fits it). */
   A.setTrackVoice = function (v) {
     const t = TC.curTrack();

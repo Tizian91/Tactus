@@ -257,28 +257,49 @@
    * from t for dur seconds. pitch: MIDI note. Through a MIDI output: the note goes there (channel and
    * program of the track).
    */
+  /**
+   * Sound families of the melody synth (TC.soundFamily: the General MIDI program decides):
+   * osc [type, detune (cents), level] · attack s · sus: level it settles to (0 = dies away, a struck string) ·
+   * tau: how fast it settles / dies (s) · rel: release (s) · cut: low-pass at this many times the pitch · gain.
+   */
+  const FAMILY = {
+    voice: { osc: [['triangle', -4, 0.8], ['sawtooth', 5, 0.18]], attack: 0.04, sus: 0.75, tau: 0.15, rel: 0.12, cut: 4, gain: 0.22 },
+    piano: { osc: [['triangle', 0, 0.85], ['sine', 1200, 0.18], ['sawtooth', 0, 0.06]], attack: 0.004, sus: 0, tau: 0.55, rel: 0.12, cut: 7, gain: 0.3 },
+    epiano: { osc: [['sine', 0, 0.9], ['sine', 1200, 0.14], ['triangle', 2400, 0.04]], attack: 0.005, sus: 0.1, tau: 0.7, rel: 0.2, cut: 6, gain: 0.3 },
+    organ: { osc: [['sine', 0, 0.5], ['sine', 1200, 0.35], ['square', 1902, 0.08]], attack: 0.01, sus: 1, tau: 0.05, rel: 0.05, cut: 8, gain: 0.18 },
+    guitar: { osc: [['sawtooth', 0, 0.45], ['triangle', 3, 0.55]], attack: 0.003, sus: 0, tau: 0.45, rel: 0.1, cut: 3.5, gain: 0.28 },
+    dist: { osc: [['sawtooth', -7, 0.5], ['square', 7, 0.4]], attack: 0.006, sus: 0.8, tau: 0.3, rel: 0.1, cut: 9, gain: 0.13 },
+    bass: { osc: [['triangle', 0, 0.9], ['sawtooth', 0, 0.22]], attack: 0.008, sus: 0.35, tau: 0.6, rel: 0.08, cut: 3, gain: 0.34 },
+    strings: { osc: [['sawtooth', -6, 0.5], ['sawtooth', 6, 0.5]], attack: 0.15, sus: 0.9, tau: 0.2, rel: 0.3, cut: 3, gain: 0.16 },
+    brass: { osc: [['sawtooth', 0, 0.8], ['sawtooth', 4, 0.2]], attack: 0.05, sus: 0.8, tau: 0.2, rel: 0.1, cut: 5, gain: 0.16 },
+    reed: { osc: [['square', 0, 0.5], ['sawtooth', 4, 0.3]], attack: 0.04, sus: 0.8, tau: 0.2, rel: 0.1, cut: 3, gain: 0.16 },
+    flute: { osc: [['sine', 0, 0.9], ['triangle', 0, 0.2]], attack: 0.08, sus: 0.85, tau: 0.2, rel: 0.12, cut: 3, gain: 0.26 },
+    lead: { osc: [['square', -5, 0.5], ['sawtooth', 5, 0.4]], attack: 0.01, sus: 0.85, tau: 0.1, rel: 0.08, cut: 6, gain: 0.13 },
+    pad: { osc: [['sawtooth', -8, 0.4], ['sawtooth', 8, 0.4], ['triangle', 0, 0.3]], attack: 0.4, sus: 0.9, tau: 0.3, rel: 0.6, cut: 2, gain: 0.15 },
+  };
+
   AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
     if (!ensure()) return;
     if (TC.midiOut && TC.midiOut.active()) {
       TC.midiOut.note(pitch, t, dur, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
+    const F = FAMILY[TC.soundFamily(track ? track.program : TC.MELODY_PROGRAM)] || FAMILY.voice;
     const out = dest || master, hz = 440 * Math.pow(2, (pitch - 69) / 12);
-    const v = Math.max(0.05, Math.min(1.2, vel)) * 0.22;
-    const end = t + Math.max(0.08, dur), rel = 0.12;
+    const v = Math.max(0.05, Math.min(1.2, vel)) * F.gain;
+    const end = t + Math.max(0.08, dur), rel = F.rel;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(v, t + 0.04);                  // soft attack
-    g.gain.setTargetAtTime(v * 0.75, t + 0.04, 0.15);              // settles
-    g.gain.setValueAtTime(v * 0.75, Math.max(t + 0.05, end - 0.01));
-    g.gain.linearRampToValueAtTime(0.0001, end + rel);             // release
+    g.gain.linearRampToValueAtTime(v, t + F.attack);                     // attack
+    g.gain.setTargetAtTime(Math.max(0.0001, v * F.sus), t + F.attack, F.tau); // settles (or dies away: a struck string)
+    g.gain.setTargetAtTime(0.0001, end, rel / 3);                          // release
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = Math.min(9000, hz * 4 + 400);
+    lp.frequency.value = Math.min(12000, hz * F.cut + 400);
     lp.Q.value = 0.8;
     lp.connect(g);
     g.connect(out);
-    for (const [type, det, amp] of [['triangle', -4, 0.8], ['sawtooth', 5, 0.18]]) {
+    for (const [type, det, amp] of F.osc) {
       const o = ctx.createOscillator(), og = ctx.createGain();
       o.type = type;
       o.frequency.value = hz;
@@ -287,7 +308,7 @@
       o.connect(og);
       og.connect(lp);
       o.start(t);
-      o.stop(end + rel + 0.05);
+      o.stop(end + rel * 2 + 0.05);
     }
   };
 

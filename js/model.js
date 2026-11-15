@@ -174,6 +174,45 @@
   /** General MIDI program of a new melody track: 54 Voice Oohs (0-based 53) - a singing voice. */
   TC.MELODY_PROGRAM = 53;
 
+  /**
+   * Sounds offered for melody tracks: [General MIDI program (0-based), English, German], grouped. The program
+   * goes to MIDI (playback through a VST, export, MusicXML); Tactus' own synth plays its family (TC.soundFamily).
+   */
+  TC.MELODY_SOUNDS = [
+    ['Voice', 'Gesang', [[53, 'Voice (oohs)', 'Stimme (Uuh)'], [52, 'Choir (aahs)', 'Chor (Aah)']]],
+    ['Keys', 'Tasten', [[0, 'Piano', 'Klavier'], [4, 'Electric piano', 'E-Piano'], [16, 'Organ', 'Orgel']]],
+    ['Guitar', 'Gitarre', [[24, 'Guitar (nylon)', 'Gitarre (Nylon)'], [25, 'Guitar (steel)', 'Gitarre (Stahl)'],
+      [27, 'Electric guitar (clean)', 'E-Gitarre (clean)'], [29, 'Electric guitar (overdrive)', 'E-Gitarre (verzerrt)']]],
+    ['Bass', 'Bass', [[33, 'Electric bass', 'E-Bass'], [32, 'Double bass', 'Kontrabass'], [38, 'Synth bass', 'Synth-Bass']]],
+    ['Strings & winds', 'Streicher & Bläser', [[48, 'Strings', 'Streicher'], [40, 'Violin', 'Violine'], [42, 'Cello', 'Cello'],
+      [56, 'Trumpet', 'Trompete'], [65, 'Alto sax', 'Altsaxofon'], [73, 'Flute', 'Flöte']]],
+    ['Synth', 'Synthesizer', [[80, 'Synth lead (square)', 'Synth-Lead (Rechteck)'], [81, 'Synth lead (saw)', 'Synth-Lead (Säge)'], [89, 'Synth pad', 'Synth-Fläche']]],
+  ];
+  /** The family of a General MIDI program, for Tactus' own melody synth (js/audio.js). */
+  TC.soundFamily = function (p) {
+    p = Number(p) || 0;
+    if (p === 4 || p === 5) return 'epiano'; // (the electric pianos are in the piano group of General MIDI)
+    if (p <= 7) return 'piano';
+    if (p <= 15) return 'epiano';
+    if (p <= 23) return 'organ';
+    if (p <= 28) return 'guitar';
+    if (p <= 31) return 'dist';
+    if (p <= 39) return 'bass';
+    if (p <= 51) return 'strings';
+    if (p <= 54) return 'voice';
+    if (p <= 63) return 'brass';
+    if (p <= 71) return 'reed';
+    if (p <= 79) return 'flute';
+    if (p <= 87) return 'lead';
+    if (p <= 95) return 'pad';
+    return 'voice';
+  };
+  /** Name of a melody sound (a program not in the list: "Program 12"). */
+  TC.soundName = function (p, de) {
+    for (const [, , list] of TC.MELODY_SOUNDS) for (const [q, en, dname] of list) if (q === p) return de ? dname : en;
+    return (de ? 'Programm ' : 'Program ') + (p + 1);
+  };
+
   TC.newTrack = function (kind = 'drums', bars = 0) {
     const t = {
       id: TC.uid('t'),

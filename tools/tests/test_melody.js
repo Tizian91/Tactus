@@ -92,4 +92,13 @@ module.exports = function (T) {
   T.ok('MusicXML bar 4: the F of 2400 ticks is tied (half + eighth or so)', m4.includes('<tie type="start"/>') && m4.includes('<tied type="stop"/>'));
   mel.clef = 'treble8';
   T.ok('MusicXML: tenor clef (treble 8 below)', TC.musicxml.build(doc).includes('<clef-octave-change>-1</clef-octave-change>'));
+
+  // sounds: the program decides the family of the synth, MIDI and MusicXML take the program
+  T.eq('sound families', [0, 4, 16, 25, 29, 33, 48, 53, 56, 65, 73, 81, 89, 120].map(TC.soundFamily),
+    ['piano', 'epiano', 'organ', 'guitar', 'dist', 'bass', 'strings', 'voice', 'brass', 'reed', 'flute', 'lead', 'pad', 'voice']);
+  T.eq('every offered sound has a family and a name', TC.MELODY_SOUNDS.every(([, , l]) => l.every(([p, en, dname]) => TC.soundFamily(p) && en && dname)), true);
+  T.eq('sound names (a program not offered: its number)', [TC.soundName(0, true), TC.soundName(33, false), TC.soundName(11, true)], ['Klavier', 'Electric bass', 'Programm 12']);
+  mel.program = 0;
+  T.eq('MIDI: the chosen sound as program change', TC.midi.read(TC.midi.build(doc, null, { tracks: [mel], multi: true }).bytes).tracks[1].programs, [{ t: 0, ch: 0, program: 0 }]);
+  T.ok('MusicXML: the chosen sound', TC.musicxml.build(doc).includes('<midi-program>1</midi-program>'));
 };

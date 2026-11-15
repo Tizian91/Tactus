@@ -172,7 +172,11 @@
     const scales = P.GROUPS.map(([g, en, dname]) => `<optgroup label="${esc(de() ? dname : en)}">` +
       P.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, (de() ? s.de : s.en) + (s.desc ? ' – ' + (de() ? s.desc[1] : s.desc[0]) : ''), s.id === sc.id)).join('') + '</optgroup>').join('');
     const change = bi > 0 && t.bars[bi] && t.bars[bi].scale;
-    return `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>
+    const listed = TC.MELODY_SOUNDS.some(([, , l]) => l.some(([p]) => p === t.program));
+    const sounds = (listed ? '' : opt(t.program, TC.soundName(t.program, de()), true)) + TC.MELODY_SOUNDS.map(([en, dname, list]) =>
+      `<optgroup label="${esc(de() ? dname : en)}">` + list.map(([p, sen, sde]) => opt(p, de() ? sde : sen, p === t.program)).join('') + '</optgroup>').join('');
+    return `<div class="row"><label>${tr('Sound')}</label><select data-action="setTrackProgram">${sounds}</select></div>
+      <div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>
       <div class="row"><label>${tr('Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>
       <div class="row"><label>${tr('Scale')}</label><select data-action="setTrackScaleRoot" class="narrow">${roots}</select>
         <select data-action="setTrackScaleId">${scales}</select></div>
@@ -543,7 +547,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale])), cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program])), cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
       S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

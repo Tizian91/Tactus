@@ -359,7 +359,7 @@ gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synt
    angebunden = klingt weiter, nur wenn davor derselbe Ton bis zum Taktende klang (Wiederholung springt zurück: neu angeschlagen).
    Teil der Kette auf anderen Ton: der Bogen löst sich. Kein Bogen in einen %-Takt.
 2. ✅ **Verlängern stoppt an der nächsten Note** (gebaut: Strich in der Vorschau, Statuszeile „bis zur nächsten Note“, Länge als „1 Takt + 2 Viertel“; nicht überschreiben, nicht schieben) – die Vorschau zeigt die Grenze.
-3. **Klang wählen** (Panel: Gesang / Klavier / Lead … = GM-Programm), Synth je Familie.
+3. ✅ **Klang wählen** (Panel „Klang“: 21 Klänge in 6 Gruppen = GM-Programm, `TC.MELODY_SOUNDS`; der Tactus-Synth spielt 13 Familien – Klavier klingt aus, Streicher / Fläche schwellen an …; beim Wählen hörbar).
 4. Oktav-Schalter, Tastatur (A–G setzt, ↑ ↓ Halbton, Strg+↑ ↓ Oktave), Höhe verschieben mit dem Auswahl-Werkzeug.
 5. Handbuch-Kapitel „Melodie schreiben“, Beispielstück mit Melodie.
 

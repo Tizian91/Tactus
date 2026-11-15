@@ -1125,12 +1125,17 @@
     if (alt) items.push({ label: tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) }), action: choose(() => A().respell()) });
     // a tie to the next note, when it is the same tone and starts where this one ends (also in the next bar) - or after
     // a rest: this note then fills it
-    const next = TC.score.tieTarget(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev, n);
+    const next = TC.score.chordTies(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev); // (a chord: all its tones the next one has)
     if (next) {
-      items.push({ label: '⁀ ' + tr(next.gap ? 'Tie to the next note (fills the rest)' : 'Tie to the next note'), checked: !next.gap && !!next.note.tie, action: () => {
-        if (next.gap) d.hit.ev.dur += next.gap;
-        next.note.tie = next.gap ? true : !next.note.tie;
-        if (!next.note.tie) delete next.note.tie;
+      items.push({ label: '⁀ ' + tr(next.gap ? 'Tie to the next note (fills the rest)' : 'Tie to the next note'), checked: next.all, action: () => {
+        TC.score.tieChord(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev, !next.all);
+        TC.commit();
+      } });
+      const one = next.targets.length > 1 && TC.score.tieTarget(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev, n);
+      if (one) items.push({ label: '⁀ ' + tr('Tie only this tone'), checked: !one.gap && !!one.note.tie && !next.all, action: () => {
+        if (one.gap) d.hit.ev.dur += one.gap;
+        if (one.note.tie && !one.gap) delete one.note.tie;
+        else one.note.tie = true;
         TC.commit();
       } });
     }

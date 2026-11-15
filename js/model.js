@@ -734,6 +734,24 @@
     const note = next && next.notes.find((x) => x.pitch === n.pitch);
     return note ? { bar: nb, ev: next, note, gap: (nb === bi ? next.tick : L) - end } : null;
   };
+  /**
+   * Ties of a chord (event ev): every tone of it that the next event has too. Returns { targets: [tieTarget …], gap,
+   * all: every one of them tied already }, or null when none can be tied.
+   */
+  SC.chordTies = function (doc, track, bi, vi, ev) {
+    const first = ev.notes.map((n) => SC.tieTarget(doc, track, bi, vi, ev, n)).find(Boolean);
+    if (!first) return null;
+    const targets = ev.notes.map((n) => SC.tieTarget(doc, track, bi, vi, ev, n)).filter((x) => x && x.ev === first.ev);
+    return { targets, gap: first.gap, all: !first.gap && targets.every((x) => x.note.tie) };
+  };
+  /** Tie the chord ev to the next one (on; a rest between: ev fills it) or untie it. False if nothing can be tied. */
+  SC.tieChord = function (doc, track, bi, vi, ev, on) {
+    const c = SC.chordTies(doc, track, bi, vi, ev);
+    if (!c) return false;
+    if (on && c.gap) ev.dur += c.gap;
+    c.targets.forEach((x) => { if (on) x.note.tie = true; else delete x.note.tie; });
+    return true;
+  };
   /** The whole chain of tied notes a note belongs to, from its first one: [{ note, ev, bar, voice, track }]. */
   SC.tieChain = function (doc, id) {
     const h = SC.findNote(doc, id);

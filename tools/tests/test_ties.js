@@ -109,6 +109,22 @@ module.exports = function (T) {
   pr(0, 1920, 480, 60);
   T.eq('… not past another note', SC.tieTarget(dr, mr, 0, 0, e2.ev, e2.note), null);
   T.eq('… not to another tone', SC.tieTarget(dr, mr, 0, 0, e1.ev, TC.newPitchNote(65, null, {})), null);
+  // a chord: every tone of it the next chord has is tied (not only the one selected)
+  const dc = TC.emptyScore(1);
+  TC.state.doc = dc;
+  const mc = SC.addTrack(dc, 'M', null, 'pitched');
+  const pc = (tick, dur, pitch) => SC.place(dc, mc, 0, 0, tick, dur, TC.newPitchNote(pitch, null, {}));
+  const k1 = pc(0, 2880, 60); pc(0, 2880, 64); pc(0, 2880, 67);
+  const k2 = pc(2880, 480, 60); pc(2880, 480, 64); pc(2880, 480, 67);
+  k2.ev.notes[0].tie = true; // (one tied already, as before)
+  T.eq('chord: not all tied yet', SC.chordTies(dc, mc, 0, 0, k1.ev).all, false);
+  SC.tieChord(dc, mc, 0, 0, k1.ev, true);
+  T.eq('chord: all three tones tied', k2.ev.notes.map((n) => !!n.tie), [true, true, true]);
+  SC.tieChord(dc, mc, 0, 0, k1.ev, false);
+  T.eq('chord: untied again', k2.ev.notes.map((n) => !!n.tie), [false, false, false]);
+  k2.ev.notes.splice(0, 1); // the next chord without the C
+  SC.tieChord(dc, mc, 0, 0, k1.ev, true);
+  T.eq('chord: only the tones the next chord has', [k2.ev.notes.map((n) => n.pitch + (n.tie ? '~' : '')), SC.chordTies(dc, mc, 0, 0, k1.ev).all], [['64~', '67~'], true]);
   const drums = TC.normalizeDoc({ bars: [{}], tracks: [{ kind: 'drums', bars: [{ voices: [[{ tick: 0, dur: 960, notes: [{ art: 38, tie: true }] }]] }] }] });
   T.eq('drum notes: no tie', drums.tracks[0].bars[0].voices[0][0].notes[0].tie, undefined);
 };

@@ -93,6 +93,16 @@
     TC.ui.hint(TC.drums.label(art));
   };
 
+  /** Melody: the voice to write in (0: voice 1, 1: voice 2); notes selected: they move into it. */
+  A.setMelodyVoice = function (v) {
+    v = Number(v) === 1 ? 1 : 0;
+    if (S.selection.size && TC.score.toVoice(S.doc, [...S.selection], v)) {
+      S.input.voice = v;
+      return TC.commit();
+    }
+    S.input.voice = v;
+    TC.refresh();
+  };
   A.setAccent = function (a) {
     a = Number(a);
     if (S.selection.size) {

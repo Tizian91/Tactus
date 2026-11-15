@@ -36,6 +36,7 @@ window.TC = window.TC || {};
       orn: null,            // grace notes: null | 'flam' | 'drag'
       trem: 0,              // roll strokes 0 … 3
       stick: '',            // sticking '' | 'R' | 'L'
+      voice: 0,             // melody: the voice being written - 0: voice 1 (stems up when there are two), 1: voice 2 (stems down)
     },
     settings: {
       theme: 'auto',        // 'auto' | 'light' | 'dark'

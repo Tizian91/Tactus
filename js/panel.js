@@ -142,8 +142,14 @@
         ${btn('setAccent', 1, '<span class="mus-btn sm"></span>', a === 1, tr('Accent (A)'))}
         ${btn('setAccent', 2, '<span class="mus-btn sm"></span>', a === 2, tr('Marcato'))}
       </div></div>`;
+    // two voices: a held tone under a moving melody (voice 2: its own rhythm, stems down)
+    const vi = hit ? hit.voice : S.input.voice === 1 ? 1 : 0;
+    const voiceRow = `<div class="row"><label>${tr('Voice (part)')}</label><div class="seg">
+        ${btn('setMelodyVoice', 0, '1', vi === 0, tr(hit ? 'Move into voice 1 (stems up)' : 'Write in voice 1 (stems up when there are two)'))}
+        ${btn('setMelodyVoice', 1, '2', vi === 1, tr(hit ? 'Move into voice 2 (stems down)' : 'Write in voice 2: its own rhythm, stems down - e.g. a held tone under the melody'))}
+      </div></div>`;
     if (!hit) {
-      return `<section><h3>${tr('Next note')}</h3>${accentRow(S.input.accent || 0)}</section>
+      return `<section><h3>${tr('Next note')}</h3>${voiceRow}${S.input.voice === 1 ? `<p class="hint tight">${tr('Voice 2: its own rhythm under voice 1 (stems down) - for a held tone or a second part.')}</p>` : ''}${accentRow(S.input.accent || 0)}</section>
         <section><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
@@ -168,6 +174,7 @@
         ${btn('octaveSelection', -1, '8↓ ' + tr('Octave down'), false, tr('An octave lower (Ctrl+↓)'))}</div>
       <p class="hint tight">${tr('↑ ↓: next line (tone of the scale) · Alt+↑ ↓: semitone · Ctrl+↑ ↓: octave')}</p>
       ${alt ? `<div class="btn-row">${btn('respell', undefined, esc(tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) })), false, tr('Same tone, written the other way'))}</div>` : ''}
+      ${voiceRow}
       <div class="btn-row">${tie}</div>
       ${tieOne ? `<div class="btn-row">${tieOne}</div>` : ''}
       ${accentRow(hit.note.accent || 0)}

@@ -816,6 +816,24 @@
     return room;
   };
 
+  /**
+   * Melody notes (ids) into voice vi (0 / 1): each keeps its place, tone and length; in the other voice it ends at the
+   * next note there (or the bar end). Returns how many moved.
+   */
+  SC.toVoice = function (doc, ids, vi) {
+    let n = 0;
+    for (const id of ids) {
+      const h = SC.findNote(doc, id);
+      if (!h || h.track.kind !== 'pitched' || h.voice === vi) continue;
+      const v = h.track.bars[h.bar].voices[h.voice];
+      h.ev.notes = h.ev.notes.filter((x) => x !== h.note);
+      if (!h.ev.notes.length) v.splice(v.indexOf(h.ev), 1);
+      const res = SC.place(doc, h.track, h.bar, vi, h.ev.tick, h.ev.dur, h.note);
+      if (res.status === 'exists') continue; // (the same tone there already)
+      n++;
+    }
+    return n;
+  };
   /** Call fn(note, event, voiceIndex, barIndex, track) for every note. */
   SC.eachNote = function (doc, fn) {
     for (const t of doc.tracks) {

@@ -194,7 +194,7 @@
           if (!used[vi] && (vi > 0 || used.some(Boolean))) return; // an empty voice: left out (voice 1 keeps its whole-bar rest)
           if (!first) o.push(`<backup><duration>${L}</duration></backup>`);
           first = false;
-          const voice = vi + 1, stem = vi % 2 === 0 ? 'up' : 'down';
+          const voice = vi + 1, stem = vi % 2 === 0 ? 'up' : 'down', two = used.filter(Boolean).length > 1;
           const beams = beamsOf(items, h.ts, h.beam);
           const tupFirst = new Set(), tupLast = new Set();
           const tups = new Map();
@@ -231,6 +231,7 @@
                   `<duration>${it.dur}</duration>` + (tStop ? '<tie type="stop"/>' : '') + (tStart ? '<tie type="start"/>' : '') +
                   `<instrument id="${pid(k)}-I1"/><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` + (it.dots ? '<dot/>' : '') +
                   (sign !== undefined ? `<accidental>${ACC_NAME[sign]}</accidental>` : '') + tm +
+                  (two ? `<stem>${stem}</stem>` : '') + // (two voices in the bar: voice 1 up, voice 2 down; one voice: the reader decides)
                   (c === 0 && bm ? bm.map((b, lv) => `<beam number="${lv + 1}">${b}</beam>`).join('') : '') +
                   (nots.length ? `<notations>${nots.join('')}</notations>` : '') + '</note>');
               });

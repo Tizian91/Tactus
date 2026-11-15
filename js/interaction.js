@@ -57,6 +57,8 @@
   /** The instrument whose line is near staff point p (the "magnet"), or null beside the lines. */
   const lineArt = (p) => TC.drums.resolveIn(TC.render.posAt(p.y), p.track || TC.curTrack());
   const isMelody = (track) => !!track && track.kind === 'pitched';
+  /** Melody: the voice notes are written into (panel: voice 1 / 2). */
+  const melVoice = () => (S.input.voice === 1 ? 1 : 0);
   const de = () => TC.getLang && TC.getLang() === 'de';
 
   /**
@@ -545,7 +547,7 @@
     let len = TC.inputTicks(S.input);
     const bar = p && RD.barAt(p.x);
     if (bar && bar.i >= bi) len = Math.max(len, SC.absTick(S.doc, bar.i, RD.snapTick(bar, p.x)) + grid - SC.absTick(S.doc, bi, tick));
-    const room = SC.melodyRoom(S.doc, track, bi, 0, tick);
+    const room = SC.melodyRoom(S.doc, track, bi, melVoice(), tick);
     return len > room ? { len: room, stop: true } : { len, stop: false };
   }
 
@@ -585,16 +587,16 @@
     S.selection.clear();
     TC.selectBar(t.bar);
     if (t.pitch !== undefined) {
-      // melody: the tone of that line, as long as chosen (dragged sideways), in the first voice
+      // melody: the tone of that line, as long as chosen (dragged sideways), in the voice chosen in the panel
       const note = TC.newPitchNote(t.pitch, t.dia, S.input), len = t.len || TC.inputTicks(S.input);
-      const res = TC.score.place(S.doc, TC.curTrack(), t.bar, 0, t.tick, len, note);
+      const res = TC.score.place(S.doc, TC.curTrack(), t.bar, melVoice(), t.tick, len, note);
       if (res.status === 'exists') {
         S.selection = new Set([res.note.id]);
         TC.refresh();
         return false;
       }
       // longer than its bar: tied on into the next bars
-      if (res.status === 'added' && len > res.ev.dur) TC.score.setMelodyLength(S.doc, TC.curTrack(), t.bar, 0, res.ev, len);
+      if (res.status === 'added' && len > res.ev.dur) TC.score.setMelodyLength(S.doc, TC.curTrack(), t.bar, melVoice(), res.ev, len);
       TC.commit();
       if (sound && S.settings.sound) TC.audio.previewTone(t.pitch, TC.curTrack());
       TC.ui.status(`${where(t)} · ${targetName(t)}`);

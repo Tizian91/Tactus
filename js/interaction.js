@@ -482,10 +482,10 @@
 
   function showAim(t, sound) {
     if (t.pitch !== undefined) {
-      S.hover = { bar: t.bar, tick: t.tick, line: t.line, pitch: t.pitch, acc: t.acc, len: t.len, label: targetName(t, true) };
+      S.hover = { bar: t.bar, tick: t.tick, line: t.line, pitch: t.pitch, acc: t.acc, len: t.len, stop: !!t.stop, label: targetName(t, true) };
       I.hoverKey = null;
       TC.render.drawHover();
-      TC.ui.status(`${where(t)} · ${targetName(t)} · ${tr('sideways: longer · release: write')}`);
+      TC.ui.status(`${where(t)} · ${targetName(t)} · ${lengthName(t.len, t.bar)}${t.stop ? ' · ' + tr('up to the next note') : ''} · ${tr('sideways: longer · release: write')}`);
       if (sound && S.settings.sound) TC.audio.previewTone(t.pitch, TC.curTrack());
       return;
     }
@@ -512,17 +512,35 @@
       }
       return;
     }
-    const L = TC.barTicks(S.doc.bars[start.bar].ts), lb = RD.layout.bars[start.bar], grid = RD.layout.grid;
-    let len = TC.inputTicks(S.input);
-    const bar = RD.barAt(p.x);
-    if (bar && bar.i > start.bar) len = L - start.tick;
-    else if (bar && bar.i === start.bar) len = Math.max(len, RD.snapTick(lb, p.x) - start.tick + grid);
-    len = Math.min(len, L - start.tick);
-    const t = Object.assign({ kind: 'place', bar: start.bar, tick: start.tick, track, len }, pt);
-    if (d.t && d.t.line === t.line && d.t.len === t.len) return;
+    const len = dragLength(track, start.bar, start.tick, p);
+    const t = Object.assign({ kind: 'place', bar: start.bar, tick: start.tick, track }, len, pt);
+    if (d.t && d.t.line === t.line && d.t.len === t.len && !!d.t.stop === t.stop) return;
     const newSound = !d.t || d.t.pitch !== t.pitch;
     d.t = t;
     showAim(t, newSound);
+  }
+
+  /**
+   * Melody: how long a note from (bar bi, tick) gets when dragged to point p: up to the grid cell under the
+   * pointer (also in a later bar: tied across the bar lines), at least the note value of the panel - but it
+   * stops at the next note of its voice (stop: true, the preview shows where). { len, stop }.
+   */
+  function dragLength(track, bi, tick, p) {
+    const RD = TC.render, SC = TC.score, grid = RD.layout.grid;
+    let len = TC.inputTicks(S.input);
+    const bar = p && RD.barAt(p.x);
+    if (bar && bar.i >= bi) len = Math.max(len, SC.absTick(S.doc, bar.i, RD.snapTick(bar, p.x)) + grid - SC.absTick(S.doc, bi, tick));
+    const room = SC.melodyRoom(S.doc, track, bi, 0, tick);
+    return len > room ? { len: room, stop: true } : { len, stop: false };
+  }
+
+  /** "2 quarters", "1 bar + 1 quarter" … for the status bar. */
+  function lengthName(ticks, bi) {
+    const L = TC.barTicks(S.doc.bars[bi].ts);
+    const q = (t) => (t % 960 === 0 ? `${t / 960} ${tr(t === 960 ? 'quarter' : 'quarters')}` : `${t / 480} ${tr(t === 480 ? 'eighth' : 'eighths')}`);
+    if (ticks < L || ticks % 240) return ticks % 240 ? `${ticks} ${tr('ticks')}` : q(ticks);
+    const bars = Math.floor(ticks / L), rest = ticks - bars * L;
+    return `${bars} ${tr(bars === 1 ? 'bar' : 'bars')}${rest ? ' + ' + q(rest) : ''}`;
   }
 
   function aimMove(e) {
@@ -553,13 +571,15 @@
     TC.selectBar(t.bar);
     if (t.pitch !== undefined) {
       // melody: the tone of that line, as long as chosen (dragged sideways), in the first voice
-      const note = TC.newPitchNote(t.pitch, t.dia, S.input);
-      const res = TC.score.place(S.doc, TC.curTrack(), t.bar, 0, t.tick, t.len || TC.inputTicks(S.input), note);
+      const note = TC.newPitchNote(t.pitch, t.dia, S.input), len = t.len || TC.inputTicks(S.input);
+      const res = TC.score.place(S.doc, TC.curTrack(), t.bar, 0, t.tick, len, note);
       if (res.status === 'exists') {
         S.selection = new Set([res.note.id]);
         TC.refresh();
         return false;
       }
+      // longer than its bar: tied on into the next bars
+      if (res.status === 'added' && len > res.ev.dur) TC.score.setMelodyLength(S.doc, TC.curTrack(), t.bar, 0, res.ev, len);
       TC.commit();
       if (sound && S.settings.sound) TC.audio.previewTone(t.pitch, TC.curTrack());
       TC.ui.status(`${where(t)} · ${targetName(t)}`);
@@ -677,9 +697,14 @@
     if (to && n.pitch !== undefined) {
       if (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.pitch === n.pitch) return;
       if (noteAt(to.bar, to.tick, null, d.hit.track, to.pitch)) return TC.ui.hint(tr('There is already such a note'));
-      const dur = d.hit.ev.dur;
-      TC.score.removeNotes(S.doc, [n.id]);
-      const res = TC.score.place(S.doc, d.hit.track, to.bar, d.hit.voice, to.tick, dur, Object.assign({}, n, { pitch: to.pitch, dia: to.dia }));
+      // the note with the notes tied on from it: as long as before, from its new place (tied again if it needs to)
+      const SC = TC.score, chain = SC.tieChain(S.doc, n.id).filter((c, k, all) => k >= all.findIndex((x) => x.note.id === n.id));
+      const total = SC.chainTicks(chain);
+      SC.removeNotes(S.doc, chain.map((c) => c.note.id));
+      const moved = Object.assign({}, n, { pitch: to.pitch, dia: to.dia });
+      delete moved.tie;
+      const res = SC.place(S.doc, d.hit.track, to.bar, d.hit.voice, to.tick, total, moved);
+      if (res.status === 'added' && total > res.ev.dur) SC.setMelodyLength(S.doc, d.hit.track, to.bar, d.hit.voice, res.ev, total);
       S.selection = new Set([res.note ? res.note.id : n.id]);
       TC.selectBar(to.bar);
       TC.commit();
@@ -977,20 +1002,28 @@
   // ---- Melody: hold a note, then up / down (♯ / ♭) or sideways (its length) ---------------------------
   // the held note - for ♯ / ♭ all selected notes, if it is one of them; one undo step on release, Esc: back
 
-  /** Notes of the held note's selection (melody notes of its track), as for the strength. */
+  /**
+   * The held note's selection (or the held note alone) with the notes tied on from them: [{ hit, sp }] -
+   * sp: the spelling of the first note of its tied chain (the tied ones change with it).
+   */
   function heldNotes(d) {
-    const held = d.hit.note;
+    const held = d.hit.note, seen = new Set(), out = [];
     const ids = S.selection.has(held.id) && S.selection.size > 1 ? [...S.selection] : [held.id];
-    return ids.map((id) => TC.score.findNote(S.doc, id)).filter((h) => h && h.note.pitch !== undefined);
+    ids.forEach((id) => {
+      const ch = TC.score.tieChain(S.doc, id);
+      if (!ch.length || ch[0].note.pitch === undefined || seen.has(ch[0].note.id)) return;
+      const sp = TC.pitch.noteSpell(ch[0].note, TC.score.scaleAt(ch[0].track, ch[0].bar));
+      ch.forEach((c) => { seen.add(c.note.id); out.push({ hit: c, sp }); });
+    });
+    return out;
   }
 
   function beginAlter(e) {
-    const d = S.drag, hits = heldNotes(d);
-    const before = hits.map((h) => ({ pitch: h.note.pitch, dia: h.note.dia }));
-    const spells = hits.map((h) => TC.pitch.noteSpell(h.note, TC.score.scaleAt(h.track, h.bar)));
-    S.drag = { mode: 'alter', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, hits, spells, k: null,
-      undo: () => hits.forEach((h, j) => Object.assign(h.note, before[j])),
-      changed: () => hits.some((h, j) => h.note.pitch !== before[j].pitch || h.note.dia !== before[j].dia) };
+    const d = S.drag, list = heldNotes(d);
+    const before = list.map((x) => ({ pitch: x.hit.note.pitch, dia: x.hit.note.dia }));
+    S.drag = { mode: 'alter', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, list, k: null,
+      undo: () => list.forEach((x, j) => Object.assign(x.hit.note, before[j])),
+      changed: () => list.some((x, j) => x.hit.note.pitch !== before[j].pitch || x.hit.note.dia !== before[j].dia) };
     alterMove(e);
   }
   function alterMove(e) {
@@ -999,9 +1032,9 @@
     const k = TC.clamp(Math.round((d.sy - e.clientY) / VEL_STEP), -4, 4);
     if (k === d.k) return;
     d.k = k;
-    d.hits.forEach((h, j) => {
-      const to = TC.pitch.alter(d.spells[j], TC.clamp(k, -2 - d.spells[j].a, 2 - d.spells[j].a));
-      if (to) Object.assign(h.note, to);
+    d.list.forEach(({ hit, sp }) => {
+      const to = TC.pitch.alter(sp, TC.clamp(k, -2 - sp.a, 2 - sp.a));
+      if (to) Object.assign(hit.note, to);
     });
     S.rev++;
     TC.render.draw();
@@ -1010,33 +1043,36 @@
     S.hover = { bar: d.t.bar, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, label: `${name} – ${tr('Esc: back')}` };
     I.hoverKey = null;
     TC.render.drawHover();
-    TC.ui.status(`${where(d.t)} · ${name}${d.hits.length > 1 ? ' · ' + tr('{n} notes', { n: d.hits.length }) : ''}`);
+    const n = new Set(d.list.map((x) => x.sp)).size;
+    TC.ui.status(`${where(d.t)} · ${name}${n > 1 ? ' · ' + tr('{n} notes', { n }) : ''}`);
   }
 
+  /**
+   * Hold a melody note, then sideways: its length - up to the grid cell under the pointer, tied on into
+   * the next bars, stopping at the next note. Every step starts again from the score as it was.
+   */
   function beginLen(e) {
-    const d = S.drag, ev = d.hit.ev, before = ev.dur;
-    S.drag = { mode: 'len', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, ev, len: null,
-      undo: () => { ev.dur = before; }, changed: () => ev.dur !== before };
+    const d = S.drag, orig = JSON.stringify(S.doc.tracks);
+    S.drag = { mode: 'len', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, noteId: d.hit.note.id, len: null, orig,
+      undo: () => { S.doc.tracks = JSON.parse(orig); }, changed: () => JSON.stringify(S.doc.tracks) !== orig };
     lenMove(e);
   }
-  /** The held note reaches to the grid cell under the pointer (at most to the end of its bar / the next note). */
   function lenMove(e) {
-    const d = S.drag, RD = TC.render, p = I.toLocal(e.clientX, e.clientY);
-    const bi = d.hit.bar, L = TC.barTicks(S.doc.bars[bi].ts), lb = RD.layout.bars[bi], bar = p && RD.barAt(p.x);
-    let len = d.len === null ? d.ev.dur : d.len;
-    if (bar && bar.i > bi) len = L - d.ev.tick;
-    else if (bar && bar.i === bi) len = Math.max(RD.layout.grid, RD.snapTick(lb, p.x) - d.ev.tick + RD.layout.grid);
-    else if (bar && bar.i < bi) len = RD.layout.grid;
-    if (len === d.len) return;
-    d.len = len;
-    d.ev.dur = Math.min(len, L - d.ev.tick);
-    TC.score.fitBar(S.doc, d.hit.track, bi); // (up to the next note of its voice)
+    const d = S.drag, p = I.toLocal(e.clientX, e.clientY), SC = TC.score;
+    d.undo(); // start again from the score as it was
+    const h = SC.tieChain(S.doc, d.noteId)[0]; // (from the first note of its chain)
+    if (!h) return;
+    SC.removeNotes(S.doc, SC.tiedOn(S.doc, h.ev.notes.map((n) => n.id))); // its tied notes do not stop it
+    const want = dragLength(h.track, h.bar, h.ev.tick, p);
+    d.len = want.len;
+    d.hit = Object.assign({}, d.hit, h);
+    const got = SC.setMelodyLength(S.doc, h.track, h.bar, h.voice, h.ev, want.len);
     S.rev++;
     TC.render.draw();
-    S.hover = { bar: bi, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, label: `${hitName(d.hit, true)} – ${tr('Esc: back')}` };
+    S.hover = { bar: d.t.bar, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, label: `${hitName(h, true)} – ${tr('Esc: back')}` };
     I.hoverKey = null;
     TC.render.drawHover();
-    TC.ui.status(`${where(d.t)} · ${tr('Length')}: ${d.ev.dur} ${tr('ticks')}`);
+    TC.ui.status(`${where(d.t)} · ${tr('Length')}: ${lengthName(got, h.bar)}${want.stop ? ' · ' + tr('up to the next note') : ''}`);
   }
   function finishMelodyEdit(d) {
     if (d.changed()) TC.commit();
@@ -1060,6 +1096,15 @@
       { label: '♭ ' + tr('a semitone lower'), action: choose(() => A().alterSelection(-1)) },
     ];
     if (alt) items.push({ label: tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) }), action: choose(() => A().respell()) });
+    // a tie to the next note, when it is the same tone and starts where this one ends (also in the next bar)
+    const next = TC.score.nextNote(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev, n);
+    if (next) {
+      items.push({ label: '⁀ ' + tr('Tie to the next note'), checked: !!next.note.tie, action: () => {
+        next.note.tie = !next.note.tie;
+        if (!next.note.tie) delete next.note.tie;
+        TC.commit();
+      } });
+    }
     items.push('-');
     const lv = levelOf(n);
     LEVELS.forEach((s, k) => items.push({

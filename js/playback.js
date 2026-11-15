@@ -70,6 +70,7 @@
       t += L * spt;
     }
     const start = t;
+    const sounding = new Map(); // melody: the last tone of each track and pitch (a tied note lengthens it)
     const sw = doc.meta.swing || 50, su = doc.meta.swingUnit || 8, st = (k) => TC.swingTick(k, sw, su); // swing / shuffle
     // repeats and endings written out (model.js playOrder): the same order as the MIDI export
     for (const o of TC.score.playBars(doc, from, to)) {
@@ -87,9 +88,17 @@
             const dur = ends && ends.has(ev) ? ends.get(ev) - ev.tick : Math.min(ev.dur, L - ev.tick);
             for (const n of ev.notes) {
               if (n.pitch !== undefined) {
-                // melody: a tone as long as the note (swing moves its start and end)
-                const t1 = t + st(ev.tick + dur) * spt;
-                hits.push({ t: t0, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - 0.02), vel: T.velocity(n), trk: track });
+                // melody: a tone as long as the note (swing moves its start and end); a tied note is not struck
+                // again - the tone before it goes on, if it is the same pitch and ends right here
+                const t1 = t + st(ev.tick + dur) * spt, key = track.id + ':' + n.pitch, before = sounding.get(key);
+                if (n.tie && before && Math.abs(before.end - t0) < 1e-6) {
+                  before.end = t1;
+                  before.dur = Math.max(0.05, t1 - before.t - 0.02);
+                  continue;
+                }
+                const hit = { t: t0, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - 0.02), vel: T.velocity(n), trk: track, end: t1 };
+                hits.push(hit);
+                sounding.set(key, hit);
                 continue;
               }
               const art = TC.drums.byId(n.art);

@@ -227,6 +227,7 @@
     out.orn = n.orn === 'flam' || n.orn === 'drag' ? n.orn : null;
     out.trem = [1, 2, 3].includes(n.trem) ? n.trem : 0;
     out.stick = n.stick === 'R' || n.stick === 'L' ? n.stick : '';
+    if (kind !== 'drums' && n.tie) out.tie = true; // melody: tied on from the note before (same pitch)
     return out;
   }
 
@@ -388,6 +389,109 @@
       const b = track.bars[i];
       if (b.scale && same(b.scale, SC.scaleAt(track, i - 1))) b.scale = null;
     }
+  };
+
+  // ---- Melody: ties (a note tied on from the one before it - also across the bar line) -------------
+  // A tied note is a note of its own (note.tie, at the place where the one before it ends, same pitch); each
+  // bar keeps its notes, as in Guitar Pro and MusicXML. A tie only counts where it fits (tiedFrom): a note
+  // moved away, or another pitch before it, simply loses it.
+
+  /** The note `n` (event ev, bar bi, voice vi) is tied on from: { bar, ev, note } (same pitch, ending where n starts), or null. */
+  SC.tiedFrom = function (doc, track, bi, vi, ev, n) {
+    if (!n.tie || n.pitch === undefined) return null;
+    let pb = bi, prev = null;
+    if (ev.tick > 0) {
+      prev = (track.bars[bi].voices[vi] || []).filter((e) => e.tick < ev.tick).pop();
+      if (!prev || prev.tick + prev.dur !== ev.tick) return null;
+    } else {
+      if (bi === 0 || track.bars[bi].simile || track.bars[bi - 1].simile) return null; // (no tie into or out of a %-bar)
+      pb = bi - 1;
+      prev = (track.bars[pb].voices[vi] || []).slice(-1)[0];
+      if (!prev || prev.tick + prev.dur !== TC.barTicks(doc.bars[pb].ts)) return null;
+    }
+    const note = prev.notes.find((x) => x.pitch === n.pitch);
+    return note ? { bar: pb, ev: prev, note } : null;
+  };
+  /** The note tied on from `n`: { bar, ev, note }, or null. */
+  SC.tiedTo = function (doc, track, bi, vi, ev, n) {
+    const x = SC.nextNote(doc, track, bi, vi, ev, n);
+    return x && x.note.tie ? x : null;
+  };
+  /** The note of the same pitch that starts where `n` ends (tied or not): { bar, ev, note }, or null - what a tie could go to. */
+  SC.nextNote = function (doc, track, bi, vi, ev, n) {
+    if (n.pitch === undefined) return null;
+    const L = TC.barTicks(doc.bars[bi].ts);
+    let nb = bi, next = null;
+    if (ev.tick + ev.dur < L) next = (track.bars[bi].voices[vi] || []).find((e) => e.tick === ev.tick + ev.dur);
+    else if (bi + 1 < track.bars.length && !track.bars[bi].simile && !track.bars[bi + 1].simile) {
+      nb = bi + 1;
+      next = (track.bars[nb].voices[vi] || []).find((e) => e.tick === 0);
+    }
+    const note = next && next.notes.find((x) => x.pitch === n.pitch);
+    return note ? { bar: nb, ev: next, note } : null;
+  };
+  /** The whole chain of tied notes a note belongs to, from its first one: [{ note, ev, bar, voice, track }]. */
+  SC.tieChain = function (doc, id) {
+    const h = SC.findNote(doc, id);
+    if (!h) return [];
+    if (h.note.pitch === undefined) return [h];
+    const at = (p, vi) => Object.assign({ voice: vi, track: h.track }, p);
+    let cur = h;
+    for (let p; (p = SC.tiedFrom(doc, h.track, cur.bar, cur.voice, cur.ev, cur.note));) cur = at(p, cur.voice);
+    const out = [cur];
+    for (let p; (p = SC.tiedTo(doc, h.track, cur.bar, cur.voice, cur.ev, cur.note));) out.push((cur = at(p, cur.voice)));
+    return out;
+  };
+  /** Ids of the notes tied on from these notes (not the notes themselves). */
+  SC.tiedOn = function (doc, ids) {
+    const out = new Set();
+    ids.forEach((id) => {
+      const chain = SC.tieChain(doc, id), k = chain.findIndex((c) => c.note.id === id);
+      chain.slice(k + 1).forEach((c) => out.add(c.note.id)); // (only what comes after it: the notes before stay)
+    });
+    ids.forEach((id) => out.delete(id));
+    return [...out];
+  };
+  /** Total length in ticks of a tied chain (from its first note). */
+  SC.chainTicks = (chain) => chain.reduce((a, c) => a + c.ev.dur, 0);
+
+  /**
+   * Melody: the event ev (bar bi, voice vi) sounds `total` ticks - across the bar lines as tied notes
+   * (all of its notes, a chord as a chord). It stops at the next note of its voice (in its bar, or one at
+   * the start of a following bar) and before a %-bar. What was tied on from it before is replaced.
+   * Returns the length it got.
+   */
+  SC.setMelodyLength = function (doc, track, bi, vi, ev, total) {
+    const old = SC.tiedOn(doc, ev.notes.map((n) => n.id));
+    if (old.length) SC.removeNotes(doc, old);
+    const voiceOf = (k) => track.bars[k].voices[vi] || [];
+    const L = (k) => TC.barTicks(doc.bars[k].ts);
+    const nextAt = (k, t) => voiceOf(k).filter((e) => e.tick > t).reduce((m, e) => Math.min(m, e.tick), L(k));
+    ev.dur = Math.max(1, Math.min(total, nextAt(bi, ev.tick) - ev.tick));
+    let got = ev.dur, prev = ev, k = bi;
+    while (got < total && prev.tick + prev.dur === L(k) && k + 1 < track.bars.length) {
+      k++;
+      if (track.bars[k].simile || track.bars[k - 1].simile || voiceOf(k).some((e) => e.tick === 0)) break;
+      const notes = prev.notes.map((n) => Object.assign(TC.newPitchNote(n.pitch, n.dia), { tie: true }));
+      const res = SC.place(doc, track, k, vi, 0, total - got, notes[0]);
+      if (!res.ev) break;
+      res.ev.notes.push(...notes.slice(1));
+      got += res.ev.dur;
+      prev = res.ev;
+    }
+    return got;
+  };
+  /** Melody: how many ticks a note at (bar bi, tick, voice vi) could sound at most (up to the next note, across bar lines). */
+  SC.melodyRoom = function (doc, track, bi, vi, tick) {
+    let room = 0;
+    for (let k = bi, t = tick; k < track.bars.length; k++, t = 0) {
+      if (k > bi && (track.bars[k].simile || track.bars[k - 1].simile)) break;
+      const L = TC.barTicks(doc.bars[k].ts), v = track.bars[k].voices[vi] || [];
+      const next = v.filter((e) => e.tick > t || (k > bi && e.tick === 0)).reduce((m, e) => Math.min(m, e.tick), L);
+      room += next - t;
+      if (next < L) break;
+    }
+    return room;
   };
 
   /** Call fn(note, event, voiceIndex, barIndex, track) for every note. */
@@ -755,6 +859,7 @@
     SC.removeNotes(doc, ids);
     for (const it of items) {
       const n = Object.assign({}, it.note, it.to);
+      if (delta) delete n.tie; // (moved in time: no longer tied to what was before it)
       SC.place(doc, track, it.pos.bar, it.to.art !== undefined ? TC.drums.voiceOf(it.to.art) : it.voice, it.pos.tick, it.dur, n);
     }
     return true;

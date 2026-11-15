@@ -352,13 +352,13 @@ Note ziehen = verschieben, halten + hoch / runter = ♯ / ♭, halten + seitlich
 gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synth, über MIDI mit Kanal und Programm), MIDI-Export
 (Programmwechsel, Notenlänge), MusicXML (Tonhöhe, Tonart mit Modus, Schlüssel inkl. Tenor, Vorzeichen, Haltebögen), Teilen-Link.
 **Noch offen aus A (Reihenfolge):**
-1. **Haltebögen über Taktgrenzen** (entschieden, wie Guitar Pro / MusicXML): jeder Takt behält seine Noten, der Rest im nächsten
+1. ✅ **Haltebögen über Taktgrenzen** (gebaut, `test_ties.js`; wie Guitar Pro / MusicXML): jeder Takt behält seine Noten, der Rest im nächsten
    Takt ist eine echte Note „angebunden“ (`note.tie`). Über den Taktstrich ziehen legt die Kette an (auch über mehrere Takte, Status
    zeigt die Gesamtlänge); ♯ / ♭, Verschieben, Löschen wirken auf die ganze Kette; Notenmenü „Haltebogen zur nächsten Note“
    (gleicher Ton) an / aus. Bogen über den Taktstrich, beim Zeilenumbruch halber Bogen am Zeilenende und -anfang. Wiedergabe / MIDI:
    angebunden = klingt weiter, nur wenn davor derselbe Ton bis zum Taktende klang (Wiederholung springt zurück: neu angeschlagen).
    Teil der Kette auf anderen Ton: der Bogen löst sich. Kein Bogen in einen %-Takt.
-2. **Verlängern stoppt an der nächsten Note** (entschieden; nicht überschreiben, nicht schieben) – die Vorschau zeigt die Grenze.
+2. ✅ **Verlängern stoppt an der nächsten Note** (gebaut: Strich in der Vorschau, Statuszeile „bis zur nächsten Note“, Länge als „1 Takt + 2 Viertel“; nicht überschreiben, nicht schieben) – die Vorschau zeigt die Grenze.
 3. **Klang wählen** (Panel: Gesang / Klavier / Lead … = GM-Programm), Synth je Familie.
 4. Oktav-Schalter, Tastatur (A–G setzt, ↑ ↓ Halbton, Strg+↑ ↓ Oktave), Höhe verschieben mit dem Auswahl-Werkzeug.
 5. Handbuch-Kapitel „Melodie schreiben“, Beispielstück mit Melodie.

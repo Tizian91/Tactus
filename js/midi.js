@@ -99,6 +99,7 @@
     const add = addTo(metaEv);
     // melody tracks: their channel (own MIDI channel, else the track's) and their sound (program change at the start)
     const melodyCh = (track) => (Number.isInteger(track.midiCh) ? track.midiCh : track.channel || 0);
+    const held = new Map(); // melody: the last note of each track, channel and pitch (a tied note lengthens it)
     tracks.forEach((track, ti) => {
       if (track.kind === 'pitched') addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
     });
@@ -137,10 +138,18 @@
             for (const n of e.notes) {
               if (n.pitch !== undefined) {
                 // melody: the note on the track's channel, as long as written (swing moves start and end)
+                // a tied note is not struck again: the note before it (same pitch, ending here) gets longer
                 const ch = melodyCh(track), v = Math.max(1, Math.min(127, Math.round(T.velocity(n) * 127)));
-                const a = t0 + sw(e.tick), z = Math.max(a + 1, t0 + sw(e.tick + dur) - 10);
+                const a = t0 + sw(e.tick), end = t0 + sw(e.tick + dur), key = ti + ':' + ch + ':' + n.pitch, before = held.get(key);
+                if (n.tie && before && Math.abs(before.end - a) < 1e-6) {
+                  before.end = end;
+                  before.off.t = Math.max(before.on + 1, Math.round(end - 10));
+                  continue;
+                }
                 put(a, 2, [0x90 | ch, n.pitch, v]);
-                put(z, 1, [0x80 | ch, n.pitch, 0]);
+                const off = { t: Math.max(Math.round(a) + 1, Math.round(end - 10)), order: 1, bytes: [0x80 | ch, n.pitch, 0] };
+                noteEv[ti].push(off);
+                held.set(key, { on: Math.round(a), end, off });
                 continue;
               }
               const art = TC.drums.byId(n.art);

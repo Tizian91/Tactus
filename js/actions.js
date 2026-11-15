@@ -124,14 +124,13 @@
   A.moveLine = function (dir) {
     if (!S.selection.size) return;
     const lines = TC.drums.lines(TC.drums.kit());
-    forSelected((n, hit) => {
-      if (n.pitch !== undefined) {
-        // melody: to the tone of the scale on the next line / space (up = higher)
-        const P = TC.pitch, sp = P.noteSpell(n, TC.score.scaleAt(hit.track, hit.bar));
-        const t = P.lineTone(sp.dia - dir, TC.score.scaleAt(hit.track, hit.bar));
-        if (t.pitch >= 0 && t.pitch <= 127) Object.assign(n, { pitch: t.pitch, dia: t.dia });
-        return;
-      }
+    // melody: to the tone of the scale on the next line / space (up = higher), tied notes along
+    changeChains((h, sc) => {
+      const t = TC.pitch.lineTone(TC.pitch.noteSpell(h.note, sc).dia - dir, sc);
+      return { pitch: t.pitch, dia: t.dia };
+    });
+    forSelected((n) => {
+      if (n.pitch !== undefined) return;
       const art = TC.drums.byId(n.art);
       const next = dir < 0 ? lines.filter(([l]) => l < art.line).pop() : lines.find(([l]) => l > art.line);
       if (next) n.art = (next[1].find((a) => a.def) || next[1][0]).id;
@@ -360,31 +359,43 @@
     TC.commit();
     TC.ui.hint(`${bi > 0 ? tr('From bar {n}', { n: bi + 1 }) + ': ' : ''}${P.scaleName(TC.score.scaleAt(t, bi), TC.getLang() === 'de')}`);
   };
-  /** Selected melody notes a semitone up (♯, dir 1) or down (♭, -1), on their own line. */
-  A.alterSelection = function (dir) {
+  /**
+   * Melody: the whole tied chain of every selected melody note, once each: [[hit, …]] (its first note
+   * decides, the tied ones follow it).
+   */
+  function selectedChains() {
+    const seen = new Set(), out = [];
+    for (const id of S.selection) {
+      const ch = TC.score.tieChain(S.doc, id);
+      if (!ch.length || ch[0].note.pitch === undefined || seen.has(ch[0].note.id)) continue;
+      ch.forEach((c) => seen.add(c.note.id));
+      out.push(ch);
+    }
+    return out;
+  }
+  /** Change every selected melody chain: fn(first hit, its scale) -> { pitch?, dia } for all of its notes, or null. */
+  function changeChains(fn) {
     let n = 0;
-    forSelected((note, hit) => {
-      if (note.pitch === undefined) return;
-      const to = TC.pitch.alter(TC.pitch.noteSpell(note, TC.score.scaleAt(hit.track, hit.bar)), Number(dir));
-      if (to && to.pitch >= 0 && to.pitch <= 127) {
-        Object.assign(note, to);
-        n++;
-      }
+    selectedChains().forEach((ch) => {
+      const to = fn(ch[0], TC.score.scaleAt(ch[0].track, ch[0].bar));
+      if (!to || to.pitch < 0 || to.pitch > 127) return;
+      ch.forEach((c) => Object.assign(c.note, to));
+      n++;
     });
-    if (n) TC.commit();
+    return n;
+  }
+  TC.actions.selectedChains = selectedChains;
+
+  /** Selected melody notes a semitone up (♯, dir 1) or down (♭, -1), on their own line (tied notes along). */
+  A.alterSelection = function (dir) {
+    if (changeChains((h, sc) => TC.pitch.alter(TC.pitch.noteSpell(h.note, sc), Number(dir)))) TC.commit();
   };
   /** Selected melody notes written the other way (F♯ ↔ G♭); the pitch stays. */
   A.respell = function () {
-    let n = 0;
-    forSelected((note, hit) => {
-      if (note.pitch === undefined) return;
-      const alt = TC.pitch.enharmonics(note.pitch, TC.pitch.noteSpell(note, TC.score.scaleAt(hit.track, hit.bar)).dia)[0];
-      if (alt) {
-        note.dia = alt.dia;
-        n++;
-      }
-    });
-    if (n) TC.commit();
+    if (changeChains((h, sc) => {
+      const alt = TC.pitch.enharmonics(h.note.pitch, TC.pitch.noteSpell(h.note, sc).dia)[0];
+      return alt ? { dia: alt.dia } : null;
+    })) TC.commit();
   };
   A.setTrackScaleRoot = (pc) => A.setTrackScale('root', pc);
   A.setTrackScaleId = (id) => A.setTrackScale('id', id);
@@ -465,7 +476,9 @@
 
   A.deleteSelection = function () {
     if (!S.selection.size) return;
-    const n = TC.score.removeNotes(S.doc, selectedIds());
+    // melody: the notes tied on from a deleted one go with it (the ones before it stay)
+    const ids = selectedIds();
+    const n = TC.score.removeNotes(S.doc, ids.concat(TC.score.tiedOn(S.doc, ids)));
     S.selection.clear();
     TC.commit();
     TC.ui.hint(tr('{n} note(s) deleted', { n }));

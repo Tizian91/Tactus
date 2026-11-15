@@ -37,6 +37,7 @@ Die erste Zeile der Ausgabe lautet `ALL OK: … passed` oder `FAILED: …`, daru
 | `test_midiin.js` | MIDI-Import: Hin und zurück (Export → Import), eingespielte Datei (Typ 1, 480 Ticks, ungenau): Raster, Triolen-Schlag, Ghost / Akzent, Flam, unbekannte Taste, Marker; Kit-Profil mit mehreren Tasten |
 | `test_pitch.js` | Tonleitern: welcher Ton auf welcher Linie liegt (auch Pentatonik / Blues / Ganzton: blasse Linien), Vorzeichen (Kirchentonarten, harmonisch Moll …), Grundton-Schreibweise (Des-Dur, Cis-Moll), Schreibweise einer Tonhöhe, Versetzungszeichen im Takt, Schlüssel (Violin, Bass, Tenor), Namen |
 | `test_melody.js` | Melodie-Spuren: anlegen, Noten mit Tonhöhe (Akkord, gleicher Ton, verschieben), Tonleiter ab einem Takt (bleibt beim Leeren, beim Ausschreiben), Speichern / Laden, Wiedergabe mit Tonlänge, MIDI (Programm, Kanal, Länge), MusicXML (Tonhöhe, Tonart, Schlüssel, Vorzeichen, Haltebögen) |
+| `test_ties.js` | Haltebögen (Melodie): Note über mehrere Taktstriche, kürzer machen, stoppt an der nächsten Note, Kette / was danach kommt, ein Bogen gilt nur wo er passt (anderer Ton, %-Takt), Bogen von Hand im Takt, Wiedergabe und MIDI schlagen nicht neu an (nach einer Wiederholung zu einem anderen Ton schon), MusicXML über den Taktstrich ohne zweites Vorzeichen, Speichern |
 | `harness.js`, `run.js` | Hilfsmittel: Dateien laden, Prüfungen zählen, alle `test_*.js` ausführen |
 
 ## Klick-Test (im Browser)

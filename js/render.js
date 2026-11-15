@@ -212,12 +212,23 @@
    * (acc: "tick:note id" -> sign, js/pitch.js P.accidentals).
    */
   function pitchInfo(doc, track, i, voices) {
-    const P = TC.pitch, scale = TC.score.scaleAt(track, i);
+    const P = TC.pitch, SC = TC.score, scale = SC.scaleAt(track, i);
+    // ties: the notes tied on from before (no sign again), and where a tie from a note goes (also into the next bar)
+    const tiesIn = new Set(), tiesOut = new Map();
+    if (!track.bars[i].simile) {
+      track.bars[i].voices.forEach((v, vi) => v.forEach((ev) => ev.notes.forEach((n) => {
+        if (SC.tiedFrom(doc, track, i, vi, ev, n)) tiesIn.add(n.id);
+        const to = SC.tiedTo(doc, track, i, vi, ev, n);
+        if (to) tiesOut.set(n.id, { bar: to.bar, tick: to.ev.tick });
+      })));
+    }
     const list = [];
-    voices.forEach((items) => items.forEach((it) => { if (it.kind === 'note') it.ev.notes.forEach((n) => list.push({ tick: it.tick, cont: it.cont, n })); }));
+    voices.forEach((items) => items.forEach((it) => {
+      if (it.kind === 'note') it.ev.notes.forEach((n) => list.push({ tick: it.tick, cont: it.cont || (it.tick === it.ev.tick && tiesIn.has(n.id)), n }));
+    }));
     const { spell, acc, fifths } = P.spellBar(list, scale, track.clef);
-    const prev = i > 0 ? P.fifths(TC.score.scaleAt(track, i - 1)) : fifths;
-    return { scale, fifths, change: fifths !== prev ? { from: prev, to: fifths } : null, spell, acc,
+    const prev = i > 0 ? P.fifths(SC.scaleAt(track, i - 1)) : fifths;
+    return { scale, fifths, change: fifths !== prev ? { from: prev, to: fifths } : null, spell, acc, tiesIn, tiesOut,
       accAt0: list.some(({ tick, n }) => tick === 0 && acc.has('0:' + n.id)) };
   }
 
@@ -946,8 +957,25 @@
       if (up) b.top = Math.min(b.top || 0, q.endY - 0.3 * SP, marks.length ? my + 0.4 * SP : 0);
       if (it.tie) {
         const nx = RD.tickX(b, it.tick + it.dur);
-        const y = stepY(q.heads[0].line) + (up ? 0.6 * SP : -0.6 * SP);
-        out.push(`<path class="tie" d="M${f(q.x + 0.6 * SP)},${f(y)} Q${f((q.x + nx) / 2)},${f(y + (up ? 1 : -1) * SP)} ${f(nx - 0.6 * SP)},${f(y)}"/>`);
+        q.heads.forEach((h) => tieArc(out, q.x + h.dx + 0.6 * SP, nx - 0.6 * SP, h.line, up));
+      }
+      if (pinfo && !it.tie) {
+        // melody: a tie to the note tied on from this one - in this bar, over the bar line, or (the next bar on
+        // another line) to the end of the line; a note tied on from a bar on the line before: a tie from the line start
+        const Lb = RD.layout.bars;
+        for (const h of q.heads) {
+          const to = pinfo.tiesOut.get(h.n.id);
+          if (to) {
+            const nb = Lb[to.bar];
+            const x2 = to.bar === b.i ? RD.tickX(b, to.tick) - 0.6 * SP
+              : nb && nb.sys === b.sys && nb.hidden === undefined ? RD.tickX(nb, 0) - 0.6 * SP : b.x + b.w + 0.9 * SP;
+            tieArc(out, q.x + h.dx + 0.6 * SP, x2, h.line, up);
+          }
+          const pv = Lb[b.i - 1];
+          if (!it.cont && it.tick === 0 && pinfo.tiesIn.has(h.n.id) && (!pv || pv.sys !== b.sys || pv.hidden !== undefined)) {
+            tieArc(out, b.x0 - 0.6 * SP, q.x + h.dx - 0.6 * SP, h.line, up);
+          }
+        }
       }
       out.push('</g>');
     }
@@ -1032,6 +1060,13 @@
       const text = main ? p[0] : SHORT[p[1]] || '·';
       out.push(`<text class="count${main ? ' beat' : ''}" x="${f(RD.tickX(b, t))}" y="${f(COUNT_Y)}">${esc(text)}</text>`);
     }
+  }
+
+  /** A tie from x1 to x2 at a head on staff step `line`, on the side away from the stem. */
+  function tieArc(out, x1, x2, line, up) {
+    if (x2 - x1 < 0.4 * SP) return;
+    const y = stepY(line) + (up ? 0.6 * SP : -0.6 * SP);
+    out.push(`<path class="tie" d="M${f(x1)},${f(y)} Q${f((x1 + x2) / 2)},${f(y + (up ? 1 : -1) * SP)} ${f(x2)},${f(y)}"/>`);
   }
 
   /** A beam (level 0 = at the stem ends, higher levels further in). */
@@ -1174,9 +1209,20 @@
         const head = TC.HEADS.normal, gi = h.len >= 3840 ? 2 : h.len >= 1920 ? 1 : 0;
         const ln = h.line, w = head.w[gi] * SP, y = stepY(ln);
         if (h.len) {
-          const x2 = Math.min(RD.tickX(b, h.tick + h.len), b.x + b.w);
-          out.push(rect(x - w / 2, y - 0.4 * SP, Math.max(w, x2 - x + w / 2 - 0.25 * SP), 0.8 * SP, 'len-bar'));
-          labelX = x2 + 0.3 * SP;
+          // the length, over the bar lines as far as it goes (bars on this line); stopped by the next note: a stroke there
+          let rest = h.len, k = h.bar, t0 = h.tick, x2 = x;
+          while (rest > 0 && L.bars[k] && L.bars[k].sys === b.sys) {
+            const bk = L.bars[k], seg = Math.min(rest, bk.L - t0);
+            const xa = k === h.bar ? x - w / 2 : RD.tickX(bk, 0) - 0.5 * SP;
+            x2 = RD.tickX(bk, t0 + seg) - (t0 + seg >= bk.L ? 0 : 0.25 * SP);
+            if (t0 + seg >= bk.L) x2 = bk.x + bk.w - 0.2 * SP;
+            out.push(rect(xa, y - 0.4 * SP, Math.max(w, x2 - xa), 0.8 * SP, 'len-bar'));
+            rest -= seg;
+            k++;
+            t0 = 0;
+          }
+          if (h.stop) out.push(rect(x2 - 0.12 * SP, y - 1.1 * SP, 0.24 * SP, 2.2 * SP, 'len-stop'));
+          labelX = x2 + 0.4 * SP;
         }
         for (let l = -2; l >= ln; l -= 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         for (let l = 10; l <= ln; l += 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));

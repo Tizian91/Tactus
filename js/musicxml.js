@@ -166,8 +166,10 @@
         const voices = bar.voices.map((v) => R.layout(v, h.ts, t.kind === 'drums', h.beam, t.fill));
         const used = voices.map((items) => items.some((it) => it.kind === 'note'));
         // melody: how each note is spelled and which ones carry a sign (as drawn)
-        const sb = mel ? P.spellBar([].concat(...voices.map((items) => items.filter((it) => it.kind === 'note')
-          .map((it) => it.ev.notes.map((n) => ({ tick: it.tick, cont: it.cont, n }))))).flat(), scale, t.clef) : null;
+        // (a note tied on from before carries no sign again)
+        const sb = mel ? P.spellBar([].concat(...voices.map((items, vi) => items.filter((it) => it.kind === 'note')
+          .map((it) => it.ev.notes.map((n) => ({ tick: it.tick, n,
+            cont: it.cont || (it.tick === it.ev.tick && !!TC.score.tiedFrom(doc, t, src, vi, it.ev, n)) }))))).flat(), scale, t.clef) : null;
         let first = true;
         voices.forEach((items, vi) => {
           if (!used[vi] && (vi > 0 || used.some(Boolean))) return; // an empty voice: left out (voice 1 keeps its whole-bar rest)
@@ -198,13 +200,16 @@
               ns.forEach((n, c) => {
                 const sp = sb.spell.get(n.id), step = 'CDEFGAB'[((sp.dia % 7) + 7) % 7], oct = Math.floor(sp.dia / 7);
                 const sign = sb.acc.get(it.tick + ':' + n.id);
+                // tied: inside the note (it.cont / it.tie), or to / from another note (also over the bar line)
+                const tStop = it.cont || (it.tick === it.ev.tick && !!TC.score.tiedFrom(doc, t, src, vi, it.ev, n));
+                const tStart = it.tie || !!TC.score.tiedTo(doc, t, src, vi, it.ev, n);
                 const nots = [];
-                if (it.cont) nots.push('<tied type="stop"/>');
-                if (it.tie) nots.push('<tied type="start"/>');
+                if (tStop) nots.push('<tied type="stop"/>');
+                if (tStart) nots.push('<tied type="start"/>');
                 if (c === 0 && tupN) nots.push(tupN);
                 if (c === 0 && acc && !it.cont) nots.push(`<articulations>${acc > 1 ? '<strong-accent type="up"/>' : '<accent/>'}</articulations>`);
                 o.push('<note>' + (c ? '<chord/>' : '') + `<pitch><step>${step}</step>${sp.a ? `<alter>${sp.a}</alter>` : ''}<octave>${oct}</octave></pitch>` +
-                  `<duration>${it.dur}</duration>` + (it.cont ? '<tie type="stop"/>' : '') + (it.tie ? '<tie type="start"/>' : '') +
+                  `<duration>${it.dur}</duration>` + (tStop ? '<tie type="stop"/>' : '') + (tStart ? '<tie type="start"/>' : '') +
                   `<instrument id="${pid(k)}-I1"/><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` + (it.dots ? '<dot/>' : '') +
                   (sign !== undefined ? `<accidental>${ACC_NAME[sign]}</accidental>` : '') + tm +
                   (c === 0 && bm ? bm.map((b, lv) => `<beam number="${lv + 1}">${b}</beam>`).join('') : '') +

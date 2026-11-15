@@ -149,6 +149,9 @@
       <p class="hint tight"><b>${esc(P.fullName(sp.dia, sp.a, de()))}</b></p>
       <div class="btn-row two">${btn('alterSelection', 1, '♯ ' + tr('Raise'), false, tr('A semitone up (hold the note, then up)'))}
         ${btn('alterSelection', -1, '♭ ' + tr('Lower'), false, tr('A semitone down (hold the note, then down)'))}</div>
+      <div class="btn-row two">${btn('octaveSelection', 1, '8↑ ' + tr('Octave up'), false, tr('An octave higher (Ctrl+↑)'))}
+        ${btn('octaveSelection', -1, '8↓ ' + tr('Octave down'), false, tr('An octave lower (Ctrl+↓)'))}</div>
+      <p class="hint tight">${tr('↑ ↓: next line (tone of the scale) · Alt+↑ ↓: semitone · Ctrl+↑ ↓: octave')}</p>
       ${alt ? `<div class="btn-row">${btn('respell', undefined, esc(tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) })), false, tr('Same tone, written the other way'))}</div>` : ''}
       <div class="row"><label>${tr('Accent')}</label><div class="seg">
         ${btn('setAccent', 0, '–', src.accent === 0, tr('No accent'))}

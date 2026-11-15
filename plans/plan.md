@@ -360,7 +360,9 @@ gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synt
    Teil der Kette auf anderen Ton: der Bogen löst sich. Kein Bogen in einen %-Takt.
 2. ✅ **Verlängern stoppt an der nächsten Note** (gebaut: Strich in der Vorschau, Statuszeile „bis zur nächsten Note“, Länge als „1 Takt + 2 Viertel“; nicht überschreiben, nicht schieben) – die Vorschau zeigt die Grenze.
 3. ✅ **Klang wählen** (Panel „Klang“: 21 Klänge in 6 Gruppen = GM-Programm, `TC.MELODY_SOUNDS`; der Tactus-Synth spielt 13 Familien – Klavier klingt aus, Streicher / Fläche schwellen an …; beim Wählen hörbar).
-4. Oktav-Schalter, Tastatur (A–G setzt, ↑ ↓ Halbton, Strg+↑ ↓ Oktave), Höhe verschieben mit dem Auswahl-Werkzeug.
+4. ✅ **Oktaven und Tastatur:** Noten-Panel „Oktave höher / tiefer“; ↑ ↓ nächste Linie (Ton der Tonleiter), Alt+↑ ↓ Halbton, Strg+↑ ↓
+   Oktave (angebundene Noten wandern mit); Auswahl-Werkzeug verschiebt Melodie-Noten auch in der Höhe (nach Linien). **Zurückgestellt:**
+   Notennamen per Buchstabe (A–G) – die Buchstaben sind belegt (A Akzent, G Ghost, E Radierer, C / F Crash / Standtom …).
 5. Handbuch-Kapitel „Melodie schreiben“, Beispielstück mit Melodie.
 
 **Entschieden:** Gesang ist einstimmig; zwei Sänger = zwei Spuren. Akkorde (gleicher Anfang, gleiche Länge) gehen in einer Stimme;

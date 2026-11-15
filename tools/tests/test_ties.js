@@ -80,6 +80,19 @@ module.exports = function (T) {
   T.ok('MusicXML bar 1: F♯ with its sign, tie start', m1.includes('<accidental>sharp</accidental>') && m1.includes('<tie type="start"/>') && m1.includes('<tied type="start"/>'));
   T.ok('MusicXML bar 2: the tied F♯ - tie stop, no sign', m2.includes('<tie type="stop"/>') && m2.includes('<tied type="stop"/>') && !m2.includes('<accidental>'));
 
+  // moving: a tied note moved together with the note before it stays tied; moved alone it loses the tie
+  const d3 = TC.emptyScore(3);
+  const m3 = SC.addTrack(d3, 'M', null, 'pitched');
+  const c1 = SC.place(d3, m3, 0, 0, 1920, 1920, TC.newPitchNote(62, null, {}));
+  SC.setMelodyLength(d3, m3, 0, 0, c1.ev, 3840); // D: half + tied half
+  const ids3 = SC.tieChain(d3, c1.note.id).map((c) => c.note.id);
+  T.ok('move the chain up a step (pitch only): still tied', SC.moveNotes(d3, ids3, 0, null, () => ({ pitch: 64, dia: 30 })) && SC.tieChain(d3, ids3[0]).length === 2);
+  SC.moveNotes(d3, ids3, -960, null);
+  T.eq('moved together a quarter earlier: both parts in bar 1', [m3.bars[0].voices[0].map((e) => e.tick + (e.notes[0].tie ? '~' : '')), m3.bars[1].voices[0].length], [['960', '2880~'], 0]);
+  T.eq('… (bar 1 then holds both parts, the tie stays inside the bar)', SC.tieChain(d3, ids3[0]).length, 2);
+  SC.moveNotes(d3, [ids3[1]], 480, null);
+  T.eq('the tied note moved alone: no tie', SC.tieChain(d3, ids3[0]).length, 1);
+
   // saving: the tie flag stays (melody), drums never get one
   const back = TC.normalizeDoc(JSON.parse(JSON.stringify(doc)));
   T.eq('saved and loaded: tied notes', back.tracks[1].bars[1].voices[0][0].notes[0].tie, true);

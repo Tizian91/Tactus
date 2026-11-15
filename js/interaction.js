@@ -950,35 +950,47 @@
    * (a note of the same instrument there) just keeps the last good one.
    */
   function selMove(e) {
-    const d = S.drag;
+    const d = S.drag, SC = TC.score;
     if (!d.orig) {
       if (!S.selection.has(d.head.id)) S.selection = d.add ? new Set([...S.selection, d.head.id]) : new Set([d.head.id]);
       d.ids = [...S.selection];
+      d.mel = d.hit.note.pitch !== undefined;
+      if (d.mel) {
+        // melody: the tied notes go along; up / down: by lines (tones of the scale of each note's bar)
+        d.ids = [...new Set(d.ids.concat(SC.tiedOn(S.doc, d.ids)))];
+        d.barOf = new Map(d.ids.map((id) => [id, (SC.findNote(S.doc, id) || { bar: 0 }).bar]));
+      }
       d.orig = JSON.stringify(S.doc.tracks);
-      d.from = TC.score.absTick(S.doc, d.head.bar, d.head.tick);
-      const arts = new Set(d.ids.map((id) => (TC.score.findNote(S.doc, id) || { note: {} }).note.art));
+      d.from = SC.absTick(S.doc, d.head.bar, d.head.tick);
+      const arts = new Set(d.ids.map((id) => (SC.findNote(S.doc, id) || { note: {} }).note.art));
       d.oneArt = arts.size === 1 ? [...arts][0] : null; // up / down only for one instrument
-      d.good = { delta: 0, art: null };
+      d.good = { delta: 0, art: null, dl: 0 };
     }
     const p = I.toLocal(e.clientX, e.clientY);
     const bar = p && TC.render.barAt(p.x);
     if (!bar || TC.render.simileAt(bar, d.hit.track) || p.x < bar.x0) return;
-    const delta = TC.score.absTick(S.doc, bar.i, TC.render.snapTick(bar, p.x)) - d.from;
-    let art = null;
-    if (d.oneArt && !I.locked(e) && p.track === d.hit.track) {
+    const delta = SC.absTick(S.doc, bar.i, TC.render.snapTick(bar, p.x)) - d.from;
+    let art = null, dl = 0;
+    if (d.mel) {
+      if (p.track && p.track.id === d.hit.track.id) dl = Math.round(TC.render.posAt(p.y)) - d.head.line;
+    } else if (d.oneArt && !I.locked(e) && p.track && p.track.id === d.hit.track.id) { // (by id: the tracks are rebuilt while moving)
       const a = lineArt(p);
       if (a && a.id !== d.oneArt) art = a.id;
     }
-    if (delta === d.good.delta && art === d.good.art) return;
-    const apply = (dl, a) => {
-      S.doc.tracks = JSON.parse(d.orig);
-      return (!dl && !a) || TC.score.moveNotes(S.doc, d.ids, dl, a);
+    if (delta === d.good.delta && art === d.good.art && dl === d.good.dl) return;
+    const lines = (k) => (n) => {
+      const sc = SC.scaleAt(d.hit.track, d.barOf.get(n.id) || 0), t = TC.pitch.lineTone(TC.pitch.noteSpell(n, sc).dia - k, sc);
+      return t.pitch >= 0 && t.pitch <= 127 ? { pitch: t.pitch, dia: t.dia } : null;
     };
-    if (apply(delta, art)) d.good = { delta, art };
-    else apply(d.good.delta, d.good.art);
+    const apply = (dt, a, k) => {
+      S.doc.tracks = JSON.parse(d.orig);
+      return (!dt && !a && !k) || SC.moveNotes(S.doc, d.ids, dt, a, k ? lines(k) : null);
+    };
+    if (apply(delta, art, dl)) d.good = { delta, art, dl };
+    else apply(d.good.delta, d.good.art, d.good.dl);
     S.rev++;
     TC.render.draw();
-    const pos = TC.score.atAbs(S.doc, d.from + d.good.delta);
+    const pos = SC.atAbs(S.doc, d.from + d.good.delta);
     if (pos) TC.ui.status(`${where(pos)} · ${tr('{n} note(s) selected', { n: d.ids.length })} · ${tr('release: move here')}`);
   }
   function finishSelMove(d, cancelled) {
@@ -989,7 +1001,7 @@
       TC.refresh();
       return;
     }
-    if (d.good.delta || d.good.art) TC.commit();
+    if (d.good.delta || d.good.art || d.good.dl) TC.commit();
     else TC.refresh();
   }
 
@@ -1257,6 +1269,7 @@
       else if (lk === 'v' && !isTyping(e)) A().pasteBar();
       else if (lk === 'd') A().duplicateBar();
       else if (lk === 'a' && !isTyping(e)) A().selectAll();
+      else if ((k === 'ArrowUp' || k === 'ArrowDown') && S.selection.size && !isTyping(e)) A().octaveSelection(k === 'ArrowUp' ? 1 : -1); // melody: an octave
       else if (k === '+' || k === '=') A().zoomIn();
       else if (k === '-') A().zoomOut();
       else if (k === '0') A().zoomReset();
@@ -1293,6 +1306,7 @@
     else if (k === 'Delete' || k === 'Backspace') A().deleteSelection();
     else if (k === 'Escape') A().selectNone();
     else if (k === 'Home') A().home();
+    else if ((k === 'ArrowUp' || k === 'ArrowDown') && S.selection.size && e.altKey) A().alterSelection(k === 'ArrowUp' ? 1 : -1); // melody: ♯ / ♭
     else if (k === 'ArrowUp' && S.selection.size) A().moveLine(-1);
     else if (k === 'ArrowDown' && S.selection.size) A().moveLine(1);
     else if (k === 'ArrowLeft' && S.selection.size) A().shiftSelection(-1);

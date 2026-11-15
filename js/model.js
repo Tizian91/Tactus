@@ -902,13 +902,15 @@
           if (ev.tick === pos.tick && ev.notes.some((n) => !moving.has(n.id) && sameSlot(n, to))) return false;
         }
       }
-      items.push({ note: h.note, pos, dur: h.ev.dur, to, voice: h.voice });
+      // (a tied note keeps its tie when the note before it moves along)
+      const from = h.note.tie && SC.tiedFrom(doc, track, h.bar, h.voice, h.ev, h.note);
+      items.push({ note: h.note, pos, dur: h.ev.dur, to, voice: h.voice, keepTie: !!from && moving.has(from.note.id) });
     }
     if (!items.length) return false;
     SC.removeNotes(doc, ids);
     for (const it of items) {
       const n = Object.assign({}, it.note, it.to);
-      if (delta) delete n.tie; // (moved in time: no longer tied to what was before it)
+      if (delta && !it.keepTie) delete n.tie; // (moved in time alone: no longer tied to what was before it)
       SC.place(doc, track, it.pos.bar, it.to.art !== undefined ? TC.drums.voiceOf(it.to.art) : it.voice, it.pos.tick, it.dur, n);
     }
     return true;

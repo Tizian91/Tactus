@@ -433,6 +433,14 @@
   A.alterSelection = function (dir) {
     if (changeChains((h, sc) => TC.pitch.alter(TC.pitch.noteSpell(h.note, sc), Number(dir)))) TC.commit();
   };
+  /** Selected melody notes an octave up (1) or down (-1), tied notes along. */
+  A.octaveSelection = function (dir) {
+    dir = Number(dir);
+    if (changeChains((h, sc) => {
+      const sp = TC.pitch.noteSpell(h.note, sc);
+      return { pitch: h.note.pitch + 12 * dir, dia: sp.dia + 7 * dir };
+    })) TC.commit();
+  };
   /** Selected melody notes written the other way (F♯ ↔ G♭); the pitch stays. */
   A.respell = function () {
     if (changeChains((h, sc) => {

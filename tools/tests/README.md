@@ -35,6 +35,8 @@ Die erste Zeile der Ausgabe lautet `ALL OK: … passed` oder `FAILED: …`, daru
 | `test_kits.js` | Kit-Profile: automatische Zuordnung, verdächtige Tasten (falsche Ausgangsnote), eine Taste = ein Instrument, Cubase-Drummap mit Tactus-Darstellung und Reihenfolge, Export / Import, Speichern im Browser |
 | `test_midi.js` | MIDI-Export: Noten und Zeiten, Anschlag (Ghost / Akzent), %-Takt, Flam, Tempo / Taktart / Marker, Kit-Profil mit Ersatz-Instrument und Fehlendem |
 | `test_midiin.js` | MIDI-Import: Hin und zurück (Export → Import), eingespielte Datei (Typ 1, 480 Ticks, ungenau): Raster, Triolen-Schlag, Ghost / Akzent, Flam, unbekannte Taste, Marker; Kit-Profil mit mehreren Tasten |
+| `test_pitch.js` | Tonleitern: welcher Ton auf welcher Linie liegt (auch Pentatonik / Blues / Ganzton: blasse Linien), Vorzeichen (Kirchentonarten, harmonisch Moll …), Grundton-Schreibweise (Des-Dur, Cis-Moll), Schreibweise einer Tonhöhe, Versetzungszeichen im Takt, Schlüssel (Violin, Bass, Tenor), Namen |
+| `test_melody.js` | Melodie-Spuren: anlegen, Noten mit Tonhöhe (Akkord, gleicher Ton, verschieben), Tonleiter ab einem Takt (bleibt beim Leeren, beim Ausschreiben), Speichern / Laden, Wiedergabe mit Tonlänge, MIDI (Programm, Kanal, Länge), MusicXML (Tonhöhe, Tonart, Schlüssel, Vorzeichen, Haltebögen) |
 | `harness.js`, `run.js` | Hilfsmittel: Dateien laden, Prüfungen zählen, alle `test_*.js` ausführen |
 
 ## Klick-Test (im Browser)

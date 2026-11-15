@@ -341,7 +341,18 @@ Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der An
   Tenor-Schlüssel (Violin 8 unten) zeichnet eine Oktave höher, als er klingt.
 - **Echte Notenlängen:** Die Pausenbereinigung bleibt beim Schlagzeug; bei Melodien zählen Länge, Pausen und Haltebögen.
 
-### Schritt A – Einstimmige Gesangsmelodie
+### Schritt A – Einstimmige Gesangsmelodie ✅ (zum Ausprobieren)
+
+**Gebaut (2026-11-15):** `js/pitch.js` (Tonleitern, Linien, Vorzeichen, Schreibweise, Schlüssel, Stimmlagen; `test_pitch.js`),
+Melodie-Spur im Modell (`clef`, `scale`, `voice`, `bar.scale`, `note.pitch` / `note.dia`; `test_melody.js`), Notenbild (Schlüssel,
+Vorzeichen am Zeilenanfang und beim Wechsel, Versetzungszeichen, Hilfslinien, Hälse nach Lage, Haltebögen im Takt, blasse Stellen
+außerhalb der Tonleiter, Tonnamen statt Drum-Map), Eingabe (Tippen = Ton der Tonleiter, **beim Drücken seitlich ziehen = Länge**,
+Note ziehen = verschieben, halten + hoch / runter = ♯ / ♭, halten + seitlich = Länge, halten + loslassen = Menü mit ♯ / ♭ /
+„Schreiben als …“ / Anschlag / Löschen; ↑ ↓ = nächste Linie), Panel (Stimmlage, Schlüssel, Grundton + Tonleiter gruppiert, ab dem
+gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synth, über MIDI mit Kanal und Programm), MIDI-Export
+(Programmwechsel, Notenlänge), MusicXML (Tonhöhe, Tonart mit Modus, Schlüssel inkl. Tenor, Vorzeichen, Haltebögen), Teilen-Link.
+**Noch offen aus A:** Haltebögen über Taktgrenzen (eine Note endet bisher am Taktende), Oktav-Schalter und Tastatur A–G,
+Tonumfang-Warnung (Stimmlage ist gespeichert, Warnung kommt mit Schritt D), Handbuch-Kapitel, Stimmlagen-Klang (nur ein Synth).
 
 1. **Spur-Art Melodie** („+ Melodie“ in der Spurliste): Schlüssel (Violin, Violin 8 unten, Bass), Stimmlage (Sopran, Alt, Tenor,
    Bariton / Bass – setzt Schlüssel und Tonumfang), Tonleiter, Klang.
@@ -352,7 +363,8 @@ Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der An
    (siehe Entscheidungen; keine Sperre). Halten + hoch / runter = ♯ / ♭.
    **Vorhören:** beim Zielen klingt der Ton unter dem Zeiger / Finger. Oktave: Hilfslinien darüber / darunter plus Oktav-Schalter
    im Panel. Tastatur: A–G setzt, ↑ ↓ Halbton, Strg+↑ ↓ Oktave. Notenmenü: Anschlag, enharmonisch umdeuten (F♯ ↔ G♭).
-   Zu klären beim Bauen: wie man eine Note verlängert (Notenwert wählen wie bisher; evtl. halten + seitwärts = Länge statt Reihe).
+   **Länge (entschieden):** beim Setzen gedrückt halten und seitlich ziehen = länger (bis zur Rasterzelle unter dem Zeiger, höchstens
+   bis zum Taktende); eine vorhandene Note: halten, dann seitlich. Der Notenwert im Panel ist die Mindestlänge.
 4. **Klang:** einfacher Synth („Stimme“ / weicher Lead, Klavier); über MIDI jedes VST mit Kanal und Programm.
 5. **Austausch:** MIDI-Export mit Programmwechsel, MusicXML mit Tonhöhe, Tonart (inkl. Modus), Schlüssel; Teilen per Link.
    Bestehendes läuft weiter: Kopieren / Einfügen, %-Takte, Mehrtaktpausen, Wiederholungen / Sprünge, Stumm / Solo.

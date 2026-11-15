@@ -173,6 +173,54 @@
     return h ? h + 1.5 * SP : 0;
   }
 
+  // ---- Melody staves (js/pitch.js): clef, key signature, accidentals
+  const ACC_ROOM = 1.3 * SP;  // room for an accidental before a note on beat 1
+  const KEY_ACC = 1.0 * SP;   // one sharp / flat of a key signature
+  const ACC_GLYPH = { 2: '', 1: '', 0: '', '-1': '', '-2': '' };
+  const ACC_W = { 2: 1.0, 1: 1.0, 0: 0.68, '-1': 0.9, '-2': 1.65 };
+  /**
+   * The signs of a key signature in the order they are written: [{ l, a }] (a = 0: a natural). A change
+   * to C major or from sharps to flats first cancels the old ones with naturals.
+   */
+  RD.keySigns = function (to, from = 0) {
+    const P = TC.pitch, out = [];
+    if (from && (to === 0 || Math.sign(to) !== Math.sign(from))) P.signature(from).forEach((x) => out.push({ l: x.l, a: 0 }));
+    return out.concat(P.signature(to));
+  };
+  /** Width of a key signature { to, from }. */
+  const keyWidth = (c) => {
+    const n = RD.keySigns(c.to, c.from || 0).length;
+    return n ? n * KEY_ACC + 1.2 * SP : 0;
+  };
+  /** Staff step of a key signature sign: sharps F C G D A E B, flats B E A D G C F at their usual places. */
+  const SIG_LINE = { 1: [0, 3, -1, 2, 5, 1, 4], '-1': [4, 1, 5, 2, 6, 3, 7] }; // treble, in the order of P.signature
+  function keySigLine(l, sharps, clef) {
+    const order = sharps ? [3, 0, 4, 1, 5, 2, 6] : [6, 2, 5, 1, 4, 0, 3];
+    return SIG_LINE[sharps ? 1 : -1][order.indexOf(l)] + (clef === 'bass' ? 2 : 0);
+  }
+  /** Key signature { to, from } as SVG, starting at x (naturals stand where the old signs stood). */
+  function drawKey(out, x, c, clef) {
+    RD.keySigns(c.to, c.from || 0).forEach((s, k) => {
+      const ln = keySigLine(s.l, s.a === 0 ? c.from > 0 : s.a > 0, clef);
+      out.push(glyph(ACC_GLYPH[s.a], x + k * KEY_ACC, stepY(ln)));
+    });
+  }
+
+  /**
+   * A melody track in bar i: its scale and key signature (change: a new one from this bar), how each
+   * note is spelled (spell: note id -> { dia, a, line }) and which notes need an accidental
+   * (acc: "tick:note id" -> sign, js/pitch.js P.accidentals).
+   */
+  function pitchInfo(doc, track, i, voices) {
+    const P = TC.pitch, scale = TC.score.scaleAt(track, i);
+    const list = [];
+    voices.forEach((items) => items.forEach((it) => { if (it.kind === 'note') it.ev.notes.forEach((n) => list.push({ tick: it.tick, cont: it.cont, n })); }));
+    const { spell, acc, fifths } = P.spellBar(list, scale, track.clef);
+    const prev = i > 0 ? P.fifths(TC.score.scaleAt(track, i - 1)) : fifths;
+    return { scale, fifths, change: fifths !== prev ? { from: prev, to: fifths } : null, spell, acc,
+      accAt0: list.some(({ tick, n }) => tick === 0 && acc.has('0:' + n.id)) };
+  }
+
   const MULTI_W = 13 * SP; // width of a multi-bar rest (before the line is justified)
   const SIMILE_W = 5 * SP; // width of a narrow, counted %-bar
 
@@ -210,7 +258,7 @@
       const parts = tracks.map((track) => {
         const simile = !!track.bars[i].simile && i > 0;
         const voices = simile ? [] : track.bars[i].voices.map((v) => TC.rhythm.layout(v, h.ts, track.kind === 'drums', h.beam, track.fill));
-        return { track, simile, voices };
+        return { track, simile, voices, pitch: track.kind === 'pitched' ? pitchInfo(doc, track, i, voices) : null };
       });
       let finest = L;
       parts.forEach((p) => p.voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); })));
@@ -218,9 +266,12 @@
       const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
       const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : 0;
       const own = parts.find((p) => p.track === cur) || parts[0];
+      // melody staves: a new key signature at this bar (the width of the widest), an accidental on beat 1
+      const ksW = i > 0 ? Math.max(0, ...parts.map((p) => (p.pitch && p.pitch.change ? keyWidth(p.pitch.change) : 0))) : 0;
+      const accW = parts.some((p) => p.pitch && p.pitch.accAt0) ? ACC_ROOM : 0;
       // simile / voices: of the track being written; allSimile: "%" in every staff (one % with a number)
       return { i, L, ts: h.ts, beam: h.beam, simile: own.simile, allSimile: parts.every((p) => p.simile), parts, scale, showTs, rs, re, volta: h.volta || null,
-        tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0), voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '' };
+        ksW, accW, tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0) + ksW + accW, voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '' };
     });
     const sv = staves(tracks, bars), lastSv = sv[sv.length - 1];
     const stackH = lastSv.dy + 4 * SP; // top line of the first staff to the bottom line of the last one
@@ -252,10 +303,19 @@
     const shown = bars.filter((b) => b.hidden === undefined);
 
     // line breaks: as many bars as fit (or the chosen number), a bar may start a new line
+    // melody staves: every line starts with the key signature (after the clef); a change at the start of a line is drawn there
+    const lineKey = (b) => Math.max(0, ...b.parts.map((p) => (p.pitch ? keyWidth({ to: p.pitch.fifths }) : 0)));
+    const atLineStart = (b) => {
+      b.tsW -= b.ksW;
+      b.ksW = 0;
+    };
     const lines = [];
-    if (!page) lines.push(bars);
-    else {
-      const avail = PAGE_W - 2 * MARGIN - CLEF_W, per = doc.page.barsPerLine;
+    if (!page) {
+      lines.push(bars);
+      atLineStart(bars[0]);
+    } else {
+      const keyMax = Math.max(0, ...bars.map(lineKey));
+      const avail = PAGE_W - 2 * MARGIN - CLEF_W - keyMax, per = doc.page.barsPerLine;
       let cur = [], used = 0;
       for (const b of shown) {
         const w = width(b);
@@ -268,13 +328,14 @@
         used += w;
       }
       if (cur.length) lines.push(cur);
+      lines.forEach((ln) => atLineStart(ln[0]));
       // justify: the notes spread over the whole line; the last line is not stretched more than the one before
       let prev = null;
       lines.forEach((ln, k) => {
         // (counted %-bars keep their narrow width)
         const fx = ln.reduce((a, b) => a + fixed(b) + (b.simileN ? b.L * b.scale : 0), 0), mv = ln.reduce((a, b) => a + (b.simileN ? 0 : b.L * b.scale), 0);
         if (!mv) return;
-        let k2 = (avail - fx) / mv;
+        let k2 = (avail + keyMax - lineKey(ln[0]) - fx) / mv;
         // the last line, and a line ended by a forced break (new line, coda), is not stretched more than the one before
         const nx = lines[k + 1] && doc.bars[lines[k + 1][0].i], forced = nx && (nx.lineBreak || nx.mark === 'coda');
         if ((k === lines.length - 1 || forced) && k2 > 1) k2 = Math.min(k2, prev || (fx + mv > 0.7 * avail ? k2 : 1));
@@ -288,8 +349,8 @@
     let ux = 0, yRel = MARGIN + headerHeight(doc.meta), pageNo = 0;
     if (page) pages.push({ y: 0 });
     lines.forEach((ln, k) => {
-      const s = { i: k, ox: ux, first: ln[0].i, last: ln[ln.length - 1].i };
-      ux += CLEF_W;
+      const s = { i: k, ox: ux, first: ln[0].i, last: ln[ln.length - 1].i, keyW: lineKey(ln[0]) };
+      ux += CLEF_W + s.keyW;
       for (const b of ln) {
         b.sys = k;
         b.x = ux;
@@ -484,7 +545,7 @@
     }
     // the line of the selected instrument, in the staff being written
     const selArt = TC.drums.byId(S.input.art), cz = L.staves.find((z) => z.track === cur);
-    if (!plain && selArt && cz && TC.drums.clickable(cur).has(selArt.id)) {
+    if (!plain && selArt && cz && cur.kind === 'drums' && TC.drums.clickable(cur).has(selArt.id)) {
       const y = cz.dy + stepY(TC.drums.lineOf(selArt, cur));
       L.systems.forEach((s) => lines[s.i].push(rect(s.ox, y - SP / 4, s.end - s.ox, SP / 2, 'line-band')));
     }
@@ -493,6 +554,13 @@
     for (const z of plain ? [] : L.staves) {
       for (const b of L.bars) {
         if (b.parts[z.k].simile || b.hidden !== undefined) continue;
+        // melody: the places outside the scale (pentatonic, blues …) are marked pale - they still write their tone
+        const pi = b.parts[z.k].pitch;
+        if (pi && TC.pitch.lineMap(pi.scale).some((x) => !x.in)) {
+          for (let l = -3; l <= 11; l++) {
+            if (!TC.pitch.lineTone(TC.pitch.diaAt(l, z.track.clef), pi.scale).in) OS(b, z).push(rect(b.x0, stepY(l) - SP / 4, b.x + b.w - b.x0, SP / 2, 'line-out'));
+          }
+        }
         const beat = TC.rhythm.beatTicks(b.ts);
         const G = TC.rhythm.groupSpans(b.ts, b.beam);
         const starts = G && new Set(G.map((g) => g[0])); // odd meters: the beam groups are the strong lines
@@ -508,7 +576,12 @@
       for (const z of L.staves) {
         const o = staffOut[s.i][z.k];
         for (let k = z.one ? 2 : 0; k < (z.one ? 3 : 5); k++) o.push(line(s.ox, k * SP, s.end, k * SP, 'staff'));
-        o.push(glyph('', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
+        if (z.track.kind === 'pitched') {
+          // melody: its clef, then the key signature of the first bar of the line
+          const c = TC.pitch.clef(z.track.clef), pi = L.bars[s.first].parts[z.k].pitch;
+          o.push(glyph(String.fromCharCode(c.glyph), s.ox + 0.9 * SP, stepY(c.line)));
+          if (pi) drawKey(o, s.ox + CLEF_W - 0.2 * SP, { to: pi.fifths }, z.track.clef);
+        } else o.push(glyph('\uE069', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
         // several staves: the name of the track above its staff (the one being written in colour)
         if (many) o.push(`<text class="staff-name${z.track === cur && !plain ? ' cur' : ''}" x="${f(s.ox)}" y="${f((z.one ? 0.4 : -1.0) * SP)}">${esc(z.track.name)}</text>`);
       }
@@ -527,11 +600,14 @@
       // in every staff: time signature, bar line, repeat signs (one-line staves: shorter lines)
       for (const z of L.staves) {
         const so = OS(b, z), y0 = z.one ? SP : 0, y1 = z.one ? 3 * SP : 4 * SP;
+        // melody: a new key signature from this bar (before the time signature)
+        const pc = b.parts[z.k].pitch;
+        if (b.ksW && pc && pc.change) drawKey(so, b.x + (b.rs ? REP_W : 0) + 0.4 * SP, pc.change, z.track.clef);
         if (b.showTs) {
           const num = String(b.ts[0]), den = String(b.ts[1]);
           const put = (str, y) => {
             const w = str.length * 1.9 * SP;
-            let x = b.x + (b.rs ? REP_W : 0) + TS_W / 2 - w / 2 + 0.05 * SP;
+            let x = b.x + (b.rs ? REP_W : 0) + b.ksW + TS_W / 2 - w / 2 + 0.05 * SP;
             for (const d of str) {
               so.push(glyph(TS_DIGIT(+d), x, y));
               x += 1.9 * SP;
@@ -629,7 +705,7 @@
         pb.top = 0;
         staffNow = z;
         const used = part.voices.map((items) => items.some((it) => it.kind === 'note'));
-        part.voices.forEach((items, vi) => drawVoice(o, pb, items, vi, used, z.track));
+        part.voices.forEach((items, vi) => drawVoice(o, pb, items, vi, used, z.track, part.pitch));
         drawUnder(o, pb);
         if (z.k === 0) b.top = pb.top;
       }
@@ -687,8 +763,9 @@
   RD.markName = (m) => ({ segno: 'Segno', segnoSegno: 'Segno Segno', coda: 'Coda', doubleCoda: 'Double Coda' })[m] || '';
 
   /** One voice of one bar: rests, heads, stems, flags, beams, dots, accents, tuplets. */
-  function drawVoice(out, b, items, vi, used, track) {
-    const up = vi % 2 === 0;
+  function drawVoice(out, b, items, vi, used, track, pinfo) {
+    const voiceUp = vi % 2 === 0;
+    let up = voiceUp; // (per note below: a melody alone points its stems away from the middle line)
     const other = used.some((u, k) => u && k !== vi);
     if (items.length === 1 && items[0].measure) {
       if (vi > 0 && !used[vi]) return;            // empty feet voice: nothing
@@ -701,17 +778,42 @@
     const groupOf = new Map();
     beams.forEach((g) => g.forEach((it) => groupOf.set(it, g)));
 
+    // the heads of each note item (drums: the line of the instrument; melody: of the pitch as spelled)
+    const headsOf = new Map();
+    for (const it of items) {
+      if (it.kind !== 'note') continue;
+      const gi = it.base >= 3840 ? 2 : it.base >= 1920 ? 1 : 0;
+      headsOf.set(it, it.ev.notes.map((n) => {
+        if (pinfo) {
+          const head = TC.HEADS.normal, sp = pinfo.spell.get(n.id);
+          const acc = pinfo.acc.get(it.tick + ':' + n.id);
+          return { n, art: null, line: sp ? sp.line : 4, head, w: head.w[gi] * SP, g: head.g[gi], dx: 0, acc: acc === undefined ? null : acc };
+        }
+        const art = TC.drums.byId(n.art);
+        const head = TC.HEADS[TC.drums.headOf(n)];
+        return { n, art, line: TC.drums.lineOf(art, track), head, w: head.w[gi] * SP, g: head.g[gi], dx: 0 };
+      }).sort((a, c) => a.line - c.line));
+    }
+    // stems: by voice (drums, two voices); a melody alone: away from the middle line - in a beam group the
+    // note furthest from it decides for the group
+    const upOf = new Map();
+    if (pinfo && !other) {
+      const decide = (list) => {
+        let hi = Infinity, lo = -Infinity;
+        list.forEach((it) => headsOf.get(it).forEach((h) => { hi = Math.min(hi, h.line); lo = Math.max(lo, h.line); }));
+        return lo - 4 > 4 - hi;
+      };
+      beams.forEach((g) => { const u = decide(g); g.forEach((it) => upOf.set(it, u)); });
+      items.forEach((it) => { if (it.kind === 'note' && !upOf.has(it)) upOf.set(it, decide([it])); });
+    }
+
     // geometry of each note item first (beams need all of their stems)
     const geo = new Map();
     for (const it of items) {
       if (it.kind !== 'note') continue;
       const x = RD.tickX(b, it.tick);
-      const gi = it.base >= 3840 ? 2 : it.base >= 1920 ? 1 : 0;
-      const heads = it.ev.notes.map((n) => {
-        const art = TC.drums.byId(n.art);
-        const head = TC.HEADS[TC.drums.headOf(n)];
-        return { n, art, line: TC.drums.lineOf(art, track), head, w: head.w[gi] * SP, g: head.g[gi], dx: 0 };
-      }).sort((a, c) => a.line - c.line);
+      up = upOf.has(it) ? upOf.get(it) : voiceUp;
+      const heads = headsOf.get(it);
       // seconds in a chord: one head to the other side of the stem
       if (up) {
         for (let k = heads.length - 2; k >= 0; k--) {
@@ -729,12 +831,14 @@
       const trem = Math.max(0, ...it.ev.notes.map((n) => n.trem || 0)); // roll strokes need a longer stem
       const extra = Math.max(0, flags - 2) * BEAM_GAP + (trem ? (trem + 0.5) * TREM_GAP : 0);
       const startY = up ? stepY(lo.line) - lo.head.stem * SP : stepY(hi.line) + hi.head.stem * SP;
-      const endY = up ? stepY(hi.line) - STEM - extra : stepY(lo.line) + STEM + extra;
-      geo.set(it, { x, heads, stemX, startY, endY, flags, trem });
+      let endY = up ? stepY(hi.line) - STEM - extra : stepY(lo.line) + STEM + extra;
+      if (pinfo) endY = up ? Math.min(endY, stepY(4)) : Math.max(endY, stepY(4)); // far off the staff: the stem reaches the middle line
+      geo.set(it, { x, heads, stemX, startY, endY, flags, trem, up });
     }
     // beams: flat, at the outermost stem end of the group
     for (const g of beams) {
       const gs = g.map((it) => geo.get(it));
+      up = gs[0].up;
       const maxFlags = Math.max(...gs.map((q) => q.flags));
       const by = up ? Math.min(...gs.map((q) => q.endY)) : Math.max(...gs.map((q) => q.endY));
       gs.forEach((q) => { q.endY = by; });
@@ -762,6 +866,7 @@
 
     for (const it of items) {
       if (it.kind === 'rest') {
+        up = voiceUp;
         const shift = other ? (up ? -SP : 2 * SP) : 0;
         const y = (it.base >= 3840 ? SP : 2 * SP) + shift;
         const x = RD.tickX(b, it.tick) - (REST_W[it.base] * SP) / 2;
@@ -770,6 +875,7 @@
         continue;
       }
       const q = geo.get(it);
+      up = q.up;
       const sel = it.ev.notes.some((n) => S.selection.has(n.id));
       out.push(`<g class="note${sel ? ' sel' : ''}">`);
       for (const h of q.heads) {
@@ -778,7 +884,13 @@
         for (let l = -2; l >= h.line; l -= 2) out.push(line(cx - h.w / 2 - 0.4 * SP, stepY(l), cx + h.w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         for (let l = 10; l <= h.line; l += 2) out.push(line(cx - h.w / 2 - 0.4 * SP, stepY(l), cx + h.w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         const hs = S.selection.has(h.n.id);
+        // melody: ♯ ♭ ♮ before the head (left of a head moved to the other side of the stem too)
+        if (h.acc !== null && h.acc !== undefined) {
+          const left = q.x + Math.min(0, ...q.heads.map((z) => z.dx)) - h.w / 2 - 0.2 * SP;
+          out.push(glyph(ACC_GLYPH[h.acc], left - ACC_W[h.acc] * SP, y, hs ? 'head hsel' : 'head'));
+        }
         out.push(glyph(h.g, cx - h.w / 2, y, hs ? 'head hsel' : 'head'));
+        if (h.line < 0) b.top = Math.min(b.top || 0, stepY(h.line) - 1.2 * SP); // above the staff: the ending brackets go higher
         if (h.n.ghost) {
           out.push(glyph('', cx - h.w / 2 - 0.5 * SP, y, 'head'));
           out.push(glyph('', cx + h.w / 2 + 0.2 * SP, y, 'head'));
@@ -845,6 +957,7 @@
     items.forEach((it) => { if (it.tup) { if (!tups.has(it.tup.s)) tups.set(it.tup.s, []); tups.get(it.tup.s).push(it); } });
     for (const list of tups.values()) {
       const notes = list.filter((it) => it.kind === 'note');
+      up = notes.length ? geo.get(notes[0]).up : voiceUp;
       const x1 = RD.tickX(b, list[0].tick), x2 = RD.tickX(b, list[list.length - 1].tick);
       const g = notes.length && groupOf.get(notes[0]);
       const oneBeam = g && g.length === list.length && notes.every((it) => groupOf.get(it) === g);
@@ -961,6 +1074,32 @@
     out.push('</g>');
   }
 
+  /**
+   * Melody staves: the names of the tones the lines and spaces mean (in the scale of bar bi), in two
+   * columns like the drum map; the places outside the scale pale. Only shown - a tap there chooses nothing.
+   */
+  function drawPitchMap(out, hl, ox, track, bi) {
+    const P = TC.pitch, scale = TC.score.scaleAt(track, bi || 0), de = TC.getLang && TC.getLang() === 'de';
+    const rows = [];
+    for (let l = -2; l <= 10; l++) {
+      const t = P.lineTone(P.diaAt(l, track.clef), scale);
+      const text = P.name(((t.dia % 7) + 7) % 7, t.a, de);
+      rows.push({ line: l, y: stepY(l), text, w: textW(text), pale: !t.in });
+    }
+    const near = rows.filter((r) => r.line % 2 === 0), far = rows.filter((r) => r.line % 2 !== 0);
+    const xNear = ox - 0.8 * SP, xFar = xNear - Math.max(0, ...near.map((r) => r.w)) - 1.0 * SP;
+    near.forEach((r) => { r.x2 = xNear; });
+    far.forEach((r) => { r.x2 = xFar; });
+    RD.layout.map = [];
+    out.push('<g class="drummap">');
+    for (const r of rows) {
+      const cls = (r.pale ? ' pale' : '') + (r.line === hl ? ' hl' : '');
+      out.push(`<path class="dm-lead${cls}" d="M${f(r.x2 + 0.25 * SP)},${f(r.y)} L${f(ox)},${f(r.y)}"/>`);
+      out.push(`<text class="dm-label${cls}" x="${f(r.x2)}" y="${f(r.y + MAP_FONT * 0.36)}">${esc(r.text)}</text>`);
+    }
+    out.push('</g>');
+  }
+
   // ---- Live layer: drum map, line under the pointer, preview ---------------------------------
 
   /** Line of the live layer: under the pointer, else the one of the selected bar, else the first. */
@@ -983,7 +1122,10 @@
     L.map = [];
     L.mapSys = s.i; // the drum map stands next to this line, at this staff
     L.mapTrack = z.track;
-    if (S.settings.showDrumMap) drawDrumMap(out, hl, s.ox, z.track);
+    if (S.settings.showDrumMap) {
+      if (z.track.kind === 'pitched') drawPitchMap(out, hl, s.ox, z.track, h && L.bars[h.bar] ? h.bar : S.selBar !== null && L.bars[S.selBar] ? S.selBar : L.systems[s.i].first);
+      else drawDrumMap(out, hl, s.ox, z.track);
+    }
     if (h && h.erase) {
       // eraser: a circle; notes under it are deleted while pressed
       out.push(`<circle class="erase-ring${h.erase.on ? ' on' : ''}" cx="${f(h.erase.x)}" cy="${f(h.erase.y)}" r="${f(RD.ERASE_R)}"/>`);
@@ -1026,6 +1168,21 @@
         for (let l = 10; l <= ln; l += 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         out.push(glyph(head.g[gi], x - w / 2, y, 'ghost'));
         labelX = x + w / 2 + 0.7 * SP;
+        labelY = y;
+      } else if (h.pitch !== undefined) {
+        // melody: the note as it would be written (its sign, if it needs one), and how long it gets (dragged sideways)
+        const head = TC.HEADS.normal, gi = h.len >= 3840 ? 2 : h.len >= 1920 ? 1 : 0;
+        const ln = h.line, w = head.w[gi] * SP, y = stepY(ln);
+        if (h.len) {
+          const x2 = Math.min(RD.tickX(b, h.tick + h.len), b.x + b.w);
+          out.push(rect(x - w / 2, y - 0.4 * SP, Math.max(w, x2 - x + w / 2 - 0.25 * SP), 0.8 * SP, 'len-bar'));
+          labelX = x2 + 0.3 * SP;
+        }
+        for (let l = -2; l >= ln; l -= 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
+        for (let l = 10; l <= ln; l += 2) out.push(line(x - w / 2 - 0.4 * SP, stepY(l), x + w / 2 + 0.4 * SP, stepY(l), 'ledger'));
+        if (h.acc !== null && h.acc !== undefined) out.push(glyph(ACC_GLYPH[h.acc], x - w / 2 - 0.2 * SP - ACC_W[h.acc] * SP, y, 'ghost'));
+        out.push(glyph(head.g[gi], x - w / 2, y, 'ghost'));
+        if (labelX === null) labelX = x + w / 2 + 0.7 * SP;
         labelY = y;
       }
       // name next to the preview: you see what you hit before clicking

@@ -252,6 +252,51 @@
     o.stop(t + 0.06);
   };
 
+  /**
+   * A melody tone: a soft synth voice (two slightly detuned oscillators through a low-pass, "ooh"-like)
+   * from t for dur seconds. pitch: MIDI note. Through a MIDI output: the note goes there (channel and
+   * program of the track).
+   */
+  AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
+    if (!ensure()) return;
+    if (TC.midiOut && TC.midiOut.active()) {
+      TC.midiOut.note(pitch, t, dur, vel, ctx, track);
+      if (!S.settings.midiOutSynth) return;
+    }
+    const out = dest || master, hz = 440 * Math.pow(2, (pitch - 69) / 12);
+    const v = Math.max(0.05, Math.min(1.2, vel)) * 0.22;
+    const end = t + Math.max(0.08, dur), rel = 0.12;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(v, t + 0.04);                  // soft attack
+    g.gain.setTargetAtTime(v * 0.75, t + 0.04, 0.15);              // settles
+    g.gain.setValueAtTime(v * 0.75, Math.max(t + 0.05, end - 0.01));
+    g.gain.linearRampToValueAtTime(0.0001, end + rel);             // release
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = Math.min(9000, hz * 4 + 400);
+    lp.Q.value = 0.8;
+    lp.connect(g);
+    g.connect(out);
+    for (const [type, det, amp] of [['triangle', -4, 0.8], ['sawtooth', 5, 0.18]]) {
+      const o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = type;
+      o.frequency.value = hz;
+      o.detune.value = det;
+      og.gain.value = amp;
+      o.connect(og);
+      og.connect(lp);
+      o.start(t);
+      o.stop(end + rel + 0.05);
+    }
+  };
+
+  /** Play a melody tone now (when it is written, aimed at or changed). */
+  AU.previewTone = function (pitch, track = TC.curTrack ? TC.curTrack() : null) {
+    if (!ensure() || TC.player.playing) return;
+    AU.tone(pitch, ctx.currentTime + 0.01, 0.45, 0.72, null, track);
+  };
+
   /** Play a note now (when it is written or chosen). */
   AU.preview = function (note, track = TC.curTrack ? TC.curTrack() : null) {
     if (!ensure() || TC.player.playing) return;
@@ -325,6 +370,7 @@
       const when = t0 + at;
       if (when >= ctx.currentTime - 0.01) {
         if (h.click) AU.click(when, h.click, h.vel, bus);
+        else if (h.pitch !== undefined) AU.tone(h.pitch, when, h.dur, h.vel, bus, h.trk);
         else AU.hit(h.art, when, h.vel, h.choke, bus, h.trk);
       }
       until = h.t;

@@ -5,6 +5,7 @@
  *
  *   TC.timeline.build(doc, { from, to, metronome, countIn }) ->
  *     { hits:  [ { t, art, vel, choke, click } ],   t in seconds from the start, sorted
+ *              (melody tracks: { t, pitch, dur, vel }: a tone of dur seconds)
  *       bars:  [ { bar, t0, t1, spt, ts } ],         bar -1 = count-in; spt = seconds per tick
  *       start, end }                                  where the music starts (after the count-in) and ends
  *
@@ -85,6 +86,12 @@
             const t0 = t + st(ev.tick) * spt; // swing: an offbeat comes later
             const dur = ends && ends.has(ev) ? ends.get(ev) - ev.tick : Math.min(ev.dur, L - ev.tick);
             for (const n of ev.notes) {
+              if (n.pitch !== undefined) {
+                // melody: a tone as long as the note (swing moves its start and end)
+                const t1 = t + st(ev.tick + dur) * spt;
+                hits.push({ t: t0, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - 0.02), vel: T.velocity(n), trk: track });
+                continue;
+              }
               const art = TC.drums.byId(n.art);
               if (!art) continue;
               const vel = T.velocity(n), choke = art.tech === 'choke';

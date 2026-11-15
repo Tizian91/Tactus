@@ -29,14 +29,19 @@
  *                jumpRep: false          after the jump the repeats are played again (default: once, last ending) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
  *                mute, solo, profile, profileName, midiOut, midiCh,
+ *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass', scale: { l, a, id } (js/pitch.js),
+ *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
- *                          simile: false } ] }       // true = "repeat the bar before" in this track (% sign; plays its bar before)
+ *                          simile: false,         // true = "repeat the bar before" in this track (% sign; plays its bar before)
+ *                          scale: null } ] }      // melody: another scale from this bar on
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
  *   Note:      drums:   { id, art, accent, ghost, head, vel,
  *                         orn: null | 'flam' | 'drag'   grace notes before the note
  *                         trem: 0 … 3                   roll: strokes through the stem
  *                         stick: '' | 'R' | 'L' }       sticking (right / left hand), written under the staff
- *              (later)  pitched: { id, pitch, ... }, tab: { id, string, fret, ... }
+ *              pitched: { id, pitch, dia, accent, ghost, vel }   pitch: MIDI note (sounding), dia: how it is spelled
+ *                                                                (place on the staff, see js/pitch.js; null = from the scale)
+ *              (later)  tab: { id, string, fret, ... }
  *
  * Time is counted in ticks: 960 per quarter note (as in Guitar Pro / MIDI files).
  * An event keeps the duration chosen when it was written; render.js / rhythm.js
@@ -156,13 +161,16 @@
   };
   TC.newTrackBar = (voices = 2) => ({ voices: Array.from({ length: voices }, () => []), simile: false });
 
+  /** General MIDI program of a new melody track: 54 Voice Oohs (0-based 53) - a singing voice. */
+  TC.MELODY_PROGRAM = 53;
+
   TC.newTrack = function (kind = 'drums', bars = 0) {
     const t = {
       id: TC.uid('t'),
-      name: kind === 'drums' ? 'Drums' : 'Track',
+      name: kind === 'drums' ? 'Drums' : kind === 'pitched' ? 'Melody' : 'Track',
       kind,
       channel: kind === 'drums' ? 9 : 0, // MIDI channel 10 = drums
-      program: 0,
+      program: kind === 'pitched' ? TC.MELODY_PROGRAM : 0,
       volume: 100,
       fill: kind === 'drums' ? 'beat' : 'off', // rest cleanup on screen (rhythm.js R.ends): beat | next | off
       kit: null,         // instruments of its own (ids; e.g. only the snare), null = the kit of the settings
@@ -176,6 +184,11 @@
       midiCh: null,      // MIDI channel 0 … 15 while playing (null = the one of the kit profile)
       bars: [],
     };
+    if (kind === 'pitched') {
+      t.clef = 'treble';
+      t.scale = { l: 0, a: 0, id: 'major' }; // C major
+      t.voice = '';
+    }
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
     return t;
   };
@@ -203,6 +216,9 @@
       out.art = n.art;
     } else {
       out.pitch = TC.clamp(Math.round(num(n.pitch, 60)), 0, 127);
+      // its spelling (place on the staff): only if it fits the pitch (at most a double sharp / flat away)
+      const dia = Number.isInteger(n.dia) ? n.dia : null;
+      out.dia = dia !== null && TC.pitch && Math.abs(out.pitch - TC.pitch.pitchOf(dia, 0)) <= 2 ? dia : null;
     }
     out.accent = [0, 1, 2].includes(n.accent) ? n.accent : 0;
     out.ghost = !!n.ghost;
@@ -273,11 +289,17 @@
       out.profileName = str(t.profileName);
       out.midiOut = str(t.midiOut);
       out.midiCh = Number.isInteger(t.midiCh) && t.midiCh >= 0 && t.midiCh <= 15 ? t.midiCh : null;
+      if (kind === 'pitched') {
+        if (TC.pitch && TC.pitch.CLEFS[t.clef]) out.clef = t.clef;
+        out.scale = TC.pitch ? TC.pitch.cleanScale(t.scale) : out.scale;
+        if (TC.pitch && TC.pitch.VOICES[t.voice]) out.voice = t.voice;
+      }
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
         const bar = TC.newTrackBar();
         // "%" of this track (older files: in the bar header, for all tracks)
         bar.simile = i > 0 && (!!(src && src.simile) || !!(raw.bars[i] && raw.bars[i].simile));
+        if (kind === 'pitched' && i > 0 && src && src.scale && TC.pitch) bar.scale = TC.pitch.cleanScale(src.scale); // a new scale from here
         const voices = src && Array.isArray(src.voices) ? src.voices : [];
         voices.slice(0, 4).forEach((v, vi) => {
           bar.voices[vi] = (Array.isArray(v) ? v : []).map((e) => {
@@ -307,10 +329,10 @@
   // ---- Tracks: they share the bar headers (time signature, tempo, repeats, jumps), each has its own
   // notes and its own %-bars
 
-  /** A new drum track at the end (or after track `after`), as many bars as the score. */
-  SC.addTrack = function (doc, name, after) {
-    const t = TC.newTrack('drums', doc.bars.length);
-    t.name = name || SC.freeTrackName(doc, 'Drums');
+  /** A new track (drums, or a melody: kind 'pitched') at the end (or after track `after`), as many bars as the score. */
+  SC.addTrack = function (doc, name, after, kind = 'drums') {
+    const t = TC.newTrack(kind, doc.bars.length);
+    t.name = name || SC.freeTrackName(doc, t.name);
     const at = after ? doc.tracks.indexOf(after) + 1 : doc.tracks.length;
     doc.tracks.splice(at > 0 ? at : doc.tracks.length, 0, t);
     return t;
@@ -347,6 +369,25 @@
     })));
     doc.tracks.splice(doc.tracks.indexOf(track) + 1, 0, t);
     return t;
+  };
+
+  /** The scale of a melody track in bar `bi`: the last one set up to there (bar.scale), else its own. */
+  SC.scaleAt = function (track, bi) {
+    for (let i = Math.min(bi, track.bars.length - 1); i > 0; i--) if (track.bars[i] && track.bars[i].scale) return track.bars[i].scale;
+    return track.scale || { l: 0, a: 0, id: 'major' };
+  };
+  /**
+   * Set the scale of a melody track from bar `bi` on (bar 0: the track's own). The notes keep their
+   * pitches; a change that ends up like the scale before it is removed.
+   */
+  SC.setScale = function (track, bi, scale) {
+    if (bi <= 0) track.scale = Object.assign({}, scale);
+    else track.bars[bi].scale = Object.assign({}, scale);
+    const same = (a, b) => a.l === b.l && a.a === b.a && a.id === b.id;
+    for (let i = 1; i < track.bars.length; i++) {
+      const b = track.bars[i];
+      if (b.scale && same(b.scale, SC.scaleAt(track, i - 1))) b.scale = null;
+    }
   };
 
   /** Call fn(note, event, voiceIndex, barIndex, track) for every note. */
@@ -401,10 +442,17 @@
     return true;
   };
 
+  /** A bar put in place of `old` keeps the scale change of `old` (melody tracks). */
+  function keepScale(bar, old) {
+    if (old && old.scale) bar.scale = old.scale;
+    else delete bar.scale;
+    return bar;
+  }
+
   /** Empty bar `bi` (its %-sign goes too): in every track, or in track `only`. */
   SC.clearBar = function (doc, bi, only) {
     doc.tracks.forEach((t) => {
-      if (!only || t === only) t.bars[bi] = TC.newTrackBar(t.bars[bi].voices.length);
+      if (!only || t === only) t.bars[bi] = keepScale(TC.newTrackBar(t.bars[bi].voices.length), t.bars[bi]);
     });
   };
 
@@ -597,6 +645,7 @@
       doc.tracks.forEach((t, k) => {
         const bar = TC.clone(t.bars[SC.sourceBar(doc, o.bar, t)]);
         bar.simile = false;
+        if (t.kind === 'pitched') bar.scale = TC.clone(SC.scaleAt(t, o.bar)); // (tidied up below)
         bar.voices.forEach((v) => v.forEach((ev) => {
           ev.id = TC.uid('e');
           ev.notes.forEach((n) => { n.id = TC.uid('n'); });
@@ -605,7 +654,15 @@
       });
     }
     doc.bars = headers;
-    doc.tracks.forEach((t, k) => { t.bars = tracks[k]; });
+    doc.tracks.forEach((t, k) => {
+      t.bars = tracks[k];
+      // melody: the scale every played bar had; written only where it changes
+      if (t.kind === 'pitched' && t.bars.length) {
+        t.scale = t.bars[0].scale;
+        t.bars[0].scale = null;
+        SC.setScale(t, 0, t.scale);
+      }
+    });
     return headers.length;
   };
 
@@ -673,7 +730,7 @@
    * Each note keeps its length. Nothing happens (false) if a note would leave the score, land in a
    * %-bar, or on a note of the same instrument that does not move.
    */
-  SC.moveNotes = function (doc, ids, delta, art) {
+  SC.moveNotes = function (doc, ids, delta, art, pitchOf) {
     const first = ids.length && SC.findNote(doc, ids[0]);
     const track = first ? first.track : doc.tracks[0], moving = new Set(ids), items = [], slots = new Set();
     if (ids.some((id) => { const h = SC.findNote(doc, id); return h && h.track !== track; })) return false; // notes of several tracks do not move together
@@ -682,21 +739,23 @@
       if (!h) continue;
       const pos = SC.atAbs(doc, SC.absTick(doc, h.bar, h.ev.tick) + delta);
       if (!pos || track.bars[pos.bar].simile) return false;
-      const a = art || h.note.art, key = pos.bar + ':' + pos.tick + ':' + a;
+      // drums: the instrument (art: another one); melody: the pitch (pitchOf(note): { pitch, dia } another one)
+      const to = h.note.pitch !== undefined ? Object.assign({ pitch: h.note.pitch, dia: h.note.dia }, pitchOf ? pitchOf(h.note) : null) : { art: art || h.note.art };
+      const key = pos.bar + ':' + pos.tick + ':' + (to.pitch !== undefined ? 'p' + to.pitch : to.art);
       if (slots.has(key)) return false; // two of them onto one place
       slots.add(key);
       for (const v of track.bars[pos.bar].voices) {
         for (const ev of v) {
-          if (ev.tick === pos.tick && ev.notes.some((n) => !moving.has(n.id) && sameSlot(n, { art: a }))) return false;
+          if (ev.tick === pos.tick && ev.notes.some((n) => !moving.has(n.id) && sameSlot(n, to))) return false;
         }
       }
-      items.push({ note: h.note, pos, dur: h.ev.dur, art: a });
+      items.push({ note: h.note, pos, dur: h.ev.dur, to, voice: h.voice });
     }
     if (!items.length) return false;
     SC.removeNotes(doc, ids);
     for (const it of items) {
-      const n = Object.assign({}, it.note, { art: it.art });
-      SC.place(doc, track, it.pos.bar, TC.drums.voiceOf(it.art), it.pos.tick, it.dur, n);
+      const n = Object.assign({}, it.note, it.to);
+      SC.place(doc, track, it.pos.bar, it.to.art !== undefined ? TC.drums.voiceOf(it.to.art) : it.voice, it.pos.tick, it.dur, n);
     }
     return true;
   };
@@ -717,7 +776,7 @@
   SC.setSimile = function (doc, track, bi, on) {
     if (bi <= 0 || !!track.bars[bi].simile === !!on) return false;
     if (on) {
-      track.bars[bi] = TC.newTrackBar(track.bars[bi].voices.length);
+      track.bars[bi] = keepScale(TC.newTrackBar(track.bars[bi].voices.length), track.bars[bi]);
       track.bars[bi].simile = true;
     } else {
       track.bars[bi] = TC.clone(track.bars[SC.sourceBar(doc, bi, track)]);
@@ -757,7 +816,7 @@
         ev.id = TC.uid('e');
         ev.notes.forEach((n) => { n.id = TC.uid('n'); });
       }));
-      t.bars[bi] = bar;
+      t.bars[bi] = keepScale(bar, t.bars[bi]);
       SC.fitBar(doc, t, bi);
     });
     return true;
@@ -804,6 +863,7 @@
 
   /** Two drum notes are "the same" if they sit on the same line of the same instrument. */
   function sameSlot(a, b) {
+    if (a.pitch !== undefined || b.pitch !== undefined) return a.pitch === b.pitch; // melody: the same pitch
     const x = TC.drums.byId(a.art), y = TC.drums.byId(b.art);
     return a.art === b.art || (x && y && x.el === y.el && x.line === y.line);
   }
@@ -896,6 +956,12 @@
     const lv = v < 49 ? 0 : v < 81 ? 1 : v < 101 ? 2 : v < 119 ? 3 : 4;
     return middle ? TC.clamp(lv, 1, 3) : lv;
   };
+
+  /** A new melody note (pitch, its spelling dia) from the input settings. */
+  TC.newPitchNote = (pitch, dia, inp = {}) => ({
+    id: TC.uid('n'), pitch, dia: Number.isInteger(dia) ? dia : null, accent: inp.accent || 0, ghost: false, head: 'auto', vel: null,
+    orn: null, trem: 0, stick: '',
+  });
 
   /** A new drum note from the input settings. */
   TC.newDrumNote = (art, inp) => ({

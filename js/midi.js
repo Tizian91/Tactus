@@ -97,6 +97,11 @@
     const noteEv = tracks.map(() => []);
     const addTo = (list) => (t, order, bytes) => list.push({ t: Math.max(0, Math.round(t)), order, bytes });
     const add = addTo(metaEv);
+    // melody tracks: their channel (own MIDI channel, else the track's) and their sound (program change at the start)
+    const melodyCh = (track) => (Number.isInteger(track.midiCh) ? track.midiCh : track.channel || 0);
+    tracks.forEach((track, ti) => {
+      if (track.kind === 'pitched') addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
+    });
 
     let t0 = 0, tempo = null, ts = null, prev = -1;
     // swing / shuffle as heard (opts.straight: the notes on the grid, e.g. to swing them in the DAW)
@@ -130,6 +135,14 @@
             if (e.tick >= L) continue;
             const dur = ends && ends.has(e) ? ends.get(e) - e.tick : Math.min(e.dur, L - e.tick);
             for (const n of e.notes) {
+              if (n.pitch !== undefined) {
+                // melody: the note on the track's channel, as long as written (swing moves start and end)
+                const ch = melodyCh(track), v = Math.max(1, Math.min(127, Math.round(T.velocity(n) * 127)));
+                const a = t0 + sw(e.tick), z = Math.max(a + 1, t0 + sw(e.tick + dur) - 10);
+                put(a, 2, [0x90 | ch, n.pitch, v]);
+                put(z, 1, [0x80 | ch, n.pitch, 0]);
+                continue;
+              }
               const art = TC.drums.byId(n.art);
               if (!art) continue;
               const k = keyFor(art, tgt, report);
@@ -215,6 +228,7 @@
       tracks.push(tk);
       p += 8;
       let t = 0, status = 0;
+      const open = {}; // notes still sounding: channel * 128 + key -> [note]
       const vl = () => {
         let n = 0, b;
         do { b = bytes[p++]; n = (n << 7) | (b & 0x7f); } while (b & 0x80);
@@ -233,11 +247,19 @@
         }
         if (b & 0x80) status = b;
         else p--;
-        const d1 = bytes[p++], d2 = bytes[p++];
+        // program change / channel pressure carry one data byte, the other channel messages two
+        const one = (status & 0xf0) === 0xc0 || (status & 0xf0) === 0xd0;
+        const d1 = bytes[p++], d2 = one ? 0 : bytes[p++];
+        if ((status & 0xf0) === 0xc0) (tk.programs || (tk.programs = [])).push({ t, ch: status & 15, program: d1 });
         if ((status & 0xf0) === 0x90 && d2 > 0) {
           const n = { t, note: d1, vel: d2, ch: status & 15, track: ti };
           notes.push(n);
           tk.notes.push(n);
+          (open[(status & 15) * 128 + d1] || (open[(status & 15) * 128 + d1] = [])).push(n);
+        } else if ((status & 0xf0) === 0x80 || (status & 0xf0) === 0x90) {
+          const q = open[(status & 15) * 128 + d1]; // note off: the length of the note it ends
+          const n = q && q.shift();
+          if (n) n.dur = t - n.t;
         }
       }
       p = end;

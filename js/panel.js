@@ -131,6 +131,53 @@
     </section>`;
   }
 
+  /** Melody track: how to write, and the selected notes (♯ / ♭, written the other way, accent). */
+  function melodyNoteSection(hit) {
+    const P = TC.pitch;
+    if (!hit) {
+      return `<section><h3>${tr('Melody')}</h3>
+        <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
+        <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
+        <p class="hint tight">${tr('Scale, clef and voice: panel "Bar · score" → Tracks.')}</p></section>`;
+    }
+    const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
+    const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
+    const src = hit.note;
+    return `<section class="has-sel"><h3>${esc(tr('Selected notes ({n})', { n: S.selection.size }))}</h3>
+      <p class="hint tight"><b>${esc(P.fullName(sp.dia, sp.a, de()))}</b></p>
+      <div class="btn-row two">${btn('alterSelection', 1, '♯ ' + tr('Raise'), false, tr('A semitone up (hold the note, then up)'))}
+        ${btn('alterSelection', -1, '♭ ' + tr('Lower'), false, tr('A semitone down (hold the note, then down)'))}</div>
+      ${alt ? `<div class="btn-row">${btn('respell', undefined, esc(tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) })), false, tr('Same tone, written the other way'))}</div>` : ''}
+      <div class="row"><label>${tr('Accent')}</label><div class="seg">
+        ${btn('setAccent', 0, '–', src.accent === 0, tr('No accent'))}
+        ${btn('setAccent', 1, '<span class="mus-btn sm"></span>', src.accent === 1, tr('Accent (A)'))}
+        ${btn('setAccent', 2, '<span class="mus-btn sm"></span>', src.accent === 2, tr('Marcato'))}
+      </div></div>
+      <div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
+        ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
+    </section>`;
+  }
+
+  /**
+   * Melody track being written: voice, clef, scale (from the selected bar on: root and kind, grouped).
+   */
+  function melodyTrackRows(t) {
+    const P = TC.pitch, bi = S.selBar !== null ? S.selBar : 0, sc = TC.score.scaleAt(t, bi), pc = P.pc(sc.l, sc.a);
+    const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`;
+    const voices = [opt('', tr('Any (no range)'), !t.voice)].concat(Object.keys(P.VOICES).map((k) => opt(k, de() ? P.VOICES[k].de : P.VOICES[k].en, t.voice === k))).join('');
+    const clefs = Object.keys(P.CLEFS).map((k) => opt(k, de() ? P.CLEFS[k].de : P.CLEFS[k].en, t.clef === k)).join('');
+    const roots = (de() ? P.ROOTS_DE : P.ROOTS).map(([v, l]) => opt(v, l, v === pc)).join('');
+    const scales = P.GROUPS.map(([g, en, dname]) => `<optgroup label="${esc(de() ? dname : en)}">` +
+      P.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, (de() ? s.de : s.en) + (s.desc ? ' – ' + (de() ? s.desc[1] : s.desc[0]) : ''), s.id === sc.id)).join('') + '</optgroup>').join('');
+    const change = bi > 0 && t.bars[bi] && t.bars[bi].scale;
+    return `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>
+      <div class="row"><label>${tr('Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>
+      <div class="row"><label>${tr('Scale')}</label><select data-action="setTrackScaleRoot" class="narrow">${roots}</select>
+        <select data-action="setTrackScaleId">${scales}</select></div>
+      <p class="hint tight">${esc(P.scaleName(sc, de()))}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
+      ${change ? `<div class="btn-row">${btn('clearScaleChange', undefined, tr('Remove the change'), false, tr('The scale before it goes on'))}</div>` : ''}`;
+  }
+
   // ---- Settings panel ----------------------------------------------------------------------------
 
   function barSection() {
@@ -230,11 +277,12 @@
     return `<section><h3>${tr('Tracks')}</h3>
       <div class="track-list">${rows}</div>
       <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track with the whole drum kit'))}
-        ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}</div>
-      <div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
+        ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}
+        ${btn('addMelody', undefined, '+ ' + tr('Melody'), false, tr('A melody track (singing voice): notes with pitches, a scale'))}</div>
+      ${cur.kind === 'pitched' ? melodyTrackRows(cur) : `<div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
         <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
       ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}
-        <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}
+        <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}`}
       ${trackSoundRows(cur)}
       ${many ? `<p class="hint tight">${tr('Click into a staff or on a name: you write into that track. Playback plays all tracks (hidden ones too) except the muted ones.')}</p>` : ''}
     </section>`;
@@ -255,14 +303,14 @@
     if (TC.midiOut && TC.midiOut.supported() && S.settings.midiOut) {
       const outs = [['', tr('Like the panel ({name})', { name: S.settings.midiOut })]].concat(TC.midiOut.outputs().map((o) => [o, o]))
         .concat(t.midiOut && !TC.midiOut.outputs().includes(t.midiOut) ? [[t.midiOut, t.midiOut + ' ' + tr('(missing)')]] : []);
-      const chs = [['', tr('From the kit profile')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
+      const chs = [['', t.kind === 'pitched' ? tr('Channel {n}', { n: t.channel + 1 }) : tr('From the kit profile')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
       const curCh = Number.isInteger(t.midiCh) ? String(t.midiCh + 1) : '';
       midi = `<div class="row"><label>${tr('MIDI output')}</label><select data-action="setTrackMidiOut">${outs.map(([v, l]) =>
         `<option value="${esc(v)}"${v === (t.midiOut || '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         <div class="row"><label>${tr('Channel')}</label><select data-action="setTrackMidiCh">${chs.map(([v, l]) =>
         `<option value="${v}"${v === curCh ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
     }
-    return `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>${midi}
+    return `${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}
       ${S.doc.tracks.length > 1 && !midi && TC.midiOut && TC.midiOut.supported() ? `<p class="hint tight">${tr('Playing through MIDI (Playback → Sound): each track can get its own output and channel here.')}</p>` : ''}`;
   }
 
@@ -481,17 +529,19 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size, lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;
       const scroll = notesRoot.scrollTop;
-      notesRoot.innerHTML = head(tr('Notes'), 'left') + toolSection() + valueSection() + instrumentSection(cur) + noteSection(hit);
+      // a melody track: no instruments - the tones come from the lines (and its scale)
+      notesRoot.innerHTML = head(tr('Notes'), 'left') + toolSection() + valueSection() +
+        (TC.curTrack().kind === 'pitched' ? melodyNoteSection(hit && hit.note.pitch !== undefined ? hit : null) : instrumentSection(cur) + noteSection(hit));
       notesRoot.scrollTop = scroll;
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh])), TC.kits.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale])), cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
       S.settings, !!S.clipboard, S.doc.bars.length, TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

@@ -92,6 +92,33 @@
     }
   };
 
+  /**
+   * A melody tone (MIDI note `pitch`) at audio time `when`, `dur` seconds long, on the channel of its
+   * track (its own MIDI channel, else track.channel); the track's program is sent once per output.
+   */
+  const programSent = new Map(); // output -> Map channel -> program
+  MO.note = function (pitch, when, dur, vel, ctx, track) {
+    const o = portOf(track);
+    if (!o) return;
+    const ch = track && Number.isInteger(track.midiCh) ? track.midiCh : track ? track.channel || 0 : 0;
+    const lat = ctx ? TC.audio.outputDelay() : 0;
+    const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
+    const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
+    try {
+      if (!programSent.has(o)) programSent.set(o, new Map());
+      const prog = track ? track.program || 0 : 0;
+      if (programSent.get(o).get(ch) !== prog) {
+        o.send([0xc0 | ch, prog], at);
+        programSent.get(o).set(ch, prog);
+      }
+      o.send([0x90 | ch, pitch, v], at);
+      o.send([0x80 | ch, pitch, 0], at + Math.max(30, dur * 1000 - 5));
+      remember(o, ch);
+    } catch (e) {
+      /* the port went away */
+    }
+  };
+
   /** One key right now (kit profile dialog: ▶ to hear which sound a key is). */
   MO.sendKey = function (note, ch = 9, vel = 100) {
     const o = port();
@@ -108,6 +135,7 @@
 
   /** Stop: forget what was handed over for later, and silence the channels used. */
   MO.stop = function () {
+    programSent.clear();
     for (const [o, chs] of used) {
       try {
         if (o.clear) o.clear();

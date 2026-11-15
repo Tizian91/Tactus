@@ -21,6 +21,17 @@
   /** Tactus noteheads -> MusicXML <notehead>. */
   const HEADS = { normal: 'normal', x: 'x', circleX: 'circle-x', circleSlash: 'slashed', heavyX: 'x', heavyXHat: 'x', diamond: 'diamond', triangle: 'triangle', slashed: 'slashed' };
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  /** Melody: the written sign of a note -> <accidental>. */
+  const ACC_NAME = { 2: 'double-sharp', 1: 'sharp', 0: 'natural', '-1': 'flat', '-2': 'flat-flat' };
+  /** Melody: <mode> of a key, when the key signature is the scale's own (C major, A minor, D dorian …). */
+  const MODES = { major: 'major', minor: 'minor', dorian: 'dorian', phrygian: 'phrygian', lydian: 'lydian', mixolydian: 'mixolydian', locrian: 'locrian' };
+  function keyMode(scale, fifths) {
+    const m = MODES[scale.id];
+    if (!m) return '';
+    // (the key signature of the scale's own root: e.g. a mode whose signature fits exactly)
+    const exact = TC.pitch.lineMap(scale).every((x, l) => x.a === TC.pitch.sigAlter(fifths, l));
+    return exact ? `<mode>${m}</mode>` : '';
+  }
 
   /** Display position of a staff line (0 = top line, half spaces down) as in a treble clef: F5 is the top line. */
   X.display = function (line) {
@@ -84,6 +95,14 @@
     });
     o.push('<part-list>');
     tracks.forEach((t, k) => {
+      if (t.kind === 'pitched') {
+        // melody: one instrument with its channel and General MIDI program
+        const ch = (Number.isInteger(t.midiCh) ? t.midiCh : t.channel || 0) + 1;
+        o.push(`<score-part id="${pid(k)}"><part-name>${esc(t.name || 'Melody')}</part-name>` +
+          `<score-instrument id="${pid(k)}-I1"><instrument-name>${esc(t.name || 'Melody')}</instrument-name></score-instrument>` +
+          `<midi-instrument id="${pid(k)}-I1"><midi-channel>${ch}</midi-channel><midi-program>${(t.program || 0) + 1}</midi-program></midi-instrument></score-part>`);
+        return;
+      }
       o.push(`<score-part id="${pid(k)}"><part-name>${esc(t.name || 'Drums')}</part-name>`);
       instOf[k].forEach((a) => o.push(`<score-instrument id="${pid(k)}-I${a.id}"><instrument-name>${esc(D.label(a))}</instrument-name></score-instrument>`));
       instOf[k].forEach((a) => o.push(`<midi-instrument id="${pid(k)}-I${a.id}"><midi-channel>10</midi-channel><midi-unpitched>${a.midi + 1}</midi-unpitched></midi-instrument>`));
@@ -113,9 +132,14 @@
         // attributes: divisions, clef, staff lines (first bar), time signature (when it changes), %-bars
         const sim = !!t.bars[i].simile && i > 0, simPrev = i > 0 && !!t.bars[i - 1].simile && i > 1;
         const attr = [];
-        if (i === 0) attr.push(`<divisions>${DIV}</divisions><key><fifths>0</fifths></key>`);
+        const mel = t.kind === 'pitched', P = TC.pitch;
+        const scale = mel ? TC.score.scaleAt(t, i) : null, fifths = mel ? P.fifths(scale) : 0;
+        if (i === 0) attr.push(`<divisions>${DIV}</divisions>`);
+        // key: melody its scale (first bar, changes), drums none
+        if (i === 0 || (mel && fifths !== P.fifths(TC.score.scaleAt(t, i - 1)))) attr.push(`<key><fifths>${fifths}</fifths>${mel ? keyMode(scale, fifths) : ''}</key>`);
         if (!ts || ts.join('/') !== h.ts.join('/')) attr.push(`<time><beats>${h.ts[0]}</beats><beat-type>${h.ts[1]}</beat-type></time>`);
-        if (i === 0) attr.push('<clef><sign>percussion</sign><line>2</line></clef>' + (one ? '<staff-details><staff-lines>1</staff-lines></staff-details>' : ''));
+        if (i === 0 && mel) attr.push({ treble: '<clef><sign>G</sign><line>2</line></clef>', treble8: '<clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>', bass: '<clef><sign>F</sign><line>4</line></clef>' }[t.clef] || '<clef><sign>G</sign><line>2</line></clef>');
+        else if (i === 0) attr.push('<clef><sign>percussion</sign><line>2</line></clef>' + (one ? '<staff-details><staff-lines>1</staff-lines></staff-details>' : ''));
         if (sim && !simPrev) attr.push('<measure-style><measure-repeat type="start">1</measure-repeat></measure-style>');
         else if (!sim && simPrev) attr.push('<measure-style><measure-repeat type="stop"/></measure-style>');
         if (attr.length) o.push('<attributes>' + attr.join('') + '</attributes>');
@@ -141,6 +165,9 @@
         const bar = t.bars[src];
         const voices = bar.voices.map((v) => R.layout(v, h.ts, t.kind === 'drums', h.beam, t.fill));
         const used = voices.map((items) => items.some((it) => it.kind === 'note'));
+        // melody: how each note is spelled and which ones carry a sign (as drawn)
+        const sb = mel ? P.spellBar([].concat(...voices.map((items) => items.filter((it) => it.kind === 'note')
+          .map((it) => it.ev.notes.map((n) => ({ tick: it.tick, cont: it.cont, n }))))).flat(), scale, t.clef) : null;
         let first = true;
         voices.forEach((items, vi) => {
           if (!used[vi] && (vi > 0 || used.some(Boolean))) return; // an empty voice: left out (voice 1 keeps its whole-bar rest)
@@ -162,6 +189,27 @@
               }
               o.push(`<note><rest/><duration>${it.dur}</duration><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` +
                 (it.dots ? '<dot/>' : '') + tm + (tupN ? `<notations>${tupN}</notations>` : '') + '</note>');
+              continue;
+            }
+            if (mel) {
+              // melody: pitch (as spelled), its sign, ties within the bar (it.tie / it.cont), accents
+              const ns = it.ev.notes.slice().sort((x, y) => x.pitch - y.pitch);
+              const bm = beams.get(it), acc = Math.max(...ns.map((n) => n.accent || 0));
+              ns.forEach((n, c) => {
+                const sp = sb.spell.get(n.id), step = 'CDEFGAB'[((sp.dia % 7) + 7) % 7], oct = Math.floor(sp.dia / 7);
+                const sign = sb.acc.get(it.tick + ':' + n.id);
+                const nots = [];
+                if (it.cont) nots.push('<tied type="stop"/>');
+                if (it.tie) nots.push('<tied type="start"/>');
+                if (c === 0 && tupN) nots.push(tupN);
+                if (c === 0 && acc && !it.cont) nots.push(`<articulations>${acc > 1 ? '<strong-accent type="up"/>' : '<accent/>'}</articulations>`);
+                o.push('<note>' + (c ? '<chord/>' : '') + `<pitch><step>${step}</step>${sp.a ? `<alter>${sp.a}</alter>` : ''}<octave>${oct}</octave></pitch>` +
+                  `<duration>${it.dur}</duration>` + (it.cont ? '<tie type="stop"/>' : '') + (it.tie ? '<tie type="start"/>' : '') +
+                  `<instrument id="${pid(k)}-I1"/><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` + (it.dots ? '<dot/>' : '') +
+                  (sign !== undefined ? `<accidental>${ACC_NAME[sign]}</accidental>` : '') + tm +
+                  (c === 0 && bm ? bm.map((b, lv) => `<beam number="${lv + 1}">${b}</beam>`).join('') : '') +
+                  (nots.length ? `<notations>${nots.join('')}</notations>` : '') + '</note>');
+              });
               continue;
             }
             const notes = it.ev.notes.slice().map((n) => ({ n, a: D.byId(n.art) })).filter((x) => x.a)

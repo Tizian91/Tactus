@@ -49,7 +49,7 @@
     const art = TC.drums.byId(id);
     if (!art) return;
     if (S.selection.size) {
-      forSelected((n) => { n.art = id; });
+      forSelected((n) => { if (n.art !== undefined) n.art = id; }); // (melody notes have no instrument)
       TC.commit();
     } else {
       S.input.art = id;
@@ -124,7 +124,14 @@
   A.moveLine = function (dir) {
     if (!S.selection.size) return;
     const lines = TC.drums.lines(TC.drums.kit());
-    forSelected((n) => {
+    forSelected((n, hit) => {
+      if (n.pitch !== undefined) {
+        // melody: to the tone of the scale on the next line / space (up = higher)
+        const P = TC.pitch, sp = P.noteSpell(n, TC.score.scaleAt(hit.track, hit.bar));
+        const t = P.lineTone(sp.dia - dir, TC.score.scaleAt(hit.track, hit.bar));
+        if (t.pitch >= 0 && t.pitch <= 127) Object.assign(n, { pitch: t.pitch, dia: t.dia });
+        return;
+      }
       const art = TC.drums.byId(n.art);
       const next = dir < 0 ? lines.filter(([l]) => l < art.line).pop() : lines.find(([l]) => l > art.line);
       if (next) n.art = (next[1].find((a) => a.def) || next[1][0]).id;
@@ -315,6 +322,78 @@
     S.selection.clear();
     TC.commit();
     TC.ui.hint(tr('Track "{name}" added - you are writing into it now', { name: t.name }));
+  };
+  /** A new melody track (treble clef, C major) after the one being written - no questions, rename it later. */
+  A.addMelody = function () {
+    const t = TC.score.addTrack(S.doc, TC.score.freeTrackName(S.doc, tr('Melody')), TC.curTrack(), 'pitched');
+    S.trackId = t.id;
+    S.selection.clear();
+    TC.commit();
+    TC.ui.hint(tr('Melody track added - tap a line: the tone of the scale there'));
+  };
+  /** Melody track being written: clef. */
+  A.setTrackClef = function (clef) {
+    const t = TC.curTrack();
+    if (t.kind !== 'pitched' || !TC.pitch.CLEFS[clef]) return;
+    t.clef = clef;
+    TC.commit();
+  };
+  /** Melody track: voice (range; sets the clef that fits it). */
+  A.setTrackVoice = function (v) {
+    const t = TC.curTrack();
+    if (t.kind !== 'pitched') return;
+    t.voice = TC.pitch.VOICES[v] ? v : '';
+    if (t.voice) t.clef = TC.pitch.VOICES[v].clef;
+    TC.commit();
+  };
+  /**
+   * Melody track: scale from the selected bar on (bar 1: the whole track) - root as a pitch class
+   * (spelled the usual way for that scale) or the kind of scale. The notes keep their pitches.
+   */
+  A.setTrackScale = function (what, value) {
+    const t = TC.curTrack();
+    if (t.kind !== 'pitched') return;
+    const bi = S.selBar !== null ? S.selBar : 0, cur = TC.score.scaleAt(t, bi), P = TC.pitch;
+    const id = what === 'id' ? value : cur.id, pc = what === 'root' ? Number(value) : P.pc(cur.l, cur.a);
+    const root = P.bestRoot(pc, id);
+    TC.score.setScale(t, bi, { l: root.l, a: root.a, id });
+    TC.commit();
+    TC.ui.hint(`${bi > 0 ? tr('From bar {n}', { n: bi + 1 }) + ': ' : ''}${P.scaleName(TC.score.scaleAt(t, bi), TC.getLang() === 'de')}`);
+  };
+  /** Selected melody notes a semitone up (♯, dir 1) or down (♭, -1), on their own line. */
+  A.alterSelection = function (dir) {
+    let n = 0;
+    forSelected((note, hit) => {
+      if (note.pitch === undefined) return;
+      const to = TC.pitch.alter(TC.pitch.noteSpell(note, TC.score.scaleAt(hit.track, hit.bar)), Number(dir));
+      if (to && to.pitch >= 0 && to.pitch <= 127) {
+        Object.assign(note, to);
+        n++;
+      }
+    });
+    if (n) TC.commit();
+  };
+  /** Selected melody notes written the other way (F♯ ↔ G♭); the pitch stays. */
+  A.respell = function () {
+    let n = 0;
+    forSelected((note, hit) => {
+      if (note.pitch === undefined) return;
+      const alt = TC.pitch.enharmonics(note.pitch, TC.pitch.noteSpell(note, TC.score.scaleAt(hit.track, hit.bar)).dia)[0];
+      if (alt) {
+        note.dia = alt.dia;
+        n++;
+      }
+    });
+    if (n) TC.commit();
+  };
+  A.setTrackScaleRoot = (pc) => A.setTrackScale('root', pc);
+  A.setTrackScaleId = (id) => A.setTrackScale('id', id);
+  /** Melody track: the scale change at the selected bar goes (the scale before it goes on). */
+  A.clearScaleChange = function () {
+    const t = TC.curTrack();
+    if (t.kind !== 'pitched' || !S.selBar || !t.bars[S.selBar].scale) return;
+    t.bars[S.selBar].scale = null;
+    TC.commit();
   };
   A.renameTrack = function (id) {
     const t = trackOf(id);

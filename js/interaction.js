@@ -42,12 +42,12 @@
   /** Is the instrument lock on (switch, or Shift held)? */
   I.locked = (e) => !!(S.input.lock || shiftDown || (e && e.shiftKey));
 
-  /** The note of instrument `art` at `tick` in a bar of a track (any voice), or null. */
-  function noteAt(bi, tick, art, track = TC.curTrack()) {
+  /** The note of instrument `art` (melody: of pitch `pitch`) at `tick` in a bar of a track (any voice), or null. */
+  function noteAt(bi, tick, art, track = TC.curTrack(), pitch) {
     for (const voice of track.bars[bi].voices) {
       for (const ev of voice) {
         if (ev.tick !== tick) continue;
-        const n = ev.notes.find((x) => x.art === art);
+        const n = ev.notes.find((x) => (pitch !== undefined ? x.pitch === pitch : x.art === art));
         if (n) return n;
       }
     }
@@ -56,6 +56,33 @@
 
   /** The instrument whose line is near staff point p (the "magnet"), or null beside the lines. */
   const lineArt = (p) => TC.drums.resolveIn(TC.render.posAt(p.y), p.track || TC.curTrack());
+  const isMelody = (track) => !!track && track.kind === 'pitched';
+  const de = () => TC.getLang && TC.getLang() === 'de';
+
+  /**
+   * Melody: the tone at staff point p in bar bi - the tone of the scale on the nearest line / space:
+   * { line, pitch, dia, a, pale (outside the scale), acc (the sign it is written with, null: none) }.
+   */
+  function pitchAt(p, track, bi) {
+    const RD = TC.render, P = TC.pitch, l = Math.round(RD.posAt(p.y));
+    if (l < RD.LINE_MIN || l > RD.LINE_MAX) return null;
+    const scale = TC.score.scaleAt(track, bi), t = P.lineTone(P.diaAt(l, track.clef), scale);
+    if (t.pitch < 0 || t.pitch > 127) return null;
+    const sig = P.sigAlter(P.fifths(scale), ((t.dia % 7) + 7) % 7);
+    return { line: l, pitch: t.pitch, dia: t.dia, a: t.a, pale: !t.in, acc: t.a !== sig ? t.a : null };
+  }
+  /** Name of a melody note ("F♯4" / "Fis4"). */
+  function toneName(n, track, bi) {
+    const sp = TC.pitch.noteSpell(n, TC.score.scaleAt(track, bi));
+    return TC.pitch.fullName(sp.dia, sp.a, de());
+  }
+  /** What a target writes / is: instrument or tone name (short: for the label at the note). */
+  function targetName(t, short) {
+    if (t.pitch !== undefined) return TC.pitch.fullName(t.dia, t.a, de()) + (t.pale ? ' · ' + tr('outside the scale') : '');
+    return TC.drums.label(t.art, short);
+  }
+  /** Name of the note of a hit (findNote). */
+  const hitName = (hit, short) => (hit && hit.note.pitch !== undefined ? toneName(hit.note, hit.track, hit.bar) : TC.drums.label(hit && TC.drums.byId(hit.note.art), short));
 
   /**
    * Where a note would go at point p: { kind: 'place', bar, tick, line, art, lock } or null
@@ -69,6 +96,11 @@
     if (S.drag && track !== TC.curTrack()) return null; // a note being aimed / moved stays in its track
     const bar = RD.barAt(p.x);
     if (!bar || RD.simileAt(bar, track) || p.x < bar.x0) return null;
+    if (isMelody(track)) {
+      // melody: every line and space (and the ledger lines around) holds a tone of the scale
+      const pt = pitchAt(p, track, bar.i);
+      return pt && Object.assign({ kind: 'place', bar: bar.i, tick: RD.snapTick(bar, p.x), track, len: TC.inputTicks(S.input) }, pt);
+    }
     const near = lineArt(p);
     if (!near) return null; // beside the lines (also with the lock): that is where bars are chosen
     const tick = RD.snapTick(bar, p.x);
@@ -92,7 +124,7 @@
     if (!bar) return null;
     const track = p.track || TC.curTrack();
     if (RD.simileAt(bar, track)) return { kind: 'bar', bar: bar.i, simile: true }; // "%" bar: nothing to write into
-    if (I.locked(e) && lineArt(p) && p.x >= bar.x0) {
+    if (!isMelody(track) && I.locked(e) && lineArt(p) && p.x >= bar.x0) {
       // the height does not matter: the selected instrument at this grid position
       const art = TC.drums.byId(S.input.art);
       const tick = RD.snapTick(bar, p.x);
@@ -103,7 +135,7 @@
           head: { id: n.id, x: RD.tickX(bar, tick), y: RD.stepY(ln), bar: bar.i, tick, line: ln, track } };
       }
     }
-    if (!I.locked(e)) {
+    if (!I.locked(e) || isMelody(track)) {
       const head = RD.headAt(p);
       if (head) return { kind: 'head', bar: head.bar, head, tick: head.tick, line: head.line };
     }
@@ -132,10 +164,14 @@
         h.hx = t.head.x;
         h.hy = t.head.y;
         const hit = TC.score.findNote(S.doc, t.head.id);
-        const name = TC.drums.label(hit && TC.drums.byId(hit.note.art), true);
+        const name = hitName(hit, true);
         const what = tr(S.selection.has(t.head.id) && S.selection.size === 1 ? 'click: delete' : 'click: select');
         h.label = `${name} – ${what}`;
-        TC.ui.status(`${where(t)} · ${name} – ${what} · ${tr('drag: move · hold, then drag: row')}`);
+        const hold = hit && hit.note.pitch !== undefined ? tr('drag: move · hold, then up / down: ♯ / ♭, sideways: length') : tr('drag: move · hold, then drag: row');
+        TC.ui.status(`${where(t)} · ${name} – ${what} · ${hold}`);
+      } else if (t.pitch !== undefined) {
+        Object.assign(h, { pitch: t.pitch, acc: t.acc, len: 0, label: targetName(t, true) });
+        TC.ui.status(`${where(t)} · ${targetName(t)} · ${tr('drag sideways while pressing: longer')}`);
       } else {
         h.label = TC.drums.label(t.art, true);
         TC.ui.status(`${where(t)} · ${TC.drums.label(t.art)}${t.lock ? ' · ' + tr('instrument lock') : ''}`);
@@ -301,10 +337,14 @@
         if (!moved(d, e)) return;
         clearTimeout(holdTimer);
         // held (or Ctrl): the first movement decides - sideways a row, up / down the strength
+        // (melody: up / down ♯ / ♭, sideways its length)
+        if (d.row && d.hit.note.pitch !== undefined) return Math.abs(e.clientY - d.sy) > Math.abs(e.clientX - d.sx) ? beginAlter(e) : beginLen(e);
         if (d.row) return Math.abs(e.clientY - d.sy) > Math.abs(e.clientX - d.sx) ? beginVel(e) : beginRow(e);
         d.mode = 'move';
         return moveMove(e);
       case 'vel': return velMove(e);
+      case 'alter': return alterMove(e);
+      case 'len': return lenMove(e);
       case 'erase': return eraseMove(e);
       case 'rect': return rectMove(e);
       case 'sel':
@@ -366,6 +406,7 @@
       finishRow();
     }
     if (d.mode === 'vel') finishVel(d);
+    if (d.mode === 'alter' || d.mode === 'len') finishMelodyEdit(d);
     if (e.pointerType === 'touch') clearHover();
     else {
       I.hoverKey = null;
@@ -386,6 +427,7 @@
     clearTimeout(holdTimer);
     if (S.drag && (S.drag.mode === 'write' || S.drag.mode === 'row')) finishRow();
     if (S.drag && S.drag.mode === 'vel') finishVel(S.drag);
+    if (S.drag && (S.drag.mode === 'alter' || S.drag.mode === 'len')) finishMelodyEdit(S.drag);
     if (S.drag && S.drag.mode === 'erase') finishErase(S.drag);
     if (S.drag && S.drag.mode === 'smove') finishSelMove(S.drag, true);
     TC.render.drawRect(null);
@@ -410,7 +452,13 @@
   /** Esc while a note is held: it is not written / moved. */
   I.cancelDrag = function () {
     const d = S.drag;
-    if (!d || !['aim', 'note', 'move', 'vel', 'smove', 'rect', 'sel'].includes(d.mode)) return false;
+    if (!d || !['aim', 'note', 'move', 'vel', 'alter', 'len', 'smove', 'rect', 'sel'].includes(d.mode)) return false;
+    if (d.mode === 'alter' || d.mode === 'len') {
+      // the tone / length goes back to what it was
+      d.undo();
+      S.rev++;
+      TC.render.draw();
+    }
     clearTimeout(holdTimer);
     if (d.mode === 'smove') finishSelMove(d, true); // the notes go back
     if (d.mode === 'rect') {
@@ -433,6 +481,14 @@
   // ---- A new note: aim, then release ----------------------------------------------------------
 
   function showAim(t, sound) {
+    if (t.pitch !== undefined) {
+      S.hover = { bar: t.bar, tick: t.tick, line: t.line, pitch: t.pitch, acc: t.acc, len: t.len, label: targetName(t, true) };
+      I.hoverKey = null;
+      TC.render.drawHover();
+      TC.ui.status(`${where(t)} · ${targetName(t)} · ${tr('sideways: longer · release: write')}`);
+      if (sound && S.settings.sound) TC.audio.previewTone(t.pitch, TC.curTrack());
+      return;
+    }
     S.hover = { bar: t.bar, tick: t.tick, line: t.line, art: t.art, lock: !!t.lock, label: TC.drums.label(t.art, true) };
     I.hoverKey = null;
     TC.render.drawHover();
@@ -440,9 +496,39 @@
     if (sound && S.settings.sound) TC.audio.preview(TC.newDrumNote(t.art.id, S.input));
   }
 
+  /**
+   * Melody: the note being aimed at keeps its place in time; up / down chooses its tone, dragging
+   * sideways makes it longer (up to the grid cell under the pointer, at most to the end of its bar).
+   */
+  function aimMelody(e) {
+    const d = S.drag, RD = TC.render, p = I.toLocal(e.clientX, e.clientY);
+    const start = d.start || (d.start = { bar: d.t.bar, tick: d.t.tick });
+    const track = TC.curTrack(), pt = p && (!p.track || p.track === track) ? pitchAt(p, track, start.bar) : null;
+    if (!pt) {
+      if (d.t) {
+        d.t = null;
+        clearHover();
+        TC.ui.status(tr('release here: no note'));
+      }
+      return;
+    }
+    const L = TC.barTicks(S.doc.bars[start.bar].ts), lb = RD.layout.bars[start.bar], grid = RD.layout.grid;
+    let len = TC.inputTicks(S.input);
+    const bar = RD.barAt(p.x);
+    if (bar && bar.i > start.bar) len = L - start.tick;
+    else if (bar && bar.i === start.bar) len = Math.max(len, RD.snapTick(lb, p.x) - start.tick + grid);
+    len = Math.min(len, L - start.tick);
+    const t = Object.assign({ kind: 'place', bar: start.bar, tick: start.tick, track, len }, pt);
+    if (d.t && d.t.line === t.line && d.t.len === t.len) return;
+    const newSound = !d.t || d.t.pitch !== t.pitch;
+    d.t = t;
+    showAim(t, newSound);
+  }
+
   function aimMove(e) {
     const d = S.drag;
     if (moved(d, e)) clearTimeout(holdTimer); // aiming: no bar menu
+    if ((d.t && d.t.pitch !== undefined) || d.start) return aimMelody(e);
     const t = placeAt(I.toLocal(e.clientX, e.clientY), e);
     if (!t) {
       if (d.t) {
@@ -465,6 +551,20 @@
   function writeNote(t, sound) {
     S.selection.clear();
     TC.selectBar(t.bar);
+    if (t.pitch !== undefined) {
+      // melody: the tone of that line, as long as chosen (dragged sideways), in the first voice
+      const note = TC.newPitchNote(t.pitch, t.dia, S.input);
+      const res = TC.score.place(S.doc, TC.curTrack(), t.bar, 0, t.tick, t.len || TC.inputTicks(S.input), note);
+      if (res.status === 'exists') {
+        S.selection = new Set([res.note.id]);
+        TC.refresh();
+        return false;
+      }
+      TC.commit();
+      if (sound && S.settings.sound) TC.audio.previewTone(t.pitch, TC.curTrack());
+      TC.ui.status(`${where(t)} · ${targetName(t)}`);
+      return true;
+    }
     const art = t.art;
     const note = TC.newDrumNote(art.id, S.input);
     const res = TC.score.place(S.doc, TC.curTrack(), t.bar, art.voice, t.tick, TC.inputTicks(S.input), note);
@@ -536,6 +636,7 @@
 
   function moveMove(e) {
     const d = S.drag, n = d.hit.note;
+    if (n.pitch !== undefined) return moveMelody(e);
     const keep = I.locked(e) ? TC.drums.byId(n.art) : null;
     const to = placeAt(I.toLocal(e.clientX, e.clientY), e, keep);
     if (to && d.to && to.bar === d.to.bar && to.tick === d.to.tick && to.art.id === d.to.art.id) return;
@@ -552,8 +653,39 @@
     TC.render.drawHover();
   }
 
+  /** Melody: a note being dragged - sideways in time, up / down to the tone of the scale on that line. */
+  function moveMelody(e) {
+    const d = S.drag, n = d.hit.note;
+    let to = placeAt(I.toLocal(e.clientX, e.clientY), e);
+    if (to && to.track !== d.hit.track) to = null;
+    if (to && d.to && to.bar === d.to.bar && to.tick === d.to.tick && to.pitch === d.to.pitch) return;
+    const newSound = to && (!d.to || to.pitch !== d.to.pitch);
+    d.to = to;
+    if (!to) {
+      S.hover = { bar: d.t.bar, tick: d.t.tick, line: d.t.line, headId: n.id, hx: d.t.head.x, hy: d.t.head.y, label: tr('release here: stays') };
+    } else {
+      S.hover = { bar: to.bar, tick: to.tick, line: to.line, pitch: to.pitch, acc: to.acc, len: 0, label: targetName(to, true) + ' ← ' + tr('move') };
+      TC.ui.status(`${where(to)} · ${targetName(to)} · ${tr('release: move here')}`);
+      if (newSound && S.settings.sound) TC.audio.previewTone(to.pitch, d.hit.track);
+    }
+    I.hoverKey = null;
+    TC.render.drawHover();
+  }
+
   function dropMove(d) {
     const to = d.to, n = d.hit.note;
+    if (to && n.pitch !== undefined) {
+      if (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.pitch === n.pitch) return;
+      if (noteAt(to.bar, to.tick, null, d.hit.track, to.pitch)) return TC.ui.hint(tr('There is already such a note'));
+      const dur = d.hit.ev.dur;
+      TC.score.removeNotes(S.doc, [n.id]);
+      const res = TC.score.place(S.doc, d.hit.track, to.bar, d.hit.voice, to.tick, dur, Object.assign({}, n, { pitch: to.pitch, dia: to.dia }));
+      S.selection = new Set([res.note ? res.note.id : n.id]);
+      TC.selectBar(to.bar);
+      TC.commit();
+      TC.ui.status(`${where(to)} · ${targetName(to)} · ${tr('moved')}`);
+      return;
+    }
     if (!to || (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.art.id === n.art)) return;
     const doc = S.doc, track = TC.curTrack();
     if (noteAt(to.bar, to.tick, to.art.id)) return TC.ui.hint(tr('There is already such a note'));
@@ -576,6 +708,15 @@
     d.row = true;
     d.held = true; // released without moving: the menu with the instruments of this line
     if (navigator.vibrate) navigator.vibrate(15);
+    if (d.hit.note.pitch !== undefined) {
+      const name = hitName(d.hit, true);
+      S.hover = { bar: d.t.bar, tick: d.t.tick, line: d.t.line, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y,
+        label: `${name} – ${tr('up / down: ♯ / ♭ · sideways: length · release: menu')}` };
+      I.hoverKey = null;
+      TC.render.drawHover();
+      TC.ui.status(`${where(d.t)} · ${name} · ${tr('up / down: a semitone higher / lower (♯ / ♭) · sideways: how long · release: menu')}`);
+      return;
+    }
     const art = TC.drums.byId(d.hit.note.art);
     S.hover = { bar: d.t.bar, tick: d.t.tick, line: d.t.line, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y,
       label: `${TC.drums.label(art, true)} – ${tr('sideways: row · up / down: strength · release: instrument')}` };
@@ -623,6 +764,7 @@
    * Changes the held note - or all selected notes, if it is one of them.
    */
   function noteMenu(d, e) {
+    if (d.hit.note.pitch !== undefined) return melodyMenu(d, e);
     const n = d.hit.note, a = TC.drums.byId(n.art);
     if (!a) return;
     const ids = S.selection.has(n.id) && S.selection.size > 1 ? [...S.selection] : [n.id];
@@ -830,6 +972,105 @@
     const changed = d.notes.some((n, k) => n.ghost !== d.before[k].ghost || n.accent !== d.before[k].accent || n.vel !== d.before[k].vel);
     if (changed) TC.commit();
     else TC.refresh();
+  }
+
+  // ---- Melody: hold a note, then up / down (♯ / ♭) or sideways (its length) ---------------------------
+  // the held note - for ♯ / ♭ all selected notes, if it is one of them; one undo step on release, Esc: back
+
+  /** Notes of the held note's selection (melody notes of its track), as for the strength. */
+  function heldNotes(d) {
+    const held = d.hit.note;
+    const ids = S.selection.has(held.id) && S.selection.size > 1 ? [...S.selection] : [held.id];
+    return ids.map((id) => TC.score.findNote(S.doc, id)).filter((h) => h && h.note.pitch !== undefined);
+  }
+
+  function beginAlter(e) {
+    const d = S.drag, hits = heldNotes(d);
+    const before = hits.map((h) => ({ pitch: h.note.pitch, dia: h.note.dia }));
+    const spells = hits.map((h) => TC.pitch.noteSpell(h.note, TC.score.scaleAt(h.track, h.bar)));
+    S.drag = { mode: 'alter', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, hits, spells, k: null,
+      undo: () => hits.forEach((h, j) => Object.assign(h.note, before[j])),
+      changed: () => hits.some((h, j) => h.note.pitch !== before[j].pitch || h.note.dia !== before[j].dia) };
+    alterMove(e);
+  }
+  function alterMove(e) {
+    const d = S.drag;
+    // a semitone per step up / down, on the note's own line (at most a double sharp / flat)
+    const k = TC.clamp(Math.round((d.sy - e.clientY) / VEL_STEP), -4, 4);
+    if (k === d.k) return;
+    d.k = k;
+    d.hits.forEach((h, j) => {
+      const to = TC.pitch.alter(d.spells[j], TC.clamp(k, -2 - d.spells[j].a, 2 - d.spells[j].a));
+      if (to) Object.assign(h.note, to);
+    });
+    S.rev++;
+    TC.render.draw();
+    const name = hitName(d.hit, true);
+    if (S.settings.sound) TC.audio.previewTone(d.hit.note.pitch, d.hit.track);
+    S.hover = { bar: d.t.bar, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, label: `${name} – ${tr('Esc: back')}` };
+    I.hoverKey = null;
+    TC.render.drawHover();
+    TC.ui.status(`${where(d.t)} · ${name}${d.hits.length > 1 ? ' · ' + tr('{n} notes', { n: d.hits.length }) : ''}`);
+  }
+
+  function beginLen(e) {
+    const d = S.drag, ev = d.hit.ev, before = ev.dur;
+    S.drag = { mode: 'len', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, ev, len: null,
+      undo: () => { ev.dur = before; }, changed: () => ev.dur !== before };
+    lenMove(e);
+  }
+  /** The held note reaches to the grid cell under the pointer (at most to the end of its bar / the next note). */
+  function lenMove(e) {
+    const d = S.drag, RD = TC.render, p = I.toLocal(e.clientX, e.clientY);
+    const bi = d.hit.bar, L = TC.barTicks(S.doc.bars[bi].ts), lb = RD.layout.bars[bi], bar = p && RD.barAt(p.x);
+    let len = d.len === null ? d.ev.dur : d.len;
+    if (bar && bar.i > bi) len = L - d.ev.tick;
+    else if (bar && bar.i === bi) len = Math.max(RD.layout.grid, RD.snapTick(lb, p.x) - d.ev.tick + RD.layout.grid);
+    else if (bar && bar.i < bi) len = RD.layout.grid;
+    if (len === d.len) return;
+    d.len = len;
+    d.ev.dur = Math.min(len, L - d.ev.tick);
+    TC.score.fitBar(S.doc, d.hit.track, bi); // (up to the next note of its voice)
+    S.rev++;
+    TC.render.draw();
+    S.hover = { bar: bi, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, label: `${hitName(d.hit, true)} – ${tr('Esc: back')}` };
+    I.hoverKey = null;
+    TC.render.drawHover();
+    TC.ui.status(`${where(d.t)} · ${tr('Length')}: ${d.ev.dur} ${tr('ticks')}`);
+  }
+  function finishMelodyEdit(d) {
+    if (d.changed()) TC.commit();
+    else TC.refresh();
+  }
+
+  /** A melody note held and released without moving: ♯ / ♭, written the other way, strength, delete. */
+  function melodyMenu(d, e) {
+    const n = d.hit.note, P = TC.pitch;
+    const ids = S.selection.has(n.id) && S.selection.size > 1 ? [...S.selection] : [n.id];
+    const choose = (fn) => () => {
+      S.selection = new Set(ids);
+      TC.selectBar(d.t.bar);
+      fn();
+      if (S.settings.sound) TC.audio.previewTone(n.pitch, d.hit.track);
+    };
+    const sp = P.noteSpell(n, TC.score.scaleAt(d.hit.track, d.hit.bar));
+    const alt = P.enharmonics(n.pitch, sp.dia)[0];
+    const items = [
+      { label: '♯ ' + tr('a semitone higher'), action: choose(() => A().alterSelection(1)) },
+      { label: '♭ ' + tr('a semitone lower'), action: choose(() => A().alterSelection(-1)) },
+    ];
+    if (alt) items.push({ label: tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) }), action: choose(() => A().respell()) });
+    items.push('-');
+    const lv = levelOf(n);
+    LEVELS.forEach((s, k) => items.push({
+      label: tr(s), checked: lv === k,
+      action: choose(() => {
+        ids.forEach((id) => { const h = TC.score.findNote(S.doc, id); if (h) setLevel(h.note, k); });
+        TC.commit();
+      }),
+    }));
+    items.push('-', { label: '🗑 ' + tr('Delete'), action: () => { S.selection = new Set(ids); A().deleteSelection(); } });
+    TC.menu.open(items, e.clientX + 14, e.clientY - 24);
   }
 
   function beginRow(e) {

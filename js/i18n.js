@@ -52,6 +52,7 @@
     'Example groove': 'Beispiel-Groove',
     'Repeats & endings': 'Wiederholungen & Häuser',
     'Jumps (D.S. al Coda)': 'Sprünge (D.S. al Coda)',
+    'Melody (singing voice over a groove)': 'Melodie (Gesang über einem Groove)',
     Manual: 'Handbuch',
     'Manual (opens in a new tab)': 'Handbuch (öffnet sich in einem neuen Tab)',
     'Help: how this works': 'Hilfe: so funktioniert es',

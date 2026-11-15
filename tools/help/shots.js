@@ -90,6 +90,7 @@ setTimeout(() => {
     // the two examples in the page view
     bspwiederholungen() { example('wiederholungen'); },
     bspspruenge() { example('spruenge'); },
+    bspmelodie() { example('melodie'); setTimeout(() => view(1.05, -10, -70), 300); },
     // MIDI import: track, where it comes from, grid, tempo, target
     import() {
       S.settings.importTarget = 'into';

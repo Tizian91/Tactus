@@ -340,11 +340,49 @@
     return B.doc;
   };
 
+  /**
+   * Example "Melody": a singing voice in A minor over a simple groove - tones of the scale, a G♯ by hand
+   * (the leading tone), a note tied over the bar line, a quarter-note rhythm with eighths.
+   */
+  ST.melodyDoc = function () {
+    const doc = TC.emptyScore(4), SC = TC.score;
+    doc.meta.title = 'Beispiel-Melodie';
+    doc.meta.artist = 'Tactus';
+    doc.meta.tempo = 92;
+    const dr = doc.tracks[0];
+    const hit = (bar, tick, art) => SC.place(doc, dr, bar, TC.drums.byId(art).voice, tick, 480, TC.newDrumNote(art, {}));
+    for (let bar = 0; bar < 4; bar++) {
+      for (let t = 0; t < 3840; t += 480) hit(bar, t, 42);
+      [0, 1920, 2400].forEach((t) => hit(bar, t, 36));
+      [960, 2880].forEach((t) => hit(bar, t, 38));
+    }
+    const mel = SC.addTrack(doc, 'Gesang', null, 'pitched');
+    doc.tracks = [mel, dr]; // the melody on top
+    mel.scale = { l: 5, a: 0, id: 'minor' }; // A minor
+    mel.voice = 'alto';
+    const P = TC.pitch;
+    // [bar, tick, ticks, staff place (C4 = 28 …), sharp]
+    const notes = [
+      [0, 0, 960, 33], [0, 960, 960, 35], [0, 1920, 1920, 37],                // A  C  E (half)
+      [1, 0, 960, 36], [1, 960, 480, 35], [1, 1440, 480, 34], [1, 1920, 2880, 33], // D  C B  A (tied over the bar line)
+      [2, 960, 960, 32], [2, 1920, 960, 33], [2, 2880, 960, 35],              // (A) G  A  C
+      [3, 0, 960, 34], [3, 960, 960, 32, 1], [3, 1920, 1920, 33],             // B  G♯  A (half)
+    ];
+    for (const [bar, tick, len, dia, sharp] of notes) {
+      const t = P.lineTone(dia, mel.scale), pitch = t.pitch + (sharp ? 1 : 0);
+      const r = SC.place(doc, mel, bar, 0, tick, len, TC.newPitchNote(pitch, dia, {}));
+      if (r.ev && len > r.ev.dur) SC.setMelodyLength(doc, mel, bar, 0, r.ev, len);
+    }
+    doc.bars[0].marker = 'Strophe';
+    return doc;
+  };
+
   /** The examples (File → Examples, and links of the manual: index.html?beispiel=…). */
   ST.EXAMPLES = [
     { id: 'groove', label: 'Example groove', make: () => ST.demoDoc(), file: 'Example.tactus.json' },
     { id: 'wiederholungen', label: 'Repeats & endings', make: () => ST.repeatsDoc(), file: 'Wiederholungen.tactus.json' },
     { id: 'spruenge', label: 'Jumps (D.S. al Coda)', make: () => ST.jumpsDoc(), file: 'Spruenge.tactus.json' },
+    { id: 'melodie', label: 'Melody (singing voice over a groove)', make: () => ST.melodyDoc(), file: 'Melodie.tactus.json' },
   ];
   ST.loadExample = function (id) {
     const ex = ST.EXAMPLES.find((e) => e.id === id);

@@ -236,7 +236,7 @@ Eine Regel für Maus, Stift und Finger:
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
 9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (in Guitar Pro getestet, siehe unten)
-11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ (Rest offen) → B → E → C → D, siehe „Phase 5 – Melodien“)
+11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ → B → E → C → D, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
 
@@ -351,7 +351,7 @@ Note ziehen = verschieben, halten + hoch / runter = ♯ / ♭, halten + seitlich
 „Schreiben als …“ / Anschlag / Löschen; ↑ ↓ = nächste Linie), Panel (Stimmlage, Schlüssel, Grundton + Tonleiter gruppiert, ab dem
 gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synth, über MIDI mit Kanal und Programm), MIDI-Export
 (Programmwechsel, Notenlänge), MusicXML (Tonhöhe, Tonart mit Modus, Schlüssel inkl. Tenor, Vorzeichen, Haltebögen), Teilen-Link.
-**Noch offen aus A (Reihenfolge):**
+**Rest aus A (2026-11-15 erledigt):**
 1. ✅ **Haltebögen über Taktgrenzen** (gebaut, `test_ties.js`; wie Guitar Pro / MusicXML): jeder Takt behält seine Noten, der Rest im nächsten
    Takt ist eine echte Note „angebunden“ (`note.tie`). Über den Taktstrich ziehen legt die Kette an (auch über mehrere Takte, Status
    zeigt die Gesamtlänge); ♯ / ♭, Verschieben, Löschen wirken auf die ganze Kette; Notenmenü „Haltebogen zur nächsten Note“
@@ -363,7 +363,7 @@ gewählten Takt; Noten-Panel ♯ / ♭ / umdeuten / Akzent), Klang (weicher Synt
 4. ✅ **Oktaven und Tastatur:** Noten-Panel „Oktave höher / tiefer“; ↑ ↓ nächste Linie (Ton der Tonleiter), Alt+↑ ↓ Halbton, Strg+↑ ↓
    Oktave (angebundene Noten wandern mit); Auswahl-Werkzeug verschiebt Melodie-Noten auch in der Höhe (nach Linien). **Zurückgestellt:**
    Notennamen per Buchstabe (A–G) – die Buchstaben sind belegt (A Akzent, G Ghost, E Radierer, C / F Crash / Standtom …).
-5. Handbuch-Kapitel „Melodie schreiben“, Beispielstück mit Melodie.
+5. ✅ Handbuch-Kapitel 8 „Melodie schreiben“ (Töne setzen, Ändern, Tonleitern) und Beispiel „Melodie“ (Datei → Beispiele, `index.html?beispiel=melodie`).
 
 **Entschieden:** Gesang ist einstimmig; zwei Sänger = zwei Spuren. Akkorde (gleicher Anfang, gleiche Länge) gehen in einer Stimme;
 zeitlich versetzt Überlappendes: klassisch mit einer zweiten Stimme, von Tactus automatisch angelegt (siehe „Später“).

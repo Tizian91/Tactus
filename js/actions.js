@@ -433,6 +433,15 @@
   A.alterSelection = function (dir) {
     if (changeChains((h, sc) => TC.pitch.alter(TC.pitch.noteSpell(h.note, sc), Number(dir)))) TC.commit();
   };
+  /** The first selected melody note: a tie to the next note on / off (only the same tone right after it). */
+  A.toggleTie = function () {
+    const id = selectedIds()[0], h = id && TC.score.findNote(S.doc, id);
+    const next = h && TC.score.nextNote(S.doc, h.track, h.bar, h.voice, h.ev, h.note);
+    if (!next) return TC.ui.hint(tr('Tie: only to the same tone right after it - or drag the note longer over the bar line.'));
+    if (next.note.tie) delete next.note.tie;
+    else next.note.tie = true;
+    TC.commit();
+  };
   /** Selected melody notes an octave up (1) or down (-1), tied notes along. */
   A.octaveSelection = function (dir) {
     dir = Number(dir);

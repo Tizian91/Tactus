@@ -136,15 +136,25 @@
   /** Melody track: how to write, and the selected notes (♯ / ♭, written the other way, accent). */
   function melodyNoteSection(hit) {
     const P = TC.pitch;
+    // accent: of the selected notes, or for the next notes
+    const accentRow = (a) => `<div class="row"><label>${tr('Accent')}</label><div class="seg">
+        ${btn('setAccent', 0, '–', a === 0, tr('No accent'))}
+        ${btn('setAccent', 1, '<span class="mus-btn sm"></span>', a === 1, tr('Accent (A)'))}
+        ${btn('setAccent', 2, '<span class="mus-btn sm"></span>', a === 2, tr('Marcato'))}
+      </div></div>`;
     if (!hit) {
-      return `<section><h3>${tr('Melody')}</h3>
+      return `<section><h3>${tr('Next note')}</h3>${accentRow(S.input.accent || 0)}</section>
+        <section><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
         <p class="hint tight">${tr('Scale, clef and voice: panel "Bar · score" → Tracks.')}</p></section>`;
     }
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
-    const src = hit.note;
+    // a tie to the next note: only to the same tone right after it
+    const next = TC.score.nextNote(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note);
+    const tie = next ? btn('toggleTie', undefined, '⁀ ' + tr('Tie to the next note'), !!next.note.tie, tr('The next note (the same tone) is not struck again'))
+      : `<p class="hint tight">${tr('Tie: only to the same tone right after it - or drag the note longer over the bar line.')}</p>`;
     return `<section class="has-sel"><h3>${esc(tr('Selected notes ({n})', { n: S.selection.size }))}</h3>
       <p class="hint tight"><b>${esc(P.fullName(sp.dia, sp.a, de()))}</b></p>
       <div class="btn-row two">${btn('alterSelection', 1, '♯ ' + tr('Raise'), false, tr('A semitone up (hold the note, then up)'))}
@@ -153,11 +163,8 @@
         ${btn('octaveSelection', -1, '8↓ ' + tr('Octave down'), false, tr('An octave lower (Ctrl+↓)'))}</div>
       <p class="hint tight">${tr('↑ ↓: next line (tone of the scale) · Alt+↑ ↓: semitone · Ctrl+↑ ↓: octave')}</p>
       ${alt ? `<div class="btn-row">${btn('respell', undefined, esc(tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) })), false, tr('Same tone, written the other way'))}</div>` : ''}
-      <div class="row"><label>${tr('Accent')}</label><div class="seg">
-        ${btn('setAccent', 0, '–', src.accent === 0, tr('No accent'))}
-        ${btn('setAccent', 1, '<span class="mus-btn sm"></span>', src.accent === 1, tr('Accent (A)'))}
-        ${btn('setAccent', 2, '<span class="mus-btn sm"></span>', src.accent === 2, tr('Marcato'))}
-      </div></div>
+      <div class="btn-row">${tie}</div>
+      ${accentRow(hit.note.accent || 0)}
       <div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
         ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
     </section>`;
@@ -538,7 +545,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.note.pitch !== undefined && (TC.score.nextNote(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note) || { note: {} }).note.tie, S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

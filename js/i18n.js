@@ -196,6 +196,9 @@
     'An octave lower (Ctrl+↓)': 'Eine Oktave tiefer (Strg+↓)',
     '↑ ↓: next line (tone of the scale) · Alt+↑ ↓: semitone · Ctrl+↑ ↓: octave': '↑ ↓: nächste Linie (Ton der Tonleiter) · Alt+↑ ↓: Halbton · Strg+↑ ↓: Oktave',
     'Tie to the next note': 'Haltebogen zur nächsten Note',
+    'The next note (the same tone) is not struck again': 'Die nächste Note (derselbe Ton) wird nicht neu angeschlagen',
+    'Tie: only to the same tone right after it - or drag the note longer over the bar line.':
+      'Haltebogen: nur zu demselben Ton direkt danach – oder die Note über den Taktstrich länger ziehen.',
     'A track only for the selected instrument, on one line': 'Eine Spur nur für das gewählte Instrument, auf einer Notenlinie',
     'Hidden – click: show': 'Ausgeblendet – Klick: einblenden',
     'Shown – click: hide': 'Eingeblendet – Klick: ausblenden',

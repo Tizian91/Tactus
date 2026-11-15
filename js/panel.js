@@ -309,6 +309,37 @@
       ${pad}</section>`;
   }
 
+  /**
+   * Find repeats (e.g. after a MIDI import from a DAW, where everything is written out): bars that play the bar
+   * before them (-> %), sections that come again right after themselves (-> |: :| n×) - marked in colour in the
+   * score, listed here with a button each; or all at once.
+   */
+  function findSection() {
+    const on = !!S.analyze, A = TC.actions;
+    let body = '';
+    if (on) {
+      const f = A.found(), MAX = 30;
+      const secs = f.sections.slice(0, MAX).map((s, k) => `<div class="found-item"><span class="found-dot sec${k % 2}"></span>` +
+        btn('showFound', 's:' + k, esc(tr('Bars {a}–{b}', { a: s.from + 1, b: s.from + s.len })) + ` <span class="muted">${s.times}×</span>`, false, tr('Show these bars'), 'link') +
+        btn('foldSection', k, `|: :| ${s.times}×`, false, tr('Write it once with a repeat sign (the copies go)')) + '</div>').join('');
+      const many = S.doc.tracks.length > 1;
+      const sims = f.simile.slice(0, MAX).map((r, k) => `<div class="found-item"><span class="found-dot sim"></span>` +
+        btn('showFound', 'm:' + k, esc((many ? r.track.name + ': ' : '') + (r.bars.length > 1 ? tr('bars {a}–{b} like {c}', { a: r.bars[0] + 1, b: r.bars[r.bars.length - 1] + 1, c: r.from + 1 }) : tr('bar {a} like {c}', { a: r.bars[0] + 1, c: r.from + 1 }))), false, tr('Show these bars'), 'link') +
+        btn('applySimile', k, '%', false, tr('As %-bars (repeat the bar before)')) + '</div>').join('');
+      const none = !f.sections.length && !f.simile.length;
+      body = `${check('toggleAnalyzeLoose', !!S.settings.analyzeLoose, tr('Ignore the strength (ghost, accent, velocity)'))}
+        ${none ? `<p class="hint">${tr('No bars found that play the same as right before them.')}</p>` : ''}
+        ${secs ? `<p class="hint tight"><b>${tr('Sections that come again (all tracks)')}</b></p><div class="found-list">${secs}</div>` : ''}
+        ${sims ? `<p class="hint tight"><b>${tr('The same bar again')}</b></p><div class="found-list">${sims}</div>` : ''}
+        ${!none ? `<div class="btn-row">${f.simile.length > 1 ? btn('applyAllSimile', undefined, tr('All as %'), false, tr('Every run found as %-bars')) : ''}
+          ${btn('autoRepeats', undefined, tr('Set all'), false, tr('Sections with |: :|, then %-bars'))}</div>` : ''}
+        <p class="hint tight">${tr('Back to the notes: right-click a bar (finger: hold it) → "Show the notes instead of %" / "Write this repeat out".')}</p>`;
+    }
+    return `<section><h3>${tr('Find repeats')}</h3>
+      ${btn('toggleAnalyze', undefined, '🔍 ' + tr('Mark bars that play the same'), on, tr('In colour: sections that come again, bars like the one before (e.g. after a MIDI import)'), 'wide')}
+      ${body}</section>`;
+  }
+
   /** Repeats and jumps of the selected bar: |: :| endings, 𝄋 / ⊕, Fine / To Coda, D.C. / D.S. */
   function repeatSection() {
     const i = S.selBar;
@@ -629,13 +660,13 @@
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
       cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program])), cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
-      S.settings, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing; the rest is in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + chordSection() + repeatSection() + playSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + chordSection() + repeatSection() + findSection() + playSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;

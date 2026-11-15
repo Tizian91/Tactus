@@ -230,7 +230,18 @@ In Cubase: <span class="ui">MIDI → Drum-Map-Einstellungen → Laden</span>, da
   <li><b>Raster:</b> wie fein Tactus die Schläge einrastet; „1/16 + Triolen“ entscheidet pro Schlag, ob gerade oder triolisch passt.</li>
   <li><b>Ziel:</b> neues Stück, oder <b>in das offene Stück</b> ab einem Takt – z. B. nur den in Cubase eingespielten Refrain holen.</li>
   <li>Anschlag wird zu den fünf Stufen, leise Schläge kurz vor einem Schlag zu Flam / Drag.</li>
+  <li><b>Wiederholungen automatisch setzen</b> (neues Stück, Häkchen an): eine MIDI-Datei kennt keine Wiederholungen, alles ist
+    ausgeschrieben. Tactus fasst Abschnitte, die direkt danach gleich wiederkommen, zu <b>|: :| 2×</b> (3×, …) zusammen und macht aus
+    Takten, die den Takt davor spielen, <b>%-Takte</b>. Abgespielt klingt alles wie vorher.</li>
 </ul>
+<p id="wiederholungen-finden"><b>Zurück zu den Noten:</b> Rechtsklick auf einen Takt (Finger: halten) → <span class="ui">Noten zeigen statt %</span>
+bzw. <span class="ui">Diese Wiederholung ausschreiben</span>. Zum Einfügen bleibt <span class="ui">Takt davor wiederholen (%)</span>.</p>
+<p><b>Selbst entscheiden:</b> Panel <span class="ui">Takt · Stück → Wiederholungen finden → Gleiche Takte markieren</span> färbt die Funde ein –
+grün / lila die Abschnitte (der erste Durchgang gestrichelt, „2/3“ = zweiter von drei Durchgängen), orange Takte wie der davor
+(„= 5“: wie Takt 5). Die Liste darunter hat je Fund einen Knopf (<span class="ui">|: :| 3×</span> bzw. <span class="ui">%</span>), dazu
+<span class="ui">Alle als %</span> und <span class="ui">Alle setzen</span>. <span class="ui">Anschlag nicht beachten</span> findet auch Takte, die
+sich nur in Ghost / Akzent unterscheiden (eingespielte Dateien). Das geht mit jedem Stück, nicht nur nach einem Import. Abschnitte mit 1./2. Haus
+erkennt Tactus noch nicht.</p>
 
 <!-- ================================================================================= -->
 <h2 id="vst-wechsel">5. Drum-VST wechseln mit Tactus</h2>

@@ -348,6 +348,7 @@
       sel: new Set(MI.drumTracks(midi)), // the MIDI tracks to take, each becomes a Tactus track
       src: {},                          // … where each one comes from (kit profile id, '' = General MIDI)
       tempo: fileBpm,
+      auto: S.settings.importAuto !== false, // new score: set repeats at once (|: :|, %-bars)
       // into the open score (from a bar on) or as a new score
       target: S.settings.importTarget === 'into' ? 'into' : 'new',
       at: (S.selBar !== null ? S.selBar : 0) + 1,
@@ -416,7 +417,9 @@
             ${tr('to')} <input type="number" min="1" max="${nb}" data-k="to" value="${st.to || nb}"> <span class="muted">${tr('of {n}', { n: nb })}</span></div>
           <label class="check"><input type="checkbox" data-k="takeTs"${st.takeTs ? ' checked' : ''}> ${tr('Take the time signatures of the file')}</label>
           <p class="hint">${tr('The notes of those bars are replaced, bars are added at the end if needed. One undo step.')}</p>`
-          : `<p class="hint">${tr('The import replaces the open score.')}</p>`}
+          : `<p class="hint">${tr('The import replaces the open score.')}</p>
+          <label class="check"><input type="checkbox" data-k="auto"${st.auto ? ' checked' : ''}> ${tr('Set repeats automatically (|: :| and %-bars where bars play the same)')}</label>
+          <p class="hint tight">${tr('Back to the notes: right-click a bar (finger: hold it).')}</p>`}
           <p class="hint">${tr('Velocity: soft = ghost note, loud = accent.')}</p>
         </div>
         <footer><span class="grow"></span><button type="button" data-k="close">${tr('Cancel')}</button>
@@ -432,6 +435,7 @@
       if (k === 'target') { st.target = e.target.value; draw(); }
       if (k === 'at' || k === 'from' || k === 'to') st[k] = Math.max(1, Math.round(Number(e.target.value) || 1));
       if (k === 'takeTs') st.takeTs = e.target.checked;
+      if (k === 'auto') st.auto = e.target.checked;
     });
     root.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-k]');
@@ -470,13 +474,20 @@
         res.doc.meta.title = title;
         S.settings.importKit = st.source;
         S.settings.importGrid = st.grid;
+        S.settings.importAuto = st.auto;
         TC.saveSettings();
         MI.close();
+        // repeats: set at once (sections |: :|, then %-bars) - or only shown in colour (panel: Find repeats)
+        const auto = st.auto ? TC.score.autoRepeats(res.doc) : null;
         TC.storage.setDoc(res.doc, title + '.tactus.json');
         S.dirty = true;
+        const f = auto ? null : TC.score.findRepeats(S.doc);
+        S.analyze = !!(f && (f.simile.length || f.sections.length));
         TC.actions.home();
         TC.refresh();
-        TC.ui.hint(tr('MIDI imported: {n} notes', { n: res.notes }));
+        TC.ui.hint(tr('MIDI imported: {n} notes', { n: res.notes }) + (auto && (auto.sections || auto.similes)
+          ? ' · ' + tr('Repeats set: {a} sections, {b} %-bars – right-click a bar: back to the notes', { a: auto.sections, b: auto.similes })
+          : S.analyze ? ' · ' + tr('Bars that play the same are marked in colour (panel: Find repeats)') : ''));
       }
     });
     draw();

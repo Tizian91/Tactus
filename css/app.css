@@ -469,3 +469,21 @@ body.perform #viewport { position: fixed; inset: 0; z-index: 40; } /* the whole 
 #perform-bar span { min-width: 56px; text-align: center; }
 .chord-slots button.off-beat:not(.active) { background: var(--panel-bg, transparent); opacity: 0.85; }
 .chord-slots button { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+/* repeats found (panel "Find repeats"): sections (two colours taking turns), bars like the one before */
+.score .ana-sec { stroke-width: 1.5; }
+.score .ana-sec.c0 { fill: #2fa36b; fill-opacity: 0.13; stroke: #2fa36b; stroke-opacity: 0.5; }
+.score .ana-sec.c1 { fill: #8a4fd8; fill-opacity: 0.13; stroke: #8a4fd8; stroke-opacity: 0.5; }
+.score .ana-sec.first { fill-opacity: 0.03; stroke-dasharray: 5 3; }
+.score .ana-sim { fill: #e8892a; fill-opacity: 0.2; }
+.score .ana-label { font-size: 11px; font-weight: 700; }
+.score .ana-label.c0 { fill: #1f8a56; }
+.score .ana-label.c1 { fill: #7240bd; }
+.score .ana-label.sim { fill: #c8701c; text-anchor: end; }
+.found-list { margin: 2px 0 6px; font-size: 13px; }
+.found-item { display: flex; align-items: center; gap: 4px; }
+.found-item button.link { flex: 1; text-align: left; background: none; border: none; padding: 2px 2px; color: var(--accent, #2b6cde); cursor: pointer; }
+.found-item button:not(.link) { padding: 2px 8px; }
+.found-dot { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.found-dot.sec0 { background: #2fa36b; }
+.found-dot.sec1 { background: #8a4fd8; }
+.found-dot.sim { background: #e8892a; }

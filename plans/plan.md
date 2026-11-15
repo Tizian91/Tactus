@@ -541,6 +541,23 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 - **Klavier: Pedal-Zeichen** (*Ped.* … ✱) und *l.v.* („klingen lassen“) – die Noten bleiben kurz geschrieben, das Zeichen hält sie.
 - **Sehr niedrige Priorität:** Schritt-Eingabe per MIDI-Keyboard (dafür gibt es die DAW).
 
+## Wiederholungen finden (nach MIDI-Import) ✅ (zum Ausprobieren, 2026-11-15)
+
+Eine MIDI-Datei aus der DAW ist ganz ausgeschrieben. Tactus findet, was sich wiederholt (`SC.findRepeats` in `js/model.js`,
+Tests `test_findrepeats.js`):
+- **Takte wie der davor** (pro Spur, nicht leer, gleiche Taktart) → %-Takt.
+- **Abschnitte**, die direkt danach gleich wiederkommen (alle Spuren gleich, mindestens 2 Takte, nicht nur ein Takt immer wieder –
+  das ist %; nicht über Text / Tempo / Taktart in der Kopie oder vorhandene Wiederholungen / Sprünge; der kürzeste passende
+  Abschnitt gewinnt) → |: :| n×.
+- **MIDI-Import, neues Stück:** Häkchen „Wiederholungen automatisch setzen“ (Standard an; zuerst Abschnitte, dann %; klingt wie vorher).
+  Ohne Häkchen werden die Funde nur farbig markiert.
+- **Panel → Wiederholungen finden → Gleiche Takte markieren:** Abschnitte grün / lila (erster Durchgang gestrichelt, „2/3“),
+  %-Kandidaten orange („= 5“); Liste mit Knopf je Fund, „Alle als %“, „Alle setzen“, „Anschlag nicht beachten“.
+- **Zurück:** Taktmenü „Noten zeigen statt %“ (statt „Takt davor wiederholen (%)“ auf einem %-Takt) und „Diese Wiederholung
+  ausschreiben (Takt a–b, n×)“ in einem |: :|-Abschnitt ohne Häuser (`SC.unfoldSection`).
+- **Später:** Abschnitte mit 1./2. Haus erkennen (gleich bis auf den letzten Takt / die letzten Takte), Ähnlichkeit statt
+  Gleichheit (ein Fill am Ende), „in das offene Stück“-Import auch automatisch.
+
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 
 Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Takt um – Android-Tablet, Chrome, MIDI-USB-C-Interface.

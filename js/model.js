@@ -549,6 +549,131 @@
     return (doc.harmony && doc.harmony.guide) || 'mark';
   };
 
+  // ---- Finding repeats (e.g. after a MIDI import from a DAW: everything written out) ---------------------
+
+  /**
+   * What a bar of a track plays, as a key to compare (a %-bar: the bar it repeats); '' = empty.
+   * loose: the strength (ghost, accent, velocity) does not count.
+   */
+  SC.barKey = function (doc, track, bi, loose) {
+    const bar = track.bars[SC.sourceBar(doc, bi, track)];
+    const evs = [];
+    bar.voices.forEach((v) => v.forEach((ev) => {
+      const ns = ev.notes.map((n) => {
+        let k = n.pitch !== undefined ? 'p' + n.pitch + (n.tie ? 't' : '') + ':' + ev.dur : 'a' + n.art;
+        if (!loose) k += [n.accent || 0, n.ghost ? 1 : 0, n.vel || '', n.orn || '', n.trem || 0, n.stick || '', n.head || ''].join(',');
+        return k;
+      }).sort();
+      if (ns.length) evs.push(ev.tick + '=' + ns.join('+'));
+    }));
+    return evs.sort().join(' ');
+  };
+  /** Bar headers alike for a repeat (time signature, tempo, signs, chords … - line breaks do not count). */
+  const sameHeader = (a, b) => {
+    const strip = (h) => JSON.stringify(Object.assign({}, h, { lineBreak: false }));
+    return strip(a) === strip(b);
+  };
+  /** Does a bar carry repeat signs, endings or jumps already (no new repeat over it)? */
+  const formed = (h) => h.repeatStart || h.repeatEnd > 1 || h.volta || h.mark || h.end || h.jump;
+
+  /**
+   * Bars that repeat what comes right before them:
+   *   simile:   [{ track, from, bars: [i …] }]  in one track bars i … play the same as bar `from` right before them
+   *                                             (not yet %, not empty, same time signature) -> %-bars
+   *   sections: [{ from, len, times }]          in all tracks bars from … from+len-1 come `times` times in a row
+   *                                             (len >= 2; not made of one bar repeated: that is %) -> |: :| times×
+   * opts.loose: the strength of the notes does not count; opts.tracks: only these tracks (default: all).
+   */
+  SC.findRepeats = function (doc, opts = {}) {
+    const tracks = opts.tracks || doc.tracks, N = doc.bars.length;
+    const keys = tracks.map((t) => doc.bars.map((h, i) => SC.barKey(doc, t, i, opts.loose)));
+    const simile = [];
+    tracks.forEach((t, k) => {
+      let run = null;
+      for (let i = 1; i < N; i++) {
+        const same = !t.bars[i].simile && keys[k][i] && keys[k][i] === keys[k][i - 1] && doc.bars[i].ts.join('/') === doc.bars[i - 1].ts.join('/');
+        if (same) {
+          if (!run) simile.push((run = { track: t, from: SC.sourceBar(doc, i - 1, t), bars: [] }));
+          run.bars.push(i);
+        } else if (!(t.bars[i].simile && run)) run = null; // (a % already there: the run goes on after it)
+      }
+    });
+    // sections: all tracks together
+    const all = doc.bars.map((h, i) => keys.map((ks) => ks[i]).join('|'));
+    const empty = (i) => keys.every((ks) => !ks[i]);
+    const blockEq = (a, b, len) => {
+      for (let j = 0; j < len; j++) if (all[a + j] !== all[b + j] || !sameHeader(Object.assign({}, doc.bars[a + j], { marker: '', tempo: null }), Object.assign({}, doc.bars[b + j], { marker: '', tempo: null })) || doc.bars[b + j].marker || doc.bars[b + j].tempo || formed(doc.bars[a + j]) || formed(doc.bars[b + j])) return false;
+      return true;
+    };
+    const sections = [];
+    for (let a = 0; a < N;) {
+      let found = null;
+      for (let len = 2; !found && a + 2 * len <= N; len++) {
+        const block = all.slice(a, a + len);
+        if (block.every((x) => x === block[0])) continue; // one bar again and again: %-bars
+        let filled = false;
+        for (let j = 0; j < len; j++) if (!empty(a + j)) filled = true;
+        if (!filled || !blockEq(a, a + len, len)) continue;
+        let times = 2;
+        while (a + (times + 1) * len <= N && blockEq(a, a + times * len, len)) times++;
+        found = { from: a, len, times };
+      }
+      if (found) {
+        sections.push(found);
+        a += found.len * found.times;
+      } else a++;
+    }
+    return { simile, sections };
+  };
+  /** A section found: its copies go, the first one gets |: … :| times× (one undo step). */
+  SC.foldSection = function (doc, s) {
+    const end = s.from + s.len - 1;
+    if (!SC.deleteBars(doc, end + 1, s.len * (s.times - 1))) return false;
+    doc.bars[s.from].repeatStart = true;
+    doc.bars[end].repeatEnd = s.times;
+    return true;
+  };
+
+  /**
+   * Set every repeat found at once: first the sections (|: :| n×, from the back so the bar numbers ahead stay),
+   * then %-bars in every track. Returns { sections, similes } (how many).
+   */
+  SC.autoRepeats = function (doc, opts = {}) {
+    const secs = SC.findRepeats(doc, opts).sections.slice().reverse();
+    secs.forEach((s) => SC.foldSection(doc, s));
+    let n = 0;
+    SC.findRepeats(doc, opts).simile.forEach((r) => r.bars.forEach((i) => { if (SC.setSimile(doc, r.track, i, true)) n++; }));
+    return { sections: secs.length, similes: n };
+  };
+  /** The repeat (|: … :| n×) bar bi lies in, without endings: { from, to, times } or null. */
+  SC.repeatAround = function (doc, bi) {
+    let a = bi;
+    while (a > 0 && !doc.bars[a].repeatStart && !(doc.bars[a - 1].repeatEnd > 1)) a--;
+    let z = bi;
+    while (z < doc.bars.length - 1 && !(doc.bars[z].repeatEnd > 1)) z++;
+    if (!(doc.bars[z].repeatEnd > 1)) return null;
+    for (let i = a; i <= z; i++) if (doc.bars[i].volta || (i < z && doc.bars[i].repeatEnd > 1) || (i > a && doc.bars[i].repeatStart)) return null;
+    return { from: a, to: z, times: doc.bars[z].repeatEnd };
+  };
+  /** Write one repeat out again (the notes of every pass as bars of their own; the signs go). */
+  SC.unfoldSection = function (doc, bi) {
+    const r = SC.repeatAround(doc, bi);
+    if (!r) return false;
+    const clip = SC.copyBars(doc, r.from, r.to), len = r.to - r.from + 1;
+    doc.bars[r.from].repeatStart = false;
+    doc.bars[r.to].repeatEnd = 0;
+    for (let k = 1; k < r.times; k++) {
+      const at = r.from + k * len;
+      for (let j = 0; j < len; j++) {
+        SC.insertBars(doc, at + j, 1, doc.bars[r.from + j].ts);
+        const h = doc.bars[r.from + j];
+        Object.assign(doc.bars[at + j], { beam: h.beam ? h.beam.slice() : null, tempo: null });
+      }
+      SC.pasteBars(doc, at, clip); // (%-bars come as the notes they play)
+    }
+    return r;
+  };
+
   // ---- Melody: ties (a note tied on from the one before it - also across the bar line) -------------
   // A tied note is a note of its own (note.tie, at the place where the one before it ends, same pitch); each
   // bar keeps its notes, as in Guitar Pro and MusicXML. A tie only counts where it fits (tiedFrom): a note

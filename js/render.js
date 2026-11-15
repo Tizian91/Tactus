@@ -568,6 +568,33 @@
         if (b) O(b).push(rect(b.x, top, b.w, L.stackH - 4 * SP + bottom - top, 'bar-sel'));
       }
     }
+    // repeats found (panel "Find repeats"): sections that come again - the first time framed, the copies filled,
+    // two colours taking turns; bars like the one before: filled in their staff, with "=" and the bar they repeat
+    if (!plain && S.analyze && TC.actions.found) {
+      const fd = TC.actions.found();
+      fd.sections.forEach((sc, k) => {
+        for (let i = sc.from; i < sc.from + sc.len * sc.times; i++) {
+          const b = L.bars[i];
+          if (!b || b.hidden !== undefined) continue;
+          const first = i < sc.from + sc.len;
+          O(b).push(rect(b.x + 1, top + 0.6 * SP, b.w - 2, L.stackH - 4 * SP + bottom - top - 0.6 * SP, `ana-sec c${k % 2}${first ? ' first' : ''}`));
+          if ((i - sc.from) % sc.len === 0) {
+            const pass = Math.floor((i - sc.from) / sc.len) + 1;
+            O(b).push(`<text class="ana-label c${k % 2}" x="${f(b.x + 0.4 * SP)}" y="${f(top + 0.4 * SP)}">${pass === 1 ? esc(TC.tr('{n} bars', { n: sc.len })) + ' ' : ''}${pass}/${sc.times}</text>`);
+          }
+        }
+      });
+      fd.simile.forEach((r) => {
+        const z = L.staves.find((q) => q.track === r.track);
+        if (!z) return;
+        r.bars.forEach((i) => {
+          const b = L.bars[i];
+          if (!b || b.hidden !== undefined) return;
+          OS(b, z).push(rect(b.x + 1, -1.2 * SP, b.w - 2, 6.4 * SP, 'ana-sim') +
+            `<text class="ana-label sim" x="${f(b.x + b.w - 0.4 * SP)}" y="${f(-1.5 * SP)}">= ${r.from + 1}</text>`);
+        });
+      });
+    }
     // the line of the selected instrument, in the staff being written
     const selArt = TC.drums.byId(S.input.art), cz = L.staves.find((z) => z.track === cur);
     if (!plain && selArt && cz && cur.kind === 'drums' && TC.drums.clickable(cur).has(selArt.id)) {

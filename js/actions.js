@@ -692,6 +692,101 @@
     TC.commit();
   };
 
+  // ---- Finding repeats (model.js SC.findRepeats): colours in the score, a list in the panel -------------
+
+  /** The repeats found in the score now (cached per change; shown tracks, strength counting or not). */
+  let foundKey = '', found = null;
+  A.found = function () {
+    const key = S.rev + ':' + !!S.settings.analyzeLoose + ':' + S.doc.tracks.length;
+    if (key !== foundKey) {
+      foundKey = key;
+      found = TC.score.findRepeats(S.doc, { loose: !!S.settings.analyzeLoose });
+    }
+    return found;
+  };
+  /** Show / hide the repeats found (colours in the score, list in the panel). */
+  A.toggleAnalyze = function () {
+    S.analyze = !S.analyze;
+    TC.refresh();
+    if (S.analyze) {
+      const f = A.found();
+      TC.ui.hint(f.simile.length || f.sections.length ? tr('Found: {a} sections, {b} runs of the same bar', { a: f.sections.length, b: f.simile.length }) : tr('No repeats found'));
+    }
+  };
+  A.toggleAnalyzeLoose = function () {
+    S.settings.analyzeLoose = !S.settings.analyzeLoose;
+    TC.saveSettings();
+    TC.refresh();
+  };
+  const scrollToBar = (i) => {
+    const L = TC.render.layout, b = L && L.bars[i];
+    if (b) TC.player.keepInView({ x: L.systems[b.sys].tx + b.x + b.w / 2, y: L.systems[b.sys].ty + 2 * TC.render.SP });
+  };
+  /** A run found: its bars become %-bars (k: index in A.found().simile). */
+  A.applySimile = function (k) {
+    const r = A.found().simile[Number(k)];
+    if (!r) return;
+    r.bars.forEach((i) => TC.score.setSimile(S.doc, r.track, i, true));
+    TC.pruneSelection();
+    TC.commit();
+    TC.ui.hint(tr('{name}: bars {a}–{b} as %', { name: r.track.name, a: r.bars[0] + 1, b: r.bars[r.bars.length - 1] + 1 }));
+  };
+  A.applyAllSimile = function () {
+    const f = A.found();
+    let n = 0;
+    f.simile.forEach((r) => r.bars.forEach((i) => { if (TC.score.setSimile(S.doc, r.track, i, true)) n++; }));
+    if (!n) return;
+    TC.pruneSelection();
+    TC.commit();
+    TC.ui.hint(tr('{n} bars as %', { n }));
+  };
+  /** A section found: written once with |: :| n× (k: index in A.found().sections). */
+  A.foldSection = function (k) {
+    const s = A.found().sections[Number(k)];
+    if (!s || !TC.score.foldSection(S.doc, s)) return;
+    TC.selectBar(s.from);
+    TC.selectBar(s.from + s.len - 1, true);
+    TC.pruneSelection();
+    TC.commit();
+    TC.ui.hint(tr('Bars {a}–{b} with a repeat ({n}×)', { a: s.from + 1, b: s.from + s.len, n: s.times }));
+  };
+  /** Everything found at once: sections |: :|, then %-bars. */
+  A.autoRepeats = function () {
+    const r = TC.score.autoRepeats(S.doc, { loose: !!S.settings.analyzeLoose });
+    if (!r.sections && !r.similes) return TC.ui.hint(tr('No repeats found'));
+    TC.selectBar(null);
+    TC.pruneSelection();
+    TC.commit();
+    TC.ui.hint(tr('Repeats set: {a} sections, {b} %-bars – right-click a bar: back to the notes', { a: r.sections, b: r.similes }));
+  };
+  /** Select (and show) the bars of a finding. */
+  A.showFound = function (v) {
+    const [kind, k] = String(v).split(':'), f = A.found();
+    const x = kind === 's' ? f.sections[Number(k)] : f.simile[Number(k)];
+    if (!x) return;
+    const a = kind === 's' ? x.from : x.from, b = kind === 's' ? x.from + x.len * x.times - 1 : x.bars[x.bars.length - 1];
+    if (kind !== 's') S.trackId = x.track.id;
+    TC.selectBar(a);
+    TC.selectBar(b, true);
+    TC.refresh();
+    scrollToBar(a);
+  };
+  /** Bar menu: a %-bar shows its notes again (all selected bars that are % in this track). */
+  A.simileToNotes = function (i = curBar()) {
+    const t = TC.curTrack(), [a, b] = rangeAt(i);
+    let n = 0;
+    for (let k = Math.max(1, a); k <= b; k++) if (TC.score.setSimile(S.doc, t, k, false)) n++;
+    if (n) TC.commit();
+  };
+  /** Bar menu: the repeat (|: :|) around bar i written out again (every pass its own bars). */
+  A.unfoldSection = function (i = curBar()) {
+    const r = TC.score.unfoldSection(S.doc, i);
+    if (!r) return;
+    TC.pruneSelection();
+    TC.commit();
+    TC.ui.hint(tr('Repeat written out: bars {a}–{b}', { a: r.from + 1, b: r.from + (r.to - r.from + 1) * r.times }));
+  };
+
   // ---- View -------------------------------------------------------------------------------
 
   TC.zoomAt = function (zoom, sx, sy) {
@@ -1711,7 +1806,9 @@
       { label: many ? tr('Copy bars {a}–{b}', ab) : 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
       { label: clipN > 1 ? tr('Paste {n} bars from here', { n: clipN }) : 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
       { label: many ? tr('Duplicate bars {a}–{b}', ab) : 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
-      { label: 'Repeat the bar before (%)', checked: !!TC.curTrack().bars[i].simile, action: () => A.toggleSimile(i), disabled: i === 0 },
+      TC.curTrack().bars[i].simile ? { label: 'Show the notes instead of %', action: () => A.simileToNotes(i) }
+        : { label: 'Repeat the bar before (%)', action: () => A.toggleSimile(i), disabled: i === 0 },
+      TC.score.repeatAround(S.doc, i) ? { label: tr('Write this repeat out (bars {a}–{b}, {n}×)', (() => { const r = TC.score.repeatAround(S.doc, i); return { a: r.from + 1, b: r.to + 1, n: r.times }; })()), action: () => A.unfoldSection(i) } : null,
       '-',
       { label: TC.tr('Tempo from here…') + (i > 0 && h.tempo ? ` (${h.tempo})` : ''), action: () => A.editBarTempo(i) },
       { label: 'Text above the bar…', action: () => A.editMarker(i) },

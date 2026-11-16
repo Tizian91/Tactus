@@ -576,15 +576,39 @@
     cbus = AU.clickBus(); // (the clicks: their own output, not under the volume slider)
     P.playing = true;
     schedule();
-    timer = setInterval(schedule, 25);
+    tick(true);
     follow();
     TC.refresh();
   };
 
+  /**
+   * The beat of the scheduler (every 25 ms the next strokes go to the audio clock / the MIDI output): from a worker -
+   * the browser slows the timers of a page it thinks hidden (a window covered by another, e.g. a full-screen editor)
+   * to about once a second, and the playback stumbled along in slow motion. A worker's timer keeps going. Without
+   * workers (or blocked): setInterval, as before.
+   */
+  let worker = null;
+  function tick(on) {
+    clearInterval(timer);
+    if (worker) worker.postMessage(0);
+    if (!on) return;
+    try {
+      if (!worker) {
+        const src = 'let t = null; onmessage = (e) => { clearInterval(t); if (e.data > 0) t = setInterval(() => postMessage(0), e.data); };';
+        worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+        worker.onmessage = () => { if (P.playing) schedule(); };
+      }
+      worker.postMessage(25);
+    } catch (e) {
+      worker = null;
+      timer = setInterval(schedule, 25);
+    }
+  }
+
   P.stop = function (quiet) {
     if (!P.playing) return;
     P.playing = false;
-    clearInterval(timer);
+    tick(false);
     if (TC.midiOut) TC.midiOut.stop();
     cancelAnimationFrame(raf);
     TC.render.drawCursor(null);

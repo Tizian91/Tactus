@@ -867,6 +867,38 @@ setTimeout(() => {
           ok('lyrics: shown again', S.doc.page.lyrics !== false && !!document.querySelector('.score .lyric'));
           TC.actions.undo();
           ok('lyrics: undone at once', TC.score.lyricVerses(S.doc.tracks.find((t) => t.id === mt.id)) === 0);
+          // only chord tones (chords locked): a note dragged up / down lands on a chord tone, as a tap writes it
+          const undoChord = TC.history.undoStack.length;
+          TC.actions.typeChord('C', 3, 0);
+          TC.actions.setGuide('lock', 3);
+          TC.actions.setTool('select');
+          const mat = (bar, tick, line) => { const [x, y] = at(bar, tick, line), z = TC.render.layout.staves.find((q) => q.track.id === mt.id); return [x, y + z.dy * S.doc.view.zoom]; };
+          const pitch0 = () => S.doc.tracks.find((t) => t.id === mt.id).bars[3].voices[0][0].notes[0].pitch;
+          const startPitch = pitch0(), got = [];
+          [1, 2, 3, -1, -2].forEach((k) => {
+            S.selection.clear();
+            mouse('pointerdown', mat(3, 0, 7));
+            mouse('pointermove', mat(3, 0, 7 - k / 2));
+            mouse('pointermove', mat(3, 0, 7 - k));
+            mouse('pointerup', mat(3, 0, 7 - k));
+            got.push(pitch0());
+            if (pitch0() !== startPitch) TC.actions.undo();
+          });
+          ok('chords locked: dragged up / down onto chord tones only ' + got.join(' '), got.every((p) => [0, 4, 7].includes(p % 12)) && new Set(got).size >= 3);
+          S.selection.clear();
+          mouse('pointerdown', mat(3, 960, 7));
+          mouse('pointermove', mat(3, 1440, 7));
+          mouse('pointerup', mat(3, 1440, 7));
+          ok('chords locked: moved sideways only, the tone stays', S.doc.tracks.find((t) => t.id === mt.id).bars[3].voices[0].some((ev) => ev.tick === 1440 && ev.notes[0].pitch === 65));
+          S.selection = new Set([S.doc.tracks.find((t) => t.id === mt.id).bars[3].voices[0][0].notes[0].id]);
+          const keys = [];
+          ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowDown'].forEach((key) => {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+            keys.push(pitch0());
+          });
+          ok('chords locked: ↑ ↓ go from chord tone to chord tone (from F: G C G E C) ' + keys.join(' '), keys.join() === '67,72,67,64,60');
+          TC.actions.setTool('write');
+          while (TC.history.undoStack.length > undoChord) TC.actions.undo();
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');
           pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';

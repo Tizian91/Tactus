@@ -168,9 +168,18 @@
   A.moveLine = function (dir) {
     if (!S.selection.size) return;
     const lines = TC.drums.lines(TC.drums.kit());
-    // melody: to the tone of the scale on the next line / space (up = higher), tied notes along
+    // melody: to the tone of the scale on the next line / space (up = higher), tied notes along -
+    // chords locked ("Only chord tones"): to the next chord tone that way
     changeChains((h, sc) => {
-      const t = TC.pitch.lineTone(TC.pitch.noteSpell(h.note, sc).dia - dir, sc);
+      const P = TC.pitch, dia = P.noteSpell(h.note, sc).dia;
+      const at = TC.score.guideAt(S.doc, h.bar) === 'lock' ? TC.score.chordAt(S.doc, h.bar, h.ev.tick) : null;
+      let t = P.lineTone(dia - dir, sc);
+      if (at) {
+        for (let k = 1; k <= 7; k++) {
+          const g = P.guideTone(dia - dir * k, sc, at.ch, 'lock');
+          if (g.chord) { t = g; break; }
+        }
+      }
       return { pitch: t.pitch, dia: t.dia };
     });
     forSelected((n) => {

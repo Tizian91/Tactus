@@ -186,7 +186,7 @@
     'Chords: no help': 'Akkorde: keine Hilfe',
     'Chord tones marked': 'Akkordtöne zeigen',
     'Only chord tones': 'Nur Akkordtöne',
-    'Tapping a line writes the nearest chord tone; hold + up / down still leaves it.': 'Tippen setzt den nächsten Akkordton; halten + hoch / runter weicht weiter ab.',
+    'Tapping or moving a note: the nearest chord tone; hold + up / down still leaves it.': 'Tippen und Verschieben: immer der nächste Akkordton; halten + hoch / runter weicht davon ab.',
     'The tones of the chord sounding are marked on the lines; every tone can be written.': 'Die Töne des klingenden Akkords sind auf den Linien markiert; gesetzt wird jeder Ton.',
     'Only the scale.': 'Nur die Tonleiter.',
     'Applies from bar {n} on.': 'Gilt ab Takt {n}.',

@@ -990,6 +990,10 @@
         // melody: the tied notes go along; up / down: by lines (tones of the scale of each note's bar)
         d.ids = [...new Set(d.ids.concat(SC.tiedOn(S.doc, d.ids)))];
         d.barOf = new Map(d.ids.map((id) => [id, (SC.findNote(S.doc, id) || { bar: 0 }).bar]));
+        // (chords locked: where each note lands; a tied note follows the first note of its chain)
+        d.absOf = new Map(d.ids.map((id) => { const h = SC.findNote(S.doc, id); return [id, h ? SC.absTick(S.doc, h.bar, h.ev.tick) : 0]; }));
+        const moving = new Set(d.ids);
+        d.rootOf = new Map(d.ids.map((id) => { const c = SC.tieChain(S.doc, id)[0]; return [id, c && moving.has(c.note.id) ? c.note.id : id]; }));
       }
       d.orig = JSON.stringify(S.doc.tracks);
       d.from = SC.absTick(S.doc, d.head.bar, d.head.tick);
@@ -1009,13 +1013,22 @@
       if (a && a.id !== d.oneArt) art = a.id;
     }
     if (delta === d.good.delta && art === d.good.art && dl === d.good.dl) return;
-    const lines = (k) => (n) => {
-      const sc = SC.scaleAt(d.hit.track, d.barOf.get(n.id) || 0), t = TC.pitch.lineTone(TC.pitch.noteSpell(n, sc).dia - k, sc);
+    // up / down by k lines: the tone of the scale there - chords locked ("Only chord tones") where the note lands:
+    // the nearest chord tone (equally near: the one on the side it comes from), as a tap writes it (pitchAt)
+    const lines = (k, dt) => (n) => {
+      const P = TC.pitch, sc = SC.scaleAt(d.hit.track, d.barOf.get(n.id) || 0), dia0 = P.noteSpell(n, sc).dia;
+      let t = P.lineTone(dia0 - k, sc);
+      const pos = SC.atAbs(S.doc, d.absOf.get(d.rootOf.get(n.id)) + dt);
+      const at = pos && SC.guideAt(S.doc, pos.bar) === 'lock' ? SC.chordAt(S.doc, pos.bar, pos.tick) : null;
+      if (at) {
+        const sct = SC.scaleAt(d.hit.track, pos.bar), tone = (x) => P.guideTone(-x, sct, at.ch, 'lock'); // (x = -dia: like lines, larger is lower)
+        t = tone(P.lockedLine(-(dia0 - k), (x) => tone(x).chord, -dia0));
+      }
       return t.pitch >= 0 && t.pitch <= 127 ? { pitch: t.pitch, dia: t.dia } : null;
     };
     const apply = (dt, a, k) => {
       S.doc.tracks = JSON.parse(d.orig);
-      return (!dt && !a && !k) || SC.moveNotes(S.doc, d.ids, dt, a, k ? lines(k) : null);
+      return (!dt && !a && !k) || SC.moveNotes(S.doc, d.ids, dt, a, k ? lines(k, dt) : null);
     };
     if (apply(delta, art, dl)) d.good = { delta, art, dl };
     else apply(d.good.delta, d.good.art, d.good.dl);

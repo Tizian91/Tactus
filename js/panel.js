@@ -319,7 +319,7 @@
       key = `<p class="hint tight">${esc(tr('Chords of {scale} (scale of "{track}" in bar {n})', { scale: Pi.scaleName(sc, de()), track: mt.name, n: i + 1 }))}</p>
         <div class="row"><label>${tr('Melody')}</label><select data-action="setGuide">${TC.GUIDES.map((v) =>
           `<option value="${v}"${v === g ? ' selected' : ''}>${esc(tr(A.GUIDE_NAMES[v]))}</option>`).join('')}</select></div>
-        <p class="hint tight">${tr(g === 'lock' ? 'Tapping a line writes the nearest chord tone; hold + up / down still leaves it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')}${i > 0 ? ' ' + esc(tr('Applies from bar {n} on.', { n: i + 1 })) : ''}</p>`;
+        <p class="hint tight">${tr(g === 'lock' ? 'Tapping or moving a note: the nearest chord tone; hold + up / down still leaves it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')}${i > 0 ? ' ' + esc(tr('Applies from bar {n} on.', { n: i + 1 })) : ''}</p>`;
     }
     else {
       const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`, pc = Pi.pc(sc.l, sc.a);

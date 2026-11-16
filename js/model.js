@@ -49,9 +49,10 @@
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false,         // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *                          scale: null,           // melody: another scale from this bar on
- *                          dyn: [ { t, v } | { t, w, len } ] } ] }   (only when set) dynamics of this track: from tick t
- *                                                 on the level v ('ppp' … 'fff', SC.DYN_LEVELS), or a hairpin w
- *                                                 ('cresc' | 'dim') len ticks long (over bar lines) - see SC.dynFactor
+ *                          dyn: [ { t, v } | { t, w, len, to } ] } ] }   (only when set) dynamics of this track: from
+ *                                                 tick t on the level v ('ppp' … 'fff', SC.DYN_LEVELS), or a hairpin w
+ *                                                 ('cresc' | 'dim') len ticks long (over bar lines) to the level `to`
+ *                                                 (written at its end, holds after it) - see SC.dynFactor
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
  *   Note:      drums:   { id, art, accent, ghost, head, vel,
  *                         orn: null | 'flam' | 'drag'   grace notes before the note
@@ -1752,7 +1753,10 @@
       if (t < 0 || t >= L) return;
       if (SC.DYN_LEVELS.includes(d.v) && !seen.has(t + 'v')) { seen.add(t + 'v'); out.push({ t, v: d.v }); }
       const len = Math.round(Number(d.len) || 0);
-      if ((d.w === 'cresc' || d.w === 'dim') && len > 0 && !seen.has(t + 'w')) { seen.add(t + 'w'); out.push({ t, w: d.w, len }); }
+      if ((d.w === 'cresc' || d.w === 'dim') && len > 0 && !seen.has(t + 'w')) {
+        seen.add(t + 'w');
+        out.push(Object.assign({ t, w: d.w, len }, SC.DYN_LEVELS.includes(d.to) ? { to: d.to } : {}));
+      }
     });
     return out.length ? out.sort((a, b) => a.t - b.t || (a.v ? -1 : 1)) : null;
   };
@@ -1768,7 +1772,7 @@
     const kind = what.w !== undefined ? 'w' : 'v';
     const before = JSON.stringify(bar.dyn || null);
     const list = (bar.dyn || []).filter((d) => !(d.t === t && d[kind]));
-    if (what[kind]) list.push(kind === 'v' ? { t, v: what.v } : { t, w: what.w, len: what.len });
+    if (what[kind]) list.push(kind === 'v' ? { t, v: what.v } : Object.assign({ t, w: what.w, len: what.len }, what.to ? { to: what.to } : {}));
     const clean = SC.cleanDyn(list, TC.barTicks(doc.bars[bi].ts));
     if (clean) bar.dyn = clean;
     else delete bar.dyn;
@@ -1784,7 +1788,7 @@
     track.bars.forEach((b, bi) => (b.dyn || []).forEach((d) => {
       const abs = at(bi, d.t);
       if (d.v) marks.push({ abs, lvl: SC.DYN_LEVELS.indexOf(d.v) });
-      else wedges.push({ abs, end: abs + d.len, w: d.w, bar: bi, t: d.t, len: d.len });
+      else wedges.push({ abs, end: abs + d.len, w: d.w, bar: bi, t: d.t, len: d.len, toV: d.to || null });
     }));
     marks.sort((a, b) => a.abs - b.abs);
     wedges.sort((a, b) => a.abs - b.abs);
@@ -1792,12 +1796,21 @@
     const all = marks.slice();
     wedges.forEach((w) => {
       w.from = levelAt(w.abs, all);
+      // the level it goes to: its own ("pp < ff"), else the next one written up to a bar after its end, else two steps on
       const next = marks.find((m) => m.abs > w.abs && m.abs <= w.end + 3840);
-      w.to = next ? next.lvl : TC.clamp(w.from + (w.w === 'cresc' ? 1 : -1) * SC.WEDGE_STEPS, 0, SC.DYN_LEVELS.length - 1);
-      w.target = !!next;
-      if (!next) { all.push({ abs: w.end, lvl: w.to, implied: true }); all.sort((a, b) => a.abs - b.abs); }
+      w.to = w.toV ? SC.DYN_LEVELS.indexOf(w.toV) : next ? next.lvl : TC.clamp(w.from + (w.w === 'cresc' ? 1 : -1) * SC.WEDGE_STEPS, 0, SC.DYN_LEVELS.length - 1);
+      w.target = !!next || !!w.toV;
+      w.sign = !!w.toV && !marks.some((m) => m.abs === w.end); // (its own level: drawn at its end)
+      if (w.toV || !next) { all.push({ abs: w.end, lvl: w.to, implied: true }); all.sort((a, b) => a.abs - b.abs); }
     });
     return { marks: all, wedges };
+  };
+  /** The level (index in SC.DYN_LEVELS) a track plays at a place - the last one written before it (mf without one). */
+  SC.levelAt = function (doc, track, bi, tick) {
+    const x = SC.absTick(doc, bi, tick);
+    let l = SC.DYN_MF;
+    for (const m of SC.dynEvents(doc, track).marks) if (m.abs <= x) l = m.lvl;
+    return l;
   };
   /**
    * How strongly a track plays at a place: (bar, tick) -> factor (1 = mf) - the level written before it, or

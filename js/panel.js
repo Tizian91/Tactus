@@ -380,15 +380,25 @@
     const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((x) =>
       btn('setChordSlot', x, `<small>${esc(short(x))}</small><i>${esc(mark(x))}</i>`, x === slot, TC.rhythm.countLabel(x, ts), TC.rhythm.countLabel(x, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>` : '';
     const levels = SC.DYN_LEVELS.map((v) => btn('setDyn', v, `<span class="dyn-txt">${v}</span>`, !!here && here.v === v, tr('{v} from here on', { v }))).join('');
-    const R = TC.barRange(), to = R ? R[1] : i;
+    // the hairpin ("pp < ff to bar 4"): from (the level sounding here), to, up to the end of which bar - set in one go
+    const d = TC.actions.wedgeDraft(), L = SC.DYN_LEVELS, up = L.indexOf(d.to) > L.indexOf(d.from);
+    const lvOpts = (cur) => L.map((v) => `<option value="${v}"${v === cur ? ' selected' : ''}>${v}</option>`).join('');
+    const ends = Array.from({ length: Math.min(S.doc.bars.length - i, 16) }, (_, k) => `<option value="${i + k}"${i + k === d.end ? ' selected' : ''}>${i + k + 1}</option>`).join('');
+    const sign = (w) => (w === 'cresc' ? '&lt;' : '&gt;');
+    const wedgeEnd = wedge && SC.atAbs(S.doc, SC.absTick(S.doc, i, wedge.t) + wedge.len - 1);
     return `<section><h3>${tr('Dynamics')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
       ${where}
       <div class="dyn-pal">${levels}</div>
-      <div class="btn-row">${btn('setWedge', 'cresc', '&lt; cresc.', !!wedge && wedge.w === 'cresc', tr('Louder and louder - to the end of bar {n}', { n: to + 1 }))}
-        ${btn('setWedge', 'dim', '&gt; dim.', !!wedge && wedge.w === 'dim', tr('Softer and softer - to the end of bar {n}', { n: to + 1 }))}
-        ${here ? btn('clearDyn', 'v', '✕ ' + esc(here.v), false, tr('Remove')) : ''}${wedge ? btn('clearDyn', 'w', '✕ ' + (wedge.w === 'cresc' ? '&lt;' : '&gt;'), false, tr('Remove')) : ''}</div>
+      ${here ? `<div class="btn-row">${btn('clearDyn', 'v', '✕ ' + esc(here.v), false, tr('Remove'))}</div>` : ''}
+      <div class="row wedge-row"><label>${tr('Hairpin')}</label><select data-action="setWedgeFrom" class="dyn-sel">${lvOpts(d.from)}</select>
+        <span class="wedge-sign">${up ? '&lt;' : '&gt;'}</span><select data-action="setWedgeTo" class="dyn-sel">${lvOpts(d.to)}</select></div>
+      <div class="row"><label>${tr('to bar')}</label><select data-action="setWedgeEnd" class="narrow">${ends}</select></div>
+      <div class="btn-row">${btn('makeWedge', undefined, `<span class="dyn-txt">${esc(d.from)}</span> ${up ? '&lt;' : '&gt;'} <span class="dyn-txt">${esc(d.to)}</span> ${tr('set')}`, false,
+        tr(up ? 'Louder and louder from {from} to {to} - to the end of bar {n}' : 'Softer and softer from {from} to {to} - to the end of bar {n}', { from: d.from, to: d.to, n: d.end + 1 }), 'wide')}</div>
+      ${wedge ? `<p class="hint tight">${tr('Here')}: ${sign(wedge.w)} ${wedge.to ? esc(wedge.to) + ' ' : ''}${esc(tr('to the end of bar {n}', { n: (wedgeEnd ? wedgeEnd.bar : i) + 1 }))}
+        ${btn('clearDyn', 'w', '✕ ' + sign(wedge.w), false, tr('Remove'))}</p>` : ''}
       ${check('toggleDynAll', !!S.dynAll, tr('For all tracks'))}
-      <p class="hint tight">${esc(S.dynAll ? tr('Plays all tracks softer / louder from here on.') : tr('Plays "{track}" softer / louder from here on.', { track: TC.score.instrumentOf(S.doc, t).name }))} ${tr('The notes stay as written (ghost, accent). A hairpin runs to the end of the selected bars ("to bar"), to the level written there.')}</p>
+      <p class="hint tight">${esc(S.dynAll ? tr('Plays all tracks softer / louder from here on.') : tr('Plays "{track}" softer / louder from here on.', { track: TC.score.instrumentOf(S.doc, t).name }))} ${tr('The notes stay as written (ghost, accent).')}</p>
     </section>`;
   }
 
@@ -752,7 +762,7 @@
     const lang = S.settings.lang;
     const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind,
       // (dynamics: the selected bar, its places and what the track has there)
-      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, S.selBar !== null && TC.curTrack().bars[S.selBar] && TC.curTrack().bars[S.selBar].dyn]);
+      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, S.selBar !== null && TC.curTrack().bars[S.selBar] && TC.curTrack().bars[S.selBar].dyn]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

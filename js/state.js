@@ -20,6 +20,7 @@ window.TC = window.TC || {};
     selBar: null,           // index of the bar shown in the panel's "Bar" section
     selBarEnd: null,        // other end of a range of selected bars (null: only selBar), see TC.barRange
     dynAll: false,          // dynamics (panel): set for all tracks at once (else the one being written)
+    wedgeDraft: null,       // the hairpin being set up in the panel { bar, t, from, to, end } (js/actions.js A.wedgeDraft)
     trackId: null,          // the track being written (null / unknown: the first one), see TC.curTrack
     tool: 'write',          // 'write' | 'select' (frame, move several) | 'erase' (note panel, keys W / V / E)
     hover: null,            // where the pointer is: { bar, tick, line, art } (render.js draws a preview)

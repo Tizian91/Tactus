@@ -1051,13 +1051,20 @@
             return s.end - 0.6 * SP;
           };
           let x0 = xOf(a), x1 = xOf(e);
+          const o = staffOut[s.i][z.k];
           if (a === w.abs && levelAt.has(w.abs)) x0 += signW(levelAt.get(w.abs)); // (after the sign it starts from)
           else if (a === w.abs) x0 -= 0.4 * SP;
           if (e === w.end && levelAt.has(w.end)) x1 -= 0.8 * SP; // (before the sign it goes to)
+          else if (e === w.end && w.sign) {
+            // its own level ("pp < ff"): right after the bar line where it ends (the next bar of this line), else at the end
+            const nb = L.bars.find((b) => b.hidden === undefined && b.sys === s.i && at(b.i, 0) === w.end);
+            const sx = nb ? RD.tickX(nb, 0) - 0.5 * SP : x1 - signW(w.toV) + 0.3 * SP;
+            o.push(glyph(w.toV.split('').map((c) => DYN_G[c]).join(''), sx, y, 'dyn'));
+            x1 = Math.min(x1, sx - 0.5 * SP);
+          }
           if (x1 - x0 < SP) continue;
           const p0 = (a - w.abs) / (w.end - w.abs), p1 = (e - w.abs) / (w.end - w.abs);
           const h0 = (w.w === 'cresc' ? p0 : 1 - p0) * H / 2, h1 = (w.w === 'cresc' ? p1 : 1 - p1) * H / 2, yc = y - 0.45 * SP;
-          const o = staffOut[s.i][z.k];
           o.push(line(x0, yc - h0, x1, yc - h1, 'hairpin'), line(x0, yc + h0, x1, yc + h1, 'hairpin'));
         }
       }

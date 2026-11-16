@@ -266,6 +266,8 @@ details > summary { list-style-position: outside; }
 .score .hairpin { stroke: var(--ink); stroke-width: 1.2; }
 .dyn-pal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0; }
 .dyn-txt { font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 700; font-size: 16px; }
+.wedge-row select.dyn-sel { flex: 1; min-width: 0; font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 700; }
+.wedge-sign { padding: 0 6px; font-weight: 700; }
 .out-list { margin: 2px 0 4px; padding-left: 18px; font-size: 12px; }
 .out-list li { margin: 1px 0; }
 .score .title { font-size: 26px; font-weight: 600; fill: var(--text); }

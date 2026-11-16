@@ -69,6 +69,17 @@ module.exports = function (T) {
   SC.pasteBar(doc, 5, clip);
   T.eq('copied with the bar', dr.bars[5].dyn, [{ t: 0, v: 'f' }]);
 
+  // ---- a hairpin with its own level ("pp < ff"): to it, and it holds after it; the level sounding at a place
+  const hp = TC.emptyScore(4), ht = hp.tracks[0];
+  SC.setDyn(hp, ht, 0, 0, { v: 'pp' });
+  SC.setDyn(hp, ht, 0, 0, { w: 'cresc', len: 2 * 3840, to: 'ff' });
+  SC.setDyn(hp, ht, 3, 0, { v: 'p' });
+  const hf = SC.dynFactor(hp, ht);
+  T.eq('"pp < ff": halfway between, ff after it (a level written later than a bar after it does not count)', [near(hf(1, 0), (F[1] + F[6]) / 2), near(hf(2, 0), F[6]), near(hf(3, 0), F[2])], [true, true, true]);
+  T.eq('the level sounding: pp at the start, ff after the hairpin', [SC.levelAt(hp, ht, 0, 0), SC.levelAt(hp, ht, 2, 960)], [1, 6]);
+  T.eq('saved and loaded: the hairpin keeps its level', TC.normalizeDoc(JSON.parse(JSON.stringify(hp))).tracks[0].bars[0].dyn, [{ t: 0, v: 'pp' }, { t: 0, w: 'cresc', len: 7680, to: 'ff' }]);
+  T.eq('MusicXML: its level at the start of the bar after it', /<measure number="3">(?:(?!<\/measure>)[^])*<dynamics><ff\/><\/dynamics>/.test(TC.musicxml.build(hp)), true);
+
   // ---- MusicXML
   const xml = TC.musicxml.build(doc);
   T.eq('MusicXML: the level, the hairpin and its stop', [/<dynamics><p\/><\/dynamics>/.test(xml), /<wedge type="crescendo" number="1"\/>/.test(xml),

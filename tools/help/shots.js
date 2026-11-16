@@ -130,11 +130,9 @@ setTimeout(() => {
       setTimeout(() => {
         const SC = TC.score, mel = S.doc.tracks.find((t) => t.kind === 'pitched'), dr = S.doc.tracks.find((t) => t.kind === 'drums');
         SC.setDyn(S.doc, mel, 0, 0, { v: 'mp' });
-        SC.setDyn(S.doc, mel, 1, 0, { w: 'cresc', len: 2 * 3840 });
-        SC.setDyn(S.doc, mel, 3, 0, { v: 'f' });
+        SC.setDyn(S.doc, mel, 1, 0, { w: 'cresc', len: 2 * 3840, to: 'f' });
         SC.setDyn(S.doc, dr, 0, 0, { v: 'p' });
-        SC.setDyn(S.doc, dr, 2, 0, { w: 'cresc', len: 3840 });
-        SC.setDyn(S.doc, dr, 3, 0, { v: 'f' });
+        SC.setDyn(S.doc, dr, 2, 0, { w: 'cresc', len: 3840, to: 'f' });
         TC.commit();
         S.trackId = mel.id;
         TC.selectBar(1);

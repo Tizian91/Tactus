@@ -145,9 +145,10 @@
       TC.score.dynEvents(doc, t).wedges.forEach((w) => {
         const p = TC.score.atAbs(doc, w.end - 1);
         if (!p) return;
-        const e = w.end - TC.score.absTick(doc, p.bar, 0);
-        if (!stops.has(p.bar)) stops.set(p.bar, []);
-        stops.get(p.bar).push(e);
+        const e = w.end - TC.score.absTick(doc, p.bar, 0), put = (bar, x) => { if (!stops.has(bar)) stops.set(bar, []); stops.get(bar).push(x); };
+        put(p.bar, { x: e });
+        // its own level ("pp < ff"): where it ends - at the start of the next bar (the end of the last one)
+        if (w.sign) put(doc.bars[p.bar + 1] ? p.bar + 1 : p.bar, { x: doc.bars[p.bar + 1] ? 0 : e, v: w.toV });
       });
       let ts = null, run = meta.tempo;
       bars.forEach((h, i) => {
@@ -203,7 +204,7 @@
             if (d.v) dir(`<dynamics><${d.v}/></dynamics>`, d.t, `<sound dynamics="${Math.round(TC.score.DYN_FACTORS[TC.score.DYN_LEVELS.indexOf(d.v)] * 0.72 * 127 / 0.9)}"/>`);
             else dir(`<wedge type="${d.w === 'cresc' ? 'crescendo' : 'diminuendo'}" number="1"/>`, d.t);
           });
-          (stops.get(i) || []).forEach((x) => dir('<wedge type="stop" number="1"/>', x));
+          (stops.get(i) || []).forEach((s) => (s.v ? dir(`<dynamics><${s.v}/></dynamics>`, s.x) : dir('<wedge type="stop" number="1"/>', s.x)));
         }
 
         // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice -

@@ -878,8 +878,22 @@ setTimeout(() => {
           const pBtn = document.querySelector('#panel-notes [data-action="setDyn"][data-value="p"]'); // (the note panel, under the notes)
           if (pBtn) pBtn.click();
           ok('dynamics: p from the panel - in the track, drawn under the staff', !!pBtn && JSON.stringify(dt.bars[0].dyn) === '[{"t":0,"v":"p"}]' && !!document.querySelector('.score .mus.dyn'));
-          TC.actions.setWedge('cresc');
-          ok('dynamics: a crescendo to the end of the bar - two lines', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["p","cresc"]' && document.querySelectorAll('.score .hairpin').length === 2);
+          // the hairpin row: "from" is the level sounding here (p) - kept, no second sign; "to" two steps on (mf)
+          const wd = TC.actions.wedgeDraft();
+          document.querySelector('#panel-notes [data-action="makeWedge"]').click();
+          ok('dynamics: hairpin from the level here (' + wd.from + ' < ' + wd.to + '), no second sign - two lines',
+            wd.from === 'p' && wd.to === 'mf' && JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'p' }, { t: 0, w: 'cresc', len: TC.barTicks(S.doc.bars[0].ts), to: 'mf' }]) && document.querySelectorAll('.score .hairpin').length === 2);
+          // "pp < ff" to bar 2: chosen in the panel, set in one go - pp at its start, ff at its end
+          const selIn = (a, v) => { const el = document.querySelector(`#panel-notes select[data-action="${a}"]`); el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); };
+          selIn('setWedgeFrom', 'pp');
+          selIn('setWedgeTo', 'ff');
+          selIn('setWedgeEnd', '1');
+          document.querySelector('#panel-notes [data-action="makeWedge"]').click();
+          ok('dynamics: "pp < ff" to bar 2 set in one go - pp written, the hairpin with ff, ff drawn at its end ' + JSON.stringify(dt.bars[0].dyn) + ' signs ' + document.querySelectorAll('.score .mus.dyn').length + ' lvl ' + TC.score.levelAt(S.doc, dt, 2, 0),
+            JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'pp' }, { t: 0, w: 'cresc', len: TC.barTicks(S.doc.bars[0].ts) + TC.barTicks(S.doc.bars[1].ts), to: 'ff' }]) && document.querySelectorAll('.score .mus.dyn').length >= 2 &&
+            TC.score.levelAt(S.doc, dt, 2, 0) === 6);
+          TC.actions.setDyn('pp');
+          TC.actions.setDyn('p');
           ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));
           TC.actions.setDyn('p');
           ok('dynamics: p once more - it goes, the hairpin stays', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["cresc"]');

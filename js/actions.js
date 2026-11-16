@@ -1334,6 +1334,40 @@
     TC.commit();
     TC.ui.hint(off ? tr('Hairpin removed') : tr(w === 'cresc' ? 'Crescendo to the end of bar {n}' : 'Diminuendo to the end of bar {n}', { n: R[1] + 1 }));
   };
+  /**
+   * The hairpin being set up in the panel ("pp < ff to bar 4"): { bar, t, from, to, end } - from: the level sounding at
+   * the place (unless chosen), to: two steps on (louder; from ff on: softer), end: the last selected bar (or this one).
+   * What was chosen holds only for this place (S.wedgeDraft).
+   */
+  A.wedgeDraft = function () {
+    const SC = TC.score, L = SC.DYN_LEVELS, i = curBar(), t = chordTick(i), d = S.wedgeDraft;
+    const mine = d && d.bar === i && d.t === t ? d : {};
+    const from = mine.from || L[SC.levelAt(S.doc, TC.curTrack(), i, t)], fi = L.indexOf(from);
+    const to = mine.to || L[fi >= L.length - 2 ? fi - 2 : fi + 2];
+    const R = TC.barRange(), end = Number.isInteger(mine.end) && mine.end >= i && mine.end < S.doc.bars.length ? mine.end : R && R[1] > i ? R[1] : i;
+    return { bar: i, t, from, to, end };
+  };
+  const draftSet = (k, v) => {
+    S.wedgeDraft = Object.assign(A.wedgeDraft(), { [k]: v });
+    TC.refresh();
+  };
+  A.setWedgeFrom = (v) => { if (TC.score.DYN_LEVELS.includes(v)) draftSet('from', v); };
+  A.setWedgeTo = (v) => { if (TC.score.DYN_LEVELS.includes(v)) draftSet('to', v); };
+  A.setWedgeEnd = (v) => draftSet('end', Number(v));
+  /** Set the hairpin of the panel: its start level at the place, the hairpin to the end of its last bar, its end level. */
+  A.makeWedge = function () {
+    const d = A.wedgeDraft(), L = TC.score.DYN_LEVELS, a = L.indexOf(d.from), b = L.indexOf(d.to);
+    if (a === b) return TC.ui.hint(tr('From and to are the same level - choose a louder or softer one'));
+    const at = TC.score.tickOf(S.doc), len = at(d.end, TC.barTicks(S.doc.bars[d.end].ts)) - at(d.bar, d.t);
+    dynTracks().forEach((tk) => {
+      // (its start level only when it is not the one sounding there anyway - a hairpin goes on from the level before it)
+      if (TC.score.DYN_LEVELS[TC.score.levelAt(S.doc, tk, d.bar, d.t)] !== d.from) TC.score.setDyn(S.doc, tk, d.bar, d.t, { v: d.from });
+      TC.score.setDyn(S.doc, tk, d.bar, d.t, { w: b > a ? 'cresc' : 'dim', len, to: d.to });
+    });
+    S.wedgeDraft = null;
+    TC.commit();
+    TC.ui.hint(tr('{from} {sign} {to} to the end of bar {n}', { from: d.from, sign: b > a ? '<' : '>', to: d.to, n: d.end + 1 }));
+  };
   /** Remove the level ('v') or the hairpin ('w') at the chosen place of the selected bar. */
   A.clearDyn = function (kind) {
     const i = curBar(), t = chordTick(i);

@@ -599,7 +599,8 @@ Exportieren. **Kein Griffbrett, keine Griffbilder, keine Tabulatur** (ausdrückl
 - Wirkt als Faktor auf die Anschlagstärke (Abspielen `js/playback.js`, MIDI-Export) – **die Noten bleiben, wie sie sind** (Ghost,
   Akzent, Stufe). Geschriebene Reihenfolge (Wiederholungen spielen sie wieder).
 - Panel „Dynamik · Takt n“ (Stellen wie die Akkorde, `S.chordSlot`), Stufen-Knöpfe, „< cresc.“ / „> dim.“ bis Ende der markierten
-  Takte, „Für alle Spuren“ (`S.dynAll`), Klavier: beide Hände. Notenbild: Bravura-Glyphen unter der Zeile (Melodie mit Text: unter dem
+  Takte, „Für alle Spuren“ (`S.dynAll`), Klavier: beide Hände. Nach Rückmeldung: Gabel in einem Schritt „pp < ff bis Takt n“
+  (`A.wedgeDraft` / `makeWedge`, Gabel trägt ihre Zielstufe `to`, die danach gilt; „Von“ = die Stufe, die dort gilt – dann kein neues Zeichen). Notenbild: Bravura-Glyphen unter der Zeile (Melodie mit Text: unter dem
   Text), Gabeln über Zeilenumbrüche. MusicXML `<dynamics>` (+ `<sound dynamics>`), `<wedge>`.
 - Spur-Lautstärke (`track.volume`, war schon im Modell, ungenutzt): Regler in „Spuren & Klang“; Tactus-Klänge: Verstärkung, MIDI:
   Melodie über MIDI: CC 7 (live einmal je Ausgang + Kanal, Export am Anfang, wenn ≠ 100), Anschlag bleibt; Schlagzeug über MIDI: die

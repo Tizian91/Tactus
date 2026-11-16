@@ -130,7 +130,7 @@
                 if (own && n === ev.notes[0]) {
                   const k = track.ksw.keys.find((x) => x.kind === (n.stroke === 'u' ? 'up' : 'down'));
                   const key = k && TC.ksw.noteOf(k.note, track.ksw.c3);
-                  if (key !== null && key !== undefined) hits.push({ t: t0 - T.KS_LEAD, ks: key, dur: 0.05, trk: track });
+                  if (key !== null && key !== undefined) hits.push({ t: t0 - T.KS_LEAD, ks: key, dur: Math.max(0.05, t1 - t0 - 0.01) + T.KS_LEAD, trk: track }); // (held while the chord sounds)
                 }
                 const sp = n.stroke && !own ? T.strum(ev, n) : 0;
                 const hit = { t: t0 + sp, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - sp - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1 };

@@ -171,7 +171,7 @@
                 const own = n.stroke && TC.ksw && TC.ksw.strums(track);
                 if (own && n === e.notes[0]) {
                   const k = track.ksw.keys.find((x) => x.kind === (n.stroke === 'u' ? 'up' : 'down')), kn = k && TC.ksw.noteOf(k.note, track.ksw.c3);
-                  if (kn !== null && kn !== undefined) { put(Math.max(0, a - KS_TICKS), 0, [0x90 | ch, kn, 100]); put(Math.max(0, a - KS_TICKS) + NOTE_LEN, 1, [0x80 | ch, kn, 0]); }
+                  if (kn !== null && kn !== undefined) { put(Math.max(0, a - KS_TICKS), 0, [0x90 | ch, kn, 100]); put(Math.max(Math.max(0, a - KS_TICKS) + 1, Math.round(end - 10)), 1, [0x80 | ch, kn, 0]); } // (held while the chord sounds)
                 }
                 const sp = n.stroke && !own ? msTicks(T.strum(e, n) * 1000) : 0;
                 // (a VST that plays its notes shifted - keyswitch profile, Iron: an octave up)

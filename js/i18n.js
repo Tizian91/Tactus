@@ -373,6 +373,8 @@
     'Way of playing': 'Spielweise',
     'Tap a bar: muted, dead notes, a slide … from a place in it.': 'Einen Takt antippen: gedämpft, Dead Notes, ein Slide … ab einer Stelle darin.',
     'Holds until the next': 'Gilt bis zur nächsten',
+    'Muting (one holds)': 'Dämpfen (eine gilt)',
+    'Picking': 'Picking',
     'Before the note here': 'Vor der Note hier',
     'Keyswitches of {name} - written under the staff, sent to the VST before the notes. ↓ / ↑ strokes: its own stroke keys.': 'Keyswitches von {name} – unter der Notenzeile geschrieben, vor den Noten ans VST geschickt. ↓ / ↑ Anschläge: seine eigenen Anschlag-Tasten.',
     '{name}: its ways of playing in the note panel; check the keys with ▶ (Tracks & sound).': '{name}: seine Spielweisen im Noten-Panel; die Tasten mit ▶ prüfen (Spuren & Klang).',

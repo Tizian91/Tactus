@@ -539,7 +539,7 @@ Abspielen und im MIDI-Export die richtige Taste kurz vor die Noten.</p>
     Iron muss „Muted“ aufleuchten. Liegt alles eine Oktave daneben: oben <span class="ui">C3 = MIDI 60 / 48</span> umschalten. Eine einzelne
     falsche Taste lässt sich im Feld daneben ändern (z. B. <code>F#2</code>).</li>
   <li>Spielweisen setzen: Takt antippen, im Noten-Panel links unter <span class="ui">Spielweise</span> die Stelle wählen und z. B.
-    <span class="ui">P.M.</span>. <b>Gilt bis zur nächsten</b> (open, P.M., ½ M., Dead, Picking): Tactus hält die Taste gedrückt, bis die nächste
+    <span class="ui">P.M.</span>. <b>Dämpfen</b> (open, P.M., ½ M., Dead – eine gilt, die nächste löst sie ab) und <b>Picking</b> (eigene Gruppe): Tactus hält die Taste gedrückt, bis die nächste
     kommt – das klappt mit Latch an und aus. <b>Vor der Note hier</b> (Slides): kurz vor der Note. <b>Hier</b> (Stop, Release): an der Stelle.
     Dieselbe noch einmal antippen nimmt sie weg.</li>
 </ol>
@@ -548,6 +548,8 @@ Abspielen und im MIDI-Export die richtige Taste kurz vor die Noten.</p>
     – Iron schlägt den Akkord selbst an.</li>
   <li>Iron spielt die Gitarre eine Oktave höher als sie klingt und höchstens <b>vier Töne</b> zugleich: Tactus schickt die Noten passend
     verschoben, angetippte Akkorde werden enge Griffe (4 Saiten). Im Notenbild steht alles, wie es klingt.</li>
+  <li>Iron braucht den <b>Trigger Mode</b> (D#1), sonst spielen die Noten nicht: Tactus schickt ihn beim Start unsichtbar mit. Slides, Stop und
+    Release stehen in einer eigenen Reihe unter den Spielweisen.</li>
   <li>Das Profil wird mit dem Stück gespeichert (auch deine geänderten Tasten). MusicXML schreibt die Spielweisen als Text über die Noten.</li>
 </ul>
 <figure><img src="help/img/keyswitch.png" alt="Eine Gitarre mit UJAM Iron 2: P.M. über anderthalb Takte, dann ein Slide und Dead Notes; links das Panel Spielweise"><figcaption>Eine Gitarren-Spur mit UJAM Iron 2: „P.M.“ gilt bis zum Open in Takt 2, dort ein Slide, in Takt 3 Dead Notes. Links das Noten-Panel mit den Spielweisen von Iron.</figcaption></figure>

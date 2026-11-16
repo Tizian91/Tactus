@@ -416,13 +416,16 @@
     const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((x) =>
       btn('setChordSlot', x, `<small>${esc(short(x))}</small><i>${esc(at(x).map(label).join(' ') || '·')}</i>`, x === slot, TC.rhythm.countLabel(x, ts), TC.rhythm.countLabel(x, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>` : '';
     const here = new Set(at(slot).map((m) => m.k));
-    const group = (kind, title) => {
-      const keys = KS.scoreKeys(t).filter((k) => k.kind === kind);
+    const group = (kind, title, g) => {
+      const keys = KS.scoreKeys(t).filter((k) => k.kind === kind && (g === undefined || (k.group || '') === g));
       return keys.length ? `<div class="row"><label>${tr(title)}</label></div><div class="ks-pal">${keys.map((k) => btn('setKs', k.id, esc(k.short || k.name), here.has(k.id), k.name)).join('')}</div>` : '';
     };
+    // the ways of playing by their group (one of a group holds at a time; picking is its own)
+    const groups = [...new Set(KS.scoreKeys(t).filter((k) => k.kind === 'art').map((k) => k.group || ''))];
+    const GROUP = { mute: 'Muting (one holds)', pick: 'Picking', '': 'Holds until the next' };
     return `<section><h3>${tr('Way of playing')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
       ${where}
-      ${group('art', 'Holds until the next')}${group('once', 'Before the note here')}${group('event', 'Here')}
+      ${groups.map((g) => group('art', GROUP[g] || g, g)).join('')}${group('once', 'Before the note here')}${group('event', 'Here')}
       <p class="hint tight">${esc(tr('Keyswitches of {name} - written under the staff, sent to the VST before the notes. ↓ / ↑ strokes: its own stroke keys.', { name: t.ksw.name }))}</p>
     </section>`;
   }

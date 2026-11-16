@@ -799,5 +799,7 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   +12; angetippte Akkorde bei `poly` ≤ 4 enge Griffe. Notenbild: Kürzel unter der Zeile, gehaltene mit gestrichelter Linie und Haken
   („open“ ohne Text). Panel: „Spuren & Klang“ → Keyswitches (Vorlage, C3, Tasten prüfen ▶ / ändern), Noten-Panel „Spielweise“.
   MusicXML: Text über den Noten. Tests: `test_keyswitch.js` (16), Klick-Test (2), Bild `keyswitch.png`, Handbuch Kap. 8 „Keyswitches“.
-- **Zu prüfen beim Nutzer:** C3 = 60 oder 48 bei Iron (▶ bei Muted), Upstroke A1 / Pick Slide F1 (aus dem Bild gelesen), was die sechs
+- **Nach dem Test (2026-11-16):** C3 = 60 stimmt; C1 frei, Slides D1 E1 F1, Pick Slide G1; Trigger Mode On (D#1) muss mit (`ksw.init`,
+  beim Start unsichtbar); Stroke-Tasten werden gehalten, solange der Akkord klingt; Gruppen `mute` (open / P.M. / ½ M. / Dead) und `pick`;
+  „open“ sichtbar; Slides / Stop / Release eigene Reihe. Alte Iron-Profile werden beim Laden auf die Vorlage gebracht. **Noch zu prüfen:** was die sechs
   Picking-Tasten C2 … A2 einzeln tun. **Offen:** eigene Profile anlegen / weitere Vorlagen; Spielweisen über das Notenmenü.

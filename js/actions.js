@@ -1438,7 +1438,9 @@
   A.setKs = function (id) {
     const t = TC.curTrack(), i = curBar(), at = chordTick(i), k = TC.ksw.keyOf(t, id);
     if (!k || !t.bars[i]) return;
-    const bar = t.bars[i], list = (bar.ks || []).filter((m) => m.t !== at || TC.ksw.keyOf(t, m.k).kind !== k.kind || m.k === id);
+    // (one of a kind - a way of playing: one of its group - at a place)
+    const same = (m) => { const o = TC.ksw.keyOf(t, m.k); return o && o.kind === k.kind && (k.kind !== 'art' || (o.group || '') === (k.group || '')); };
+    const bar = t.bars[i], list = (bar.ks || []).filter((m) => m.t !== at || !same(m) || m.k === id);
     const had = list.some((m) => m.t === at && m.k === id);
     const out = had ? list.filter((m) => !(m.t === at && m.k === id)) : list.concat([{ t: at, k: id }]);
     if (out.length) bar.ks = out.sort((a, b) => a.t - b.t);

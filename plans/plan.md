@@ -591,6 +591,22 @@ Exportieren. **Kein Griffbrett, keine Griffbilder, keine Tabulatur** (ausdrückl
   Akkorde bevorzugt), Wechsel zwischen den Akkorden mit kleinen Sprüngen; Schrägstrich-Akkorde mit ihrem Bass.
 - Danach von Hand änderbar wie jede Melodie; ein neuer Akkord ändert die eingefügten Noten nicht von selbst.
 
+### Dynamik und Spur-Lautstärke ✅ (Wunsch 2026-11-16, zum Ausprobieren)
+
+- Daten: `bar.dyn = [{ t, v }, { t, w: 'cresc' | 'dim', len }]` je Spur-Takt (geht mit Kopieren, eigener Wert macht einen Takt
+  „anders“ für %). `SC.DYN_LEVELS` / `DYN_FACTORS` (mf = 1, ppp 0,35 … fff 1,45), `SC.dynFactor(doc, track)` → (Takt, Tick) → Faktor;
+  Gabel zur nächsten Stufe bis 1 Takt nach ihrem Ende, sonst 2 Stufen weiter (danach gilt die erreichte Stufe).
+- Wirkt als Faktor auf die Anschlagstärke (Abspielen `js/playback.js`, MIDI-Export) – **die Noten bleiben, wie sie sind** (Ghost,
+  Akzent, Stufe). Geschriebene Reihenfolge (Wiederholungen spielen sie wieder).
+- Panel „Dynamik · Takt n“ (Stellen wie die Akkorde, `S.chordSlot`), Stufen-Knöpfe, „< cresc.“ / „> dim.“ bis Ende der markierten
+  Takte, „Für alle Spuren“ (`S.dynAll`), Klavier: beide Hände. Notenbild: Bravura-Glyphen unter der Zeile (Melodie mit Text: unter dem
+  Text), Gabeln über Zeilenumbrüche. MusicXML `<dynamics>` (+ `<sound dynamics>`), `<wedge>`.
+- Spur-Lautstärke (`track.volume`, war schon im Modell, ungenutzt): Regler in „Spuren & Klang“; Tactus-Klänge: Verstärkung, MIDI:
+  CC 7 (live einmal je Ausgang + Kanal, Export am Anfang, wenn ≠ 100) – Anschlagstärke unverändert.
+- Tests: `test_dynamics.js` (21), Klick-Test (7), Bild `help/img/dynamik.png`, Handbuch Kap. 10 „Dynamik“.
+- Offen: Dynamik im Taktmenü; Gabel per Ziehen im Notenbild; Ausweichen, wenn Dynamik und Zählhilfe sich bei sehr tiefen Noten
+  berühren.
+
 ### Später
 
 - Bass / Gitarre mit Tabulatur (Phase 6), MIDI-Import von Melodien (Quantisieren, Schreibweise),

@@ -488,6 +488,25 @@ Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass 
   <li><b>Bildschirm an</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, auf Tablet und Handy): Der Bildschirm geht beim Abspielen und in der Bühnenansicht nicht aus, auf Wunsch auch die ganze Zeit, solange Tactus offen ist. Das geht nur in der Online-Version (bzw. der installierten App), nicht aus einer Datei. Der Browser gibt die Sperre frei, wenn du zu einer anderen App wechselst, und Tactus holt sie zurück, wenn du wiederkommst.</li>
   <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
 </ul>
+<h3 id="dynamik">Dynamik (ppp … fff) und Lautstärke der Spuren</h3>
+<p><b>Dynamik</b> sagt, wie stark ab einer Stelle gespielt wird: Takt antippen, im Panel <span class="ui">Dynamik</span> die Stelle im Takt
+wählen (wie bei den Akkorden) und eine Stufe <i>ppp pp p mp mf f ff fff</i>. Ohne Angabe spielt alles <i>mf</i> – wie bisher.</p>
+<ul>
+  <li><b>Gabeln:</b> <span class="ui">&lt; cresc.</span> (immer lauter) und <span class="ui">&gt; dim.</span> (immer leiser) gehen von der
+    Stelle bis zum Ende der markierten Takte (<span class="ui">bis Takt</span> im Takt-Panel) – zur Stufe, die dort steht, sonst zwei Stufen
+    weiter.</li>
+  <li><b>Für eine Spur oder alle:</b> normal gilt die Angabe für die Spur, in die du schreibst (beim Klavier für beide Hände);
+    <span class="ui">Für alle Spuren</span> setzt sie überall auf einmal.</li>
+  <li><b>Die Noten bleiben, wie sie sind:</b> Ghost-Note, Akzent und Anschlagsstufe ändern sich nicht – die Dynamik spielt sie nur leiser
+    oder lauter (ein Akzent in <i>p</i> ist leiser als einer in <i>f</i>, eine Ghost-Note bleibt eine Ghost-Note).</li>
+  <li>Sie klingt mit den Tactus-Klängen und über MIDI (Anschlagstärke); MusicXML schreibt <i>p</i>, <i>f</i> … und die Gabeln.
+    Dieselbe Stufe noch einmal antippen nimmt sie wieder weg.</li>
+</ul>
+<p><b>Lautstärke einer Spur:</b> in <span class="ui">Spuren &amp; Klang</span> der Regler <span class="ui">Lautstärke</span> bei der Spur –
+wie ein Fader am Mischpult. Mit Tactus-Klängen wird die Spur leiser / lauter, über MIDI schickt Tactus die Kanal-Lautstärke (CC 7); die
+Anschlagstärke bleibt, so wechselt dein Drum-VST nicht die Samples.</p>
+<figure><img src="help/img/dynamik.png" alt="Gesang mp mit Crescendo zu f, Schlagzeug p mit Crescendo zu f; rechts das Panel Dynamik"><figcaption>Gesang <i>mp</i>, über zwei Takte lauter bis <i>f</i>; das Schlagzeug von <i>p</i> nach <i>f</i>. Rechts das Panel mit den Stufen und den Gabeln.</figcaption></figure>
+
 <h3 id="verzoegerung">Verzögerung ausgleichen</h3>
 <p>Bluetooth-Kopfhörer und manche Soundkarten spielen den Ton hörbar später, als der Cursor läuft. Feld
 <span class="ui">Ausgabe-Verzögerung</span> im Panel: den Unterschied eintragen (darunter steht, wie viel der Browser selbst meldet – das ist schon eingerechnet).

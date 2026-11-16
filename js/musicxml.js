@@ -140,6 +140,15 @@
       o.push(`<part id="${pid(k)}">`);
       const one = D.oneLine(t), lh = lhOf(t);
       const lyrUp = t.kind === 'pitched' ? TC.score.lyricInfo(doc, t) : null; // lyrics: syllables of voice 1 (upper staff)
+      // dynamics: where each hairpin stops (bar -> ticks in it)
+      const stops = new Map();
+      TC.score.dynEvents(doc, t).wedges.forEach((w) => {
+        const p = TC.score.atAbs(doc, w.end - 1);
+        if (!p) return;
+        const e = w.end - TC.score.absTick(doc, p.bar, 0);
+        if (!stops.has(p.bar)) stops.set(p.bar, []);
+        stops.get(p.bar).push(e);
+      });
       let ts = null, run = meta.tempo;
       bars.forEach((h, i) => {
         const L = TC.barTicks(h.ts);
@@ -186,6 +195,16 @@
         }
         // chord symbols: over the melody track the chords follow (else the first part), each at its place in the bar
         if (t === chordPart) TC.score.chordsIn(doc, i).forEach((x) => o.push(harmonyXml(x.ch, x.t)));
+        // dynamics under the staff (a piano: at the upper one): levels with how loud they sound, hairpins start / stop
+        {
+          const stf = lh ? '<staff>1</staff>' : '', off = (x) => (x ? `<offset>${x}</offset>` : '');
+          const dir = (inner, x, sound = '') => o.push(`<direction placement="below"><direction-type>${inner}</direction-type>${off(x)}${stf}${sound}</direction>`);
+          TC.score.dynIn(t, i).forEach((d) => {
+            if (d.v) dir(`<dynamics><${d.v}/></dynamics>`, d.t, `<sound dynamics="${Math.round(TC.score.DYN_FACTORS[TC.score.DYN_LEVELS.indexOf(d.v)] * 0.72 * 127 / 0.9)}"/>`);
+            else dir(`<wedge type="${d.w === 'cresc' ? 'crescendo' : 'diminuendo'}" number="1"/>`, d.t);
+          });
+          (stops.get(i) || []).forEach((x) => dir('<wedge type="stop" number="1"/>', x));
+        }
 
         // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice -
         // a piano: the upper staff (staff 1), then back to the bar start and the lower one (staff 2, voices 5 …)

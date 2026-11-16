@@ -48,7 +48,10 @@
  *                                                    and name follow the upper one (SC.syncHands)
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false,         // true = "repeat the bar before" in this track (% sign; plays its bar before)
- *                          scale: null } ] }      // melody: another scale from this bar on
+ *                          scale: null,           // melody: another scale from this bar on
+ *                          dyn: [ { t, v } | { t, w, len } ] } ] }   (only when set) dynamics of this track: from tick t
+ *                                                 on the level v ('ppp' … 'fff', SC.DYN_LEVELS), or a hairpin w
+ *                                                 ('cresc' | 'dim') len ticks long (over bar lines) - see SC.dynFactor
  *   Event:     { id, tick, dur, notes: [Note] }   // a chord / beat; tick from the bar start
  *   Note:      drums:   { id, art, accent, ghost, head, vel,
  *                         orn: null | 'flam' | 'drag'   grace notes before the note
@@ -403,6 +406,8 @@
         // "%" of this track (older files: in the bar header, for all tracks)
         bar.simile = i > 0 && (!!(src && src.simile) || !!(raw.bars[i] && raw.bars[i].simile));
         if (kind === 'pitched' && i > 0 && src && src.scale && TC.pitch) bar.scale = TC.pitch.cleanScale(src.scale); // a new scale from here
+        const dyn = src && TC.score.cleanDyn(src.dyn, TC.barTicks(h.ts));
+        if (dyn) bar.dyn = dyn;
         const voices = src && Array.isArray(src.voices) ? src.voices : [];
         voices.slice(0, 4).forEach((v, vi) => {
           bar.voices[vi] = (Array.isArray(v) ? v : []).map((e) => {
@@ -649,7 +654,9 @@
       }).sort();
       if (ns.length) evs.push(ev.tick + '=' + ns.join('+'));
     }));
-    return evs.sort().join(' ');
+    // (other dynamics: not the same bar - a %-bar would lose them)
+    const dyn = track.bars[bi] && track.bars[bi].dyn;
+    return evs.sort().join(' ') + (dyn && !loose ? ' ~' + dyn.map((d) => d.t + (d.v || d.w + d.len)).join(',') : '');
   };
   /** Bar headers alike for a repeat (time signature, tempo, signs, chords … - line breaks do not count). */
   const sameHeader = (a, b) => {
@@ -1331,6 +1338,12 @@
   };
 
   /** Ticks from the start of the score to `tick` in bar `bi` (written bars). */
+  /** absTick for many places at once: (bar, tick) -> ticks from the start (the bar starts counted once). */
+  SC.tickOf = function (doc) {
+    const starts = [0];
+    doc.bars.forEach((h, i) => starts.push(starts[i] + TC.barTicks(h.ts)));
+    return (bi, tick) => (starts[bi] !== undefined ? starts[bi] : starts[starts.length - 1]) + tick;
+  };
   SC.absTick = function (doc, bi, tick) {
     let t = 0;
     for (let i = 0; i < bi; i++) t += TC.barTicks(doc.bars[i].ts);
@@ -1716,5 +1729,90 @@
       if (last) last.endNote = null; // (the last syllable of a verse: no line - a verse not typed to its end yet)
     }
     return out;
+  };
+
+  // ---- Dynamics (ppp … fff, hairpins) of a track ------------------------------------------------------------
+  // They change how strongly the notes are played (playback, MIDI) - never the notes themselves (ghost, accent,
+  // strength stay as written). Without any: mf, as before. Placed in written order (a repeat plays them again).
+
+  SC.DYN_LEVELS = ['ppp', 'pp', 'p', 'mp', 'mf', 'f', 'ff', 'fff'];
+  /** How much stronger / softer than mf each level plays (times the strength of the note). */
+  SC.DYN_FACTORS = [0.35, 0.48, 0.62, 0.8, 1, 1.15, 1.3, 1.45];
+  SC.DYN_MF = 4;
+  /** A hairpin without a level after it: this many steps louder / softer. */
+  SC.WEDGE_STEPS = 2;
+
+  /** A bar's dynamics, cleaned (levels and hairpins inside the bar, one of each kind per place), or null. */
+  SC.cleanDyn = function (list, L) {
+    if (!Array.isArray(list)) return null;
+    const seen = new Set(), out = [];
+    list.forEach((d) => {
+      if (!d || typeof d !== 'object') return;
+      const t = Math.round(Number(d.t) || 0);
+      if (t < 0 || t >= L) return;
+      if (SC.DYN_LEVELS.includes(d.v) && !seen.has(t + 'v')) { seen.add(t + 'v'); out.push({ t, v: d.v }); }
+      const len = Math.round(Number(d.len) || 0);
+      if ((d.w === 'cresc' || d.w === 'dim') && len > 0 && !seen.has(t + 'w')) { seen.add(t + 'w'); out.push({ t, w: d.w, len }); }
+    });
+    return out.length ? out.sort((a, b) => a.t - b.t || (a.v ? -1 : 1)) : null;
+  };
+  /** The dynamics of bar bi of a track (written there; a %-bar has its own). */
+  SC.dynIn = (track, bi) => (track.bars[bi] && track.bars[bi].dyn) || [];
+  /**
+   * Set a level (v: 'ppp' … 'fff') or a hairpin (w: 'cresc' | 'dim', len ticks) at tick t of bar bi - or remove
+   * what is there (v / w null). Returns true when something changed.
+   */
+  SC.setDyn = function (doc, track, bi, t, what) {
+    const bar = track.bars[bi];
+    if (!bar) return false;
+    const kind = what.w !== undefined ? 'w' : 'v';
+    const before = JSON.stringify(bar.dyn || null);
+    const list = (bar.dyn || []).filter((d) => !(d.t === t && d[kind]));
+    if (what[kind]) list.push(kind === 'v' ? { t, v: what.v } : { t, w: what.w, len: what.len });
+    const clean = SC.cleanDyn(list, TC.barTicks(doc.bars[bi].ts));
+    if (clean) bar.dyn = clean;
+    else delete bar.dyn;
+    return JSON.stringify(bar.dyn || null) !== before;
+  };
+  /**
+   * The dynamics of a track in written order: [{ abs, lvl } | { abs, end, w, from, to }] - each hairpin with the
+   * level it starts from and the one it reaches (the next level written up to one bar after its end, else
+   * SC.WEDGE_STEPS steps on; that level holds after it).
+   */
+  SC.dynEvents = function (doc, track) {
+    const marks = [], wedges = [], at = SC.tickOf(doc);
+    track.bars.forEach((b, bi) => (b.dyn || []).forEach((d) => {
+      const abs = at(bi, d.t);
+      if (d.v) marks.push({ abs, lvl: SC.DYN_LEVELS.indexOf(d.v) });
+      else wedges.push({ abs, end: abs + d.len, w: d.w, bar: bi, t: d.t, len: d.len });
+    }));
+    marks.sort((a, b) => a.abs - b.abs);
+    wedges.sort((a, b) => a.abs - b.abs);
+    const levelAt = (x, list) => { let l = SC.DYN_MF; for (const m of list) if (m.abs <= x) l = m.lvl; return l; };
+    const all = marks.slice();
+    wedges.forEach((w) => {
+      w.from = levelAt(w.abs, all);
+      const next = marks.find((m) => m.abs > w.abs && m.abs <= w.end + 3840);
+      w.to = next ? next.lvl : TC.clamp(w.from + (w.w === 'cresc' ? 1 : -1) * SC.WEDGE_STEPS, 0, SC.DYN_LEVELS.length - 1);
+      w.target = !!next;
+      if (!next) { all.push({ abs: w.end, lvl: w.to, implied: true }); all.sort((a, b) => a.abs - b.abs); }
+    });
+    return { marks: all, wedges };
+  };
+  /**
+   * How strongly a track plays at a place: (bar, tick) -> factor (1 = mf) - the level written before it, or
+   * inside a hairpin the way from its start level to its end level.
+   */
+  SC.dynFactor = function (doc, track) {
+    const ev = SC.dynEvents(doc, track), F = SC.DYN_FACTORS, at = SC.tickOf(doc);
+    if (!ev.marks.length && !ev.wedges.length) return () => 1;
+    return (bi, tick) => {
+      const x = at(bi, tick);
+      const w = ev.wedges.find((q) => q.abs <= x && x < q.end);
+      if (w) return F[w.from] + (F[w.to] - F[w.from]) * (x - w.abs) / (w.end - w.abs);
+      let l = SC.DYN_MF;
+      for (const m of ev.marks) if (m.abs <= x) l = m.lvl; else break;
+      return F[l];
+    };
   };
 })(window.TC);

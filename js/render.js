@@ -175,6 +175,13 @@
         if (z.lyrRows) bars.forEach((b) => z.lyrY = Math.max(z.lyrY, lowestInk(b.parts[k]) + 1.5 * SP));
       }
       z.below = belowOf(z, under);
+      // dynamics (ppp … fff, hairpins): a row under the staff - drums between the stems and the counting, a melody
+      // under its lowest note or under its lyrics (a piano: once, under the right hand - its left hand has the same)
+      if (!track.lh && track.bars.some((b) => b.dyn)) {
+        const low = track.kind === 'pitched' ? Math.max(6.8 * SP, ...bars.map((b) => lowestInk(b.parts[k]) + 2.2 * SP)) : 9.6 * SP;
+        z.dynY = z.lyrRows ? lyrEnd(z) + 2.4 * SP : low;
+        z.below = Math.max(z.below, z.dynY + 1.6 * SP + (under && track.kind === 'pitched' ? 3.4 * SP : 0));
+      }
       dy += 4 * SP + (z.below + STAFF_ABOVE) * gap;
       return z;
     });
@@ -1010,6 +1017,48 @@
               if (ex - x2 > 0.6 * SP) o.push(line(x2 + 0.25 * SP, ly + 0.15 * SP, ex, ly + 0.15 * SP, 'lyric-ext'));
             }
           }
+        }
+      }
+    }
+
+    // dynamics: the level as a sign (p, mf, ff …) at its place, hairpins as a wedge from their place to their end
+    // (over line breaks: a piece in each line, opening as far as it has come)
+    for (const z of L.staves) {
+      if (z.dynY === undefined) continue;
+      const tr = z.track, y = z.dynY, H = 1.5 * SP, at = TC.score.tickOf(doc), signW = (v) => v.length * 1.25 * SP + 0.3 * SP;
+      const DYN_G = { p: '\uE520', m: '\uE521', f: '\uE522' };
+      const levelAt = new Map(); // (abs tick -> level written there: a hairpin starts after it / ends before it)
+      for (const b of L.bars) {
+        if (b.hidden !== undefined) continue;
+        TC.score.dynIn(tr, b.i).forEach((d) => {
+          if (!d.v) return;
+          levelAt.set(at(b.i, d.t), d.v);
+          OS(b, z).push(glyph(d.v.split('').map((c) => DYN_G[c]).join(''), RD.tickX(b, d.t) - 0.5 * SP, y, 'dyn'));
+        });
+      }
+      const ev = TC.score.dynEvents(doc, tr);
+      for (const w of ev.wedges) {
+        for (const s of L.systems) {
+          const fb = L.bars[s.first], lb = L.bars[s.last];
+          const s0 = at(fb.i, 0), s1 = at(lb.i, lb.L);
+          let a = Math.max(w.abs, s0), e = Math.min(w.end, s1);
+          if (e <= a) continue;
+          const xOf = (abs) => {
+            for (let i = s.first; i <= s.last; i++) {
+              const b = L.bars[i], b0 = at(b.i, 0);
+              if (b.hidden === undefined && abs >= b0 && abs <= b0 + b.L) return abs === b0 + b.L ? b.x + b.w - 0.6 * SP : RD.tickX(b, abs - b0);
+            }
+            return s.end - 0.6 * SP;
+          };
+          let x0 = xOf(a), x1 = xOf(e);
+          if (a === w.abs && levelAt.has(w.abs)) x0 += signW(levelAt.get(w.abs)); // (after the sign it starts from)
+          else if (a === w.abs) x0 -= 0.4 * SP;
+          if (e === w.end && levelAt.has(w.end)) x1 -= 0.8 * SP; // (before the sign it goes to)
+          if (x1 - x0 < SP) continue;
+          const p0 = (a - w.abs) / (w.end - w.abs), p1 = (e - w.abs) / (w.end - w.abs);
+          const h0 = (w.w === 'cresc' ? p0 : 1 - p0) * H / 2, h1 = (w.w === 'cresc' ? p1 : 1 - p1) * H / 2, yc = y - 0.45 * SP;
+          const o = staffOut[s.i][z.k];
+          o.push(line(x0, yc - h0, x1, yc - h1, 'hairpin'), line(x0, yc + h0, x1, yc + h1, 'hairpin'));
         }
       }
     }

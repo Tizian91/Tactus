@@ -800,8 +800,9 @@ setTimeout(() => {
             ok('MIDI output: ▶ test at the track - the snare on channel 10 at once ' + JSON.stringify(sent), !!testBtn && !!test && sent.length === 2 && sent[0].join() === [0x99, 38, 100].join());
             sent.length = 0;
             TC.audio.preview(TC.newDrumNote(38, { accent: 1 }));
-            ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127) ' + JSON.stringify(sent[0]),
-              sent.length === 2 && sent[0].join() === [0x99, 38, 127].join() && sent[1][0] === 0x89);
+            const noteMsgs = sent.filter((m) => (m[0] & 0xf0) !== 0xb0); // (the fader: CC 7 once before)
+            ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127; CC 7 = 100 before it) ' + JSON.stringify(sent),
+              noteMsgs.length === 2 && noteMsgs[0].join() === [0x99, 38, 127].join() && noteMsgs[1][0] === 0x89 && sent.some((m) => m.join() === [0xb9, 7, 100].join()));
             TC.actions.setMidiLead(200);
             ok('MIDI output: lead 200 ms set in the panel', TC.midiOut.lead() === 0.2 && document.querySelector('input[data-midilead]').value === '200');
             // two outputs: a melody track on its own (Test Port 2), the drums on theirs, a track without one: Tactus' sounds
@@ -864,6 +865,29 @@ setTimeout(() => {
           ok('chords: a typed chord is shown', [...document.querySelectorAll('.chord-sym')].some((e) => e.textContent === 'F♯m7/C♯'));
           TC.actions.clearBarChords(0);
           ok('chords: removed', !S.doc.bars[0].chords && !document.querySelector('.chord-sym'));
+          // dynamics: p from the panel (drawn under the staff), a crescendo to the end of the bar, for all tracks; the fader
+          const undoDyn = TC.history.undoStack.length, dt = TC.curTrack();
+          TC.selectBar(0);
+          S.chordSlot = 0;
+          TC.panel.update(true);
+          const pBtn = document.querySelector('#panel-settings [data-action="setDyn"][data-value="p"]');
+          if (pBtn) pBtn.click();
+          ok('dynamics: p from the panel - in the track, drawn under the staff', !!pBtn && JSON.stringify(dt.bars[0].dyn) === '[{"t":0,"v":"p"}]' && !!document.querySelector('.score .mus.dyn'));
+          TC.actions.setWedge('cresc');
+          ok('dynamics: a crescendo to the end of the bar - two lines', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["p","cresc"]' && document.querySelectorAll('.score .hairpin').length === 2);
+          ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));
+          TC.actions.setDyn('p');
+          ok('dynamics: p once more - it goes, the hairpin stays', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["cresc"]');
+          TC.actions.toggleDynAll();
+          TC.actions.setDyn('ff');
+          ok('dynamics: "for all tracks" - every track gets it', S.doc.tracks.every((t) => (t.bars[0].dyn || []).some((d) => d.v === 'ff')));
+          TC.actions.toggleDynAll();
+          W('input[data-trackvol]').value = '64';
+          W('input[data-trackvol]').dispatchEvent(new Event('change', { bubbles: true }));
+          ok('fader: the track volume set in "Tracks & sound"', TC.curTrack().volume === 64);
+          TC.panel.closeSettings();
+          while (TC.history.undoStack.length > undoDyn) TC.actions.undo();
+          ok('dynamics and fader: undone', S.doc.tracks.every((t) => t.bars.every((b) => !b.dyn) && t.volume === 100));
           // melody in two voices: voice 2 chosen in the panel, a tap writes there (stems down), the voice 1 note stays
           TC.actions.addMelody();
           const mt = S.doc.tracks.find((t) => t.kind === 'pitched');

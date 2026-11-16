@@ -365,6 +365,34 @@
   }
 
   /**
+   * Dynamics of the selected bar: a level (ppp … fff) or a hairpin (cresc. / dim.) at a place (the same places as the
+   * chords) - for the track being written (a piano: both hands) or all tracks. They play the notes softer / louder;
+   * the notes stay as written.
+   */
+  function dynSection() {
+    const i = S.selBar, SC = TC.score;
+    if (i === null || !S.doc.bars[i]) return '';
+    const t = TC.curTrack(), ts = S.doc.bars[i].ts, slots = SC.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
+    const list = SC.dynIn(t, i), lv = (x) => list.find((d) => d.t === x && d.v), wg = (x) => list.find((d) => d.t === x && d.w);
+    const here = lv(slot), wedge = wg(slot);
+    const short = (x) => { const c = TC.rhythm.countLabel(x, ts).split(' '); return c.length > 1 ? c[1] : c[0]; };
+    const mark = (x) => (lv(x) ? lv(x).v : '') + (wg(x) ? (wg(x).w === 'cresc' ? '<' : '>') : '') || '·';
+    const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((x) =>
+      btn('setChordSlot', x, `<small>${esc(short(x))}</small><i>${esc(mark(x))}</i>`, x === slot, TC.rhythm.countLabel(x, ts), TC.rhythm.countLabel(x, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>` : '';
+    const levels = SC.DYN_LEVELS.map((v) => btn('setDyn', v, `<span class="dyn-txt">${v}</span>`, !!here && here.v === v, tr('{v} from here on', { v }))).join('');
+    const R = TC.barRange(), to = R ? R[1] : i;
+    return `<section><h3>${tr('Dynamics')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
+      ${where}
+      <div class="dyn-pal">${levels}</div>
+      <div class="btn-row">${btn('setWedge', 'cresc', '&lt; cresc.', !!wedge && wedge.w === 'cresc', tr('Louder and louder - to the end of bar {n}', { n: to + 1 }))}
+        ${btn('setWedge', 'dim', '&gt; dim.', !!wedge && wedge.w === 'dim', tr('Softer and softer - to the end of bar {n}', { n: to + 1 }))}
+        ${here ? btn('clearDyn', 'v', '✕ ' + esc(here.v), false, tr('Remove')) : ''}${wedge ? btn('clearDyn', 'w', '✕ ' + (wedge.w === 'cresc' ? '&lt;' : '&gt;'), false, tr('Remove')) : ''}</div>
+      ${check('toggleDynAll', !!S.dynAll, tr('For all tracks'))}
+      <p class="hint tight">${esc(S.dynAll ? tr('Plays all tracks softer / louder from here on.') : tr('Plays "{track}" softer / louder from here on.', { track: TC.score.instrumentOf(S.doc, t).name }))} ${tr('The notes stay as written (ghost, accent). A hairpin runs to the end of the selected bars ("to bar"), to the level written there.')}</p>
+    </section>`;
+  }
+
+  /**
    * Find repeats (e.g. after a MIDI import from a DAW, where everything is written out): bars that play the bar
    * before them (-> %), sections that come again right after themselves (-> |: :| n×) - marked in colour in the
    * score, listed here with a button each; or all at once.
@@ -487,7 +515,9 @@
         (t.midiOut ? `<div class="row"><label>${tr('Channel')}</label><select data-action="setTrackMidiCh">${chs.map(([v, l]) =>
           `<option value="${v}"${v === curCh ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>` : '');
     }
-    return `${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}`;
+    const vol = Number.isInteger(t.volume) ? t.volume : 100;
+    return `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="127" step="1" value="${vol}" data-trackvol title="${esc(tr('Fader of this track ({n}) - Tactus sounds softer / louder, through MIDI the channel volume (CC 7)', { n: vol }))}"></div>
+      ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}`;
   }
 
   /** All tempo changes of the score: click = go to the bar, ✕ = remove the change. */
@@ -732,7 +762,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program])), cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
@@ -740,7 +770,7 @@
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing: the track (and a melody's scale), the bar and what belongs to it, the score -
       // tracks and playback in their own window ("Tracks & sound…"), the rest in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + dynSection() + repeatSection() + findSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
@@ -826,6 +856,8 @@
       TC.actions.setAudioDelay(el.value);
     } else if (el.matches('input[data-clickvol]')) {
       TC.actions.setClickVol(el.value);
+    } else if (el.matches('input[data-trackvol]')) {
+      TC.actions.setTrackVolume(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
     } else if (el.matches('input[data-bartempo]')) {

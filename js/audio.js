@@ -128,7 +128,7 @@
       TC.midiOut.hit(art, t, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
-    const out = dest || master, v = Math.max(0.05, Math.min(1.2, vel));
+    const out = dest || master, v = Math.max(0.05, Math.min(1.2, vel)) * AU.trackGain(track);
     // recorded sounds (js/samples.js) when switched on and loaded; else the synth below
     if (S.settings.samples && TC.samples) {
       if (TC.samples.play(ctx, a.id, t, v, choke, out)) return;
@@ -330,6 +330,9 @@
     81: { osc: [['sawtooth', -7, 0.5], ['sawtooth', 7, 0.5]], cut: 8, gain: 0.12 },                   // lead saw
   };
 
+  /** A track's fader (track.volume 0 … 127, 100 = as before) as a gain for Tactus' sounds. */
+  AU.trackGain = (track) => (track && Number.isInteger(track.volume) ? Math.max(0, track.volume) / 100 : 1);
+
   AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
     if (!ensure()) return;
     // the chord pad: its own MIDI output only (if connected; else here), never the drums' output
@@ -341,7 +344,7 @@
     const prog = track ? track.program : TC.MELODY_PROGRAM;
     const F = Object.assign({}, FAMILY[TC.soundFamily(prog)] || FAMILY.voice, SOUND[prog] || {});
     const out = dest || master, hz = 440 * Math.pow(2, (pitch - 69) / 12);
-    const v = Math.max(0.05, Math.min(1.2, vel)) * F.gain;
+    const v = Math.max(0.05, Math.min(1.2, vel)) * F.gain * AU.trackGain(track);
     dur = Math.max(0.08, dur);
     const end = t + dur, rel = F.rel;
     // a short note does not wait for a slow attack (a pad's eighth would else swell after its end and break off)

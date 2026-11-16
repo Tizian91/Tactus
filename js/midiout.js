@@ -99,6 +99,14 @@
   /** A track's output is chosen but not there (not connected, or MIDI not allowed yet). */
   MO.missing = () => !S.settings.midiOff && S.doc.tracks.some((t) => t.midiOut && !byName(t.midiOut));
 
+  /** A track's fader (track.volume, 100 = as before): the channel volume CC 7, sent once per output and channel. */
+  const volSent = new Map();
+  function volume(o, ch, track, at) {
+    const vol = track && Number.isInteger(track.volume) ? TC.clamp(track.volume, 0, 127) : 100, k = o.name + ':' + ch;
+    if (volSent.get(k) === vol) return;
+    if (send(o, [0xb0 | ch, 7, vol], at)) volSent.set(k, vol);
+  }
+
   /** Key and channel of an instrument for the kit profile of a track (General MIDI without one). */
   function key(art, track) {
     const a = TC.drums.byId(art);
@@ -128,6 +136,7 @@
     const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
     const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
+    volume(o, k.ch, track, at);
     if (send(o, [0x90 | k.ch, k.note, v], at)) {
       send(o, [0x80 | k.ch, k.note, 0], at + NOTE_MS);
       remember(o, k.ch);
@@ -152,6 +161,7 @@
       if (!send(o, [0xc0 | ch, prog], at)) return;
       programSent.get(o).set(ch, prog);
     }
+    volume(o, ch, track, at);
     if (send(o, [0x90 | ch, pitch, v], at)) {
       send(o, [0x80 | ch, pitch, 0], at + Math.max(30, dur * 1000 - 5));
       remember(o, ch);
@@ -194,6 +204,7 @@
   /** Stop: forget what was handed over for later, and silence the channels used. */
   MO.stop = function () {
     programSent.clear();
+    volSent.clear();
     for (const [o, chs] of used) {
       try {
         if (o.clear) o.clear();

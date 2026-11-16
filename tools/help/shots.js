@@ -124,6 +124,26 @@ setTimeout(() => {
         view(0.95, 10, -40);
       }, 400);
     },
+    // dynamics: the melody example - vocals mp, a crescendo over two bars to f; drums p, crescendo to f; the panel
+    dynamik() {
+      example('melodie');
+      setTimeout(() => {
+        const SC = TC.score, mel = S.doc.tracks.find((t) => t.kind === 'pitched'), dr = S.doc.tracks.find((t) => t.kind === 'drums');
+        SC.setDyn(S.doc, mel, 0, 0, { v: 'mp' });
+        SC.setDyn(S.doc, mel, 1, 0, { w: 'cresc', len: 2 * 3840 });
+        SC.setDyn(S.doc, mel, 3, 0, { v: 'f' });
+        SC.setDyn(S.doc, dr, 0, 0, { v: 'p' });
+        SC.setDyn(S.doc, dr, 2, 0, { w: 'cresc', len: 3840 });
+        SC.setDyn(S.doc, dr, 3, 0, { v: 'f' });
+        TC.commit();
+        S.trackId = mel.id;
+        TC.selectBar(1);
+        A.togglePanelRight();
+        TC.refresh();
+        view(0.9, 10, -40);
+        setTimeout(() => { const h = [...document.querySelectorAll('#panel-settings h3')].find((x) => /Dynamik/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
+      }, 400);
+    },
     // MIDI import: track, where it comes from, grid, tempo, target
     import() {
       S.settings.importTarget = 'into';

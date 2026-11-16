@@ -87,6 +87,9 @@
     const pad = !!(doc.harmony && doc.harmony.pad && doc.harmony.vol > 0 && TC.pitch && !doc.tracks.some((x) => x.solo) && doc.bars.some((x) => x.chords));
     let padNow = null; // the chord sounding: { key, end, hits }
     const chordTrk = T.chordTrack(doc);
+    // dynamics (ppp … fff, hairpins) of each track: how strongly it plays at a place (the notes stay as written)
+    const dynOf = new Map(doc.tracks.map((tr) => [tr, TC.score.dynFactor(doc, tr)]));
+    const loud = (v, f) => Math.min(1.2, v * f);
     const sw = doc.meta.swing || 50, su = doc.meta.swingUnit || 8, st = (k) => TC.swingTick(k, sw, su); // swing / shuffle
     // repeats and endings written out (model.js playOrder): the same order as the MIDI export
     for (const o of TC.score.playBars(doc, from, to)) {
@@ -94,7 +97,7 @@
       const h = doc.bars[bi], spt = tick(h, T.tempoAt(doc, bi)), L = TC.barTicks(h.ts);
       for (const track of doc.tracks) { // all tracks together, but not the muted ones (solo: only those)
         if (!T.audible(doc, track)) continue;
-        const src = TC.score.sourceBar(doc, bi, track);
+        const src = TC.score.sourceBar(doc, bi, track), df = dynOf.get(track);
         for (const voice of track.bars[src].voices) {
           // a roll fills the note as it is shown (rest cleanup, rhythm.js R.ends)
           const ends = track.kind === 'drums' && TC.rhythm ? TC.rhythm.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
@@ -112,18 +115,18 @@
                   before.dur = Math.max(0.05, t1 - before.t - 0.02);
                   continue;
                 }
-                const hit = { t: t0, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - 0.02), vel: T.velocity(n), trk: track, end: t1 };
+                const hit = { t: t0, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1 };
                 hits.push(hit);
                 sounding.set(key, hit);
                 continue;
               }
               const art = TC.drums.byId(n.art);
               if (!art) continue;
-              const vel = T.velocity(n), choke = art.tech === 'choke';
-              if (n.orn === 'flam') hits.push({ t: t0 - 0.03, art: n.art, vel: 0.35, trk: track });
+              const f = df(bi, ev.tick), vel = loud(T.velocity(n), f), choke = art.tech === 'choke';
+              if (n.orn === 'flam') hits.push({ t: t0 - 0.03, art: n.art, vel: loud(0.35, f), trk: track });
               if (n.orn === 'drag') {
-                hits.push({ t: t0 - 0.06, art: n.art, vel: 0.33, trk: track });
-                hits.push({ t: t0 - 0.03, art: n.art, vel: 0.38, trk: track });
+                hits.push({ t: t0 - 0.06, art: n.art, vel: loud(0.33, f), trk: track });
+                hits.push({ t: t0 - 0.03, art: n.art, vel: loud(0.38, f), trk: track });
               }
               hits.push({ t: t0, art: n.art, vel, choke, accent: n.accent || 0, trk: track });
               if (n.trem) {

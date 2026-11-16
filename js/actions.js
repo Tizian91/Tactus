@@ -358,6 +358,13 @@
     // instruments of this track the profile has no key for: show them right away
     if (p && TC.kits.check(S.doc, p).length) TC.kits.openCheck(p);
   };
+  /** The track's fader (0 … 127, 100 = as before): Tactus' sounds louder / softer, through MIDI the channel volume (CC 7). */
+  A.setTrackVolume = function (v) {
+    const t = TC.curTrack();
+    t.volume = TC.clamp(Math.round(Number(v)), 0, 127);
+    sync(t);
+    TC.commit();
+  };
   /** MIDI output of a track (default: the one being written) while playing: '' = Tactus' sounds, '?' = look for outputs. */
   A.setTrackMidiOut = function (v, track) {
     if (v === '?') return A.findMidiOutputs();
@@ -1297,6 +1304,49 @@
     const where = tr('Bar {n}', { n: i + 1 }) + (t ? ', ' + TC.rhythm.countLabel(t, S.doc.bars[i].ts) : '');
     TC.ui.hint(x ? `${where}: ${TC.pitch.chordName(x.ch, de())}` : `${where}: ${tr('no chord')}`);
   };
+  // ---- Dynamics (ppp … fff, hairpins): at the place chosen in the panel (the same places as the chords) -----------
+  /** The tracks a dynamic goes into: the one being written (a piano: both hands) - or all of them (panel switch). */
+  const dynTracks = () => (S.dynAll ? S.doc.tracks.slice() : TC.score.handsOf(S.doc, TC.curTrack()));
+  /** A level (ppp … fff) at the chosen place of the selected bar - the same once more: it goes. */
+  A.setDyn = function (v) {
+    if (!TC.score.DYN_LEVELS.includes(v)) return;
+    const i = curBar(), t = chordTick(i), cur = TC.score.dynIn(TC.curTrack(), i).find((d) => d.t === t && d.v);
+    const off = cur && cur.v === v;
+    let n = 0;
+    dynTracks().forEach((tr) => { if (TC.score.setDyn(S.doc, tr, i, t, { v: off ? null : v })) n++; });
+    if (!n) return;
+    TC.commit();
+    TC.ui.hint(off ? tr('Dynamic removed') : tr('{v} from here on - the notes stay as written', { v }));
+  };
+  /**
+   * A hairpin (cresc. / dim.) from the chosen place of the selected bar to the end of the selected bars ("to bar" in
+   * the bar panel) - to the next level written there, else two steps louder / softer. The same once more: it goes.
+   */
+  A.setWedge = function (w) {
+    if (w !== 'cresc' && w !== 'dim') return;
+    const R = TC.barRange() || [curBar(), curBar()], i = R[0], t = S.selBar === i ? chordTick(i) : 0;
+    const at = TC.score.tickOf(S.doc), len = at(R[1], TC.barTicks(S.doc.bars[R[1]].ts)) - at(i, t);
+    const cur = TC.score.dynIn(TC.curTrack(), i).find((d) => d.t === t && d.w);
+    const off = cur && cur.w === w && cur.len === len;
+    let n = 0;
+    dynTracks().forEach((tk) => { if (TC.score.setDyn(S.doc, tk, i, t, { w: off ? null : w, len })) n++; });
+    if (!n) return;
+    TC.commit();
+    TC.ui.hint(off ? tr('Hairpin removed') : tr(w === 'cresc' ? 'Crescendo to the end of bar {n}' : 'Diminuendo to the end of bar {n}', { n: R[1] + 1 }));
+  };
+  /** Remove the level ('v') or the hairpin ('w') at the chosen place of the selected bar. */
+  A.clearDyn = function (kind) {
+    const i = curBar(), t = chordTick(i);
+    let n = 0;
+    dynTracks().forEach((tk) => { if (TC.score.setDyn(S.doc, tk, i, t, kind === 'w' ? { w: null } : { v: null })) n++; });
+    if (n) TC.commit();
+  };
+  /** Dynamics for the track being written only, or for all tracks at once (not part of the score). */
+  A.toggleDynAll = function () {
+    S.dynAll = !S.dynAll;
+    TC.refresh();
+  };
+
   /** The scale-degree chord `deg` (1 …; seventh chord if switched on in the panel) at the chosen place of bar i. */
   A.setChordDeg = function (deg, i = curBar(), t = chordTick(i)) {
     deg = Number(deg);

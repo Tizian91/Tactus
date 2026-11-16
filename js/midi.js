@@ -103,7 +103,16 @@
     const held = new Map(); // melody: the last note of each track, channel and pitch (a tied note lengthens it)
     tracks.forEach((track, ti) => {
       if (track.kind === 'pitched' && !track.lh) addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
+      // the track's volume (fader, 100 = as before): channel volume CC 7 at the start - the strengths stay
+      const vol = Number.isInteger(track.volume) ? track.volume : 100;
+      if (vol !== 100 && !track.lh) {
+        const k = track.kind === 'drums' ? keyFor(TC.drums.byId(38), targetOf(track), { replaced: new Map(), missing: new Set() }) : null;
+        const ch = track.kind === 'pitched' ? melodyCh(track) : Number.isInteger(track.midiCh) ? track.midiCh : k ? k.ch : 9;
+        addTo(noteEv[ti])(0, 0, [0xb0 | ch, 7, TC.clamp(vol, 0, 127)]);
+      }
     });
+    // dynamics (ppp … fff, hairpins) of each track: the strengths of its notes (as heard)
+    const dynOf = tracks.map((t) => TC.score.dynFactor(doc, t));
     // lyrics: a lyric event per syllable (karaoke: the word ends with a space); verse n on the n-th pass of a repeat
     const lyrOf = tracks.map((t) => (TC.score.lyricVerses(t) ? TC.score.lyricInfo(doc, t) : null));
 
@@ -136,7 +145,7 @@
 
       tracks.forEach((track, ti) => { // every track on the keys of its kit profile
         const tgt = targetOf(track), put = addTo(noteEv[ti]);
-        const src = TC.score.sourceBar(doc, bi, track);
+        const src = TC.score.sourceBar(doc, bi, track), df = dynOf[ti];
         if (lyrOf[ti] && src === bi) {
           for (const e of track.bars[bi].voices[0] || []) {
             const list = lyrOf[ti].get(e);
@@ -153,7 +162,7 @@
               if (n.pitch !== undefined) {
                 // melody: the note on the track's channel, as long as written (swing moves start and end)
                 // a tied note is not struck again: the note before it (same pitch, ending here) gets longer
-                const ch = melodyCh(track), v = Math.max(1, Math.min(127, Math.round(T.velocity(n) * 127)));
+                const ch = melodyCh(track), v = Math.max(1, Math.min(127, Math.round(T.velocity(n) * df(bi, e.tick) * 127)));
                 const a = t0 + sw(e.tick), end = t0 + sw(e.tick + dur), key = ti + ':' + ch + ':' + n.pitch, before = held.get(key);
                 if (n.tie && before && Math.abs(before.end - a) < 1e-6) {
                   before.end = end;
@@ -175,11 +184,11 @@
                 put(t, 2, [0x90 | k.ch, k.note, v]);
                 put(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
               };
-              const at = t0 + sw(e.tick), vel = T.velocity(n); // swing: an offbeat comes later
-              if (n.orn === 'flam') hit(at - msTicks(30), 0.35);
+              const f = df(bi, e.tick), at = t0 + sw(e.tick), vel = T.velocity(n) * f; // swing: an offbeat comes later
+              if (n.orn === 'flam') hit(at - msTicks(30), 0.35 * f);
               if (n.orn === 'drag') {
-                hit(at - msTicks(60), 0.33);
-                hit(at - msTicks(30), 0.38);
+                hit(at - msTicks(60), 0.33 * f);
+                hit(at - msTicks(30), 0.38 * f);
               }
               hit(at, vel);
               if (n.trem) {

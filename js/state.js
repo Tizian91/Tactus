@@ -19,6 +19,7 @@ window.TC = window.TC || {};
     selection: new Set(),   // ids of selected notes
     selBar: null,           // index of the bar shown in the panel's "Bar" section
     selBarEnd: null,        // other end of a range of selected bars (null: only selBar), see TC.barRange
+    dynAll: false,          // dynamics (panel): set for all tracks at once (else the one being written)
     trackId: null,          // the track being written (null / unknown: the first one), see TC.curTrack
     tool: 'write',          // 'write' | 'select' (frame, move several) | 'erase' (note panel, keys W / V / E)
     hover: null,            // where the pointer is: { bar, tick, line, art } (render.js draws a preview)

@@ -168,10 +168,22 @@
     }
     volume(o, ch, track, at);
     if (send(o, [0x90 | ch, pitch, v], at)) {
-      send(o, [0x80 | ch, pitch, 0], at + Math.max(30, dur * 1000 - 5));
+      const offAt = at + Math.max(30, dur * 1000 - 5);
+      send(o, [0x80 | ch, pitch, 0], offAt);
       remember(o, ch);
+      hold(o, ch, pitch, offAt);
     }
   };
+  /**
+   * Notes sent whose release is still to come (a keyswitch held for bars, a long tone): on stop each gets a real
+   * note off - "all notes off" (CC 123) is ignored by many VSTs, and a held keyswitch (palm mute) would stay pressed.
+   */
+  let held = [];
+  function hold(o, ch, pitch, offAt) {
+    const now = performance.now();
+    held = held.filter((h) => h.offAt > now);
+    held.push({ o, ch, pitch, offAt });
+  }
 
   /**
    * Test of a track's output (▶ at "Plays on"): one note right now - drums the snare (key of its kit profile),
@@ -210,9 +222,12 @@
   MO.stop = function () {
     programSent.clear();
     volSent.clear();
+    const now = performance.now(), open = held.filter((h) => h.offAt > now);
+    held = [];
     for (const [o, chs] of used) {
       try {
-        if (o.clear) o.clear();
+        if (o.clear) o.clear(); // (what was handed over for later goes - their releases too:)
+        open.filter((h) => h.o === o).forEach((h) => o.send([0x80 | h.ch, h.pitch, 0])); // a real release of what is held
         for (const ch of chs) o.send([0xb0 | ch, 123, 0]); // all notes off
       } catch (e) {
         /* ignore */

@@ -820,6 +820,12 @@ setTimeout(() => {
             TC.audio.hit(42, 0.1, 0.7, false, null, plain);
             ok('MIDI output: melody on its output, drums on theirs, a track without one not on MIDI ' + JSON.stringify(sent2) + ' ' + JSON.stringify(sent),
               sent2.some((m) => m[0] === 0x90 && m[1] === 60) && sent.some((m) => m[1] === 38) && !sent.some((m) => m[1] === 60 || m[1] === 42));
+            // stopped while a note (a held keyswitch) still sounds: a real release for it, not only "all notes off"
+            sent2.length = 0;
+            TC.midiOut.note(64, 0, 10, 0.8, null, mt2);
+            TC.midiOut.stop();
+            const ci = sent2.indexOf('clear');
+            ok('MIDI output: on stop a held note gets a real note off ' + JSON.stringify(sent2), ci >= 0 && sent2.slice(ci).some((m) => Array.isArray(m) && m[0] === 0x80 && m[1] === 64));
             S.doc.tracks = S.doc.tracks.filter((t) => t !== mt2 && t !== plain);
             TC.actions.setMidiLead(0);
             TC.panel.closeSettings();

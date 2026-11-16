@@ -802,4 +802,6 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - **Nach dem Test (2026-11-16):** C3 = 60 stimmt; C1 frei, Slides D1 E1 F1, Pick Slide G1; Trigger Mode On (D#1) muss mit (`ksw.init`,
   beim Start unsichtbar); Stroke-Tasten werden gehalten, solange der Akkord klingt; Gruppen `mute` (open / P.M. / ½ M. / Dead) und `pick`;
   „open“ sichtbar; Slides / Stop / Release eigene Reihe. Alte Iron-Profile werden beim Laden auf die Vorlage gebracht. **Noch zu prüfen:** was die sechs
-  Picking-Tasten C2 … A2 einzeln tun. **Offen:** eigene Profile anlegen / weitere Vorlagen; Spielweisen über das Notenmenü.
+  Picking-Tasten C2 … A2 einzeln tun (laut Nutzer: Härtegrade). Zweite Vorlage **UJAM Virtual Bassist Rowdy** (2026-11-17): C0–E0 Slides
+  (span „note“: nur über die Note), C#0 / F#0 Legato, G0 Silent Dead (Umschalter), A0 / B0 Dead, Bb0 Full Stop; Noten +24 (zu prüfen),
+  „Noten verschieben“ im Profil wählbar. **Offen:** eigene Profile anlegen / weitere Vorlagen; Spielweisen über das Notenmenü.

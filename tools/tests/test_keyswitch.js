@@ -63,6 +63,19 @@ module.exports = function (T) {
   T.eq('MIDI: muted just before bar 1', mutedOn.t, 0);
   void sev;
 
+
+  // ---- UJAM Virtual Bassist Rowdy: the lowest octave C0 … B0
+  const rowdy = KS.fromTemplate('ujam-rowdy'), rk = (id) => KS.noteOf(rowdy.keys.find((k) => k.id === id).note, rowdy.c3);
+  T.eq('Rowdy: slides C0 D0 E0, legato off C#0 / on F#0, silent dead G0, dead A0 B0, full stop Bb0 (MIDI)', ['slide1', 'slide2', 'slide3', 'legOff', 'legOn', 'deadMode', 'dead1', 'dead2', 'stop'].map(rk), [24, 26, 28, 25, 30, 31, 33, 35, 34]);
+  T.eq('Rowdy: notes two octaves up, one tone at a time, no start keys', [rowdy.noteShift, rowdy.poly, rowdy.init], [24, 1, []]);
+  const bd = TC.emptyScore(1), bt = SC.addTrack(bd, 'Bass', null, 'pitched');
+  bt.ksw = rowdy;
+  [0, 960, 1920].forEach((t) => SC.place(bd, bt, 0, 0, t, 960, TC.newPitchNote(28, null, {})));
+  bt.bars[0].ks = [{ t: 0, k: 'slide1' }, { t: 0, k: 'legOn' }];
+  const be = KS.events(bd, bt, [{ bar: 0, t0: 0 }], (o, k) => k, 3840, []);
+  T.eq('Rowdy: a pre-intro slide held over its note only (not the next), legato on to the end', [be.find((e) => e.key === 24).hold, be.find((e) => e.key === 30).hold], [960, 3840]);
+  const bm = TC.midi.read(TC.midi.build(bd, null, { tracks: [bt] }).bytes);
+  T.eq('Rowdy: the low E (E1 = 28) goes to it two octaves up (52)', bm.notes.some((n) => n.note === 52) && !bm.notes.some((n) => n.note === 28), true);
   // ---- MusicXML: the ways of playing as directions
   const xml = TC.musicxml.build(doc);
   T.eq('MusicXML: P.M. and the slide as words above', [/<words>P\.M\.<\/words>/.test(xml), /<words>sl\. ↗<\/words>/.test(xml)], [true, true]);

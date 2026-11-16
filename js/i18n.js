@@ -361,6 +361,8 @@
     'Auto (note value)': 'Auto (wie Notenwert)',
     'notes as long as the note value, on every place of the grid': 'Noten so lang wie der Notenwert, auf jeder Stelle des Rasters',
     'Keyswitches': 'Keyswitches',
+    'Shift notes': 'Noten verschieben',
+    'Notes go to the VST {n} semitones higher (check: a low note must sound as the VST\'s lowest string); at most {p} tones at a time.': 'Noten gehen {n} Halbtöne höher ans VST (prüfen: ein tiefer Ton muss als tiefste Saite des VSTs klingen); höchstens {p} Töne zugleich.',
     'way of playing': 'Spielweise',
     'before a note': 'vor einer Note',
     'at its place': 'an der Stelle',

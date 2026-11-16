@@ -1416,6 +1416,13 @@
     TC.commit();
     if (t.ksw) TC.ui.hint(tr('{name}: its ways of playing in the note panel; check the keys with ▶ (Tracks & sound).', { name: t.ksw.name }));
   };
+  /** How many semitones the notes are sent higher than they sound (the VST's play range: Iron +12, a bass +24 …). */
+  A.setKswShift = function (v) {
+    const t = TC.curTrack(), n = Number(v);
+    if (!t || !t.ksw || !Number.isInteger(n) || Math.abs(n) > 36) return;
+    t.ksw.noteShift = n;
+    TC.commit();
+  };
   /** Which MIDI note the VST calls C3 (60 or 48) - all its keys and its notes move along. */
   A.setKswC3 = function (v) {
     const t = TC.curTrack();

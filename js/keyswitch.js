@@ -8,6 +8,7 @@
  *     c3     the MIDI note the VST calls C3 (60 or 48) - its keys and its play range follow it
  *     init   keys sent at the start, unseen (Iron: trigger mode on - else its notes do not play)
  *     group  ways of playing of one group replace each other (Iron: open / muted / half / dead; picking its own)
+ *     span   a slide ('once'): held over the note at its place and the next one (default), or 'note' only that one
  *     kind   'art'   a way of playing (dead, muted, half muted, open, picking): held until the next one of its group
  *            'once'  before the note at its place (a slide)
  *            'event' at its place (stop, release)
@@ -43,6 +44,18 @@
       ['trigOff', 'Trigger mode off', '', 'C#1', 'mode'], ['trigOn', 'Trigger mode on', '', 'D#1', 'mode'],
       ['noArtStrum', 'Disable articulation strumming', '', 'F#1', 'mode'], ['strumAuto', 'Strum – auto', '', 'B2', 'mode'],
     ].map(([id, name, short, note, kind, group]) => Object.assign({ id, name, short, note, kind }, group ? { group } : {})),
+  }, {
+    // UJAM Virtual Bassist Rowdy, Instrument Mode (the manual: the lowest octave C0 … B0; play range C3 … E5 - a bass, sent
+    // two octaves up: to check with a low E, "Shift notes" in the profile)
+    tpl: 'ujam-rowdy', v: 1, name: 'UJAM Virtual Bassist Rowdy (Instrument Mode)', c3: 60, noteShift: 24, poly: 1, init: [],
+    keys: [
+      ['slide1', 'Slide 1 (pre-intro)', 'sl. 1', 'C0', 'once', '', 'note'], ['slide2', 'Slide 2 (pre-intro)', 'sl. 2', 'D0', 'once', '', 'note'],
+      ['slide3', 'Slide 3 (pre-intro)', 'sl. 3', 'E0', 'once', '', 'note'],
+      ['legOff', 'Legato off', 'non leg.', 'C#0', 'art', 'legato'], ['legOn', 'Legato on', 'legato', 'F#0', 'art', 'legato'],
+      ['deadMode', 'Silent dead note (the keys play dead notes - on / off)', 'dead ⇄', 'G0', 'event'],
+      ['dead1', 'Dead note 1', 'x', 'A0', 'event'], ['dead2', 'Dead note 2', 'x 2', 'B0', 'event'],
+      ['stop', 'Full stop', 'stop', 'A#0', 'event'],
+    ].map(([id, name, short, note, kind, group, span]) => Object.assign({ id, name, short, note, kind }, group ? { group } : {}, span ? { span } : {})),
   }];
   KS.KINDS = ['art', 'once', 'event', 'down', 'up', 'mode'];
   KS.template = (id) => KS.TEMPLATES.find((x) => x.tpl === id) || null;
@@ -72,7 +85,7 @@
     if (tpl && (!Array.isArray(p.init) || (p.v || 1) < (tpl.v || 1))) p = Object.assign(KS.fromTemplate(p.tpl), { c3: p.c3 });
     const keys = p.keys.filter((k) => k && typeof k.id === 'string' && KS.KINDS.includes(k.kind) && KS.noteOf(k.note) !== null)
       .map((k) => Object.assign({ id: k.id.slice(0, 40), name: String(k.name || k.id).slice(0, 60), short: String(k.short || '').slice(0, 12), note: k.note, kind: k.kind },
-        typeof k.group === 'string' && k.group ? { group: k.group.slice(0, 20) } : {}));
+        typeof k.group === 'string' && k.group ? { group: k.group.slice(0, 20) } : {}, k.span === 'note' ? { span: 'note' } : {}));
     if (!keys.length) return null;
     const ids = new Set(keys.map((k) => k.id));
     return { tpl: typeof p.tpl === 'string' ? p.tpl : '', v: Number.isInteger(p.v) ? p.v : 1, name: String(p.name || 'Keyswitches').slice(0, 60), c3: p.c3 === 48 ? 48 : 60,
@@ -127,7 +140,9 @@
         } else if (k.kind === 'once') {
           // a slide: held from the note here up to the end of the next note (that one too) - else the VST does not slide
           const n = notes().find((x) => x.at >= at - 1e-6), next = n && notes().find((x) => x.at > n.at + 1e-6);
-          out.push({ at, key: k.midi, hold: next ? Math.max(0, next.end - at) : n ? Math.max(0, n.end - at) : 0 });
+          // (span 'note': only over the note here - Rowdy's pre-intro slides)
+          const upTo = k.span === 'note' ? n : next || n;
+          out.push({ at, key: k.midi, hold: upTo ? Math.max(0, upTo.end - at) : 0 });
         } else out.push({ at, key: k.midi, hold: 0 });
       }
     }

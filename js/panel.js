@@ -619,7 +619,8 @@
           <span class="ksw-name">${esc(k.name)} <span class="muted">${esc(tr(KIND[k.kind]))}</span></span>
           <input type="text" class="ksw-note" data-kswnote data-id="${esc(k.id)}" value="${esc(k.note)}" maxlength="4" title="${esc(tr('Its key, as the VST names it (C3 = {n})', { n: p.c3 }))}"></div>`).join('');
       more = `<div class="row"><label>C3 =</label><div class="seg">${btn('setKswC3', 60, 'MIDI 60', p.c3 !== 48, tr('C3 is middle C (Cubase, most VSTs)'))}${btn('setKswC3', 48, 'MIDI 48', p.c3 === 48, tr('C3 an octave lower'))}</div></div>
-        <p class="hint tight">${esc(tr('Notes go to the VST {n} semitones higher; at most {p} tones at a time (tapped chords: tight grips).', { n: p.noteShift, p: p.poly || '–' }))}</p>
+        <div class="row"><label>${tr('Shift notes')}</label><select data-action="setKswShift">${[-12, 0, 12, 24, 36].map((n) => `<option value="${n}"${n === p.noteShift ? ' selected' : ''}>${n > 0 ? '+' : ''}${n}</option>`).join('')}</select></div>
+        <p class="hint tight">${esc(tr('Notes go to the VST {n} semitones higher (check: a low note must sound as the VST\'s lowest string); at most {p} tones at a time.', { n: p.noteShift, p: p.poly || '–' }))}</p>
         <details class="ksw-list"><summary>${tr('Check / change the keys ({n})', { n: p.keys.length })}</summary>${rows}
           <p class="hint tight">${tr('▶ sends the key: the VST should show that way of playing. Wrong everywhere: switch C3 above.')}</p></details>`;
     }

@@ -196,12 +196,15 @@ Das geht in <b>Chrome und Edge am PC</b>.</p>
     (Mac: der eingebaute IAC-Treiber).</li>
   <li>In Cubase: die Schlagzeugspur auf diesen MIDI-Eingang stellen und <b>Monitor</b> einschalten (oder die Aufnahme aktivieren).
     Ein Standalone-VST stellst du in seinen MIDI-Einstellungen auf den Port.</li>
-  <li>In Tactus: Panel <span class="ui">Wiedergabe → Klang → MIDI-Ausgang (Cubase …)…</span>; beim ersten Mal fragt der Browser um Erlaubnis. Dann den Port wählen.</li>
-  <li>Abspielen. Die Tasten kommen aus dem Kit-Profil des Stücks.</li>
+  <li>In Tactus: bei der Spur <span class="ui">Spielt über → MIDI-Ausgang (Cubase, ein VST)…</span>; beim ersten Mal fragt der Browser um
+    Erlaubnis. Dann den Port wählen. <b>Jede Spur hat ihren eigenen Ausgang</b> – ein VST spielt ein Instrument: z. B. Schlagzeug auf
+    „Cubase1“ (EZDrummer), Melodie auf „Cubase2“ (Falcon). Alle auf einen Blick und umstellbar: Panel
+    <span class="ui">Wiedergabe → Klang der Spuren</span>. Eine Spur ohne Ausgang klingt mit den Tactus-Klängen.</li>
+  <li>Abspielen. Die Tasten kommen aus dem Kit-Profil der Spur, den Kanal stellst du bei der Spur ein.</li>
   <li><b>Vorlauf</b> einstellen (Feld unter dem Ausgang): mit Metronom abspielen und erhöhen, bis VST und Klick zusammen sind.
     Mit ASIO-Treiber sind das wenige Millisekunden, ein Standalone-VST ohne ASIO braucht oft 100–250 ms.</li>
 </ol>
-<p>Der Knopf <span class="ui">Tactus / MIDI</span> in der Werkzeugleiste schaltet danach mit einem Tipp zwischen Tactus-Klängen und deinem VST um.</p>
+<p>Der Knopf <span class="ui">MIDI / Tactus</span> in der Werkzeugleiste schaltet MIDI mit einem Tipp vorübergehend aus (alles mit Tactus-Klängen) und wieder an – die Ausgänge der Spuren bleiben eingestellt. Kommt bei einem Port nichts an, meldet Tactus das; ein loopMIDI-Port, der angelegt wurde, während der Browser lief, geht erst nach einem Neustart des Browsers (alle Fenster schließen).</p>
 
 <h3 id="midi-export">MIDI nach Cubase</h3>
 <p><span class="ui">Datei → MIDI exportieren für</span> → das Kit-Profil (oder <kbd>Strg</kbd>+<kbd>E</kbd> mit dem Profil des Stücks). Die Datei enthält:</p>

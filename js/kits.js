@@ -440,10 +440,7 @@
   /** ▶: a key through the MIDI output (the drum VST plays it); without one: Tactus' sound of the instrument. */
   function audition(p, note) {
     const e = K.map(p).entries.find((x) => x.inote === note);
-    if (TC.midiOut && TC.midiOut.active()) {
-      TC.midiOut.sendKey(note, K.channel(e));
-      return;
-    }
+    if (TC.midiOut && TC.midiOut.sendKey(note, K.channel(e))) return;
     const art = K.artOfKey(p, note);
     if (art !== null && TC.audio) TC.audio.preview(TC.newDrumNote(art, {}));
   }
@@ -460,7 +457,7 @@
     const opts = K.list.map((q) => `<option value="${q.id}"${q.id === cur ? ' selected' : ''}>${esc(q.name)}</option>`).join('');
     let body = '';
     const midiHint = TC.midiOut && TC.midiOut.active() ? ''
-      : `<p class="hint tight">${tr('▶ plays a key through the MIDI output (panel → playback → sound) on your drum VST. None is chosen now: ▶ plays Tactus\' sound of the instrument.')}</p>`;
+      : `<p class="hint tight">${tr('▶ plays a key on your drum VST once a drum track has a MIDI output (at the track: "Plays on"). None has one now: ▶ plays Tactus\' sound of the instrument.')}</p>`;
     if (!p) {
       body = `<div class="kit-empty"><p>${tr('No kit profile yet.')}</p>
         <p class="hint">${tr('Load the drum map of your drum VST (Cubase .drm, or the note names for Reaper .txt / Studio One .pitchlist). Tactus guesses from the key names which key is which instrument; you only correct what does not fit.')}</p>
@@ -764,7 +761,7 @@
       if (b.dataset.k === 'kits') { K.closeCheck(); cur = p.id; return K.open(); }
       if (b.dataset.k === 'play') {
         const k = TC.midi.keyFor(TC.drums.byId(art), p, { replaced: new Map(), missing: new Set() });
-        if (k && TC.midiOut && TC.midiOut.active()) TC.midiOut.sendKey(k.note, k.ch);
+        if (k && TC.midiOut && TC.midiOut.sendKey(k.note, k.ch)) { /* played by the drum VST */ }
         else if (k && TC.audio) TC.audio.preview(TC.newDrumNote(K.artOfKey(p, k.note) || art, {}));
       }
       if (b.dataset.k === 'replace') {

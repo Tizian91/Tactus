@@ -454,18 +454,15 @@
       .concat(missing ? [[t.profile, t.profileName + ' ' + tr('(missing)')]] : [])
       .map(([v, l]) => `<option value="${esc(v)}"${v === (t.profile || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
     let midi = '';
-    if (TC.midiOut && TC.midiOut.supported() && S.settings.midiOut) {
-      const outs = [['', tr('Like the panel ({name})', { name: S.settings.midiOut })]].concat(TC.midiOut.outputs().map((o) => [o, o]))
-        .concat(t.midiOut && !TC.midiOut.outputs().includes(t.midiOut) ? [[t.midiOut, t.midiOut + ' ' + tr('(missing)')]] : []);
+    // where the track sounds: Tactus' sounds or its own MIDI output (+ channel)
+    if (TC.midiOut && TC.midiOut.supported()) {
       const chs = [['', t.kind === 'pitched' ? tr('Channel {n}', { n: t.channel + 1 }) : tr('From the kit profile')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
       const curCh = Number.isInteger(t.midiCh) ? String(t.midiCh + 1) : '';
-      midi = `<div class="row"><label>${tr('MIDI output')}</label><select data-action="setTrackMidiOut">${outs.map(([v, l]) =>
-        `<option value="${esc(v)}"${v === (t.midiOut || '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
-        <div class="row"><label>${tr('Channel')}</label><select data-action="setTrackMidiCh">${chs.map(([v, l]) =>
-        `<option value="${v}"${v === curCh ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+      midi = `<div class="row"><label>${tr('Sound output')}</label><select data-action="setTrackMidiOut">${outputOptions(t)}</select></div>` +
+        (t.midiOut ? `<div class="row"><label>${tr('Channel')}</label><select data-action="setTrackMidiCh">${chs.map(([v, l]) =>
+          `<option value="${v}"${v === curCh ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>` : '');
     }
-    return `${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}
-      ${S.doc.tracks.length > 1 && !midi && TC.midiOut && TC.midiOut.supported() ? `<p class="hint tight">${tr('Playing through MIDI (Playback → Sound): each track can get its own output and channel here.')}</p>` : ''}`;
+    return `${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}`;
   }
 
   /** All tempo changes of the score: click = go to the bar, ✕ = remove the change. */
@@ -554,32 +551,43 @@
     </section>`;
   }
 
-  /** Where the playback sounds: Tactus' own sounds or a MIDI output (Cubase plays them, js/midiout.js). */
+  /**
+   * The options of a track's output: Tactus' sounds, the MIDI outputs (one missing: marked), look for outputs.
+   * val(output) -> the option value (the playback list puts the track's id in front).
+   */
+  function outputOptions(t, val = (v) => v) {
+    const MO = TC.midiOut, outs = MO.outputs();
+    return [['', tr('Tactus sounds')]].concat(outs.map((o) => [o, 'MIDI: ' + o]))
+      .concat(t.midiOut && !outs.includes(t.midiOut) ? [[t.midiOut, 'MIDI: ' + t.midiOut + ' ' + tr('(missing)')]] : [])
+      .map(([v, l]) => `<option value="${esc(val(v))}"${v === (t.midiOut || '') ? ' selected' : ''}>${esc(l)}</option>`).join('') +
+      `<option value="${esc(val('?'))}">${tr(outs.length ? 'Look for MIDI outputs again…' : 'MIDI output (Cubase, a VST)…')}</option>`;
+  }
+
+  /**
+   * Where each track sounds: Tactus' sounds or a MIDI output - each its own (one VST plays one instrument, e.g. EZDrummer
+   * the drums, Falcon the melody). The same list as in the track settings, all in one place; lead, Tactus as well, MIDI off.
+   */
   function soundRow() {
     const MO = TC.midiOut;
     if (!MO || !MO.supported()) return '';
-    const st = S.settings, outs = MO.outputs();
-    if (st.midiOut && !outs.includes(st.midiOut)) outs.unshift(st.midiOut);
-    const opts = [`<option value="">${tr('Tactus sounds')}</option>`]
-      .concat(outs.map((n) => `<option value="${esc(n)}"${n === st.midiOut ? ' selected' : ''}>MIDI: ${esc(n)}</option>`))
-      .concat(`<option value="?">${tr(outs.length ? 'Look for MIDI outputs again…' : 'MIDI output (Cubase …)…')}</option>`).join('');
-    const p = TC.kits && TC.kits.current(S.doc);
+    const st = S.settings, insts = TC.score.instruments(S.doc), chosen = MO.chosen();
+    const rows = insts.map((t) => `<div class="row"><label>${esc(t.name)}</label><select data-action="setOutputOf">${outputOptions(t, (v) => t.id + '|' + v)}</select></div>`).join('');
     let more = '';
-    if (st.midiOut) {
-      more = MO.missing()
-        ? `<p class="hint warn">${tr('"{name}" is not connected.', { name: st.midiOut })}</p>`
-        : `<p class="hint tight">${tr('Keys of the kit profile: {name}', { name: p ? p.name : 'General MIDI' })}</p>`;
+    if (chosen) {
+      if (MO.missing()) more += `<p class="hint warn">${tr('A MIDI output is not connected - is the virtual MIDI cable (e.g. loopMIDI) running?')}</p>`;
+      more += check('toggleSoundOut', !!st.midiOff, tr('MIDI off for now: all with Tactus sounds'));
       more += `<div class="row"><label>${tr('Lead')}</label><input type="number" min="0" max="500" step="10" data-midilead value="${Number(st.midiLead) || 0}"> <span class="muted">ms</span></div>
         <p class="hint tight">${tr('Sends the notes earlier, as much as the drum VST is late (its audio buffer). Set it with the metronome on until both sound together.')} <a class="help-link" href="hilfe.html#vst-wiedergabe" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></p>`;
       more += check('toggleMidiSynth', !!st.midiOutSynth, tr('Tactus sounds as well'));
     }
-    return `<div class="row"><label>${tr('Sound')}</label><select data-action="setMidiOut">${opts}</select></div>${more}`;
+    return `<h3 class="sub">${tr('Sound of each track')}</h3>${rows}
+      <p class="hint tight">${tr('Each track its own: Tactus sounds or a MIDI output (one VST per instrument). Channel and kit profile: track settings.')}</p>${more}`;
   }
 
   /** Tactus' own sounds: synthesized or recorded (js/samples.js). */
   function samplesRow() {
     const st = S.settings;
-    if (st.midiOut && !st.midiOutSynth && TC.midiOut && TC.midiOut.active()) return '';
+    if (!st.midiOutSynth && TC.midiOut && S.doc.tracks.some((t) => t.kind === 'drums') && S.doc.tracks.filter((t) => t.kind === 'drums').every((t) => TC.midiOut.trackActive(t))) return ''; // (every drum track plays on a VST)
     const sm = TC.samples, state = sm ? sm.state() : 'off';
     const note = !st.samples ? '' : state === 'loading' ? `<p class="hint tight">${tr('Loading the recordings… (about 3.5 MB, once)')}</p>`
       : state === 'failed' ? `<p class="hint warn tight">${tr('The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.')}</p>` : '';

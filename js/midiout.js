@@ -8,11 +8,12 @@
  * the MIDI export; without one: General MIDI on channel 10). Strokes are handed over with their exact
  * time, so they keep the timing of the playback; the cursor and the metronome stay in Tactus.
  *
- *   settings.midiOut       name of the output ('' = Tactus' own sounds)
+ * Every track has its own output - one VST plays one instrument (drums, piano …):
+ *   track.midiOut          the track's MIDI output ('' = Tactus' own sounds; not connected: Tactus' sounds too)
+ *   track.midiCh           its channel 0 … 15 (null: drums the channel of the kit profile, melody track.channel)
+ *   settings.midiOff       MIDI off for a moment: everything with Tactus' sounds (toolbar switch)
  *   settings.midiOutSynth  play Tactus' own sounds as well
- *   track.midiOut          a track's own output (e.g. one loopMIDI port per drum VST in Cubase;
- *                          '' or not connected: settings.midiOut)
- *   track.midiCh           a track's own channel 0 … 15 (null: the channel of its kit profile)
+ *   settings.midiOut       (before 2026-11-16: one output for all tracks - given to the tracks once, js/main.js)
  */
 (function (TC) {
   const MO = (TC.midiOut = {});
@@ -40,22 +41,58 @@
     return asking;
   };
 
+  /**
+   * An output that does not take notes (the browser could not open it - e.g. a loopMIDI port made while the
+   * browser was running): said once, instead of staying silent. Opened on first use, so the error shows.
+   */
+  const opened = new Set(), failed = new Set();
+  function fail(o, e) {
+    if (failed.has(o.name)) return;
+    failed.add(o.name);
+    if (TC.ui) TC.ui.hint(TC.tr('The MIDI output "{name}" takes no notes ({err}). Close the browser completely (all windows) and open it again - a new loopMIDI port is only seen then.', { name: o.name, err: (e && (e.name || e.message)) || '?' }));
+  }
+  function ready(o) {
+    if (opened.has(o)) return;
+    opened.add(o);
+    if (o.open) Promise.resolve().then(() => o.open()).then(() => failed.delete(o.name)).catch((e) => fail(o, e));
+  }
+  /** Send to an output; a failure is said (once per output). */
+  function send(o, msg, at) {
+    ready(o);
+    try {
+      o.send(msg, at);
+      return true;
+    } catch (e) {
+      fail(o, e);
+      return false;
+    }
+  }
+  /** Outputs that did not take notes (names). */
+  MO.failed = () => [...failed];
+
   /** Names of the MIDI outputs (empty until MO.init has been answered). */
   MO.outputs = () => (access ? [...access.outputs.values()].map((o) => o.name) : []);
   const byName = (name) => (access && name ? [...access.outputs.values()].find((o) => o.name === name) || null : null);
-  const port = () => byName(S.settings.midiOut);
-  /** The output of a track: its own (if connected), else the one of the panel. */
-  const portOf = (track) => (track && track.midiOut && byName(track.midiOut)) || port();
+  /** The output of a track (connected, MIDI not switched off), or null: Tactus' sounds. */
+  const portOf = (track) => (!S.settings.midiOff && track && track.midiOut && byName(track.midiOut)) || null;
   /** A track's own output is chosen but not connected. */
   MO.trackMissing = (track) => !!(track && track.midiOut && access && !byName(track.midiOut));
 
   /** Is a MIDI output of this name connected? */
   MO.connected = (name) => !!byName(name);
 
-  /** Playback goes to a MIDI output (chosen and connected). */
-  MO.active = () => !!port();
-  /** The chosen output is not there (not connected, or MIDI not allowed yet). */
-  MO.missing = () => !!S.settings.midiOut && !port();
+  /** Does this track play through MIDI (its output connected, MIDI not switched off)? */
+  MO.trackActive = (track) => !!portOf(track);
+  /** Does anything play through MIDI (then the lead applies)? */
+  MO.anyActive = (doc) => !!(doc && doc.tracks.some((t) => portOf(t)));
+  /** Does any track of the score play through MIDI now? */
+  MO.active = () => MO.anyActive(S.doc);
+  /** Has any track a MIDI output chosen (connected or not, switched off or not)? */
+  MO.chosen = (doc = S.doc) => doc.tracks.some((t) => !!t.midiOut);
+  /** Where a track plays: its output's name, or '' (Tactus' sounds). */
+  MO.outputOf = (track) => { const o = portOf(track); return o ? o.name : ''; };
+  /** A track's output is chosen but not there (not connected, or MIDI not allowed yet). */
+  MO.missing = () => !S.settings.midiOff && S.doc.tracks.some((t) => t.midiOut && !byName(t.midiOut));
 
   /** Key and channel of an instrument for the kit profile of a track (General MIDI without one). */
   function key(art, track) {
@@ -86,12 +123,9 @@
     const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
     const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
-    try {
-      o.send([0x90 | k.ch, k.note, v], at);
-      o.send([0x80 | k.ch, k.note, 0], at + NOTE_MS);
+    if (send(o, [0x90 | k.ch, k.note, v], at)) {
+      send(o, [0x80 | k.ch, k.note, 0], at + NOTE_MS);
       remember(o, k.ch);
-    } catch (e) {
-      /* the port went away */
     }
   };
 
@@ -107,24 +141,23 @@
     const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
     const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
-    try {
-      if (!programSent.has(o)) programSent.set(o, new Map());
-      const prog = track ? track.program || 0 : 0;
-      if (programSent.get(o).get(ch) !== prog) {
-        o.send([0xc0 | ch, prog], at);
-        programSent.get(o).set(ch, prog);
-      }
-      o.send([0x90 | ch, pitch, v], at);
-      o.send([0x80 | ch, pitch, 0], at + Math.max(30, dur * 1000 - 5));
+    if (!programSent.has(o)) programSent.set(o, new Map());
+    const prog = track ? track.program || 0 : 0;
+    if (programSent.get(o).get(ch) !== prog) {
+      if (!send(o, [0xc0 | ch, prog], at)) return;
+      programSent.get(o).set(ch, prog);
+    }
+    if (send(o, [0x90 | ch, pitch, v], at)) {
+      send(o, [0x80 | ch, pitch, 0], at + Math.max(30, dur * 1000 - 5));
       remember(o, ch);
-    } catch (e) {
-      /* the port went away */
     }
   };
 
   /** One key right now (kit profile dialog: ▶ to hear which sound a key is). */
   MO.sendKey = function (note, ch = 9, vel = 100) {
-    const o = port();
+    // (the output of the track being written, else of the first drum track that has one)
+    const cur = TC.curTrack && TC.curTrack();
+    const o = portOf(cur && cur.kind === 'drums' ? cur : null) || portOf(S.doc.tracks.find((t) => t.kind === 'drums' && portOf(t)));
     if (!o) return false;
     try {
       o.send([0x90 | ch, note, vel]);

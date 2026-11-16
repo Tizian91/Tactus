@@ -47,16 +47,15 @@
     document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
     document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
     document.getElementById('follow-btn').classList.toggle('active', S.settings.followPlay !== false);
-    // sound switch: only where MIDI exists and an output was chosen once
+    // sound switch: only when a track has a MIDI output - MIDI off for a moment (all with Tactus' sounds) and on again
     const snd = document.getElementById('sound-btn');
     if (snd) {
-      const out = S.settings.midiOut;
-      snd.hidden = !TC.midiOut.supported() || !(out || S.settings.midiOutLast);
-      snd.textContent = out ? 'MIDI' : 'Tactus';
-      snd.classList.toggle('active', !!out);
-      snd.classList.toggle('missing', !!out && TC.midiOut.missing());
-      snd.title = (out ? tr('Sound: {name}', { name: out }) : tr('Sound: Tactus')) + ' – ' +
-        tr('Sound of the playback: Tactus sounds or the MIDI output (Cubase …). Click: switch');
+      const on = !S.settings.midiOff;
+      snd.hidden = !TC.midiOut.supported() || !TC.midiOut.chosen();
+      snd.textContent = on ? 'MIDI' : 'Tactus';
+      snd.classList.toggle('active', on);
+      snd.classList.toggle('missing', on && TC.midiOut.missing());
+      snd.title = tr(on ? 'MIDI on: the tracks with a MIDI output play there. Click: all with Tactus sounds' : 'MIDI off: all tracks with Tactus sounds. Click: MIDI on');
     }
     const tempo = document.getElementById('tempo-input');
     if (document.activeElement !== tempo) tempo.value = S.doc.meta.tempo;
@@ -102,7 +101,6 @@
   function init() {
     TC.storage.loadSettings();
     TC.kits.load();
-    if (S.settings.midiOut && TC.midiOut.supported()) TC.midiOut.init(); // the chosen MIDI output again (permission is remembered)
     if (S.settings.remoteIn && TC.remote && TC.remote.supported()) TC.remote.init(); // page turning by MIDI: listen again
     // recorded sounds switched on: load them with the first touch (the browser allows sound only then)
     document.addEventListener('pointerdown', () => { if (S.settings.samples && TC.samples.state() === 'off') TC.samples.load(TC.audio.context()); }, { once: true, capture: true });
@@ -135,6 +133,13 @@
       S.doc = TC.storage.demoDoc(); // first start: an example to look at
       S.file.name = 'Example.tactus.json';
     }
+    // one MIDI output for all tracks (before 2026-11-16): the tracks of this score get it, once - now each has its own
+    if (S.settings.midiOut) {
+      S.doc.tracks.forEach((t) => { if (!t.midiOut) t.midiOut = S.settings.midiOut; });
+      S.settings.midiOut = '';
+      TC.saveSettings();
+    }
+    if (TC.midiOut.supported() && TC.midiOut.chosen()) TC.midiOut.init(); // the tracks' MIDI outputs again (permission is remembered)
     // the default size became 160 %: a score kept from before is enlarged once
     let toStart = !back;
     if (!S.settings.zoomV2) {

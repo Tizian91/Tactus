@@ -124,7 +124,7 @@
     const a = TC.drums.byId(art);
     if (!a) return;
     // playback through a MIDI output (Cubase …): the stroke goes there; Tactus' sounds only if wanted
-    if (TC.midiOut && TC.midiOut.active()) {
+    if (TC.midiOut && TC.midiOut.trackActive(track)) {
       TC.midiOut.hit(art, t, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
@@ -333,7 +333,7 @@
   AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
     if (!ensure()) return;
     // the chord pad: its own MIDI output only (if connected; else here), never the drums' output
-    const toMidi = TC.midiOut && (track && track.ownPort ? TC.midiOut.connected(track.midiOut) : TC.midiOut.active() && !(track && track.synthOnly));
+    const toMidi = TC.midiOut && (track && track.ownPort ? !S.settings.midiOff && TC.midiOut.connected(track.midiOut) : TC.midiOut.trackActive(track) && !(track && track.synthOnly));
     if (toMidi) {
       TC.midiOut.note(pitch, t, dur, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
@@ -446,7 +446,7 @@
     }
     // MIDI output with a lead (settings.midiLead): its strokes are handed over that much earlier
     const chordOut = S.doc.harmony && S.doc.harmony.pad && S.doc.harmony.midiOut && TC.midiOut && TC.midiOut.connected(S.doc.harmony.midiOut);
-    const lead = TC.midiOut && (TC.midiOut.active() || chordOut) ? TC.midiOut.lead() : 0;
+    const lead = TC.midiOut && (TC.midiOut.anyActive(S.doc) || chordOut) ? TC.midiOut.lead() : 0;
     const horizon = ctx.currentTime - t0 + AHEAD + lead;
     for (;;) {
       if (idx >= tl.hits.length) {
@@ -567,7 +567,7 @@
     build();
     idx = 0;
     until = -1;
-    t0 = ctx.currentTime + 0.05 + (TC.midiOut && TC.midiOut.active() ? TC.midiOut.lead() : 0); // room for the MIDI lead
+    t0 = ctx.currentTime + 0.05 + (TC.midiOut && TC.midiOut.anyActive(S.doc) ? TC.midiOut.lead() : 0); // room for the MIDI lead
     bus = ctx.createGain(); // this run's own output: stop() fades it without touching the next run
     bus.connect(master);
     cbus = AU.clickBus(); // (the clicks: their own output, not under the volume slider)

@@ -769,15 +769,34 @@ setTimeout(() => {
           // MIDI output (Web MIDI stubbed): the strokes go to the port with the keys of the kit profile
           const sent = [];
           const port = { name: 'Test Port', send: (m) => sent.push(Array.from(m)), clear: () => sent.push('clear') };
-          Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: () => Promise.resolve({ outputs: new Map([['p', port]]) }) });
+          const sent2 = [], port2 = { name: 'Test Port 2', send: (m) => sent2.push(Array.from(m)), clear: () => sent2.push('clear') };
+          Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: () => Promise.resolve({ outputs: new Map([['p', port], ['q', port2]]) }) });
           return TC.midiOut.init().then(() => {
-            TC.actions.setMidiOut('Test Port');
-            ok('MIDI output: chosen in the panel', [...document.querySelectorAll('select[data-action="setMidiOut"] option')].some((o) => o.value === 'Test Port' && o.selected) && TC.midiOut.active());
+            // every track its own output (one VST per instrument): chosen in the playback list or at the track
+            const dr = S.doc.tracks.find((t) => t.kind === 'drums');
+            TC.actions.selectTrack(dr.id);
+            TC.panel.update(true);
+            ok('MIDI output: the playback panel lists each track with the outputs', !!document.querySelector(`select[data-action="setOutputOf"] option[value="${dr.id}|Test Port"]`) && !TC.midiOut.active());
+            TC.actions.setOutputOf(dr.id + '|Test Port');
+            TC.panel.update(true);
+            ok('MIDI output: the drum track plays there (its track settings show it)', dr.midiOut === 'Test Port' && TC.midiOut.active() &&
+              [...document.querySelectorAll('select[data-action="setTrackMidiOut"] option')].some((o) => o.value === 'Test Port' && o.selected));
             TC.audio.preview(TC.newDrumNote(38, { accent: 1 }));
             ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127) ' + JSON.stringify(sent[0]),
               sent.length === 2 && sent[0].join() === [0x99, 38, 127].join() && sent[1][0] === 0x89);
             TC.actions.setMidiLead(200);
             ok('MIDI output: lead 200 ms set in the panel', TC.midiOut.lead() === 0.2 && document.querySelector('input[data-midilead]').value === '200');
+            // two outputs: a melody track on its own (Test Port 2), the drums on theirs, a track without one: Tactus' sounds
+            const mt2 = TC.score.addTrack(S.doc, 'Synth', null, 'pitched');
+            mt2.midiOut = 'Test Port 2';
+            const plain = TC.score.addTrack(S.doc, 'Shaker', null, 'drums');
+            sent.length = 0; sent2.length = 0;
+            TC.audio.tone(60, 0.1, 0.3, 0.7, null, mt2);
+            TC.audio.hit(38, 0.1, 0.7, false, null, dr);
+            TC.audio.hit(42, 0.1, 0.7, false, null, plain);
+            ok('MIDI output: melody on its output, drums on theirs, a track without one not on MIDI ' + JSON.stringify(sent2) + ' ' + JSON.stringify(sent),
+              sent2.some((m) => m[0] === 0x90 && m[1] === 60) && sent.some((m) => m[1] === 38) && !sent.some((m) => m[1] === 60 || m[1] === 42));
+            S.doc.tracks = S.doc.tracks.filter((t) => t !== mt2 && t !== plain);
             TC.actions.setMidiLead(0);
             // own kit profile (no drum map from the maker): key view, ▶ plays the key on the MIDI output
             const realSave = TC.kits.save, realPrompt = window.prompt;
@@ -807,12 +826,12 @@ setTimeout(() => {
             const sb = document.getElementById('sound-btn');
             ok('toolbar: sound switch shows MIDI', !sb.hidden && sb.textContent === 'MIDI' && sb.classList.contains('active'));
             sb.click();
-            ok('toolbar: click → Tactus sounds', !TC.midiOut.active() && sb.textContent === 'Tactus' && !sb.hidden);
+            ok('toolbar: click → MIDI off, Tactus sounds (the output of the track stays)', !TC.midiOut.active() && sb.textContent === 'Tactus' && !sb.hidden && dr.midiOut === 'Test Port');
             sb.click();
             return new Promise((r) => setTimeout(r, 50)).then(() => {
-              ok('toolbar: click again → the MIDI output chosen last', TC.midiOut.active() && sb.textContent === 'MIDI');
-              TC.actions.setMidiOut('');
-              ok('MIDI output off: Tactus sounds again', !TC.midiOut.active());
+              ok('toolbar: click again → MIDI on', TC.midiOut.active() && sb.textContent === 'MIDI');
+              TC.actions.setTrackMidiOut('', dr);
+              ok('track back on Tactus sounds: nothing on MIDI, the switch goes', !TC.midiOut.active() && document.getElementById('sound-btn').hidden);
             });
           }).catch((e) => ok('MIDI output: ' + e.message, false));
         }).then(() => {

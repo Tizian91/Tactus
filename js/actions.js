@@ -279,6 +279,7 @@
     const art = TC.drums.byId(S.input.art);
     if (!art) return;
     const t = TC.score.addTrack(S.doc, TC.score.freeTrackName(S.doc, TC.drums.elName(art)), TC.curTrack());
+    if (TC.curTrack().kind === 'drums') t.midiOut = TC.curTrack().midiOut; // (the same drum VST)
     t.kit = [art.id];
     t.oneLine = true;
     S.trackId = t.id;
@@ -355,10 +356,15 @@
     // instruments of this track the profile has no key for: show them right away
     if (p && TC.kits.check(S.doc, p).length) TC.kits.openCheck(p);
   };
-  /** MIDI output of the track being written while playing ('' = the one of the panel). */
-  A.setTrackMidiOut = function (v) {
-    TC.curTrack().midiOut = v || '';
-    sync(TC.curTrack());
+  /** MIDI output of a track (default: the one being written) while playing: '' = Tactus' sounds, '?' = look for outputs. */
+  A.setTrackMidiOut = function (v, track) {
+    if (v === '?') return A.findMidiOutputs();
+    const t = track && track.id ? track : TC.curTrack();
+    if (TC.player.playing) TC.player.stop(true);
+    t.midiOut = v || '';
+    sync(t);
+    if (v) S.settings.midiOff = false; // (an output chosen: it is meant to be heard)
+    TC.saveSettings();
     TC.commit();
   };
   /** MIDI channel of the track being written while playing ('' = the one of its kit profile; 1 … 16). */
@@ -377,6 +383,7 @@
     const name = prompt(tr('Name of the new track (e.g. Snare, Cymbals):'), TC.score.freeTrackName(S.doc, tr('Drums')));
     if (name === null) return;
     const t = TC.score.addTrack(S.doc, name.trim() || TC.score.freeTrackName(S.doc, tr('Drums')), TC.curTrack());
+    if (TC.curTrack().kind === 'drums') t.midiOut = TC.curTrack().midiOut; // (the same drum VST)
     S.trackId = t.id;
     S.selection.clear();
     TC.commit();
@@ -984,37 +991,39 @@
     if (TC.player.playing) TC.player.restartHere();
     TC.refresh();
   };
+  /** Look for MIDI outputs (the browser asks once whether Tactus may use MIDI). */
+  A.findMidiOutputs = function () {
+    return TC.midiOut.init().then((ok) => {
+      if (!ok) TC.ui.hint(tr('MIDI is not available (Chrome / Edge, and allow it when the browser asks).'));
+      else if (!TC.midiOut.outputs().length) TC.ui.hint(tr('No MIDI output found - is the virtual MIDI cable (e.g. loopMIDI) running?'));
+      TC.refresh();
+      return ok;
+    });
+  };
+  /** (older menus) '?' looks for outputs; an output name: the track being written plays there. */
+  A.setMidiOut = (value) => (value === '?' ? A.findMidiOutputs() : A.setTrackMidiOut(value));
   /**
-   * Sound of the playback: '' = Tactus' own sounds, '?' = look for MIDI outputs (the browser asks
-   * once), otherwise the name of a MIDI output (js/midiout.js: Cubase plays the notes).
+   * Output of a track (playback list): value "trackId|output" - '' = Tactus' sounds, '?' = look for outputs.
+   * One VST plays one instrument, so every track has its own.
    */
-  A.setMidiOut = function (value) {
-    if (value === '?') {
-      TC.midiOut.init().then((ok) => {
-        if (!ok) TC.ui.hint(tr('MIDI is not available (Chrome / Edge, and allow it when the browser asks).'));
-        else if (!TC.midiOut.outputs().length) TC.ui.hint(tr('No MIDI output found - is the virtual MIDI cable (e.g. loopMIDI) running?'));
+  A.setOutputOf = function (value) {
+    const v = String(value), k = v.indexOf('|'), t = S.doc.tracks.find((x) => x.id === v.slice(0, k));
+    if (!t) return;
+    A.setTrackMidiOut(v.slice(k + 1), t);
+  };
+  /** Toolbar / playback panel: MIDI off for a moment (every track with Tactus' sounds) and on again. */
+  A.toggleSoundOut = function () {
+    if (!TC.midiOut.chosen()) return TC.ui.hint(tr('No track plays through MIDI: choose it at the track - "Plays on".'));
+    if (TC.player.playing) TC.player.stop(true);
+    S.settings.midiOff = !S.settings.midiOff;
+    TC.saveSettings();
+    if (!S.settings.midiOff) {
+      TC.midiOut.init().then(() => {
+        if (TC.midiOut.missing()) TC.ui.hint(tr('No MIDI output found - is the virtual MIDI cable (e.g. loopMIDI) running?'));
         TC.refresh();
       });
-      return;
     }
-    if (TC.player.playing) TC.player.stop(true);
-    S.settings.midiOut = value || '';
-    if (value) S.settings.midiOutLast = value; // for the switch in the toolbar
-    TC.saveSettings();
     TC.refresh();
-  };
-  /** Toolbar: Tactus sounds ↔ the MIDI output chosen last. */
-  A.toggleSoundOut = function () {
-    if (S.settings.midiOut) {
-      S.settings.midiOutLast = S.settings.midiOut;
-      return A.setMidiOut('');
-    }
-    const last = S.settings.midiOutLast;
-    if (!last) return TC.ui.hint(tr('Choose a MIDI output first: panel → Playback → Sound.'));
-    TC.midiOut.init().then(() => {
-      A.setMidiOut(last);
-      if (TC.midiOut.missing()) TC.ui.hint(tr('No MIDI output found - is the virtual MIDI cable (e.g. loopMIDI) running?'));
-    });
   };
   /** The view follows the playback cursor (off: it stays, to change notes while listening). */
   A.toggleFollowPlay = function () {

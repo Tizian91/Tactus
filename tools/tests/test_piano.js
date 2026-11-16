@@ -75,7 +75,9 @@ module.exports = function (T) {
   const only = TC.midi.read(TC.midi.build(doc, null, { tracks: [pf] }).bytes);
   T.eq('MIDI: the piano alone (one file): both hands', only.notes.map((n) => n.note).sort(), [36, 72]);
 
-  // one staff again: the lower one becomes a melody track of its own, its notes stay
-  const was = SC.setPiano(doc, pf, false, 'Klavier – linke Hand');
-  T.eq('off: the lower staff is a track of its own', [ids(doc), was.bars[0].voices[0].length, SC.isPiano(doc, pf)], [['Drums', 'Gesang', 'Klavier', 'Klavier – linke Hand'], 1, false]);
+  // one staff again: the left hand goes (the action asks first when it has notes); on again: one new, empty left hand
+  SC.setPiano(doc, pf, false);
+  T.eq('off: the left hand goes', [ids(doc), SC.isPiano(doc, pf)], [['Drums', 'Gesang', 'Klavier'], false]);
+  const again = SC.setPiano(doc, pf, true);
+  T.eq('on again: one left hand, empty', [ids(doc), again.bars[0].voices[0].length], [['Drums', 'Gesang', 'Klavier', 'Klavier(L)'], 0]);
 };

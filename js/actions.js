@@ -77,19 +77,21 @@
    * otherwise they are the settings for the next notes.
    */
 
-  /** Instrument (selected notes change to it; otherwise the next notes get it). */
+  /**
+   * Instrument: the next notes get it (also the lock writes it) - and selected notes change to it. (Only the selected
+   * notes, as before, left the instrument of the next notes as it was: a tap on a crash, "crash medium" chosen, and
+   * the lock went on writing the other crash.)
+   */
   A.setArt = function (id) {
     id = Number(id);
     const art = TC.drums.byId(id);
     if (!art) return;
+    S.input.art = id;
+    TC.saveSettings();
     if (S.selection.size) {
       forSelected((n) => { if (n.art !== undefined) n.art = id; }); // (melody notes have no instrument)
       TC.commit();
-    } else {
-      S.input.art = id;
-      TC.saveSettings();
-      TC.refresh();
-    }
+    } else TC.refresh();
     TC.ui.hint(TC.drums.label(art));
   };
 
@@ -409,18 +411,23 @@
   };
   /**
    * Melody track being written: two staves (piano: a lower staff in the bass clef for the left hand) on / off -
-   * off, the lower staff becomes a melody track of its own (its notes stay).
+   * off, the left hand goes (with notes: asked first; undo brings it back).
    */
   A.togglePiano = function () {
     const t = TC.curTrack();
     if (!t || t.kind !== 'pitched') return;
-    const up = TC.score.instrumentOf(S.doc, t), on = !TC.score.leftHand(S.doc, up);
-    const lh = TC.score.setPiano(S.doc, up, on, TC.score.freeTrackName(S.doc, up.name + ' – ' + tr('left hand')));
-    if (!lh) return;
+    const up = TC.score.instrumentOf(S.doc, t), old = TC.score.leftHand(S.doc, up), on = !old;
+    if (old) {
+      let n = 0;
+      old.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => { n += ev.notes.length; })));
+      if (n && !confirm(tr('Remove the left hand (lower staff) with its {n} notes? (Undo is possible.)', { n }))) return TC.refresh();
+    }
+    if (!TC.score.setPiano(S.doc, up, on)) return;
     if (on) up.voice = '';
-    S.trackId = on ? up.id : t.id;
+    S.trackId = up.id;
+    S.selection.clear();
     TC.commit();
-    TC.ui.hint(tr(on ? 'Two staves: tap the lower one to write the left hand' : 'One staff again - the lower one is the track "{name}" now', { name: lh.name }));
+    TC.ui.hint(tr(on ? 'Two staves: tap the lower one to write the left hand' : 'One staff again'));
   };
   /** Melody track being written: clef. */
   A.setTrackClef = function (clef) {

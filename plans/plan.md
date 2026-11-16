@@ -526,7 +526,7 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 - Spur-Operationen im Block: Hinzufügen nach einem Klavier (nach beiden Zeilen), Verschieben, Verdoppeln, Löschen. Laden: eine
   linke Hand nur direkt nach einer Melodie-Spur, die selbst keine linke Hand ist (sonst eigene Spur).
 - Panel: Spurliste ein Eintrag je Instrument; „+ Klavier“ (Klang Klavier); bei Melodie-Spuren der Haken „Zwei Notenzeilen (Klavier:
-  rechte und linke Hand)“ – aus: die untere Zeile wird eine eigene Spur „… – linke Hand“. Hinweis, welche Hand man schreibt;
+  rechte und linke Hand)“ – aus: die linke Hand verschwindet (mit Noten: Nachfrage; vorher wurde sie eine eigene Spur – verwirrend, beim Wiederanwählen gab es zwei). Hinweis, welche Hand man schreibt;
   „Schlüssel (obere / untere Zeile)“; keine Stimmlage beim Klavier. Statuszeile „Spur: Klavier (linke Hand)“.
 - Notenbild: geschweifte Klammer links (`brace` in `js/render.js`), Taktstriche (auch Wiederholung / Schluss) durch den Raum
   zwischen den Zeilen, Name einmal, Tonleiter-Text einmal.

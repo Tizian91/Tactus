@@ -399,6 +399,12 @@ setTimeout(() => {
   ok('→ moves the snare one step later ' + voice(nb3, 0).join(' '), voice(nb3, 0).join() === '960:480:42,1440:480:42+38,1920:480:42,2400:480:42');
   TC.actions.undo(); TC.actions.undo();
   ok('undo: back where they were', voice(nb3, 0).join() === '0:480:42,480:480:42,960:480:42+38,1440:480:42');
+  // a note selected, another instrument chosen: the note changes - and the next notes (and the lock) get it too
+  S.selection = new Set([S.doc.tracks[0].bars[nb3].voices.flat().find((ev) => ev.tick === 960 && ev.notes.some((n) => n.art === 38)).notes.find((n) => n.art === 38).id]);
+  TC.actions.setArt(40);
+  ok('instrument chosen with a note selected: the note changes, the next notes get it too ' + voice(nb3, 0).join(' '), S.input.art === 40 && voice(nb3, 0).join().includes('960:480:42+40'));
+  TC.actions.undo();
+  S.selection.clear();
   TC.actions.setTool('erase');
   mouse('pointerdown', at(nb3, 0, -1));
   [480, 960, 1440, 1920].forEach((t) => mouse('pointermove', at(nb3, t, -1)));
@@ -953,8 +959,10 @@ setTimeout(() => {
           TC.actions.toggleMute(pf.id);
           TC.actions.selectTrack(plh.id);
           TC.actions.togglePiano();
-          ok('piano: one staff again - the lower one is a track of its own (its note stays), no brace',
-            !plh.lh && !TC.score.isPiano(S.doc, pf) && plh.bars[1].voices[0].length === 1 && !document.querySelector('.score .brace'));
+          ok('piano: one staff again - the left hand is gone (asked: it had a note), no brace, writing the upper staff',
+            !S.doc.tracks.includes(plh) && !TC.score.isPiano(S.doc, pf) && !document.querySelector('.score .brace') && TC.curTrack() === pf);
+          TC.actions.togglePiano();
+          ok('piano: on again - one left hand, empty', S.doc.tracks.filter((t) => t.lh).length === 1 && TC.score.leftHand(S.doc, pf).bars.every((b) => !b.voices.flat().length));
           while (TC.history.undoStack.length > undoPiano) TC.actions.undo();
           ok('piano: undone', !S.doc.tracks.some((t) => t.lh) && S.doc.tracks.every((t) => t.name !== pf.name));
           S.trackId = S.doc.tracks[0].id;

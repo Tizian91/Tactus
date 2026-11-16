@@ -524,9 +524,9 @@
   };
   /**
    * A melody track becomes a piano (on: a lower staff in the bass clef after it, its left hand) or one
-   * staff again (off: the lower staff becomes a melody track of its own, named lhName). Returns the left hand.
+   * staff again (off: the left hand goes, with its notes - the action asks first). Returns the left hand.
    */
-  SC.setPiano = function (doc, t, on, lhName) {
+  SC.setPiano = function (doc, t, on) {
     const up = SC.instrumentOf(doc, t);
     if (!up || up.kind !== 'pitched') return null;
     let lh = SC.leftHand(doc, up);
@@ -537,8 +537,7 @@
       doc.tracks.splice(doc.tracks.indexOf(up) + 1, 0, lh);
       SC.syncHands(doc, up);
     } else if (!on && lh) {
-      delete lh.lh;
-      lh.name = lhName || SC.freeTrackName(doc, up.name + ' 2');
+      doc.tracks.splice(doc.tracks.indexOf(lh), 1);
     }
     return lh;
   };

@@ -142,6 +142,25 @@ setTimeout(() => {
         setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => /Dynamik/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
       }, 400);
     },
+    // chords as notes: the melody example with a guitar strumming its chords (↓ ↓↑ ↑↓↑), the note panel
+    akkordnoten() {
+      example('melodie');
+      setTimeout(() => {
+        const mel = S.doc.tracks.find((t) => t.kind === 'pitched');
+        const gt = TC.score.addTrack(S.doc, 'Gitarre', mel, 'pitched');
+        gt.program = 25;
+        gt.clef = 'treble8';
+        TC.accomp.write(S.doc, gt, 0, 3, 'gDDU', 0);
+        TC.commit();
+        S.trackId = gt.id;
+        TC.selectBar(0);
+        S.selBarEnd = 3;
+        A.togglePanel();
+        TC.refresh();
+        view(0.85, 10, -40);
+        setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => /Akkorde als Noten/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
+      }, 400);
+    },
     // MIDI import: track, where it comes from, grid, tempo, target
     import() {
       S.settings.importTarget = 'into';

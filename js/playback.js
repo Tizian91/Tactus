@@ -65,6 +65,13 @@
     return out;
   };
 
+  /** A stroke (note.stroke 'd' / 'u'): how much later (seconds) this string of the chord sounds than the first one. */
+  T.STRUM = 0.012;
+  T.strum = function (ev, n) {
+    const order = ev.notes.slice().sort((a, b) => a.pitch - b.pitch), k = order.indexOf(n);
+    return (n.stroke === 'u' ? order.length - 1 - k : k) * T.STRUM;
+  };
+
   /** Is a track heard? Solo tracks only, if there are any; else every track that is not muted. */
   T.audible = (doc, track) => (doc.tracks.some((t) => t.solo) ? !!track.solo : !track.mute);
 
@@ -115,7 +122,9 @@
                   before.dur = Math.max(0.05, t1 - before.t - 0.02);
                   continue;
                 }
-                const hit = { t: t0, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1 };
+                // a stroke (strummed guitar): the strings one after the other - down from the lowest, up from the highest
+                const sp = n.stroke ? T.strum(ev, n) : 0;
+                const hit = { t: t0 + sp, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - sp - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1 };
                 hits.push(hit);
                 sounding.set(key, hit);
                 continue;

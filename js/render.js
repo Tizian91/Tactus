@@ -391,9 +391,11 @@
       const sc = p.pitch.scale, prev = i > 0 ? TC.score.scaleAt(p.track, i - 1) : null;
       if (prev && prev.l === sc.l && prev.a === sc.a && prev.id === sc.id) return;
       const name = P.scaleTitle(sc, de);
-      if (name) out.push(mel.length > 1 ? `${p.track.name}: ${name}` : name);
+      if (name) out.push({ track: p.track.name, name });
     });
-    return out.join(' · ');
+    // (several melody tracks in the same scale: it once; else each with its track's name)
+    if (out.length > 1 && out.every((x) => x.name === out[0].name) && out.length === mel.length) return out[0].name;
+    return out.map((x) => (mel.length > 1 ? `${x.track}: ${x.name}` : x.name)).join(' · ');
   }
 
   RD.computeLayout = function () {
@@ -1320,6 +1322,14 @@
           out.push(`<text class="mus-xs" x="${f(q.x - 0.97 * SP)}" y="${f(my + (up ? 0 : 0.8 * SP))}"></text>`);
         }
         my += up ? -1.2 * SP : 1.2 * SP;
+      }
+      // a stroke (strummed guitar, js/accomp.js): ⊓ down / V up - above the chord, above its stem and accents
+      const strokeN = !it.cont && it.ev.notes.find((n) => n.stroke);
+      if (strokeN && q.heads.length) {
+        const topHead = Math.min(...q.heads.map((h) => stepY(h.line)));
+        const sy = Math.min(up ? q.endY : topHead, 0) - 1.0 * SP - (up && marks.length ? marks.length * 1.2 * SP : 0);
+        out.push(glyph(strokeN.stroke === 'u' ? '' : '', q.x - 0.45 * SP, sy, 'head'));
+        b.top = Math.min(b.top || 0, sy - 1.3 * SP);
       }
       q.markY = marks.length ? my + (up ? 0.5 * SP : -0.5 * SP) : null; // outermost mark (tuplet numbers go beyond it)
       if (up) b.top = Math.min(b.top || 0, q.endY - 0.3 * SP, marks.length ? my + 0.4 * SP : 0);

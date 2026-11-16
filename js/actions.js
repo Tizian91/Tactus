@@ -1368,6 +1368,30 @@
     TC.commit();
     TC.ui.hint(tr('{from} {sign} {to} to the end of bar {n}', { from: d.from, sign: b > a ? '<' : '>', to: d.to, n: d.end + 1 }));
   };
+  // ---- Chords as notes (js/accomp.js): the chord symbols of the selected bars written out in the track being written
+  /** The pattern chosen in the panel (for this browser session), else the one that fits the track. */
+  A.accompPattern = () => (S.accompPattern && TC.accomp.byId(S.accompPattern) ? S.accompPattern : TC.accomp.defaultFor(TC.curTrack()));
+  A.setAccompPattern = function (id) {
+    if (!TC.accomp.byId(id)) return;
+    S.accompPattern = id;
+    TC.refresh();
+  };
+  /** Write the chords of the selected bars ("to bar") as notes - the voice's notes there are replaced (asked first). */
+  A.writeAccomp = function () {
+    const t = TC.curTrack(), AC = TC.accomp;
+    if (!t || t.kind !== 'pitched') return TC.ui.hint(tr('Chords as notes: in a melody track (piano, guitar …)'));
+    const R = TC.barRange() || [curBar(), curBar()], vi = S.input.voice === 1 ? 1 : 0;
+    let any = false;
+    for (let i = R[0]; i <= R[1]; i++) if (TC.score.chordAt(S.doc, i, TC.barTicks(S.doc.bars[i].ts) - 1)) any = true;
+    if (!any) return TC.ui.hint(tr('No chords in these bars yet - set them first (panel "Bar · score" → Chords).'));
+    const old = AC.notesIn(t, R[0], R[1], vi);
+    if (old && !confirm(tr('Replace the {n} notes in bars {a}–{b} with the chords as notes? (Undo is possible.)', { n: old, a: R[0] + 1, b: R[1] + 1 }))) return;
+    const n = AC.write(S.doc, t, R[0], R[1], A.accompPattern(), vi);
+    S.selection.clear();
+    TC.commit();
+    TC.ui.hint(tr('{n} notes written in bars {a}–{b}', { n, a: R[0] + 1, b: R[1] + 1 }));
+  };
+
   /** Remove the level ('v') or the hairpin ('w') at the chosen place of the selected bar. */
   A.clearDyn = function (kind) {
     const i = curBar(), t = chordTick(i);

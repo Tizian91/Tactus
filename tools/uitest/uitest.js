@@ -1015,6 +1015,26 @@ setTimeout(() => {
           ok('piano: on again - one left hand, empty', S.doc.tracks.filter((t) => t.lh).length === 1 && TC.score.leftHand(S.doc, pf).bars.every((b) => !b.voices.flat().length));
           while (TC.history.undoStack.length > undoPiano) TC.actions.undo();
           ok('piano: undone', !S.doc.tracks.some((t) => t.lh) && S.doc.tracks.every((t) => t.name !== pf.name));
+          // chords as notes: a guitar track, a chord in bar 1, "↓ ↓↑ ↑↓↑" chosen in the note panel, written - strokes drawn
+          const undoAcc = TC.history.undoStack.length;
+          const gtr = TC.score.addTrack(S.doc, 'Gitarre', null, 'pitched');
+          gtr.program = 25;
+          TC.score.setChord(S.doc, 0, 0, { name: 'C' });
+          TC.commit();
+          TC.actions.selectTrack(gtr.id);
+          TC.selectBar(0);
+          TC.refresh();
+          const accSel = document.querySelector('#panel-notes select[data-action="setAccompPattern"]');
+          ok('chords as notes: in the note panel, a guitar starts with the pop strum', !!accSel && accSel.value === 'gDDU');
+          accSel.value = 'gBeats';
+          accSel.dispatchEvent(new Event('change', { bubbles: true }));
+          document.querySelector('#panel-notes [data-action="writeAccomp"]').click();
+          const gev = gtr.bars[0].voices[0];
+          ok('chords as notes: ↓ on every beat - the C grip, four strokes, ⊓ drawn ' + gev.map((e) => e.notes.length).join(','),
+            gev.length === TC.barTicks(S.doc.bars[0].ts) / 960 && gev[0].notes.map((n) => n.pitch).sort((a, b) => a - b).join() === '48,52,55,60,64' &&
+            gev.every((e) => e.notes.every((n) => n.stroke === 'd')) && [...document.querySelectorAll('.score text.mus')].some((x) => x.textContent === ''));
+          while (TC.history.undoStack.length > undoAcc) TC.actions.undo();
+          ok('chords as notes: undone', !S.doc.tracks.some((t) => t.name === 'Gitarre') && !S.doc.bars[0].chords);
           S.trackId = S.doc.tracks[0].id;
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');

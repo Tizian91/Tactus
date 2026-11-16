@@ -263,6 +263,8 @@
                 if (tStart) nots.push('<tied type="start"/>');
                 if (c === 0 && tupN) nots.push(tupN);
                 if (c === 0 && acc && !it.cont) nots.push(`<articulations>${acc > 1 ? '<strong-accent type="up"/>' : '<accent/>'}</articulations>`);
+                const stroke = c === 0 && !it.cont && (ns.find((x) => x.stroke) || {}).stroke; // (a strummed chord: down / up)
+                if (stroke) nots.push(`<technical><${stroke === 'u' ? 'up-bow' : 'down-bow'}/></technical>`);
                 o.push('<note>' + (c ? '<chord/>' : '') + `<pitch><step>${step}</step>${sp.a ? `<alter>${sp.a}</alter>` : ''}<octave>${oct}</octave></pitch>` +
                   `<duration>${it.dur}</duration>` + (tStop ? '<tie type="stop"/>' : '') + (tStart ? '<tie type="start"/>' : '') +
                   `<instrument id="${pid(k)}-I1"/><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` + (it.dots ? '<dot/>' : '') +

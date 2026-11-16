@@ -166,7 +166,8 @@
                   before.off.t = Math.max(before.on + 1, Math.round(end - 10));
                   continue;
                 }
-                put(a, 2, [0x90 | ch, n.pitch, v]);
+                const sp = n.stroke ? msTicks(T.strum(e, n) * 1000) : 0; // (a stroke: the strings one after the other)
+                put(a + sp, 2, [0x90 | ch, n.pitch, v]);
                 const off = { t: Math.max(Math.round(a) + 1, Math.round(end - 10)), order: 1, bytes: [0x80 | ch, n.pitch, 0] };
                 noteEv[ti].push(off);
                 held.set(key, { on: Math.round(a), end, off });

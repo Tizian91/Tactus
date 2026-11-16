@@ -316,8 +316,8 @@ festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Eins
 **Leitlinie:** Eine neue Spur „Melodie“ geht sofort ohne Einrichtung (Violinschlüssel, C-Dur, weicher Klang). Tonleiter, Schlüssel,
 Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der Anschlag Feinschliff.
 
-**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → C Liedtext ✅ (vorgezogen, 2026-11-16) → E Klaviersystem ✅ (2026-11-16) →
-**G Akkorde als Noten** (Klavier linke Hand und Gitarre in einem Zug, vorgezogen) → D Komfort.
+**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → C Liedtext ✅ (vorgezogen, 2026-11-16) → E Klaviersystem ✅ (2026-11-16) → Dynamik ✅ →
+G Akkorde als Noten ✅ (2026-11-16) → **D Komfort**.
 
 ### Stand nach Schritt B (2026-11-15, noch nicht committet / nicht online)
 
@@ -574,7 +574,19 @@ MuseScore / Guitar Pro (erkennen sie ein Klavier mit zwei Zeilen?). Noch nicht: 
 - **Tonumfang:** Noten außerhalb der gewählten Stimmlage rot markiert.
 - **Rhythmus übernehmen:** Rhythmus einer anderen Spur (z. B. Bassdrum) in die Melodie-Spur einfügen, nur die Töne fehlen dann.
 
-### Schritt G – Akkorde als Noten: Klavier linke Hand und Gitarren-Begleitung (Wunsch 2026-11-16, als Nächstes)
+### Schritt G – Akkorde als Noten: Klavier und Gitarre ✅ (zum Ausprobieren, 2026-11-16)
+
+**Gebaut:** `js/accomp.js` (`TC.accomp`): Lagen – Klavier (Bass + enge Akkordtöne, nach Schlüssel), Gitarre (Griffsuche auf 6 Saiten in
+Standardstimmung: Bass auf der tiefsten klingenden Saite, keine stummen Saiten dazwischen, ≤ 4 Bünde, alle Akkordtöne (ab 4 Tönen darf die
+Quinte fehlen), offene Saiten bevorzugt, keine doppelten Töne, nah am Griff davor → die bekannten offenen Akkorde / Barré). 10 Spielweisen
+(`AC.PATTERNS`: Klavier ausgehalten / Schläge / Bass + Akkord (3/4 Walzer) / gebrochen / Alberti; Gitarre gehalten ↓ / ↓ je Schlag /
+↓ ↓↑ ↑↓↑ / ↓↑ Achtel / gezupft). `AC.write` in die markierten Takte der Spur (Stimme 1 / 2), Akkordwechsel im Takt (Schlag am Wechsel,
+gehaltene Akkorde enden dort). `note.stroke` d / u: ⊓ / V über dem Akkord, gespielt 12 ms je Saite versetzt (`T.strum`), MIDI-Export
+ebenso, MusicXML `<down-bow/>` / `<up-bow/>`. Panel: Noten-Panel „Akkorde als Noten“ (Spielweise, „In Takt a–b schreiben“; Gitarre
+(Klang 24–31) startet mit Pop-Schlag, linke Hand mit Bass + Akkord). Neue Melodie-Spuren übernehmen die Tonleiter des Stücks; eine
+gemeinsame Tonleiter steht nur einmal über den Noten. Tests: `test_accomp.js` (24), Klick-Test (3), Bild `akkordnoten.png`, Handbuch
+Kap. 8 „Akkorde als Noten“. **Offen:** Anschlag einzelner Noten im Noten-Panel ändern; eigene Schlagmuster; Akkord per Tipp in die
+linke Hand; Gitarren-Lage wählbar (offen / höher).
 
 Ein gemeinsamer Kern für beide: aus den Akkordsymbolen Noten nach einem Muster. **Klavier (linke Hand):** Grundton + Akkord,
 gebrochen (Alberti), ausgehalten, Grundton / Quinte. **Gitarre:** wie unten.

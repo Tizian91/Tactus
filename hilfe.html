@@ -32,7 +32,7 @@
     <li><a href="#takte">7. Takte und Form</a>
       <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
     <li><a href="#melodie">8. Melodie schreiben</a>
-      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li></ol></li>
+      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde als Noten</a></li></ol></li>
     <li><a href="#notenblatt">9. Notenblatt und PDF</a></li>
     <li><a href="#wiedergabe">10. Wiedergabe und Klang</a>
       <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
@@ -463,6 +463,23 @@ Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass 
   <li><b>Export:</b> MusicXML schreibt ein Klavier mit zwei Notenzeilen (Guitar Pro, MuseScore), MIDI eine Spur mit beiden Händen.</li>
 </ul>
 <figure><img src="help/img/klavier.png" alt="Das Melodie-Beispiel als Klavier: oben die Melodie mit Text, unten Grundton und Akkord"><figcaption>Das Melodie-Beispiel als Klavier: oben die Melodie mit dem Text darunter, unten in der linken Hand Grundton und Akkord jedes Takts.</figcaption></figure>
+
+<h3 id="akkordnoten">Akkorde als Noten (Klavier, Gitarre)</h3>
+<p>Die Akkordsymbole einiger Takte werden zu Noten in der Spur, in die du schreibst – eine Begleitung zum Mitspielen und
+Exportieren. Takt antippen (mehrere: <span class="ui">bis Takt</span>), im Noten-Panel links unter <span class="ui">Akkorde als Noten</span>
+die <span class="ui">Spielweise</span> wählen, dann <span class="ui">♫ In Takt 1–4 schreiben</span>. Was in dieser Stimme stand, wird
+ersetzt (Tactus fragt vorher; Rückgängig geht). Danach sind es normale Noten.</p>
+<ul>
+  <li><b>Klavier:</b> ausgehalten (ein Akkord je Wechsel), Akkord auf jeden Schlag, Bass + Akkord (im 3/4 ein Walzer), gebrochen in
+    Achteln, Alberti-Bass. Grundton bzw. Schrägstrich-Bass unten, die Akkordtöne eng darüber – im Bassschlüssel tiefer.</li>
+  <li><b>Gitarre:</b> angeschlagen und gehalten ↓, ↓ auf jeden Schlag, ↓ ↓↑ ↑↓↑ (Pop-Schlag), ↓↑ in Achteln, gezupft. Die Töne sind
+    <b>echte Griffe</b> auf sechs Saiten (offene Akkorde, Barré, der Bass auf der tiefsten Saite, möglichst wenig Sprung zum nächsten
+    Akkord). Ab- und Aufschlag stehen als ⊓ / V über dem Akkord und klingen wie ein echter Anschlag leicht nacheinander (abwärts von
+    tief nach hoch, aufwärts umgekehrt) – auch über MIDI und im MIDI-Export; MusicXML schreibt sie für Guitar Pro / MuseScore mit.</li>
+  <li>Wechselt der Akkord mitten im Takt, wechseln die Noten mit; hat die Spielweise dort keinen Schlag, wird der neue Akkord dort
+    angeschlagen. Eine neue Gitarren-Spur: <span class="ui">+ Melodie</span>, Klang „Gitarre“ – sie startet in der Tonleiter des Stücks.</li>
+</ul>
+<figure><img src="help/img/akkordnoten.png" alt="Das Melodie-Beispiel mit einer Gitarre, die ihre Akkorde im Pop-Schlag spielt"><figcaption>Eine Gitarre spielt die Akkorde des Melodie-Beispiels im Pop-Schlag ↓ ↓↑ ↑↓↑: echte Griffe, Ab- und Aufschläge darüber. Links das Noten-Panel mit „Akkorde als Noten“.</figcaption></figure>
 
 <!-- ================================================================================= -->
 <h2 id="notenblatt">9. Notenblatt und PDF</h2>

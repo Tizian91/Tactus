@@ -394,9 +394,9 @@
   };
 
   /** Play a melody tone now (when it is written, aimed at or changed). */
-  AU.previewTone = function (pitch, track = TC.curTrack ? TC.curTrack() : null) {
+  AU.previewTone = function (pitch, track = TC.curTrack ? TC.curTrack() : null, delay = 0) {
     if (!ensure() || TC.player.playing) return;
-    AU.tone(pitch, ctx.currentTime + 0.01, 0.45, 0.72, null, track);
+    AU.tone(pitch, ctx.currentTime + 0.01 + delay, 0.45, 0.72, null, track);
   };
 
   /** Play a note now (when it is written or chosen). */

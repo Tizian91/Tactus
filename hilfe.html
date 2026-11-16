@@ -32,7 +32,7 @@
     <li><a href="#takte">7. Takte und Form</a>
       <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
     <li><a href="#melodie">8. Melodie schreiben</a>
-      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde als Noten</a></li></ol></li>
+      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde setzen</a></li></ol></li>
     <li><a href="#notenblatt">9. Notenblatt und PDF</a></li>
     <li><a href="#wiedergabe">10. Wiedergabe und Klang</a>
       <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
@@ -414,6 +414,36 @@ Melodie, nur mit Schlagzeug. Takt antippen (über oder unter den Linien), dann i
   <li><b>Mitspielen:</b> beim Abspielen klingt ein weicher Akkord-Teppich (abschaltbar, eigene Lautstärke) – Songschreiben auch ganz ohne Melodie.
     Standard ist der Tactus-Klang, auch wenn das Schlagzeug über MIDI läuft. Wer ein Synth-VST hat, wählt darunter unter <span class="ui">Klang</span> dessen MIDI-Ausgang und einen Kanal (Standard 15) – nicht den Ausgang des Drum-VSTs, das würde die Akkorde als Schläge spielen.</li>
 </ul>
+<details class="chord-list"><summary><b>Welche Akkorde kann ich eintippen?</b> (alle Schreibweisen)</summary>
+<p>Ein Akkord ist <b>Grundton + Art</b>, wahlweise mit <b>/Bass</b>. Grundton: <code>C D E F G A H</code> (deutsch, <code>B</code> = B♭)
+bzw. <code>C … B</code> (englisch) mit <code>#</code> / <code>b</code> oder deutsch <code>Cis Fis Es As</code> … Groß- und Kleinschreibung
+zählt bei <code>M</code> (Dur-Septime) und <code>m</code> (Moll). Beispiele auf C:</p>
+<table class="chord-table">
+  <thead><tr><th>Akkord</th><th>steht als</th><th>tippen</th><th>Töne (auf C)</th></tr></thead>
+  <tbody>
+    <tr><td>Dur</td><td>C</td><td><code>C</code>, <code>Cmaj</code>, <code>CM</code>, <code>Cdur</code></td><td>C E G</td></tr>
+    <tr><td>Moll</td><td>Cm</td><td><code>Cm</code>, <code>Cmin</code>, <code>Cmi</code>, <code>C-</code>, <code>Cmoll</code></td><td>C E♭ G</td></tr>
+    <tr><td>vermindert</td><td>C°</td><td><code>Cdim</code>, <code>C°</code>, <code>Co</code></td><td>C E♭ G♭</td></tr>
+    <tr><td>übermäßig</td><td>C+</td><td><code>Caug</code>, <code>C+</code>, <code>C#5</code></td><td>C E G♯</td></tr>
+    <tr><td>Dur mit ♭5</td><td>C(♭5)</td><td><code>Cb5</code>, <code>C(b5)</code>, <code>C-5</code></td><td>C E G♭</td></tr>
+    <tr><td>sus2 / sus4</td><td>Csus2 / Csus4</td><td><code>Csus2</code>, <code>Csus4</code>, <code>Csus</code></td><td>C D G / C F G</td></tr>
+    <tr><td>Powerchord</td><td>C5</td><td><code>C5</code></td><td>C G</td></tr>
+    <tr><td>Dominant-Septakkord</td><td>C7</td><td><code>C7</code>, <code>Cdom7</code></td><td>C E G B♭</td></tr>
+    <tr><td>große Septime</td><td>Cmaj7</td><td><code>Cmaj7</code>, <code>CM7</code>, <code>CΔ</code>, <code>Cj7</code>, <code>Cma7</code></td><td>C E G H</td></tr>
+    <tr><td>Moll-Sept</td><td>Cm7</td><td><code>Cm7</code>, <code>Cmin7</code>, <code>C-7</code></td><td>C E♭ G B♭</td></tr>
+    <tr><td>halbvermindert</td><td>Cm7♭5</td><td><code>Cm7b5</code>, <code>Cø</code>, <code>C-7b5</code></td><td>C E♭ G♭ B♭</td></tr>
+    <tr><td>vermindert 7</td><td>C°7</td><td><code>Cdim7</code>, <code>C°7</code>, <code>Co7</code></td><td>C E♭ G♭ A</td></tr>
+    <tr><td>Moll mit großer Septime</td><td>Cm(maj7)</td><td><code>Cm(maj7)</code>, <code>CmM7</code>, <code>C-maj7</code></td><td>C E♭ G H</td></tr>
+    <tr><td>übermäßig + große / kleine Septime</td><td>C+maj7 / C+7</td><td><code>C+maj7</code>, <code>Cmaj7#5</code> / <code>C+7</code>, <code>C7#5</code></td><td>C E G♯ H / B♭</td></tr>
+    <tr><td>Sept mit ♭5</td><td>C7♭5 / Cmaj7♭5</td><td><code>C7b5</code> / <code>Cmaj7b5</code></td><td>C E G♭ B♭ / H</td></tr>
+    <tr><td>7sus4</td><td>C7sus4</td><td><code>C7sus4</code>, <code>C7sus</code></td><td>C F G B♭</td></tr>
+    <tr><td>Sexte</td><td>C6 / Cm6</td><td><code>C6</code> / <code>Cm6</code>, <code>C-6</code></td><td>C E G A / C E♭ G A</td></tr>
+    <tr><td>add9</td><td>Cadd9 / Cmadd9</td><td><code>Cadd9</code>, <code>Cadd2</code> / <code>Cmadd9</code>, <code>Cm(add9)</code></td><td>C E G D / C E♭ G D</td></tr>
+    <tr><td>None</td><td>C9 / Cmaj9 / Cm9</td><td><code>C9</code> / <code>Cmaj9</code>, <code>CΔ9</code> / <code>Cm9</code>, <code>C-9</code></td><td>C E G B♭ D …</td></tr>
+    <tr><td>mit anderem Bass</td><td>C/E</td><td><code>C/E</code>, <code>Am7/G</code>, <code>G/H</code></td><td>der Ton nach / klingt unten</td></tr>
+  </tbody>
+</table>
+</details>
 <p><b>Beim Schreiben der Melodie</b> helfen die Akkorde (Panel, Zeile <span class="ui">Melodie</span>, gilt ab dem gewählten Takt):</p>
 <ul>
   <li><span class="ui">Akkordtöne zeigen</span> (Standard): die Töne des gerade klingenden Akkords sind blau hinterlegt, der <b>Grundton</b> (bei Am jedes A) kräftiger; gesetzt wird jeder Ton.</li>
@@ -464,22 +494,27 @@ Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass 
 </ul>
 <figure><img src="help/img/klavier.png" alt="Das Melodie-Beispiel als Klavier: oben die Melodie mit Text, unten Grundton und Akkord"><figcaption>Das Melodie-Beispiel als Klavier: oben die Melodie mit dem Text darunter, unten in der linken Hand Grundton und Akkord jedes Takts.</figcaption></figure>
 
-<h3 id="akkordnoten">Akkorde als Noten (Klavier, Gitarre)</h3>
-<p>Die Akkordsymbole einiger Takte werden zu Noten in der Spur, in die du schreibst – eine Begleitung zum Mitspielen und
-Exportieren. Takt antippen (mehrere: <span class="ui">bis Takt</span>), im Noten-Panel links unter <span class="ui">Akkorde als Noten</span>
-die <span class="ui">Spielweise</span> wählen, dann <span class="ui">♫ In Takt 1–4 schreiben</span>. Was in dieser Stimme stand, wird
-ersetzt (Tactus fragt vorher; Rückgängig geht). Danach sind es normale Noten.</p>
+<h3 id="akkordnoten">Akkorde wie Noten setzen (Klavier, Gitarre)</h3>
+<p>Ganze Akkorde setzt du wie Töne: im Noten-Panel links unter <span class="ui">Akkorde</span> bei <span class="ui">Setzen</span>
+<span class="ui">Akkord</span> wählen (oder gleich <span class="ui">↓</span> / <span class="ui">↑</span> für einen Ab- / Aufschlag). Dann setzt ein
+Tipp in die Notenzeile <b>den Akkord, der dort laut Akkordzeile gilt</b> – mit dem gewählten Notenwert (seitlich ziehen: länger, wie bei Tönen).
+Welcher Akkord es ist, bestimmst du im Akkord-Panel rechts (Stufenknopf oder eingetippt, siehe <a href="#akkorde">Akkorde</a>).
+<span class="ui">Ton</span> schaltet zurück auf einzelne Töne.</p>
 <ul>
-  <li><b>Klavier:</b> ausgehalten (ein Akkord je Wechsel), Akkord auf jeden Schlag, Bass + Akkord (im 3/4 ein Walzer), gebrochen in
-    Achteln, Alberti-Bass. Grundton bzw. Schrägstrich-Bass unten, die Akkordtöne eng darüber – im Bassschlüssel tiefer.</li>
-  <li><b>Gitarre:</b> angeschlagen und gehalten ↓, ↓ auf jeden Schlag, ↓ ↓↑ ↑↓↑ (Pop-Schlag), ↓↑ in Achteln, gezupft. Die Töne sind
-    <b>echte Griffe</b> auf sechs Saiten (offene Akkorde, Barré, der Bass auf der tiefsten Saite, möglichst wenig Sprung zum nächsten
-    Akkord). Ab- und Aufschlag stehen als ⊓ / V über dem Akkord und klingen wie ein echter Anschlag leicht nacheinander (abwärts von
-    tief nach hoch, aufwärts umgekehrt) – auch über MIDI und im MIDI-Export; MusicXML schreibt sie für Guitar Pro / MuseScore mit.</li>
-  <li>Wechselt der Akkord mitten im Takt, wechseln die Noten mit; hat die Spielweise dort keinen Schlag, wird der neue Akkord dort
-    angeschlagen. Eine neue Gitarren-Spur: <span class="ui">+ Melodie</span>, Klang „Gitarre“ – sie startet in der Tonleiter des Stücks.</li>
+  <li><b>Gitarre</b> (Klang einer Gitarre): ein echter Griff auf sechs Saiten – offene Akkorde, Barré, der Bass auf der tiefsten Saite.</li>
+  <li><b>Alles andere</b> (Klavier …): die Akkordtöne eng zusammen, <b>ab dem angetippten Ton aufwärts</b> – höher getippt ergibt eine
+    Umkehrung weiter oben; ein Schrägstrich-Bass (C/E) liegt darunter.</li>
+  <li><b>Oktave:</b> wie bei Tönen – den Akkord auswählen, <span class="ui">8↑ Oktave hoch</span> / <span class="ui">8↓ Oktave runter</span>
+    (<kbd>Strg</kbd>+<kbd>↑</kbd> <kbd>↓</kbd>).</li>
+  <li><b>Anschlag:</b> einen als Akkord gesetzten Akkord <b>halten und nach unten ziehen</b> = Abschlag ↓, <b>nach oben</b> = Aufschlag ↑
+    (zurück zur Mitte: wie vorher). Oder im Menü (halten / Rechtsklick) <span class="ui">↓ Abschlag · ↑ Aufschlag · – Kein Anschlag</span>, oder
+    bei ausgewähltem Akkord im Panel <span class="ui">Anschlag</span>. Ohne Anschlag klingen alle Töne zugleich.</li>
+  <li>Ab- und Aufschläge stehen als ⊓ / V über dem Akkord und klingen wie ein echter Anschlag leicht nacheinander (abwärts von tief nach
+    hoch, aufwärts umgekehrt) – auch über MIDI und im MIDI-Export; MusicXML schreibt sie für Guitar Pro / MuseScore mit.</li>
+  <li>Ist an der Stelle noch kein Akkord gesetzt, sagt Tactus das und setzt nichts. Eine neue Gitarren-Spur: <span class="ui">+ Melodie</span>,
+    Klang „Gitarre“ – sie startet in der Tonleiter des Stücks.</li>
 </ul>
-<figure><img src="help/img/akkordnoten.png" alt="Das Melodie-Beispiel mit einer Gitarre, die ihre Akkorde im Pop-Schlag spielt"><figcaption>Eine Gitarre spielt die Akkorde des Melodie-Beispiels im Pop-Schlag ↓ ↓↑ ↑↓↑: echte Griffe, Ab- und Aufschläge darüber. Links das Noten-Panel mit „Akkorde als Noten“.</figcaption></figure>
+<figure><img src="help/img/akkordnoten.png" alt="Das Melodie-Beispiel mit einer Gitarre, die ihre Akkorde mit Ab- und Aufschlägen spielt"><figcaption>Eine Gitarre spielt die Akkorde des Melodie-Beispiels: echte Griffe, Ab- und Aufschläge (⊓ / V) darüber. Links das Noten-Panel mit <span class="ui">Akkorde → Setzen</span>.</figcaption></figure>
 
 <!-- ================================================================================= -->
 <h2 id="notenblatt">9. Notenblatt und PDF</h2>

@@ -23,6 +23,10 @@ module.exports = function (T) {
   // ---- piano voicings
   T.eq('piano, bass clef: C2 + C3 E3 G3', AC.voicing(ch('C'), 'piano', { clef: 'bass' }), { bass: 36, tones: [48, 52, 55] });
   T.eq('piano, treble clef: an octave higher', AC.voicing(ch('Am'), 'piano', { clef: 'treble' }), { bass: 57, tones: [60, 64, 69] });
+  const pt = { program: 0, clef: 'treble' };
+  T.eq('a tapped chord (piano): from the tapped tone up - E4 tapped: E G C (an inversion), C4: C E G', [AC.chordNotes(ch('C'), pt, 64).map((x) => x.pitch), AC.chordNotes(ch('C'), pt, 60).map((x) => x.pitch)], [[64, 67, 72], [60, 64, 67]]);
+  T.eq('a tapped slash chord: its bass below', AC.chordNotes(ch('C/G'), pt, 60).map((x) => x.pitch), [55, 60, 64]);
+  T.eq('a tapped chord (guitar): the grip', AC.chordNotes(ch('G'), { program: 25 }, 60).map((x) => x.pitch), [43, 47, 50, 55, 59, 67]);
 
   // ---- written into bars
   const doc = TC.emptyScore(3);

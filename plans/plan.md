@@ -585,7 +585,11 @@ gehaltene Akkorde enden dort). `note.stroke` d / u: ⊓ / V über dem Akkord, ge
 ebenso, MusicXML `<down-bow/>` / `<up-bow/>`. Panel: Noten-Panel „Akkorde als Noten“ (Spielweise, „In Takt a–b schreiben“; Gitarre
 (Klang 24–31) startet mit Pop-Schlag, linke Hand mit Bass + Akkord). Neue Melodie-Spuren übernehmen die Tonleiter des Stücks; eine
 gemeinsame Tonleiter steht nur einmal über den Noten. Tests: `test_accomp.js` (24), Klick-Test (3), Bild `akkordnoten.png`, Handbuch
-Kap. 8 „Akkorde als Noten“. **Offen:** Anschlag einzelner Noten im Noten-Panel ändern; eigene Schlagmuster; Akkord per Tipp in die
+Kap. 8. **Nach Rückmeldung (2026-11-16): Schlagmuster sind „zu viel unter die Arme gegriffen“ → stattdessen Akkorde wie Noten setzen:**
+Noten-Panel „Akkorde → Setzen: Ton · Akkord · ↓ · ↑“, ein Tipp setzt den Akkord der Akkordzeile dort (Gitarre: Griff, sonst ab dem
+angetippten Ton aufwärts, `AC.chordNotes`), Notenwert wie bei Tönen; `note.chordNote`: gehalten + runter / hoch = Ab- / Aufschlag (sonst
+♯ / ♭); Menü ↓ / ↑ / –; Panel „Anschlag“ bei ausgewähltem Akkord. Die Muster (`AC.write`) bleiben im Code, ohne Knopf. Handbuch:
+Tabelle „Welche Akkorde kann ich eintippen?“. **Offen:** Akkord per Tipp in die
 linke Hand; Gitarren-Lage wählbar (offen / höher).
 
 Ein gemeinsamer Kern für beide: aus den Akkordsymbolen Noten nach einem Muster. **Klavier (linke Hand):** Grundton + Akkord,

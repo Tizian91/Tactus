@@ -594,12 +594,43 @@
   }
 
   /**
+   * Melody, writing chords (note panel "Write: chord / ↓ / ↑"): the chord of the chord symbols at that place, as long as
+   * the note value - a guitar: a grip; else close from the tapped tone up (higher: an inversion higher). With a stroke
+   * ↓ / ↑ when chosen. No chord there: said, nothing written.
+   */
+  function writeChord(t, sound) {
+    const track = TC.curTrack(), at = TC.score.chordAt(S.doc, t.bar, t.tick);
+    if (!at) {
+      TC.ui.hint(tr('No chord here yet - set one in the panel "Bar · score" → Chords (or write single tones: "Tone").'));
+      TC.refresh();
+      return false;
+    }
+    const len = t.len || TC.inputTicks(S.input), stroke = S.input.chordMode === 'd' || S.input.chordMode === 'u' ? S.input.chordMode : null;
+    const notes = TC.accomp.chordNotes(at.ch, track, t.pitch);
+    let n = 0;
+    notes.forEach((x) => {
+      const note = TC.newPitchNote(x.pitch, x.dia, S.input);
+      note.chordNote = true; // (written as a chord: held + down / up gives its stroke)
+      if (stroke) note.stroke = stroke;
+      const res = TC.score.place(S.doc, track, t.bar, melVoice(), t.tick, len, note);
+      if (res.status === 'added' || res.status === 'chord') n++;
+      if (res.status === 'added' && len > res.ev.dur) TC.score.setMelodyLength(S.doc, track, t.bar, melVoice(), res.ev, len);
+    });
+    if (!n) { TC.refresh(); return false; }
+    TC.commit();
+    if (sound && S.settings.sound) notes.forEach((x, k) => TC.audio.previewTone(x.pitch, track, stroke ? (stroke === 'u' ? notes.length - 1 - k : k) * 0.012 : 0));
+    TC.ui.status(`${where(t)} · ${TC.pitch.chordName(at.ch, de())}${stroke ? ' ' + (stroke === 'd' ? '↓' : '↑') : ''}`);
+    return true;
+  }
+
+  /**
    * Write the note of target t (kind 'place'). Already there: it is selected instead.
    * Returns true when the score changed (one undo step).
    */
   function writeNote(t, sound) {
     S.selection.clear();
     TC.selectBar(t.bar);
+    if (t.pitch !== undefined && S.input.chordMode) return writeChord(t, sound);
     if (t.pitch !== undefined) {
       // melody: the tone of that line, as long as chosen (dragged sideways), in the voice chosen in the panel
       const note = TC.newPitchNote(t.pitch, t.dia, S.input), len = t.len || TC.inputTicks(S.input);
@@ -1076,6 +1107,15 @@
 
   function beginAlter(e) {
     const d = S.drag, list = heldNotes(d);
+    // a chord written as a chord (note.chordNote): held and moved down - a down stroke ↓, up - an up stroke ↑ (its tones stay)
+    if (d.hit.note.chordNote) {
+      const evs = [...new Set([d.hit.ev].concat(list.filter((x) => x.hit.note.chordNote).map((x) => x.hit.ev)))];
+      const notes = [].concat(...evs.map((ev) => ev.notes)), was = notes.map((n) => n.stroke || '');
+      S.drag = { mode: 'alter', strum: true, id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, notes, k: null,
+        undo: () => notes.forEach((n, j) => { if (was[j]) n.stroke = was[j]; else delete n.stroke; }),
+        changed: () => notes.some((n, j) => (n.stroke || '') !== was[j]) };
+      return alterMove(e);
+    }
     const before = list.map((x) => ({ pitch: x.hit.note.pitch, dia: x.hit.note.dia }));
     S.drag = { mode: 'alter', id: d.id, sx: d.sx, sy: d.sy, t: d.t, hit: d.hit, list, k: null,
       undo: () => list.forEach((x, j) => Object.assign(x.hit.note, before[j])),
@@ -1084,6 +1124,22 @@
   }
   function alterMove(e) {
     const d = S.drag;
+    if (d.strum) {
+      // the stroke of the chord: up ↑ / down ↓ (back to the middle: as it was)
+      const k = Math.sign(Math.round((d.sy - e.clientY) / VEL_STEP));
+      if (k === d.k) return;
+      d.k = k;
+      d.undo();
+      if (k) d.notes.forEach((n) => { n.stroke = k > 0 ? 'u' : 'd'; });
+      S.rev++;
+      TC.render.draw();
+      const label = k > 0 ? '↑ ' + tr('Up stroke') : k < 0 ? '↓ ' + tr('Down stroke') : tr('as it was');
+      S.hover = { bar: d.t.bar, headId: d.t.head.id, hx: d.t.head.x, hy: d.t.head.y, label: `${label} – ${tr('Esc: back')}` };
+      I.hoverKey = null;
+      TC.render.drawHover();
+      TC.ui.status(`${where(d.t)} · ${label}`);
+      return;
+    }
     // a semitone per step up / down, on the note's own line (at most a double sharp / flat)
     const k = TC.clamp(Math.round((d.sy - e.clientY) / VEL_STEP), -4, 4);
     if (k === d.k) return;
@@ -1177,6 +1233,11 @@
         TC.commit();
       }),
     }));
+    // a stroke (strummed chord): down / up / none - for the whole chord
+    const sk = (d.hit.ev.notes.find((x) => x.stroke) || {}).stroke || '';
+    items.push('-', ...[['d', '↓ ' + tr('Down stroke')], ['u', '↑ ' + tr('Up stroke')], ['', '– ' + tr('No stroke')]].map(([v, l]) => ({
+      label: l, checked: sk === v, action: choose(() => { S.selection = new Set(ids); A().setStroke(v); }),
+    })));
     // lyrics: type the syllable of this note (and on from there)
     items.push('-', { label: '✎ ' + tr('Lyrics (Ctrl+L)'), action: () => {
       S.selection = new Set([n.id]);

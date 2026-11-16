@@ -1368,28 +1368,21 @@
     TC.commit();
     TC.ui.hint(tr('{from} {sign} {to} to the end of bar {n}', { from: d.from, sign: b > a ? '<' : '>', to: d.to, n: d.end + 1 }));
   };
-  // ---- Chords as notes (js/accomp.js): the chord symbols of the selected bars written out in the track being written
-  /** The pattern chosen in the panel (for this browser session), else the one that fits the track. */
-  A.accompPattern = () => (S.accompPattern && TC.accomp.byId(S.accompPattern) ? S.accompPattern : TC.accomp.defaultFor(TC.curTrack()));
-  A.setAccompPattern = function (id) {
-    if (!TC.accomp.byId(id)) return;
-    S.accompPattern = id;
+  // ---- Chords written like notes (js/interaction.js writeChord): a tap writes the chord of the chord symbols there
+  /** What a tap writes in a melody track: '' a tone, 'n' a chord, 'd' a chord struck down ↓, 'u' up ↑. */
+  A.setChordMode = function (v) {
+    S.input.chordMode = ['n', 'd', 'u'].includes(v) ? v : '';
+    TC.saveSettings();
     TC.refresh();
+    if (S.input.chordMode) TC.ui.hint(tr('Tap: the chord of the chord symbols there - hold a chord and move down / up: its stroke ↓ / ↑'));
   };
-  /** Write the chords of the selected bars ("to bar") as notes - the voice's notes there are replaced (asked first). */
-  A.writeAccomp = function () {
-    const t = TC.curTrack(), AC = TC.accomp;
-    if (!t || t.kind !== 'pitched') return TC.ui.hint(tr('Chords as notes: in a melody track (piano, guitar …)'));
-    const R = TC.barRange() || [curBar(), curBar()], vi = S.input.voice === 1 ? 1 : 0;
-    let any = false;
-    for (let i = R[0]; i <= R[1]; i++) if (TC.score.chordAt(S.doc, i, TC.barTicks(S.doc.bars[i].ts) - 1)) any = true;
-    if (!any) return TC.ui.hint(tr('No chords in these bars yet - set them first (panel "Bar · score" → Chords).'));
-    const old = AC.notesIn(t, R[0], R[1], vi);
-    if (old && !confirm(tr('Replace the {n} notes in bars {a}–{b} with the chords as notes? (Undo is possible.)', { n: old, a: R[0] + 1, b: R[1] + 1 }))) return;
-    const n = AC.write(S.doc, t, R[0], R[1], A.accompPattern(), vi);
-    S.selection.clear();
+  /** The stroke of the selected chords (their whole events): 'd' down, 'u' up, '' none. */
+  A.setStroke = function (v) {
+    const evs = new Set();
+    for (const id of S.selection) { const h = TC.score.findNote(S.doc, id); if (h && h.note.pitch !== undefined) evs.add(h.ev); }
+    if (!evs.size) return;
+    evs.forEach((ev) => ev.notes.forEach((n) => { if (v === 'd' || v === 'u') n.stroke = v; else delete n.stroke; }));
     TC.commit();
-    TC.ui.hint(tr('{n} notes written in bars {a}–{b}', { n, a: R[0] + 1, b: R[1] + 1 }));
   };
 
   /** Remove the level ('v') or the hairpin ('w') at the chosen place of the selected bar. */

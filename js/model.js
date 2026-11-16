@@ -62,6 +62,8 @@
  *                                                                (place on the staff, see js/pitch.js; null = from the scale)
  *                         stroke: 'd' | 'u'       (only when set) struck as a stroke down / up (a strummed guitar,
  *                                                 js/accomp.js): a mark above it, played a little spread
+ *                         chordNote: true         (only when set) written as a chord (note panel "Write: chord"):
+ *                                                 held and moved down / up it gets a stroke (else ♯ / ♭)
  *                         lyr: ['Lie-', 'Son-']   (only when set) lyrics: the syllable of each verse (1st, 2nd ...); a
  *                                                 trailing "-" joins it to the next syllable of the word ('' = none).
  *                                                 Kept on the first note of an event in voice 1 (SC.lyricOf).
@@ -304,6 +306,7 @@
     out.stick = n.stick === 'R' || n.stick === 'L' ? n.stick : '';
     if (kind !== 'drums' && n.tie) out.tie = true; // melody: tied on from the note before (same pitch)
     if (kind !== 'drums' && (n.stroke === 'd' || n.stroke === 'u')) out.stroke = n.stroke; // struck as a stroke ↓ / ↑ (js/accomp.js)
+    if (kind !== 'drums' && n.chordNote) out.chordNote = true; // written as a chord (held + down / up: its stroke)
     if (kind !== 'drums' && Array.isArray(n.lyr)) { // lyrics: a syllable per verse
       const lyr = n.lyr.slice(0, SC.LYRIC_VERSES).map((x) => SC.cleanSyllable(x));
       while (lyr.length && !lyr[lyr.length - 1]) lyr.pop();

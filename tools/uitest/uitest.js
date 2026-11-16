@@ -1015,26 +1015,44 @@ setTimeout(() => {
           ok('piano: on again - one left hand, empty', S.doc.tracks.filter((t) => t.lh).length === 1 && TC.score.leftHand(S.doc, pf).bars.every((b) => !b.voices.flat().length));
           while (TC.history.undoStack.length > undoPiano) TC.actions.undo();
           ok('piano: undone', !S.doc.tracks.some((t) => t.lh) && S.doc.tracks.every((t) => t.name !== pf.name));
-          // chords as notes: a guitar track, a chord in bar 1, "↓ ↓↑ ↑↓↑" chosen in the note panel, written - strokes drawn
+          // chords written like notes: a guitar track, a chord in bar 1, "↓" in the note panel, a tap - the grip struck down
           const undoAcc = TC.history.undoStack.length;
           const gtr = TC.score.addTrack(S.doc, 'Gitarre', null, 'pitched');
           gtr.program = 25;
           TC.score.setChord(S.doc, 0, 0, { name: 'C' });
           TC.commit();
           TC.actions.selectTrack(gtr.id);
+          S.selection.clear();
           TC.selectBar(0);
           TC.refresh();
-          const accSel = document.querySelector('#panel-notes select[data-action="setAccompPattern"]');
-          ok('chords as notes: in the note panel, a guitar starts with the pop strum', !!accSel && accSel.value === 'gDDU');
-          accSel.value = 'gBeats';
-          accSel.dispatchEvent(new Event('change', { bubbles: true }));
-          document.querySelector('#panel-notes [data-action="writeAccomp"]').click();
+          const modeBtn = document.querySelector('#panel-notes [data-action="setChordMode"][data-value="d"]');
+          if (modeBtn) modeBtn.click();
+          click(0, 0, 4, { track: gtr });
           const gev = gtr.bars[0].voices[0];
-          ok('chords as notes: ↓ on every beat - the C grip, four strokes, ⊓ drawn ' + gev.map((e) => e.notes.length).join(','),
-            gev.length === TC.barTicks(S.doc.bars[0].ts) / 960 && gev[0].notes.map((n) => n.pitch).sort((a, b) => a - b).join() === '48,52,55,60,64' &&
-            gev.every((e) => e.notes.every((n) => n.stroke === 'd')) && [...document.querySelectorAll('.score text.mus')].some((x) => x.textContent === ''));
+          ok('chords: "↓" in the note panel, a tap - the C grip struck down, drawn ⊓ ' + (gev[0] ? gev[0].notes.map((n) => n.pitch).join(',') : '-'),
+            !!modeBtn && gev.length === 1 && gev[0].notes.map((n) => n.pitch).sort((a, b) => a - b).join() === '48,52,55,60,64' &&
+            gev[0].notes.every((n) => n.stroke === 'd' && n.chordNote) && [...document.querySelectorAll('.score text.mus')].some((x) => x.textContent === ''));
+          S.selection = new Set([gev[0].notes[0].id]);
+          TC.refresh();
+          const upBtn = document.querySelector('#panel-notes [data-action="setStroke"][data-value="u"]');
+          if (upBtn) upBtn.click();
+          ok('chords: the selected chord - its stroke ↑ in the panel', !!upBtn && gev[0].notes.every((n) => n.stroke === 'u'));
+          S.selection.clear();
+          TC.refresh();
+          // held (Ctrl) and moved down: a down stroke - its tones stay
+          const gh = TC.render.headsInView().find((h) => h.track && h.track.id === gtr.id), vw = S.doc.view, vr = vp.getBoundingClientRect();
+          const [hx, hy] = [vr.left + vw.x + gh.wx * vw.zoom, vr.top + vw.y + gh.wy * vw.zoom];
+          mouse('pointerdown', [hx, hy], { ctrlKey: true });
+          mouse('pointermove', [hx, hy + 20], { ctrlKey: true });
+          mouse('pointermove', [hx, hy + 45], { ctrlKey: true });
+          mouse('pointerup', [hx, hy + 45], { ctrlKey: true });
+          ok('chords: a chord held and moved down - a down stroke, the tones stay', gev[0].notes.every((n) => n.stroke === 'd') && gev[0].notes.map((n) => n.pitch).sort((a, b) => a - b).join() === '48,52,55,60,64');
+          S.selection.clear();
+          TC.actions.setChordMode('');
+          TC.score.setChord(S.doc, 1, 0, null);
+          ok('chords: no chord symbol there - nothing written, said', (() => { TC.actions.setChordMode('n'); const before = gtr.bars[1].voices[0].length; click(1, 0, 4, { track: gtr }); TC.actions.setChordMode(''); return gtr.bars[1].voices[0].length === before || !!TC.score.chordAt(S.doc, 1, 0); })());
           while (TC.history.undoStack.length > undoAcc) TC.actions.undo();
-          ok('chords as notes: undone', !S.doc.tracks.some((t) => t.name === 'Gitarre') && !S.doc.bars[0].chords);
+          ok('chords: undone', !S.doc.tracks.some((t) => t.name === 'Gitarre') && !S.doc.bars[0].chords);
           S.trackId = S.doc.tracks[0].id;
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');

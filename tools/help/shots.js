@@ -142,7 +142,7 @@ setTimeout(() => {
         setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => /Dynamik/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
       }, 400);
     },
-    // chords as notes: the melody example with a guitar strumming its chords (↓ ↓↑ ↑↓↑), the note panel
+    // chords written like notes: the melody example with a guitar playing its chords (strokes ⊓ / V), the note panel (Write ↓)
     akkordnoten() {
       example('melodie');
       setTimeout(() => {
@@ -158,7 +158,9 @@ setTimeout(() => {
         A.togglePanel();
         TC.refresh();
         view(0.85, 10, -40);
-        setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => /Akkorde als Noten/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
+        S.input.chordMode = 'd';
+        TC.refresh();
+        setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => x.textContent.trim() === 'Akkorde'); if (h) h.scrollIntoView(); }, 200);
       }, 400);
     },
     // MIDI import: track, where it comes from, grid, tempo, target

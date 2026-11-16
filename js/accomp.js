@@ -223,6 +223,7 @@
         const pitches = [...new Set(take(st, v, kind))].filter((p) => p >= 0 && p <= 127);
         pitches.forEach((p) => {
           const note = TC.newPitchNote(p, spell(p, at.ch), {});
+          note.chordNote = true;
           if (st.stroke) note.stroke = st.stroke;
           const r = SC.place(doc, track, bi, vi, st.t, dur, note);
           if (r.status === 'added' || r.status === 'chord') n++;
@@ -231,6 +232,26 @@
       SC.fitBar(doc, track, bi);
     }
     return n;
+  };
+
+  /**
+   * A chord written with a tap (note panel "Write: chord"): its notes [{ pitch, dia }] - a guitar: a grip; else the
+   * chord tones close together from the tapped pitch up (tapped higher: an inversion higher; a slash bass below them).
+   */
+  AC.chordNotes = function (ch, track, tapped) {
+    let pitches;
+    if (AC.isGuitar(track)) pitches = AC.voicing(ch, 'guitar');
+    else {
+      const pcs = [...new Set(P().chordPcs(ch))], base = Math.max(0, Math.min(115, tapped));
+      // the chord tone at or right above the tapped pitch first, the others above it
+      const first = pcs.map((pc) => from(pc, base)).sort((a, b) => a - b)[0];
+      pitches = pcs.map((pc) => from(pc, first)).sort((a, b) => a - b);
+      if (ch.bass) {
+        const b = bassPc(ch);
+        if (mod(pitches[0], 12) !== b) pitches = [from(b, pitches[0] - 12)].concat(pitches.filter((p) => mod(p, 12) !== b));
+      }
+    }
+    return pitches.filter((p) => p >= 0 && p <= 127).map((p) => ({ pitch: p, dia: spell(p, ch) }));
   };
 
   /** Notes in voice vi of bars from … to (what writing there would replace). */

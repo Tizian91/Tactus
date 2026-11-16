@@ -82,3 +82,8 @@ dl.keys dd { margin: 0; }
 .lines td.staff { width: 84px; }
 a.open { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; border-radius: 18px; padding: 3px 12px; margin: 2px 4px 2px 0; font-size: 14px; white-space: nowrap; }
 a.open:hover { filter: brightness(1.08); }
+details.chord-list { margin: 10px 0; }
+details.chord-list summary { cursor: pointer; }
+.chord-table { font-size: 14px; }
+.chord-table td:first-child { white-space: nowrap; }
+@media (max-width: 600px) { .chord-table { display: block; overflow-x: auto; } }

@@ -153,7 +153,7 @@
         <section><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
-        <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${dynSection()}${accompSection()}${lyricsSection(false)}`;
+        <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${accompSection(null)}${dynSection()}${lyricsSection(false)}`;
     }
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
@@ -180,7 +180,7 @@
       ${accentRow(hit.note.accent || 0)}
       <div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
         ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
-    </section>${dynSection()}${accompSection()}${lyricsSection(true)}`;
+    </section>${accompSection(hit)}${dynSection()}${lyricsSection(true)}`;
   }
 
   /** Lyrics of the melody track being written: the verse, start typing (at the selected note), delete a verse. */
@@ -365,21 +365,29 @@
   }
 
   /**
-   * Chords as notes (js/accomp.js): the chord symbols of the selected bars written into this track - a pattern for a
-   * piano (held, bass + chord, broken, Alberti) or a guitar (strokes ↓ ↑, picked); after that they are notes like any.
+   * Chords written like notes: what a tap writes - a tone, or the chord of the chord symbols there (with a stroke ↓ / ↑);
+   * a selected chord: its stroke. (Held and moved down / up, a chord written as a chord gets its stroke too.)
    */
-  function accompSection() {
-    const t = TC.curTrack(), AC = TC.accomp, i = S.selBar;
-    if (!AC || t.kind !== 'pitched') return '';
-    const cur = TC.actions.accompPattern(), R = TC.barRange();
-    const groups = [['piano', 'Piano'], ['guitar', 'Guitar']].map(([g, label]) => `<optgroup label="${esc(tr(label))}">` +
-      AC.PATTERNS.filter((p) => p.group === g).map((p) => `<option value="${p.id}"${p.id === cur ? ' selected' : ''}>${esc(de() ? p.de : p.en)}</option>`).join('') + '</optgroup>').join('');
-    const where = i === null ? '' : R && R[1] > R[0] ? tr('bars {a}–{b}', { a: R[0] + 1, b: R[1] + 1 }) : tr('bar {n}', { n: i + 1 });
-    return `<section><h3>${tr('Chords as notes')}</h3>
-      <div class="row"><label>${tr('Playing')}</label><select data-action="setAccompPattern">${groups}</select></div>
-      ${i === null ? `<p class="hint">${tr('Tap a bar (several: "to bar"), then write its chords as notes here.')}</p>`
-        : `<div class="btn-row">${btn('writeAccomp', undefined, '♫ ' + esc(tr('Write into {where}', { where })), false, tr('The chord symbols of these bars as notes in this track - what is there in this voice is replaced'), 'wide')}</div>`}
-      <p class="hint tight">${tr('From the chord symbols (panel "Bar · score" → Chords). Guitar: real grips, strokes ↓ ↑ played a little spread. After that: notes like any others.')}</p>
+  function accompSection(hit) {
+    const t = TC.curTrack();
+    if (t.kind !== 'pitched') return '';
+    if (hit) {
+      // the selected chord: its stroke (a chord - more than one tone, or written as a chord)
+      if (hit.ev.notes.length < 2 && !hit.note.chordNote) return '';
+      const sk = (hit.ev.notes.find((n) => n.stroke) || {}).stroke || '';
+      return `<section><h3>${tr('Chord')}</h3><div class="row"><label>${tr('Stroke')}</label><div class="seg">
+          ${btn('setStroke', '', '–', sk === '', tr('No stroke: all tones at once'))}
+          ${btn('setStroke', 'd', '↓', sk === 'd', tr('Down stroke: from the lowest string up'))}
+          ${btn('setStroke', 'u', '↑', sk === 'u', tr('Up stroke: from the highest string down'))}</div></div>
+        <p class="hint tight">${tr('Or hold the chord and move down / up.')}</p></section>`;
+    }
+    const m = S.input.chordMode || '';
+    return `<section><h3>${tr('Chords')}</h3><div class="row"><label>${tr('A tap sets')}</label><div class="seg">
+        ${btn('setChordMode', '', tr('Tone'), m === '', tr('A tap writes one tone'))}
+        ${btn('setChordMode', 'n', tr('Chord'), m === 'n', tr('A tap writes the chord of the chord symbols there'))}
+        ${btn('setChordMode', 'd', '↓', m === 'd', tr('A chord struck down'))}
+        ${btn('setChordMode', 'u', '↑', m === 'u', tr('A chord struck up'))}</div></div>
+      <p class="hint tight">${tr(m ? 'Tap: the chord of the chord symbols there (panel "Bar · score" → Chords) - a guitar: a grip; else from the tapped tone up. Hold it, then down / up: its stroke.' : 'Chord: a tap writes the whole chord of the chord symbols there.')}</p>
     </section>`;
   }
 
@@ -786,7 +794,7 @@
     const lang = S.settings.lang;
     const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind,
       // (dynamics: the selected bar, its places and what the track has there)
-      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, S.accompPattern, TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
+      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, hit && hit.ev.notes.map((n) => n.stroke || '').join(), TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

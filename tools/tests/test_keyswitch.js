@@ -39,7 +39,8 @@ module.exports = function (T) {
   const L0 = TC.timeline.LEAD;
   const muted = hits.find((h) => h.ks === 54), open = hits.find((h) => h.ks === 58), slide = hits.find((h) => h.ks === 38);
   T.eq('muted (F#2) held from bar 1 to bar 2 beat 3, just before', [Math.round((muted.t - L0) * 1000), Math.round(muted.dur * 100) / 100], [-20, 3]);
-  T.eq('open then, to the end; the slide at the same place, short', [Math.round((open.t - L0) * 100) / 100, Math.round(open.dur * 100) / 100, Math.round((slide.t - L0) * 100) / 100, slide.dur], [2.98, 3, 2.98, 0.05]);
+  T.eq('let ring then, to the end; the slide at the same place - held over the next note too (to the end of bar 3, beat 2)', [Math.round((open.t - L0) * 100) / 100, Math.round(open.dur * 100) / 100, Math.round((slide.t - L0) * 100) / 100, Math.round(slide.dur * 100) / 100], [2.98, 3, 2.98, 2]);
+  T.eq('Iron 2: open is called let ring', [keyOf('open').short, KS.clean(Object.assign(KS.fromTemplate('ujam-iron2'), { v: 1, keys: [{ id: 'open', name: 'Open', short: 'open', note: 'A#2', kind: 'art' }], init: ['trigOn'] })).keys.find((k) => k.id === 'open').short], ['let ring', 'let ring']);
   T.eq('trigger mode on (D#1 = 39) at the start, before everything', hits.filter((h) => h.ks === 39).map((h) => Math.round((h.t - L0) * 1000)), [-20]);
   const fromBar2 = TC.timeline.build(doc, { from: 1 }).hits.filter((h) => h.ks === 54);
   T.eq('playing from bar 2: the way of playing set before it is sent at the start', fromBar2.length === 1 && Math.abs(fromBar2[0].t - (L0 - 0.02)) < 1e-6, true);

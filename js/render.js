@@ -179,9 +179,16 @@
       // staff and the tab of a guitar part) - the lyrics and the dynamics below it
       if (track.ksw && !track.lh && track.bars.some((b) => b.ks)) {
         z.ksY = Math.max(6.0 * SP, ...bars.map((b) => lowestInk(b.parts[k]) + 1.6 * SP));
-        // (slides, stops, release: a row of their own under the ways of playing - they do not cover each other)
-        const once = TC.ksw && track.bars.some((b) => (b.ks || []).some((m) => { const x = TC.ksw.keyOf(track, m.k); return x && x.kind !== 'art'; }));
-        z.ksY2 = once ? z.ksY + 1.5 * SP : z.ksY;
+        // a row per group of ways of playing (muting, picking …), then one for slides / stops / release - only the rows
+        // used, in the order of the profile: they do not cover each other (nor their lines)
+        const rowOf = (x) => (x.kind === 'art' ? 'g:' + (x.group || '') : x.kind === 'once' || x.kind === 'event' ? 'once' : null);
+        const used = new Set();
+        track.bars.forEach((b) => (b.ks || []).forEach((m) => { const x = TC.ksw && TC.ksw.keyOf(track, m.k); if (x && rowOf(x)) used.add(rowOf(x)); }));
+        const rows = [];
+        track.ksw.keys.forEach((x) => { const r = rowOf(x); if (r && used.has(r) && !rows.includes(r)) rows.push(r); });
+        z.ksRow = new Map(rows.map((r, n) => [r, z.ksY + n * 1.5 * SP]));
+        z.ksRowOf = (x) => z.ksRow.get(rowOf(x)) || z.ksY;
+        z.ksY2 = z.ksY + Math.max(0, rows.length - 1) * 1.5 * SP; // (the lowest row)
         if (z.lyrRows) z.lyrY = Math.max(z.lyrY, z.ksY2 + 2.2 * SP);
         z.below = Math.max(belowOf(z, under), z.ksY2 + 1.4 * SP);
       }
@@ -1096,21 +1103,21 @@
           if (!k) return;
           // (a way of playing in the first row - "open" too; a slide, a stop, release in the row under it)
           const x = RD.tickX(b, m.t) - 0.4 * SP, txt = k.short || k.name;
-          OS(b, z).push(`<text class="ks-mark${k.kind === 'art' ? '' : ' once'}" x="${f(x)}" y="${f(k.kind === 'art' ? y : z.ksY2)}">${esc(txt)}</text>`);
+          OS(b, z).push(`<text class="ks-mark${k.kind === 'art' ? '' : ' once'}" x="${f(x)}" y="${f(z.ksRowOf(k))}">${esc(txt)}</text>`);
         });
       }
       // the lines of the ways of playing: from each to the next (in written order), over line breaks
       const arts = [];
       tk.bars.forEach((bar, bi) => ((bar && bar.ks) || []).forEach((m) => {
         const k = TC.ksw.keyOf(tk, m.k);
-        if (k && k.kind === 'art') arts.push({ abs: at(bi, m.t), txt: k.short || k.name, g: k.group || '' });
+        if (k && k.kind === 'art') arts.push({ abs: at(bi, m.t), txt: k.short || k.name, g: k.group || '', y: z.ksRowOf(k) });
       }));
       arts.sort((a, b) => a.abs - b.abs);
       // (to the next way of playing of its group - "open" has no line)
       arts.forEach((a, n) => {
-        if (/^open$/i.test(a.txt)) return;
+        if (/^(open|let ring)$/i.test(a.txt)) return;
         const next = arts.slice(n + 1).find((x) => x.g === a.g);
-        spans.push({ a: a.abs, e: next ? next.abs : at(doc.bars.length, 0), w: a.txt.length * 0.6 * SP + 0.4 * SP });
+        spans.push({ a: a.abs, e: next ? next.abs : at(doc.bars.length, 0), w: a.txt.length * 0.6 * SP + 0.4 * SP, y: a.y });
       });
       for (const sp of spans) {
         for (const s of L.systems) {
@@ -1124,7 +1131,7 @@
             }
             return s.end - 0.5 * SP;
           };
-          const x0 = xOf(a) + (a === sp.a ? sp.w : 0), x1 = xOf(e), o = staffOut[s.i][z.k], ly = y - 0.35 * SP;
+          const x0 = xOf(a) + (a === sp.a ? sp.w : 0), x1 = xOf(e), o = staffOut[s.i][z.k], ly = sp.y - 0.35 * SP; // (in its own row)
           if (x1 - x0 > 0.5 * SP) o.push(line(x0, ly, x1, ly, 'ks-line'));
           if (e === sp.e) o.push(line(x1, ly - 0.6 * SP, x1, ly, 'ks-end')); // (the hook points up, to the staff)
         }

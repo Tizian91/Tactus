@@ -27,9 +27,10 @@
   KS.TEMPLATES = [{
     // (checked with Iron 2: C3 = 60; C1 is free - the slides start on D1; D#1 trigger mode on is needed, else the
     // notes do not play: sent at the start, unseen; open / muted / half / dead exclude each other, picking is its own)
-    tpl: 'ujam-iron2', name: 'UJAM Iron 2 (Instrument Mode)', c3: 60, noteShift: 12, poly: 4, init: ['trigOn'],
+    // (v: the version of the template - a profile saved with an older one is brought to it when loaded)
+    tpl: 'ujam-iron2', v: 2, name: 'UJAM Iron 2 (Instrument Mode)', c3: 60, noteShift: 12, poly: 4, init: ['trigOn'],
     keys: [
-      ['open', 'Open', 'open', 'A#2', 'art', 'mute'], ['muted', 'Muted (palm mute)', 'P.M.', 'F#2', 'art', 'mute'],
+      ['open', 'Let ring (open)', 'let ring', 'A#2', 'art', 'mute'], ['muted', 'Muted (palm mute)', 'P.M.', 'F#2', 'art', 'mute'],
       ['half', 'Half muted', '½ M.', 'G#2', 'art', 'mute'], ['dead', 'Dead notes', 'Dead', 'D#2', 'art', 'mute'],
       ['pick1', 'Picking (C2)', 'pick', 'C2', 'art', 'pick'], ['pick2', 'Picking (D2)', 'pick 2', 'D2', 'art', 'pick'],
       ['pick3', 'Picking (E2)', 'pick 3', 'E2', 'art', 'pick'], ['pick4', 'Picking (F2)', 'pick 4', 'F2', 'art', 'pick'],
@@ -68,13 +69,13 @@
     // a profile of a template saved before it was corrected (no init keys yet - Iron: slides one key off, no trigger
     // mode, no groups): the corrected template, keeping which C3 was chosen
     const tpl = KS.template(p.tpl);
-    if (tpl && !Array.isArray(p.init)) p = Object.assign(KS.fromTemplate(p.tpl), { c3: p.c3 });
+    if (tpl && (!Array.isArray(p.init) || (p.v || 1) < (tpl.v || 1))) p = Object.assign(KS.fromTemplate(p.tpl), { c3: p.c3 });
     const keys = p.keys.filter((k) => k && typeof k.id === 'string' && KS.KINDS.includes(k.kind) && KS.noteOf(k.note) !== null)
       .map((k) => Object.assign({ id: k.id.slice(0, 40), name: String(k.name || k.id).slice(0, 60), short: String(k.short || '').slice(0, 12), note: k.note, kind: k.kind },
         typeof k.group === 'string' && k.group ? { group: k.group.slice(0, 20) } : {}));
     if (!keys.length) return null;
     const ids = new Set(keys.map((k) => k.id));
-    return { tpl: typeof p.tpl === 'string' ? p.tpl : '', name: String(p.name || 'Keyswitches').slice(0, 60), c3: p.c3 === 48 ? 48 : 60,
+    return { tpl: typeof p.tpl === 'string' ? p.tpl : '', v: Number.isInteger(p.v) ? p.v : 1, name: String(p.name || 'Keyswitches').slice(0, 60), c3: p.c3 === 48 ? 48 : 60,
       noteShift: Number.isInteger(p.noteShift) && Math.abs(p.noteShift) <= 36 ? p.noteShift : 0, poly: Number.isInteger(p.poly) && p.poly > 0 ? p.poly : 0,
       init: Array.isArray(p.init) ? p.init.filter((id) => ids.has(id)) : [], keys };
   };
@@ -96,6 +97,19 @@
   KS.events = function (doc, track, order, timeOf, end, startArts) {
     if (!track.ksw) return [];
     const out = [], art = new Map(), start = timeOf(order[0], 0); // (the way of playing held now, per group)
+    // the notes of the track as played (start, end) - a slide holds its key over them (made when first needed)
+    let list = null;
+    const notes = () => {
+      if (list) return list;
+      list = [];
+      for (const o of order) {
+        const src = TC.score.sourceBar(doc, o.bar, track), L = TC.barTicks(doc.bars[o.bar].ts);
+        (track.bars[src] ? track.bars[src].voices : []).forEach((v) => v.forEach((ev) => {
+          if (ev.tick < L) list.push({ at: timeOf(o, ev.tick), end: timeOf(o, Math.min(L, ev.tick + ev.dur)) });
+        }));
+      }
+      return list.sort((a, b) => a.at - b.at);
+    };
     // keys sent at the start, unseen (trigger mode on), first of all
     (track.ksw.init || []).forEach((id) => { const k = KS.keyOf(track, id); if (k && k.midi !== null) out.push({ at: start, key: k.midi, hold: 0, init: true }); });
     // the ways of playing that hold where the playing starts (set before it)
@@ -110,6 +124,10 @@
           const before = art.get(g);
           if (before) out.push({ at: before.at, key: before.key, hold: Math.max(0, at - before.at) });
           art.set(g, { at, key: k.midi });
+        } else if (k.kind === 'once') {
+          // a slide: held from the note here up to the end of the next note (that one too) - else the VST does not slide
+          const n = notes().find((x) => x.at >= at - 1e-6), next = n && notes().find((x) => x.at > n.at + 1e-6);
+          out.push({ at, key: k.midi, hold: next ? Math.max(0, next.end - at) : n ? Math.max(0, n.end - at) : 0 });
         } else out.push({ at, key: k.midi, hold: 0 });
       }
     }

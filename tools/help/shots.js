@@ -174,7 +174,7 @@ setTimeout(() => {
         gt.clef = 'treble8';
         gt.ksw = TC.ksw.fromTemplate('ujam-iron2');
         TC.accomp.write(S.doc, gt, 0, 3, 'gEighths', 0);
-        gt.bars[0].ks = [{ t: 0, k: 'muted' }];
+        gt.bars[0].ks = [{ t: 0, k: 'muted' }, { t: 0, k: 'pick3' }];
         gt.bars[1].ks = [{ t: 1920, k: 'open' }, { t: 1920, k: 'slideUp' }];
         gt.bars[2].ks = [{ t: 2880, k: 'dead' }];
         gt.bars[3].ks = [{ t: 0, k: 'open' }];

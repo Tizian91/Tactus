@@ -899,6 +899,31 @@ setTimeout(() => {
           ok('chords locked: ↑ ↓ go from chord tone to chord tone (from F: G C G E C) ' + keys.join(' '), keys.join() === '67,72,67,64,60');
           TC.actions.setTool('write');
           while (TC.history.undoStack.length > undoChord) TC.actions.undo();
+          // piano: "+ Piano" in the panel - two staves with a brace, one entry in the list; a tap into the lower staff writes the left hand
+          const undoPiano = TC.history.undoStack.length;
+          S.selection.clear(); TC.panel.update(true);
+          const pb = document.querySelector('#panel-settings [data-action="addPiano"]') || document.querySelector('[data-action="addPiano"]');
+          if (pb) pb.click();
+          const pf = TC.curTrack(), plh = TC.score.leftHand(S.doc, pf);
+          ok('piano: added from the panel - two staves (treble, bass), a brace, one entry in the track list',
+            !!pb && !!plh && pf.clef === 'treble' && plh.clef === 'bass' && !!document.querySelector('.score .brace') &&
+            [...document.querySelectorAll('[data-action="selectTrack"]')].filter((b) => b.dataset.value === plh.id).length === 0);
+          click(1, 0, 3, { track: plh });
+          ok('piano: a tap into the lower staff writes the left hand', TC.curTrack() === plh && plh.bars[1].voices[0].length === 1 && pf.bars[1].voices[0].length === 0);
+          click(1, 0, 3, { track: pf });
+          ok('piano: … into the upper staff the right hand', TC.curTrack() === pf && pf.bars[1].voices[0].length === 1);
+          const lowPitch = plh.bars[1].voices[0][0].notes[0].pitch, highPitch = pf.bars[1].voices[0][0].notes[0].pitch;
+          ok('piano: the same place on the staff is lower in the bass clef ' + highPitch + ' / ' + lowPitch, highPitch - lowPitch > 12);
+          TC.actions.toggleMute(pf.id);
+          ok('piano: mute holds for both hands', pf.mute && plh.mute);
+          TC.actions.toggleMute(pf.id);
+          TC.actions.selectTrack(plh.id);
+          TC.actions.togglePiano();
+          ok('piano: one staff again - the lower one is a track of its own (its note stays), no brace',
+            !plh.lh && !TC.score.isPiano(S.doc, pf) && plh.bars[1].voices[0].length === 1 && !document.querySelector('.score .brace'));
+          while (TC.history.undoStack.length > undoPiano) TC.actions.undo();
+          ok('piano: undone', !S.doc.tracks.some((t) => t.lh) && S.doc.tracks.every((t) => t.name !== pf.name));
+          S.trackId = S.doc.tracks[0].id;
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');
           pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';

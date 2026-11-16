@@ -257,6 +257,8 @@
   // %-bars. The track being written is TC.curTrack() (not part of the score, not undone).
 
   const trackOf = (id) => S.doc.tracks.find((t) => t.id === id) || TC.curTrack();
+  /** A piano: the other staff gets what both share (sound, scale, mute / solo, name …) from t. */
+  const sync = (t) => TC.score.syncHands(S.doc, t);
   /** Write into this track (and show it). */
   A.selectTrack = function (id) {
     const t = trackOf(id);
@@ -286,10 +288,11 @@
   };
   /** Show / hide a track (still played; the one being written goes to a shown one). */
   A.toggleTrackHidden = function (id) {
-    const t = trackOf(id);
-    if (!t.hidden && S.doc.tracks.filter((x) => !x.hidden).length < 2) return TC.ui.hint(tr('At least one track stays visible'));
+    const t = TC.score.instrumentOf(S.doc, trackOf(id));
+    if (!t.hidden && TC.score.instruments(S.doc).filter((x) => !x.hidden).length < 2) return TC.ui.hint(tr('At least one track stays visible'));
     t.hidden = !t.hidden;
-    if (t.hidden && t === TC.curTrack()) {
+    sync(t);
+    if (t.hidden && TC.score.handsOf(S.doc, t).includes(TC.curTrack())) {
       S.trackId = S.doc.tracks.find((x) => !x.hidden).id;
       S.selection.clear();
       fitArt(TC.curTrack());
@@ -330,11 +333,13 @@
   A.toggleMute = function (id) {
     const t = trackOf(id);
     t.mute = !t.mute;
+    sync(t);
     TC.commit();
   };
   A.toggleSolo = function (id) {
     const t = trackOf(id);
     t.solo = !t.solo;
+    sync(t);
     TC.commit();
   };
   /**
@@ -353,12 +358,14 @@
   /** MIDI output of the track being written while playing ('' = the one of the panel). */
   A.setTrackMidiOut = function (v) {
     TC.curTrack().midiOut = v || '';
+    sync(TC.curTrack());
     TC.commit();
   };
   /** MIDI channel of the track being written while playing ('' = the one of its kit profile; 1 … 16). */
   A.setTrackMidiCh = function (v) {
     const n = Number(v);
     TC.curTrack().midiCh = v !== '' && n >= 1 && n <= 16 ? n - 1 : null;
+    sync(TC.curTrack());
     TC.commit();
   };
   /** The next track (status bar, cycles). */
@@ -383,6 +390,31 @@
     TC.commit();
     TC.ui.hint(tr('Melody track added - tap a line: the tone of the scale there'));
   };
+  /** A new piano: two staves (treble: right hand, bass: left hand), one instrument - after the one being written. */
+  A.addPiano = function () {
+    const t = TC.score.addTrack(S.doc, TC.score.freeTrackName(S.doc, tr('Piano')), TC.curTrack(), 'pitched');
+    t.program = 0;
+    TC.score.setPiano(S.doc, t, true);
+    S.trackId = t.id;
+    S.selection.clear();
+    TC.commit();
+    TC.ui.hint(tr('Piano added - the upper staff is the right hand, the lower one the left hand'));
+  };
+  /**
+   * Melody track being written: two staves (piano: a lower staff in the bass clef for the left hand) on / off -
+   * off, the lower staff becomes a melody track of its own (its notes stay).
+   */
+  A.togglePiano = function () {
+    const t = TC.curTrack();
+    if (!t || t.kind !== 'pitched') return;
+    const up = TC.score.instrumentOf(S.doc, t), on = !TC.score.leftHand(S.doc, up);
+    const lh = TC.score.setPiano(S.doc, up, on, TC.score.freeTrackName(S.doc, up.name + ' – ' + tr('left hand')));
+    if (!lh) return;
+    if (on) up.voice = '';
+    S.trackId = on ? up.id : t.id;
+    TC.commit();
+    TC.ui.hint(tr(on ? 'Two staves: tap the lower one to write the left hand' : 'One staff again - the lower one is the track "{name}" now', { name: lh.name }));
+  };
   /** Melody track being written: clef. */
   A.setTrackClef = function (clef) {
     const t = TC.curTrack();
@@ -396,6 +428,7 @@
     p = Number(p);
     if (t.kind !== 'pitched' || !Number.isInteger(p) || p < 0 || p > 127) return;
     t.program = p;
+    sync(t);
     TC.commit();
     if (S.settings.sound) TC.audio.previewTone(t.clef === 'bass' ? 48 : t.clef === 'treble8' ? 60 : 67, t);
   };
@@ -418,6 +451,7 @@
     const id = what === 'id' ? value : cur.id, pc = what === 'root' ? Number(value) : P.pc(cur.l, cur.a);
     const root = P.bestRoot(pc, id);
     TC.score.setScale(t, bi, { l: root.l, a: root.a, id });
+    sync(t);
     TC.commit();
     TC.ui.hint(`${bi > 0 ? tr('From bar {n}', { n: bi + 1 }) + ': ' : ''}${P.scaleName(TC.score.scaleAt(t, bi), TC.getLang() === 'de')}`);
   };
@@ -522,13 +556,15 @@
     const t = TC.curTrack();
     if (t.kind !== 'pitched' || !S.selBar || !t.bars[S.selBar].scale) return;
     t.bars[S.selBar].scale = null;
+    sync(t);
     TC.commit();
   };
   A.renameTrack = function (id) {
-    const t = trackOf(id);
+    const t = TC.score.instrumentOf(S.doc, trackOf(id));
     const name = prompt(tr('Name of the track:'), t.name);
     if (name === null || !name.trim() || name.trim() === t.name) return;
     t.name = name.trim();
+    sync(t);
     TC.commit();
   };
   A.duplicateTrack = function (id) {
@@ -539,13 +575,13 @@
   };
   A.deleteTrack = function (id) {
     const t = trackOf(id);
-    if (S.doc.tracks.length < 2) return TC.ui.hint(tr('The last track cannot be deleted'));
+    if (TC.score.instruments(S.doc).length < 2) return TC.ui.hint(tr('The last track cannot be deleted'));
     let notes = 0;
-    t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => { notes += ev.notes.length; })));
+    TC.score.handsOf(S.doc, t).forEach((h) => h.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => { notes += ev.notes.length; }))));
     if (notes && !confirm(tr('Delete the track "{name}" with its {n} notes? (Undo is possible.)', { name: t.name, n: notes }))) return;
-    const i = S.doc.tracks.indexOf(t);
+    const i = S.doc.tracks.indexOf(TC.score.instrumentOf(S.doc, t));
     TC.score.deleteTrack(S.doc, t);
-    if (S.trackId === t.id || !S.trackId) S.trackId = S.doc.tracks[Math.min(i, S.doc.tracks.length - 1)].id;
+    if (!S.doc.tracks.some((x) => x.id === S.trackId)) S.trackId = S.doc.tracks[Math.min(i, S.doc.tracks.length - 1)].id;
     TC.pruneSelection();
     TC.commit();
   };
@@ -1583,7 +1619,7 @@
    */
   A.exportMidi = function (profileId) {
     // several tracks, or chord symbols (a MIDI track / file of their own): the dialog
-    if (S.doc.tracks.length > 1 || S.doc.bars.some((h) => h.chords)) return A.exportMidiDialog(profileId);
+    if (TC.score.instruments(S.doc).length > 1 || S.doc.bars.some((h) => h.chords)) return A.exportMidiDialog(profileId);
     const t = S.doc.tracks[0];
     const p = profileId !== undefined ? (profileId ? TC.kits.byId(profileId) : null) : TC.kits.ofTrack(S.doc, t);
     const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
@@ -1604,7 +1640,7 @@
     TC.kits.load();
     const old = document.querySelector('.midi-export-backdrop');
     if (old) old.remove();
-    const rows = S.doc.tracks.map((t) => {
+    const rows = TC.score.instruments(S.doc).map((t) => { // (a piano: one row, its left hand goes along)
       const own = TC.kits.ofTrack(S.doc, t);
       return { t, on: true, target: preset !== undefined ? preset || 'gm' : own ? own.id : 'gm' };
     });

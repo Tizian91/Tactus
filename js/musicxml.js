@@ -77,7 +77,9 @@
   X.harmonyXml = harmonyXml;
 
   X.build = function (doc, opts = {}) {
-    const tracks = opts.tracks || doc.tracks;
+    // a part per instrument: a piano is one part with two staves (its left hand: staff 2, voices 5 …)
+    const tracks = (opts.tracks || doc.tracks).filter((t) => !t.lh);
+    const lhOf = (t) => (t.kind === 'pitched' ? TC.score.leftHand(doc, t) : null);
     // how signs and jumps are written (Guitar Pro reads them its own way - still being tried out):
     //   direction: <sound> inside the <direction> (standard)   measure: <sound> in the bar itself
     //   sign: To Coda with the coda sign as well               gp: the words of Guitar Pro (Da Coda, Dal Segno al Coda …)
@@ -136,8 +138,8 @@
 
     tracks.forEach((t, k) => {
       o.push(`<part id="${pid(k)}">`);
-      const one = D.oneLine(t);
-      const lyr = t.kind === 'pitched' ? TC.score.lyricInfo(doc, t) : null; // lyrics: syllables of voice 1
+      const one = D.oneLine(t), lh = lhOf(t);
+      const lyrUp = t.kind === 'pitched' ? TC.score.lyricInfo(doc, t) : null; // lyrics: syllables of voice 1 (upper staff)
       let ts = null, run = meta.tempo;
       bars.forEach((h, i) => {
         const L = TC.barTicks(h.ts);
@@ -159,7 +161,9 @@
         // key: melody its scale (first bar, changes), drums none
         if (i === 0 || (mel && fifths !== P.fifths(TC.score.scaleAt(t, i - 1)))) attr.push(`<key><fifths>${fifths}</fifths>${mel ? keyMode(scale, fifths) : ''}</key>`);
         if (!ts || ts.join('/') !== h.ts.join('/')) attr.push(`<time><beats>${h.ts[0]}</beats><beat-type>${h.ts[1]}</beat-type></time>`);
-        if (i === 0 && mel) attr.push({ treble: '<clef><sign>G</sign><line>2</line></clef>', treble8: '<clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>', bass: '<clef><sign>F</sign><line>4</line></clef>' }[t.clef] || '<clef><sign>G</sign><line>2</line></clef>');
+        const clefXml = (c, num) => (num ? `<clef number="${num}">` : '<clef>') + ({ treble: '<sign>G</sign><line>2</line>', treble8: '<sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change>', bass: '<sign>F</sign><line>4</line>' }[c] || '<sign>G</sign><line>2</line>') + '</clef>';
+        if (i === 0 && lh) attr.push('<staves>2</staves>' + clefXml(t.clef, 1) + clefXml(lh.clef, 2));
+        else if (i === 0 && mel) attr.push(clefXml(t.clef));
         else if (i === 0) attr.push('<clef><sign>percussion</sign><line>2</line></clef>' + (one ? '<staff-details><staff-lines>1</staff-lines></staff-details>' : ''));
         if (sim && !simPrev) attr.push('<measure-style><measure-repeat type="start">1</measure-repeat></measure-style>');
         else if (!sim && simPrev) attr.push('<measure-style><measure-repeat type="stop"/></measure-style>');
@@ -183,7 +187,15 @@
         // chord symbols: over the melody track the chords follow (else the first part), each at its place in the bar
         if (t === chordPart) TC.score.chordsIn(doc, i).forEach((x) => o.push(harmonyXml(x.ch, x.t)));
 
-        // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice
+        // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice -
+        // a piano: the upper staff (staff 1), then back to the bar start and the lower one (staff 2, voices 5 …)
+        writeStaff(t, lh ? 1 : 0, lyrUp);
+        if (lh) {
+          o.push(`<backup><duration>${L}</duration></backup>`);
+          writeStaff(lh, 2, null);
+        }
+        function writeStaff(t, staff, lyr) {
+        const stf = staff ? `<staff>${staff}</staff>` : '';
         const src = TC.score.sourceBar(doc, i, t);
         const bar = t.bars[src];
         const voices = bar.voices.map((v) => R.layout(v, h.ts, t.kind === 'drums', h.beam, t.fill));
@@ -198,7 +210,7 @@
           if (!used[vi] && (vi > 0 || used.some(Boolean))) return; // an empty voice: left out (voice 1 keeps its whole-bar rest)
           if (!first) o.push(`<backup><duration>${L}</duration></backup>`);
           first = false;
-          const voice = vi + 1, stem = vi % 2 === 0 ? 'up' : 'down', two = used.filter(Boolean).length > 1;
+          const voice = vi + 1 + (staff === 2 ? 4 : 0), stem = vi % 2 === 0 ? 'up' : 'down', two = used.filter(Boolean).length > 1;
           const beams = beamsOf(items, h.ts, h.beam);
           const tupFirst = new Set(), tupLast = new Set();
           const tups = new Map();
@@ -209,11 +221,11 @@
             const tupN = (tupFirst.has(it) ? '<tuplet type="start" bracket="no"/>' : '') + (tupLast.has(it) ? '<tuplet type="stop"/>' : '');
             if (it.kind === 'rest') {
               if (it.measure) {
-                o.push(`<note><rest measure="yes"/><duration>${L}</duration><voice>${voice}</voice></note>`);
+                o.push(`<note><rest measure="yes"/><duration>${L}</duration><voice>${voice}</voice>${stf}</note>`);
                 continue;
               }
               o.push(`<note><rest/><duration>${it.dur}</duration><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` +
-                (it.dots ? '<dot/>' : '') + tm + (tupN ? `<notations>${tupN}</notations>` : '') + '</note>');
+                (it.dots ? '<dot/>' : '') + tm + stf + (tupN ? `<notations>${tupN}</notations>` : '') + '</note>');
               continue;
             }
             if (mel) {
@@ -235,7 +247,7 @@
                   `<duration>${it.dur}</duration>` + (tStop ? '<tie type="stop"/>' : '') + (tStart ? '<tie type="start"/>' : '') +
                   `<instrument id="${pid(k)}-I1"/><voice>${voice}</voice><type>${TYPES[it.base] || 'quarter'}</type>` + (it.dots ? '<dot/>' : '') +
                   (sign !== undefined ? `<accidental>${ACC_NAME[sign]}</accidental>` : '') + tm +
-                  (two ? `<stem>${stem}</stem>` : '') + // (two voices in the bar: voice 1 up, voice 2 down; one voice: the reader decides)
+                  (two ? `<stem>${stem}</stem>` : '') + stf + // (two voices in the bar: voice 1 up, voice 2 down; one voice: the reader decides)
                   (c === 0 && bm ? bm.map((b, lv) => `<beam number="${lv + 1}">${b}</beam>`).join('') : '') +
                   (nots.length ? `<notations>${nots.join('')}</notations>` : '') +
                   (c === 0 && vi === 0 && !it.cont && it.tick === it.ev.tick && lyr ? lyricXml(lyr.get(it.ev)) : '') + '</note>');
@@ -282,6 +294,7 @@
             });
           }
         });
+        }
 
         // at the end of the bar: Fine, To Coda, D.C. / D.S. (the text, a sign if it has one - To Coda ⊕ -, its <sound>)
         const end = (words, sound, sign = '') => {

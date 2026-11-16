@@ -105,6 +105,25 @@ setTimeout(() => {
         f.dispatchEvent(new Event('input'));
       }, 400);
     },
+    // piano: the melody example on two staves - the left hand plays the root and the chord of each bar
+    klavier() {
+      example('melodie');
+      setTimeout(() => {
+        const t = S.doc.tracks.find((x) => x.kind === 'pitched'), P = TC.pitch;
+        S.trackId = t.id;
+        A.togglePiano();
+        const lh = TC.score.leftHand(S.doc, t);
+        S.doc.bars.forEach((h, i) => {
+          const at = TC.score.chordAt(S.doc, i, 0);
+          if (!at) return;
+          const root = P.pc(at.ch.root.l, at.ch.root.a), L = TC.barTicks(h.ts);
+          TC.score.place(S.doc, lh, i, 0, 0, L / 2, TC.newPitchNote(36 + root, null, {}));
+          P.chordPcs(at.ch).forEach((pc) => TC.score.place(S.doc, lh, i, 0, L / 2, L / 2, TC.newPitchNote(48 + pc, null, {})));
+        });
+        TC.commit();
+        view(0.95, 10, -40);
+      }, 400);
+    },
     // MIDI import: track, where it comes from, grid, tempo, target
     import() {
       S.settings.importTarget = 'into';

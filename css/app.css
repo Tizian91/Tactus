@@ -261,6 +261,7 @@ details > summary { list-style-position: outside; }
 .score .barno { font-size: 10px; fill: var(--muted); }
 .score .staff-name { font-size: 10px; font-weight: 600; fill: var(--muted); }
 .score .staff-name.cur { fill: var(--accent); }
+.score .brace { fill: var(--ink); }
 .score .title { font-size: 26px; font-weight: 600; fill: var(--text); }
 .score .subtitle { font-size: 14px; fill: var(--label); }
 .score .tempo { font-size: 13px; font-weight: 600; fill: var(--text); }

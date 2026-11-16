@@ -308,7 +308,7 @@ Schritte:
   „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
   `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
 
-## Phase 5 – Melodien (Schritt A ✅, B ✅, C Liedtext ✅ – als Nächstes: Schritt E Klaviersystem)
+## Phase 5 – Melodien (Schritt A ✅, B ✅, C Liedtext ✅, E Klavier ✅ – als Nächstes: Akkorde als Noten, Klavier + Gitarre)
 
 Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben eine **Gesangsmelodie aus dem Kopf** schnell als Noten
 festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Einspielen (dafür gibt es die DAW).
@@ -316,7 +316,8 @@ festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Eins
 **Leitlinie:** Eine neue Spur „Melodie“ geht sofort ohne Einrichtung (Violinschlüssel, C-Dur, weicher Klang). Tonleiter, Schlüssel,
 Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der Anschlag Feinschliff.
 
-**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → C Liedtext ✅ (vorgezogen, 2026-11-16) → **E Klaviersystem** → D Komfort → G Gitarren-Begleitung.
+**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → C Liedtext ✅ (vorgezogen, 2026-11-16) → E Klaviersystem ✅ (2026-11-16) →
+**G Akkorde als Noten** (Klavier linke Hand und Gitarre in einem Zug, vorgezogen) → D Komfort.
 
 ### Stand nach Schritt B (2026-11-15, noch nicht committet / nicht online)
 
@@ -505,7 +506,7 @@ Tonleitern: **▶** zum Vorhören, Zweitnamen in der Auswahl (Äolisch, Ionisch,
 - Die Akkordsymbole gelten für alle Spuren (Melodie, Klaviersystem, Schlagzeug); Hervorheben / Sperren wirkt beim Setzen in
   Melodie-Spuren und in beiden Zeilen eines Klaviersystems.
 
-### Schritt E – Klaviersystem (wichtig, nach B)
+### Schritt E – Klaviersystem ✅ (zum Ausprobieren, 2026-11-16)
 
 Ein Instrument, zwei Notenzeilen: oben Violinschlüssel (rechte Hand), unten Bassschlüssel (linke Hand), links eine geschweifte
 Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile hat ihren eigenen Rhythmus.
@@ -515,6 +516,27 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 - **Akkord per Tipp in die linke Hand** (Stufenakkorde aus B): „Am“ setzt A-C-E in die untere Zeile (Lage wählbar).
 - Export: MusicXML ein Part mit `<staves>2</staves>` (Guitar Pro / MuseScore erkennen ein Klavier), MIDI eine Spur.
 - Bis dahin: zwei Melodie-Spuren „Klavier rechts / links“ (Violin- / Bassschlüssel) gehen schon.
+
+**Gebaut:**
+- Daten: **zwei gekoppelte Melodie-Spuren** – die linke Hand ist die Spur direkt nach der oberen, mit `lh: true` (`js/model.js`
+  `SC.leftHand` / `rightHand` / `handsOf` / `instrumentOf` / `instruments` / `isPiano` / `setPiano` / `syncHands`). Gemeinsam
+  (`SC.HAND_SHARED` + Tonleiter mit ihren Wechseln): Name, Klang, Lautstärke, Stumm / Solo, Ausblenden, MIDI-Ausgang / -Kanal; die
+  obere Spur bestimmt, eine Aktion an einer Hand gleicht ab (`sync` in `js/actions.js`). Eigen je Zeile: Noten, zwei Stimmen,
+  Schlüssel. So gehen Tippen, Verschieben, Akkordhilfe, Liedtext, Abspielen je Zeile ohne Umbau.
+- Spur-Operationen im Block: Hinzufügen nach einem Klavier (nach beiden Zeilen), Verschieben, Verdoppeln, Löschen. Laden: eine
+  linke Hand nur direkt nach einer Melodie-Spur, die selbst keine linke Hand ist (sonst eigene Spur).
+- Panel: Spurliste ein Eintrag je Instrument; „+ Klavier“ (Klang Klavier); bei Melodie-Spuren der Haken „Zwei Notenzeilen (Klavier:
+  rechte und linke Hand)“ – aus: die untere Zeile wird eine eigene Spur „… – linke Hand“. Hinweis, welche Hand man schreibt;
+  „Schlüssel (obere / untere Zeile)“; keine Stimmlage beim Klavier. Statuszeile „Spur: Klavier (linke Hand)“.
+- Notenbild: geschweifte Klammer links (`brace` in `js/render.js`), Taktstriche (auch Wiederholung / Schluss) durch den Raum
+  zwischen den Zeilen, Name einmal, Tonleiter-Text einmal.
+- Export: MusicXML ein Part, `<staves>2</staves>`, `<clef number="1|2">`, linke Hand nach `<backup>` mit `<staff>2</staff>`,
+  Stimmen 5 / 6. MIDI eine Spur je Instrument (beide Hände; Export-Dialog: eine Zeile).
+- Tests: `test_piano.js` (23), Klick-Test (7: „+ Klavier“, Tippen oben / unten, Stumm für beide, aus, rückgängig), Bild
+  `help/img/klavier.png`, Handbuch Kapitel 8 „Klavier“.
+
+**Zum Ausprobieren:** Tippen in die untere Zeile am Tablet (trifft man sie?), Abstand der Zeilen mit / ohne Liedtext, Import in
+MuseScore / Guitar Pro (erkennen sie ein Klavier mit zwei Zeilen?). Noch nicht: Noten von einer Hand in die andere ziehen.
 
 ### Schritt C – Liedtext ✅ (zum Ausprobieren, 2026-11-16)
 
@@ -552,7 +574,11 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 - **Tonumfang:** Noten außerhalb der gewählten Stimmlage rot markiert.
 - **Rhythmus übernehmen:** Rhythmus einer anderen Spur (z. B. Bassdrum) in die Melodie-Spur einfügen, nur die Töne fehlen dann.
 
-### Schritt G – Gitarren-Begleitung aus den Akkorden (Wunsch 2026-11-16, nach E / D)
+### Schritt G – Akkorde als Noten: Klavier linke Hand und Gitarren-Begleitung (Wunsch 2026-11-16, als Nächstes)
+
+Ein gemeinsamer Kern für beide: aus den Akkordsymbolen Noten nach einem Muster. **Klavier (linke Hand):** Grundton + Akkord,
+gebrochen (Alberti), ausgehalten, Grundton / Quinte. **Gitarre:** wie unten.
+
 
 Die Akkordsymbole nicht nur über den Takten, sondern **als Noten in eine Spur einfügen** – eine Begleitgitarre zum Mitspielen /
 Exportieren. **Kein Griffbrett, keine Griffbilder, keine Tabulatur** (ausdrücklich nicht gewünscht).

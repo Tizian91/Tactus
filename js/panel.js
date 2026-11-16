@@ -221,9 +221,13 @@
     const listed = TC.MELODY_SOUNDS.some(([, , l]) => l.some(([p]) => p === t.program));
     const sounds = (listed ? '' : opt(t.program, TC.soundName(t.program, de()), true)) + TC.MELODY_SOUNDS.map(([en, dname, list]) =>
       `<optgroup label="${esc(de() ? dname : en)}">` + list.map(([p, sen, sde]) => opt(p, de() ? sde : sen, p === t.program)).join('') + '</optgroup>').join('');
+    // piano (two staves): no voice range; the clef is the one of the staff being written
+    const piano = TC.score.isPiano(S.doc, t);
     return `<div class="row"><label>${tr('Sound')}</label><select data-action="setTrackProgram">${sounds}</select></div>
-      <div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>
-      <div class="row"><label>${tr('Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>
+      ${check('togglePiano', piano, tr('Two staves (piano: right and left hand)'))}
+      ${piano ? `<p class="hint tight">${tr(t.lh ? 'You are writing the left hand (lower staff). Tap the upper staff for the right hand.' : 'You are writing the right hand (upper staff). Tap the lower staff for the left hand.')}</p>` : ''}
+      ${piano ? '' : `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>`}
+      <div class="row"><label>${tr(piano ? (t.lh ? 'Clef (lower staff)' : 'Clef (upper staff)') : 'Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>
       <div class="row"><label>${tr('Scale')}</label><select data-action="setTrackScaleRoot" class="narrow">${roots}</select>
         <select data-action="setTrackScaleId">${scales}</select>${btn('previewScale', undefined, '▶', false, tr('Hear the scale'), 'icon')}</div>
       <p class="hint tight">${esc(P.scaleName(sc, de()))}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
@@ -403,10 +407,11 @@
    * Below: the instruments of the track being written (those of the drum kit, or its own; one line).
    */
   function tracksSection() {
-    const cur = TC.curTrack(), ts = S.doc.tracks, many = ts.length > 1;
+    // (a piano is one entry: its two staves are one instrument)
+    const cur = TC.curTrack(), ts = TC.score.instruments(S.doc), many = ts.length > 1, curI = TC.score.instrumentOf(S.doc, cur);
     const rows = ts.map((t, k) => `<div class="track-item${t.hidden ? ' hidden-track' : ''}">` +
       (many ? btn('toggleTrackHidden', t.id, t.hidden ? '◌' : '◉', false, tr(t.hidden ? 'Hidden – click: show' : 'Shown – click: hide'), 'icon eye') : '') +
-      btn('selectTrack', t.id, esc(t.name), t === cur, tr('Write into this track'), 'link') +
+      btn('selectTrack', t.id, esc(t.name), t === curI, tr(TC.score.isPiano(S.doc, t) ? 'Write into this track (two staves: tap the lower one for the left hand)' : 'Write into this track'), 'link') +
       (many ? btn('toggleMute', t.id, 'M', !!t.mute, tr(t.mute ? 'Muted – click: play' : 'Mute (not played)'), 'icon ms mute') +
         btn('toggleSolo', t.id, 'S', !!t.solo, tr('Solo: only the solo tracks are played'), 'icon ms solo') : '') +
       btn('renameTrack', t.id, '✎', false, tr('Rename'), 'icon') +
@@ -426,7 +431,8 @@
       <div class="track-list">${rows}</div>
       <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track with the whole drum kit'))}
         ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}
-        ${btn('addMelody', undefined, '+ ' + tr('Melody'), false, tr('A melody track (singing voice): notes with pitches, a scale'))}</div>
+        ${btn('addMelody', undefined, '+ ' + tr('Melody'), false, tr('A melody track (singing voice): notes with pitches, a scale'))}
+        ${btn('addPiano', undefined, '+ ' + tr('Piano'), false, tr('Two staves: right hand (treble clef), left hand (bass clef)'))}</div>
       ${cur.kind === 'pitched' ? melodyTrackRows(cur) : `<div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
         <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
       ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}

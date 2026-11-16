@@ -74,7 +74,7 @@
     if (trk) {
       // several tracks: the one shown and written (click: the next one)
       trk.hidden = S.doc.tracks.length < 2;
-      trk.textContent = tr('Track: {name}', { name: TC.curTrack().name });
+      trk.textContent = tr('Track: {name}', { name: TC.curTrack().name + (TC.curTrack().lh ? ' (' + tr('left hand') + ')' : '') });
       trk.title = tr('The track you see and write into. Click: next track (all tracks: panel "Tracks")');
     }
     document.title = (S.doc.meta.title ? S.doc.meta.title + ' – ' : '') + 'Tactus';

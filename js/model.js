@@ -43,6 +43,9 @@
  *                mute, solo, profile, profileName, midiOut, midiCh,
  *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass', scale: { l, a, id } (js/pitch.js),
  *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
+ *                                         lh: true   piano: the lower staff (left hand) of the melody track right
+ *                                                    before it - one instrument; sound, scale, mute / solo, hidden
+ *                                                    and name follow the upper one (SC.syncHands)
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false,         // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *                          scale: null } ] }      // melody: another scale from this bar on
@@ -392,6 +395,7 @@
         if (TC.pitch && TC.pitch.CLEFS[t.clef]) out.clef = t.clef;
         out.scale = TC.pitch ? TC.pitch.cleanScale(t.scale) : out.scale;
         if (TC.pitch && TC.pitch.VOICES[t.voice]) out.voice = t.voice;
+        if (t.lh) out.lh = true;
       }
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
@@ -413,6 +417,9 @@
       return out;
     });
     if (!doc.tracks.length) doc.tracks.push(TC.newTrack('drums', doc.bars.length));
+    // piano: a left hand only right after a melody track that is no left hand itself
+    doc.tracks.forEach((t, i) => { if (t.lh && !(i > 0 && doc.tracks[i - 1].kind === 'pitched' && !doc.tracks[i - 1].lh)) delete t.lh; });
+    TC.score.syncHands(doc);
     if (doc.tracks.every((t) => t.hidden)) doc.tracks[0].hidden = false; // one track is always shown
     doc.tracks.forEach((t) => doc.bars.forEach((h, i) => TC.score.fitBar(doc, t, i)));
     if (raw.view && typeof raw.view === 'object') {
@@ -432,6 +439,7 @@
   SC.addTrack = function (doc, name, after, kind = 'drums') {
     const t = TC.newTrack(kind, doc.bars.length);
     t.name = name || SC.freeTrackName(doc, t.name);
+    if (after) after = SC.handsOf(doc, after).slice(-1)[0]; // (after a piano: after both of its staves)
     const at = after ? doc.tracks.indexOf(after) + 1 : doc.tracks.length;
     doc.tracks.splice(at > 0 ? at : doc.tracks.length, 0, t);
     return t;
@@ -442,32 +450,97 @@
     if (!taken.has(base)) return base;
     for (let n = 2; ; n++) if (!taken.has(base + ' ' + n)) return base + ' ' + n;
   };
-  /** Remove a track (the last one stays). */
+  /** Remove a track - a piano with both of its staves (the last one stays). */
   SC.deleteTrack = function (doc, track) {
-    const i = doc.tracks.indexOf(track);
-    if (i < 0 || doc.tracks.length < 2) return false;
-    doc.tracks.splice(i, 1);
+    const hands = SC.handsOf(doc, track);
+    if (!doc.tracks.includes(track) || doc.tracks.length - hands.length < 1) return false;
+    doc.tracks = doc.tracks.filter((t) => !hands.includes(t));
     return true;
   };
-  /** Move a track up (-1) or down (+1) in the list. */
+  /** Move a track up (-1) or down (+1) in the list (a piano: both staves, past a piano: past both). */
   SC.moveTrack = function (doc, track, dir) {
-    const i = doc.tracks.indexOf(track), j = i + dir;
-    if (i < 0 || j < 0 || j >= doc.tracks.length) return false;
-    doc.tracks.splice(i, 1);
-    doc.tracks.splice(j, 0, track);
+    const units = SC.instruments(doc).map((t) => SC.handsOf(doc, t));
+    const i = units.findIndex((u) => u.includes(track)), j = i + dir;
+    if (i < 0 || j < 0 || j >= units.length) return false;
+    const [u] = units.splice(i, 1);
+    units.splice(j, 0, u);
+    doc.tracks = [].concat(...units);
     return true;
   };
-  /** A copy of a track (new ids) right after it. */
+  /** A copy of a track (new ids) right after it - a piano: both staves. */
   SC.duplicateTrack = function (doc, track) {
-    const t = TC.clone(track);
-    t.id = TC.uid('t');
-    t.name = SC.freeTrackName(doc, track.name);
-    t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => {
-      ev.id = TC.uid('e');
-      ev.notes.forEach((n) => { n.id = TC.uid('n'); });
-    })));
-    doc.tracks.splice(doc.tracks.indexOf(track) + 1, 0, t);
-    return t;
+    const hands = SC.handsOf(doc, track), name = SC.freeTrackName(doc, hands[0].name);
+    const copies = hands.map((h) => {
+      const t = TC.clone(h);
+      t.id = TC.uid('t');
+      t.name = name;
+      t.bars.forEach((b) => b.voices.forEach((v) => v.forEach((ev) => {
+        ev.id = TC.uid('e');
+        ev.notes.forEach((n) => { n.id = TC.uid('n'); });
+      })));
+      return t;
+    });
+    doc.tracks.splice(doc.tracks.indexOf(hands[hands.length - 1]) + 1, 0, ...copies);
+    return copies[0];
+  };
+
+  // ---- Piano: one instrument on two staves - a melody track (right hand, upper staff) and the track right after it
+  // with lh: true (left hand, lower staff). Each staff has its own notes, voices and clef; the rest is the instrument's.
+
+  /** What both hands of a piano share (the upper one decides; SC.syncHands copies it). */
+  SC.HAND_SHARED = ['name', 'program', 'volume', 'mute', 'solo', 'hidden', 'midiOut', 'midiCh', 'channel'];
+  /** The left hand (lower staff) of a piano's upper track, or null. */
+  SC.leftHand = function (doc, t) {
+    const n = t && !t.lh ? doc.tracks[doc.tracks.indexOf(t) + 1] : null;
+    return n && n.lh ? n : null;
+  };
+  /** The upper track (right hand) of a left hand, or null. */
+  SC.rightHand = (doc, t) => (t && t.lh ? doc.tracks[doc.tracks.indexOf(t) - 1] || null : null);
+  /** The tracks of the instrument t belongs to: [upper, lower] of a piano, else [t]. */
+  SC.handsOf = function (doc, t) {
+    const up = SC.rightHand(doc, t) || t, lh = SC.leftHand(doc, up);
+    return lh ? [up, lh] : [t];
+  };
+  /** The instrument's track (a piano: its upper one) - the one listed, named, exported as a part. */
+  SC.instrumentOf = (doc, t) => SC.rightHand(doc, t) || t;
+  /** The instruments (no left hands): the tracks listed in the panel. */
+  SC.instruments = (doc) => doc.tracks.filter((t) => !t.lh);
+  /** Is t a piano (either of its staves)? */
+  SC.isPiano = (doc, t) => SC.handsOf(doc, t).length > 1;
+  /**
+   * The other hand gets what the instrument shares (SC.HAND_SHARED, the scale and its changes) from `from`
+   * (default: the upper one) - of every piano, or only of from's.
+   */
+  SC.syncHands = function (doc, from) {
+    doc.tracks.forEach((lh, i) => {
+      if (!lh.lh) return;
+      const up = doc.tracks[i - 1];
+      if (from && from !== up && from !== lh) return;
+      const src = from || up, dst = src === up ? lh : up;
+      SC.HAND_SHARED.forEach((k) => { dst[k] = src[k]; });
+      dst.scale = Object.assign({}, src.scale);
+      dst.bars.forEach((b, k) => { b.scale = src.bars[k] && src.bars[k].scale ? Object.assign({}, src.bars[k].scale) : null; });
+    });
+  };
+  /**
+   * A melody track becomes a piano (on: a lower staff in the bass clef after it, its left hand) or one
+   * staff again (off: the lower staff becomes a melody track of its own, named lhName). Returns the left hand.
+   */
+  SC.setPiano = function (doc, t, on, lhName) {
+    const up = SC.instrumentOf(doc, t);
+    if (!up || up.kind !== 'pitched') return null;
+    let lh = SC.leftHand(doc, up);
+    if (on && !lh) {
+      lh = TC.newTrack('pitched', doc.bars.length);
+      lh.lh = true;
+      lh.clef = 'bass';
+      doc.tracks.splice(doc.tracks.indexOf(up) + 1, 0, lh);
+      SC.syncHands(doc, up);
+    } else if (!on && lh) {
+      delete lh.lh;
+      lh.name = lhName || SC.freeTrackName(doc, up.name + ' 2');
+    }
+    return lh;
   };
 
   /** The scale of a melody track in bar `bi`: the last one set up to there (bar.scale), else its own. */
@@ -493,7 +566,7 @@
 
   /** The melody track whose scale the chords follow: the one being written if it is a melody, else the first one; or null. */
   SC.harmonyTrack = function (doc, prefer) {
-    if (prefer && prefer.kind === 'pitched' && doc.tracks.includes(prefer)) return prefer;
+    if (prefer && prefer.kind === 'pitched' && doc.tracks.includes(prefer)) return SC.instrumentOf(doc, prefer);
     return doc.tracks.find((t) => t.kind === 'pitched') || null;
   };
   /** The scale the chords of bar bi are built on: of the melody track (SC.harmonyTrack), else the key of the score. */

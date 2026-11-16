@@ -12,7 +12,7 @@ mkdir -p "$OUT"
 sed 's#uitest.js#../help/shots.js#' tools/uitest/index.html > tools/uitest/_helpshots.html
 trap 'rm -f tools/uitest/_helpshots.html' EXIT
 ROOT=$(pwd -W 2>/dev/null || pwd)
-NAMES=${*:-ueberblick notenmenue anschlag seite kitprofil fehlt import bspwiederholungen bspspruenge bspmelodie liedtext}
+NAMES=${*:-ueberblick notenmenue anschlag seite kitprofil fehlt import bspwiederholungen bspspruenge bspmelodie liedtext klavier}
 for n in $NAMES; do
   "$EDGE" --headless --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1180,820 \
     --virtual-time-budget=6000 --screenshot="$ROOT/$OUT/$n.png" "file:///$ROOT/tools/uitest/_helpshots.html?s=$n" 2>/dev/null || true

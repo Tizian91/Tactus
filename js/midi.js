@@ -90,7 +90,8 @@
   M.build = function (doc, target, opts = {}) {
     const T = TC.timeline, R = TC.rhythm;
     const report = { replaced: new Map(), missing: new Set() };
-    const tracks = opts.tracks || doc.tracks;
+    // (a piano: its left hand goes along with it, into the same MIDI track)
+    const tracks = [].concat(...(opts.tracks || doc.tracks).filter((t) => !t.lh).map((t) => TC.score.handsOf(doc, t)));
     const targetOf = opts.targetOf || (() => target);
     const metaEv = []; // { t, order, bytes } order: 0 meta, 1 note off, 2 note on
     const starts = []; // { bar, t } of every played bar (page turns)
@@ -101,7 +102,7 @@
     const melodyCh = (track) => (Number.isInteger(track.midiCh) ? track.midiCh : track.channel || 0);
     const held = new Map(); // melody: the last note of each track, channel and pitch (a tied note lengthens it)
     tracks.forEach((track, ti) => {
-      if (track.kind === 'pitched') addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
+      if (track.kind === 'pitched' && !track.lh) addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
     });
     // lyrics: a lyric event per syllable (karaoke: the word ends with a space); verse n on the n-th pass of a repeat
     const lyrOf = tracks.map((t) => (TC.score.lyricVerses(t) ? TC.score.lyricInfo(doc, t) : null));
@@ -252,7 +253,8 @@
     const multi = !!opts.multi && tracks.length > 0;
     const chordName = TC.tr ? TC.tr('Chords') : 'Chords';
     const chunks = multi
-      ? [chunk(doc.meta.title || 'Tactus', metaEv)].concat(tracks.map((t, ti) => chunk(t.name, noteEv[ti])), opts.chords ? [chunk(chordName, chordEv)] : [])
+      ? [chunk(doc.meta.title || 'Tactus', metaEv)].concat(tracks.map((t, ti) => (t.lh ? null : chunk(t.name, noteEv[ti].concat(tracks[ti + 1] && tracks[ti + 1].lh ? noteEv[ti + 1] : [])))).filter(Boolean),
+        opts.chords ? [chunk(chordName, chordEv)] : [])
       : [chunk(opts.name || doc.meta.title || 'Tactus', metaEv.concat(...noteEv, chordEv))];
     const head = [0x4d, 0x54, 0x68, 0x64, ...u32(6), 0, multi ? 1 : 0, 0, chunks.length, (TC.TPQ >> 8) & 255, TC.TPQ & 255];
     const bytes = new Uint8Array(head.concat(...chunks));

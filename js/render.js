@@ -148,7 +148,17 @@
   /** Room below staff z: its lyrics (then the counting under them), else staffBelow. */
   const belowOf = (z, under) => (z.lyrRows ? Math.max(staffBelow(under), lyrEnd(z) + (under ? 3.4 : 1.6) * SP) : staffBelow(under));
   /** The tracks with a staff: every shown one (the one being written always). */
-  RD.shownTracks = (doc) => doc.tracks.filter((t) => !t.hidden || t === TC.curTrack());
+  RD.shownTracks = (doc) => doc.tracks.filter((t) => !t.hidden || TC.score.handsOf(doc, t).includes(TC.curTrack()));
+  /** The piano brace { (left of the staves of one piano), from y0 to y1 (staff coordinates), its right edge at x. */
+  function brace(x, y0, y1) {
+    const h = y1 - y0, w = 1.1 * SP, m = y0 + h / 2, P = (a, b) => `${f(a)},${f(b)}`;
+    return `<path class="brace" d="M${P(x, y0)} C${P(x - w * 1.15, y0 + h * 0.06)} ${P(x + w * 0.15, y0 + h * 0.44)} ${P(x - w, m)}` +
+      ` C${P(x + w * 0.15, y0 + h * 0.56)} ${P(x - w * 1.15, y0 + h * 0.94)} ${P(x, y1)}` +
+      ` C${P(x - w * 0.75, y0 + h * 0.93)} ${P(x + w * 0.45, y0 + h * 0.56)} ${P(x - w, m)}` +
+      ` C${P(x + w * 0.45, y0 + h * 0.44)} ${P(x - w * 0.75, y0 + h * 0.07)} ${P(x, y0)}Z"/>`;
+  }
+  /** The staff after z if it is the lower staff (left hand) of z's piano, else null. */
+  const lowerOf = (L, z) => { const n = L.staves[z.k + 1]; return n && n.track.lh && !z.track.lh ? n : null; };
   /** The staves of the shown tracks (bars: their parts in the same order). */
   function staves(tracks, bars) {
     // the space between two staves (below the one, above the next): ⚙ → Page, % of the standard
@@ -368,7 +378,7 @@
    */
   function scaleText(doc, parts, i) {
     if (doc.page.scaleNames === false || !TC.pitch) return '';
-    const mel = parts.filter((p) => p.pitch), de = TC.getLang && TC.getLang() === 'de', P = TC.pitch;
+    const mel = parts.filter((p) => p.pitch && !p.track.lh), de = TC.getLang && TC.getLang() === 'de', P = TC.pitch;
     const out = [];
     mel.forEach((p) => {
       const sc = p.pitch.scale, prev = i > 0 ? TC.score.scaleAt(p.track, i - 1) : null;
@@ -818,7 +828,10 @@
           if (pi) drawKey(o, s.ox + CLEF_W - 0.2 * SP, { to: pi.fifths }, z.track.clef);
         } else o.push(glyph('\uE069', s.ox + 0.9 * SP, 2 * SP)); // percussion clef
         // several staves: the name of the track above its staff (the one being written in colour)
-        if (many) o.push(`<text class="staff-name${z.track === cur && !plain ? ' cur' : ''}" x="${f(s.ox)}" y="${f((z.one ? 0.4 : -1.0) * SP)}">${esc(z.track.name)}</text>`);
+        // (a piano: its name once, over the upper staff; a brace joins its two staves)
+        const lower = lowerOf(L, z);
+        if (many && !z.track.lh) o.push(`<text class="staff-name${(z.track === cur || (lower && lower.track === cur)) && !plain ? ' cur' : ''}" x="${f(s.ox)}" y="${f((z.one ? 0.4 : -1.0) * SP)}">${esc(z.track.name)}</text>`);
+        if (lower) o.push(brace(s.ox - 0.45 * SP, 0, lower.dy - z.dy + 4 * SP));
       }
       if (many) {
         // the staves of a line belong together: a line at the left joins them
@@ -864,6 +877,15 @@
           so.push(rect(end - 0.5 * SP, y0, 0.5 * SP, y1 - y0, 'barline-thick'));
         } else {
           so.push(line(end, y0, end, y1, 'barline'));
+        }
+        // a piano: the bar lines go on through the space between its two staves
+        const lower = lowerOf(L, z);
+        if (lower) {
+          const g0 = y1, g1 = lower.dy - z.dy, thin = (x) => so.push(line(x, g0, x, g1, 'barline'));
+          if (b.re) { thin(end - 0.85 * SP); so.push(rect(end - 0.5 * SP, g0, 0.5 * SP, g1 - g0, 'barline-thick')); }
+          else if (lastOf === L.bars.length - 1) { thin(end - 0.75 * SP); so.push(rect(end - 0.5 * SP, g0, 0.5 * SP, g1 - g0, 'barline-thick')); }
+          else thin(end);
+          if (b.rs) { so.push(rect(b.x, g0, 0.5 * SP, g1 - g0, 'barline-thick')); thin(b.x + 0.85 * SP); }
         }
       }
       // played more than twice: "3×" above the first staff

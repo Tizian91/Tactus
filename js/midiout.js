@@ -72,7 +72,12 @@
 
   /** Names of the MIDI outputs (empty until MO.init has been answered). */
   MO.outputs = () => (access ? [...access.outputs.values()].map((o) => o.name) : []);
-  const byName = (name) => (access && name ? [...access.outputs.values()].find((o) => o.name === name) || null : null);
+  // (a name listed twice - an old port gone, a new one of the same name: the connected one)
+  const byName = (name) => {
+    if (!access || !name) return null;
+    const all = [...access.outputs.values()].filter((o) => o.name === name);
+    return all.find((o) => o.state !== 'disconnected') || all[0] || null;
+  };
   /** The output of a track (connected, MIDI not switched off), or null: Tactus' sounds. */
   const portOf = (track) => (!S.settings.midiOff && track && track.midiOut && byName(track.midiOut)) || null;
   /** A track's own output is chosen but not connected. */
@@ -151,6 +156,23 @@
       send(o, [0x80 | ch, pitch, 0], at + Math.max(30, dur * 1000 - 5));
       remember(o, ch);
     }
+  };
+
+  /**
+   * Test of a track's output (▶ at "Plays on"): one note right now - drums the snare (key of its kit profile),
+   * a melody middle C on its channel. Returns what the browser says about the port: { name, state, connection } or null.
+   */
+  MO.test = function (track) {
+    const o = track && track.midiOut ? byName(track.midiOut) : null;
+    if (!o) return null;
+    let note = 60, ch = Number.isInteger(track.midiCh) ? track.midiCh : track.channel || 0;
+    if (track.kind === 'drums') {
+      const k = key(38, track);
+      if (k) ({ note, ch } = k);
+    }
+    const ok = send(o, [0x90 | ch, note, 100]) && send(o, [0x80 | ch, note, 0], performance.now() + 300);
+    remember(o, ch);
+    return { name: o.name, state: o.state || '?', connection: o.connection || '?', ok, note, ch: ch + 1 };
   };
 
   /** One key right now (kit profile dialog: ▶ to hear which sound a key is). */

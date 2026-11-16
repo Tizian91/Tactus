@@ -196,11 +196,15 @@ Das geht in <b>Chrome und Edge am PC</b>.</p>
     (Mac: der eingebaute IAC-Treiber).</li>
   <li>In Cubase: die Schlagzeugspur auf diesen MIDI-Eingang stellen und <b>Monitor</b> einschalten (oder die Aufnahme aktivieren).
     Ein Standalone-VST stellst du in seinen MIDI-Einstellungen auf den Port.</li>
-  <li>In Tactus: bei der Spur <span class="ui">Spielt über → MIDI-Ausgang (Cubase, ein VST)…</span>; beim ersten Mal fragt der Browser um
-    Erlaubnis. Dann den Port wählen. <b>Jede Spur hat ihren eigenen Ausgang</b> – ein VST spielt ein Instrument: z. B. Schlagzeug auf
-    „Cubase1“ (EZDrummer), Melodie auf „Cubase2“ (Falcon). Alle auf einen Blick und umstellbar: Panel
-    <span class="ui">Wiedergabe → Klang der Spuren</span>. Eine Spur ohne Ausgang klingt mit den Tactus-Klängen.</li>
+  <li>In Tactus: Panel <span class="ui">Takt · Stück → Spuren &amp; Klang…</span>, bei der Spur <span class="ui">Spielt über → MIDI-Ausgang (Cubase, ein VST)…</span>;
+    beim ersten Mal fragt der Browser um Erlaubnis. Dann den Port wählen. <b>Jede Spur hat ihren eigenen Ausgang</b> – ein VST spielt ein
+    Instrument: z. B. Schlagzeug auf „Drums“ (EZDrummer), Melodie auf „Melodie“ (Falcon). Eine Spur ohne Ausgang klingt mit den Tactus-Klängen.
+    <span class="ui">▶</span> neben „Spielt über“ schickt sofort einen Testton (Snare bzw. ein C) – so siehst du, ob der Port ankommt.</li>
   <li>Abspielen. Die Tasten kommen aus dem Kit-Profil der Spur, den Kanal stellst du bei der Spur ein.</li>
+  <li><b>Mehrere VSTs über einen Port</b> (wenn ein zweiter loopMIDI-Port nichts empfängt – unter neueren Windows-11-Versionen möglich):
+    alle Spuren auf denselben Port, aber auf verschiedene Kanäle – z. B. Schlagzeug Kanal 10 („Aus dem Kit-Profil (Kanal 10)“), Melodie
+    Kanal 1. Im VST dann nur diesen Kanal hören lassen (EZDrummer: MIDI-Kanal 10 statt „All“, Falcon: Kanal 1), sonst spielt jedes VST
+    die Noten des anderen mit.</li>
   <li><b>Vorlauf</b> einstellen (Feld unter dem Ausgang): mit Metronom abspielen und erhöhen, bis VST und Klick zusammen sind.
     Mit ASIO-Treiber sind das wenige Millisekunden, ein Standalone-VST ohne ASIO braucht oft 100–250 ms.</li>
 </ol>
@@ -344,7 +348,7 @@ Abspielen, Cursor und MIDI-Export folgen den Sprüngen.</p>
 <!-- ================================================================================= -->
 <h2 id="melodie">8. Melodie schreiben</h2>
 <p>Beim Songschreiben eine Gesangsmelodie aus dem Kopf festhalten: Tactus kennt die Tonleiter, du tippst nur auf die Linie.
-Neue Spur: Panel <span class="ui">Takt · Stück → Spuren → + Melodie</span>. Sie startet mit Violinschlüssel, C-Dur und einem
+Neue Spur: Panel <span class="ui">Takt · Stück → Spuren &amp; Klang… → + Melodie</span>. Sie startet mit Violinschlüssel, C-Dur und einem
 Stimmen-Klang – einstellen musst du nichts. Wer will, wählt darunter <span class="ui">Klang</span> (Gesang, Klavier, Gitarre, Bass,
 Streicher, Synth …), <span class="ui">Stimmlage</span> (setzt den passenden Schlüssel), <span class="ui">Schlüssel</span> und
 <span class="ui">Tonleiter</span>.</p>
@@ -448,7 +452,7 @@ als Lyric-Ereignis (Karaoke); bei einer Wiederholung kommt im zweiten Durchgang 
 <p>Ein Instrument, zwei Notenzeilen: oben die rechte Hand (Violinschlüssel), unten die linke (Bassschlüssel), links eine geschweifte
 Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass und Akkorde, ohne zweite Stimme.</p>
 <ul>
-  <li><b>Neu:</b> Panel <span class="ui">Takt · Stück</span> → Spuren → <span class="ui">+ Klavier</span>. Oder eine Melodie-Spur bekommt
+  <li><b>Neu:</b> Panel <span class="ui">Takt · Stück → Spuren &amp; Klang…</span> → <span class="ui">+ Klavier</span>. Oder eine Melodie-Spur bekommt
     <span class="ui">Zwei Notenzeilen (Klavier: rechte und linke Hand)</span> – ihre Noten bleiben in der oberen Zeile.</li>
   <li><b>Schreiben:</b> In die obere Zeile tippen schreibt die rechte Hand, in die untere die linke. Die Statuszeile zeigt
     „Spur: Klavier (linke Hand)“. Jede Zeile kann wieder zwei Stimmen haben.</li>
@@ -480,9 +484,9 @@ Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass 
   <li>▶ / <kbd>Leertaste</kbd> spielt ab dem ausgewählten Takt; sind mehrere Takte ausgewählt, genau diese.</li>
   <li><span class="ui">⟳ Schleife</span>: die ausgewählten Takte immer wieder. Läuft das Stück ohne Schleife bis zum Ende, beginnt der nächste Start bei Takt 1.</li>
   <li><b>Während des Abspielens bearbeiten:</b> jede Änderung ist sofort zu hören – so findest du den Groove am schnellsten.</li>
-  <li><span class="ui">Klick</span> = Metronom, Einzähler im Panel; wie laut er ist, stellt der Regler <span class="ui">Klick</span> im Panel <span class="ui">Wiedergabe</span> ein, unabhängig vom Lautstärkeregler (ganz links = stumm). <span class="ui">Folgen</span> aus: die Ansicht bleibt stehen, damit du beim Hören an einer anderen Stelle ändern kannst.</li>
-  <li><b>Bildschirm an</b> (Panel <span class="ui">Wiedergabe</span>, auf Tablet und Handy): Der Bildschirm geht beim Abspielen und in der Bühnenansicht nicht aus, auf Wunsch auch die ganze Zeit, solange Tactus offen ist. Das geht nur in der Online-Version (bzw. der installierten App), nicht aus einer Datei. Der Browser gibt die Sperre frei, wenn du zu einer anderen App wechselst, und Tactus holt sie zurück, wenn du wiederkommst.</li>
-  <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (Panel <span class="ui">Wiedergabe</span>, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
+  <li><span class="ui">Klick</span> = Metronom, Einzähler im Panel; wie laut er ist, stellt der Regler <span class="ui">Klick</span> im Fenster <span class="ui">Spuren &amp; Klang</span> (Wiedergabe) ein, unabhängig vom Lautstärkeregler (ganz links = stumm). <span class="ui">Folgen</span> aus: die Ansicht bleibt stehen, damit du beim Hören an einer anderen Stelle ändern kannst.</li>
+  <li><b>Bildschirm an</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, auf Tablet und Handy): Der Bildschirm geht beim Abspielen und in der Bühnenansicht nicht aus, auf Wunsch auch die ganze Zeit, solange Tactus offen ist. Das geht nur in der Online-Version (bzw. der installierten App), nicht aus einer Datei. Der Browser gibt die Sperre frei, wenn du zu einer anderen App wechselst, und Tactus holt sie zurück, wenn du wiederkommst.</li>
+  <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
 </ul>
 <h3 id="verzoegerung">Verzögerung ausgleichen</h3>
 <p>Bluetooth-Kopfhörer und manche Soundkarten spielen den Ton hörbar später, als der Cursor läuft. Feld

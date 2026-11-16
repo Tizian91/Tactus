@@ -948,6 +948,8 @@
   A.togglePanelRight = () => A.togglePanel('right');
   /** Settings window (drum kit, notation, page, view, keys): open / close. */
   A.openSettings = () => TC.panel.openSettings();
+  /** The window "Tracks & sound": the tracks (add, order, mute / solo, instruments, "Plays on") and the playback. */
+  A.openTracks = () => TC.panel.openSettings('tracks');
   /** Left-handed: the note panel goes to the right, the settings to the left. */
   /** Fingers write notes on the lines (off: pen / mouse only, a finger selects and scrolls). */
   A.toggleFingerWrites = function () {
@@ -1010,6 +1012,15 @@
     const v = String(value), k = v.indexOf('|'), t = S.doc.tracks.find((x) => x.id === v.slice(0, k));
     if (!t) return;
     A.setTrackMidiOut(v.slice(k + 1), t);
+  };
+  /** ▶ at "Plays on": one note to the output of the track being written now - and what the browser says about the port. */
+  A.testTrackOut = function () {
+    const t = TC.curTrack();
+    TC.midiOut.init().then(() => {
+      const r = TC.midiOut.test(t);
+      if (!r) return TC.ui.hint(tr('"{name}" is not connected - is loopMIDI running? A port made while the browser was open: close the browser completely and open it again.', { name: t.midiOut }));
+      TC.ui.hint(tr('Test note {note} on channel {ch} sent to "{name}" (port: {state}, {connection}). Nothing heard: does the VST listen to this port? A port made while the browser was open: close the browser completely and open it again.', r));
+    });
   };
   /** Toolbar / playback panel: MIDI off for a moment (every track with Tactus' sounds) and on again. */
   A.toggleSoundOut = function () {

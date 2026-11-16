@@ -122,6 +122,9 @@ setTimeout(() => {
   // drag: a row of hi-hat eighths in one go, one undo step
   TC.actions.setValue(8); TC.actions.setArt(42);
   const at = (bar, tick, line) => screenOf(bar, tick, line);
+  // the window "Tracks & sound" (tracks, playback): opened when needed, closed after each block
+  const W = (sel) => { if (!TC.panel.isSettingsOpen()) TC.actions.openTracks(); return document.querySelector('.settings-dialog ' + sel); };
+  const WA = (sel) => { if (!TC.panel.isSettingsOpen()) TC.actions.openTracks(); return document.querySelectorAll('.settings-dialog ' + sel); };
   const mouse = (type, [x, y], o = {}) => vp.dispatchEvent(new PointerEvent(type, Object.assign({ clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 1, pointerType: 'mouse' }, o)));
   // a row: write the first note, then Ctrl + drag from it (hold + drag works too, see the finger test)
   const drawRow = (bar, ticks, line) => { click(bar, 0, line); const c = { ctrlKey: true }; mouse('pointerdown', at(bar, 0, line), c); ticks.forEach((t) => mouse('pointermove', at(bar, t, line), c)); mouse('pointerup', at(bar, ticks[ticks.length - 1], line), c); };
@@ -549,14 +552,15 @@ setTimeout(() => {
     ok('settings window: Escape closes it', !TC.panel.isSettingsOpen() && !document.querySelector('.settings-dialog'));
     // recorded sounds: switch in the panel; here (file://) they cannot load, the synth plays on
     TC.actions.toggleSamples();
-    ok('samples: switched on in the panel, credits shown', S.settings.samples && !!document.querySelector('#panel-settings input[data-action="toggleSamples"]:checked') &&
-      /MuldjordKit/.test(document.getElementById('panel-settings').textContent));
+    ok('samples: switched on in the panel, credits shown', S.settings.samples && !!W('input[data-action="toggleSamples"]:checked') &&
+      /MuldjordKit/.test(document.querySelector('.settings-dialog').textContent));
     TC.audio.preview(TC.newDrumNote(38, {}));
     ok('samples not loaded yet: a written note still sounds (synth), no error', TC.samples.state() !== 'ready');
     TC.actions.toggleSamples();
     TC.actions.setAudioDelay(150);
-    ok('output delay 150 ms: in the panel, the cursor waits for it', document.querySelector('#panel-settings input[data-audiodelay]').value === '150' && TC.audio.outputDelay() >= 0.15);
+    ok('output delay 150 ms: in the panel, the cursor waits for it', W('input[data-audiodelay]').value === '150' && TC.audio.outputDelay() >= 0.15);
     TC.actions.setAudioDelay(0);
+    TC.panel.closeSettings();
     // tempo changes listed in the panel: click goes to the bar, ✕ removes the change
     TC.actions.setBarTempo(140, 1);
     const ti = document.querySelector('#panel-settings .tempo-item [data-action="gotoBar"]');
@@ -567,14 +571,14 @@ setTimeout(() => {
     ok('tempo list: ✕ removes the change', !S.doc.bars[1].tempo && !document.querySelector('#panel-settings .tempo-item'));
     // tracks: add one, write into it, switch back, delete it
     const st = document.getElementById('status-track');
-    ok('tracks: one track, listed in the panel, nothing in the status bar', document.querySelectorAll('#panel-settings .track-item').length === 1 && st.hidden);
+    ok('tracks: one track, listed in "Tracks & sound", nothing in the status bar', WA('.track-item').length === 1 && st.hidden);
     const first = S.doc.tracks[0], before = JSON.stringify(first.bars);
     const savePrompt = window.prompt; window.prompt = () => 'Snare';
     TC.actions.addTrack();
     window.prompt = savePrompt;
     const sn = TC.curTrack();
     ok('tracks: added "Snare", writing into it, status bar shows it', S.doc.tracks.length === 2 && sn.name === 'Snare' && sn !== first &&
-      document.querySelectorAll('#panel-settings .track-item').length === 2 && !st.hidden && /Snare/.test(st.textContent));
+      WA('.track-item').length === 2 && !st.hidden && /Snare/.test(st.textContent));
     TC.selectBar(0);
     TC.refresh();
     click(0, 0, 3);
@@ -582,13 +586,14 @@ setTimeout(() => {
     ok('tracks: the view shows the new track (one note head)', TC.render.layout.bars[0].voices.flat().filter((it) => it.kind === 'note').length === 1);
     st.click();
     ok('tracks: status bar click goes to the next track', TC.curTrack() === first && /Drums/.test(st.textContent));
-    document.querySelector(`#panel-settings .track-item [data-action="deleteTrack"][data-value="${sn.id}"]`).click();
+    W(`.track-item [data-action="deleteTrack"][data-value="${sn.id}"]`).click();
     ok('tracks: ✕ deletes the track (asked first: it has a note)', S.doc.tracks.length === 1 && st.hidden && JSON.stringify(first.bars) === before);
     TC.actions.undo();
     ok('tracks: undo brings it back with its note', S.doc.tracks.length === 2 && S.doc.tracks[1].bars[0].voices.flat().length === 1);
     TC.actions.undo();
     TC.actions.undo();
     ok('tracks: undo back to one track', S.doc.tracks.length === 1 && TC.curTrack() === S.doc.tracks[0]);
+    TC.panel.closeSettings();
     // several staves: a track only for the snare (one line), click into the other staff, hide / show
     const drums = S.doc.tracks[0], drumsBefore = JSON.stringify(drums.bars);
     TC.actions.setArt(38);
@@ -629,13 +634,14 @@ setTimeout(() => {
     TC.actions.setArt(38);
     TC.actions.addTrackFor();
     const sn3 = TC.curTrack();
-    const msBtn = (a) => document.querySelector(`#panel-settings .track-item [data-action="${a}"][data-value="${sn3.id}"]`);
+    const msBtn = (a) => W(`.track-item [data-action="${a}"][data-value="${sn3.id}"]`);
     msBtn('toggleMute').click();
     ok('M: the track is muted, the button lit, not in the playback', sn3.mute && msBtn('toggleMute').classList.contains('active') &&
       !TC.timeline.build(S.doc).hits.some((h) => h.trk === sn3));
     msBtn('toggleSolo').click();
     ok('S: solo, the button lit', sn3.solo && msBtn('toggleSolo').classList.contains('active'));
-    ok('the track being written: a kit profile row', !!document.querySelector('#panel-settings select[data-action="setTrackProfile"]'));
+    ok('the track being written: a kit profile row', !!W('select[data-action="setTrackProfile"]'));
+    TC.panel.closeSettings();
     TC.actions.exportMidiCurrent();
     const exd = document.querySelector('.midi-export-backdrop');
     ok('Ctrl+E with two tracks: the export dialog, a row each, one file per track', !!exd && exd.querySelectorAll('.export-row').length === 2 &&
@@ -775,12 +781,18 @@ setTimeout(() => {
             // every track its own output (one VST per instrument): chosen in the playback list or at the track
             const dr = S.doc.tracks.find((t) => t.kind === 'drums');
             TC.actions.selectTrack(dr.id);
+            TC.actions.openTracks();
             TC.panel.update(true);
-            ok('MIDI output: the playback panel lists each track with the outputs', !!document.querySelector(`select[data-action="setOutputOf"] option[value="${dr.id}|Test Port"]`) && !TC.midiOut.active());
-            TC.actions.setOutputOf(dr.id + '|Test Port');
+            ok('MIDI output: the track lists the outputs ("Plays on")', !!document.querySelector('select[data-action="setTrackMidiOut"] option[value="Test Port"]') && !TC.midiOut.active());
+            TC.actions.setTrackMidiOut('Test Port');
             TC.panel.update(true);
             ok('MIDI output: the drum track plays there (its track settings show it)', dr.midiOut === 'Test Port' && TC.midiOut.active() &&
               [...document.querySelectorAll('select[data-action="setTrackMidiOut"] option')].some((o) => o.value === 'Test Port' && o.selected));
+            sent.length = 0;
+            const testBtn = W('[data-action="testTrackOut"]');
+            const test = TC.midiOut.test(dr);
+            ok('MIDI output: ▶ test at the track - the snare on channel 10 at once ' + JSON.stringify(sent), !!testBtn && !!test && sent.length === 2 && sent[0].join() === [0x99, 38, 100].join());
+            sent.length = 0;
             TC.audio.preview(TC.newDrumNote(38, { accent: 1 }));
             ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127) ' + JSON.stringify(sent[0]),
               sent.length === 2 && sent[0].join() === [0x99, 38, 127].join() && sent[1][0] === 0x89);
@@ -798,6 +810,7 @@ setTimeout(() => {
               sent2.some((m) => m[0] === 0x90 && m[1] === 60) && sent.some((m) => m[1] === 38) && !sent.some((m) => m[1] === 60 || m[1] === 42));
             S.doc.tracks = S.doc.tracks.filter((t) => t !== mt2 && t !== plain);
             TC.actions.setMidiLead(0);
+            TC.panel.closeSettings();
             // own kit profile (no drum map from the maker): key view, ▶ plays the key on the MIDI output
             const realSave = TC.kits.save, realPrompt = window.prompt;
             TC.kits.save = () => true;
@@ -921,12 +934,14 @@ setTimeout(() => {
           // piano: "+ Piano" in the panel - two staves with a brace, one entry in the list; a tap into the lower staff writes the left hand
           const undoPiano = TC.history.undoStack.length;
           S.selection.clear(); TC.panel.update(true);
-          const pb = document.querySelector('#panel-settings [data-action="addPiano"]') || document.querySelector('[data-action="addPiano"]');
+          const pb = W('[data-action="addPiano"]');
           if (pb) pb.click();
+          const pianoListed = [...WA('.track-item [data-action="selectTrack"]')].map((b) => b.dataset.value);
+          TC.panel.closeSettings();
           const pf = TC.curTrack(), plh = TC.score.leftHand(S.doc, pf);
           ok('piano: added from the panel - two staves (treble, bass), a brace, one entry in the track list',
             !!pb && !!plh && pf.clef === 'treble' && plh.clef === 'bass' && !!document.querySelector('.score .brace') &&
-            [...document.querySelectorAll('[data-action="selectTrack"]')].filter((b) => b.dataset.value === plh.id).length === 0);
+            pianoListed.includes(pf.id) && !pianoListed.includes(plh.id));
           click(1, 0, 3, { track: plh });
           ok('piano: a tap into the lower staff writes the left hand', TC.curTrack() === plh && plh.bars[1].voices[0].length === 1 && pf.bars[1].voices[0].length === 0);
           click(1, 0, 3, { track: pf });

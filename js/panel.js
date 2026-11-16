@@ -207,17 +207,13 @@
   };
 
   /**
-   * Melody track being written: voice, clef, scale (from the selected bar on: root and kind, grouped).
+   * Melody track being written: sound, piano, voice, clef (its scale: scaleRows, at the top of the panel).
    */
   function melodyTrackRows(t) {
-    const P = TC.pitch, bi = S.selBar !== null ? S.selBar : 0, sc = TC.score.scaleAt(t, bi), pc = P.pc(sc.l, sc.a);
+    const P = TC.pitch;
     const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`;
     const voices = [opt('', tr('Any (no range)'), !t.voice)].concat(Object.keys(P.VOICES).map((k) => opt(k, de() ? P.VOICES[k].de : P.VOICES[k].en, t.voice === k))).join('');
     const clefs = Object.keys(P.CLEFS).map((k) => opt(k, de() ? P.CLEFS[k].de : P.CLEFS[k].en, t.clef === k)).join('');
-    const roots = (de() ? P.ROOTS_DE : P.ROOTS).map(([v, l]) => opt(v, l, v === pc)).join('');
-    const scales = P.GROUPS.map(([g, en, dname]) => `<optgroup label="${esc(de() ? dname : en)}">` +
-      P.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, scaleLabel(s), s.id === sc.id)).join('') + '</optgroup>').join('');
-    const change = bi > 0 && t.bars[bi] && t.bars[bi].scale;
     const listed = TC.MELODY_SOUNDS.some(([, , l]) => l.some(([p]) => p === t.program));
     const sounds = (listed ? '' : opt(t.program, TC.soundName(t.program, de()), true)) + TC.MELODY_SOUNDS.map(([en, dname, list]) =>
       `<optgroup label="${esc(de() ? dname : en)}">` + list.map(([p, sen, sde]) => opt(p, de() ? sde : sen, p === t.program)).join('') + '</optgroup>').join('');
@@ -227,11 +223,36 @@
       ${check('togglePiano', piano, tr('Two staves (piano: right and left hand)'))}
       ${piano ? `<p class="hint tight">${tr(t.lh ? 'You are writing the left hand (lower staff). Tap the upper staff for the right hand.' : 'You are writing the right hand (upper staff). Tap the lower staff for the left hand.')}</p>` : ''}
       ${piano ? '' : `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>`}
-      <div class="row"><label>${tr(piano ? (t.lh ? 'Clef (lower staff)' : 'Clef (upper staff)') : 'Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>
-      <div class="row"><label>${tr('Scale')}</label><select data-action="setTrackScaleRoot" class="narrow">${roots}</select>
+      <div class="row"><label>${tr(piano ? (t.lh ? 'Clef (lower staff)' : 'Clef (upper staff)') : 'Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>`;
+  }
+  /** Melody track: its scale from the selected bar on (a change here) - in the panel, next to the bar it belongs to. */
+  function scaleRows(t) {
+    const P = TC.pitch, bi = S.selBar !== null ? S.selBar : 0, sc = TC.score.scaleAt(t, bi), pc = P.pc(sc.l, sc.a);
+    const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`;
+    const roots = (de() ? P.ROOTS_DE : P.ROOTS).map(([v, l]) => opt(v, l, v === pc)).join('');
+    const scales = P.GROUPS.map(([g, en, dname]) => `<optgroup label="${esc(de() ? dname : en)}">` +
+      P.SCALES.filter((s) => s.group === g).map((s) => opt(s.id, scaleLabel(s), s.id === sc.id)).join('') + '</optgroup>').join('');
+    const change = bi > 0 && t.bars[bi] && t.bars[bi].scale;
+    return `<div class="row"><label>${tr('Scale')}</label><select data-action="setTrackScaleRoot" class="narrow">${roots}</select>
         <select data-action="setTrackScaleId">${scales}</select>${btn('previewScale', undefined, '▶', false, tr('Hear the scale'), 'icon')}</div>
       <p class="hint tight">${esc(P.scaleName(sc, de()))}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
       ${change ? `<div class="btn-row">${btn('clearScaleChange', undefined, tr('Remove the change'), false, tr('The scale before it goes on'))}</div>` : ''}`;
+  }
+
+  /**
+   * Top of the panel: the track being written (a list - a tap into a staff chooses too), a melody's scale from this
+   * bar on, and "Tracks & sound…" (the window with the tracks and the playback: set up once, rarely touched).
+   */
+  function trackBarSection() {
+    const cur = TC.curTrack(), curI = TC.score.instrumentOf(S.doc, cur), insts = TC.score.instruments(S.doc);
+    const opts = insts.map((t) => `<option value="${esc(t.id)}"${t === curI ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
+    const out = TC.midiOut && TC.midiOut.supported() ? TC.midiOut.outputOf(cur) : '';
+    return `<section class="track-bar">
+      <div class="row"><label>${tr('Track')}</label><select data-action="selectTrack">${opts}</select></div>
+      ${cur.kind === 'pitched' ? scaleRows(cur) : ''}
+      <div class="btn-row">${btn('openTracks', undefined, tr('Tracks & sound…'), false, tr('Tracks (add, order, mute / solo), the sound of each track (Tactus or a MIDI output), playback'), 'wide')}</div>
+      ${out ? `<p class="hint tight">${esc(tr('Plays on {name}', { name: out }))}</p>` : ''}
+    </section>`;
   }
 
   // ---- Settings panel ----------------------------------------------------------------------------
@@ -456,9 +477,12 @@
     let midi = '';
     // where the track sounds: Tactus' sounds or its own MIDI output (+ channel)
     if (TC.midiOut && TC.midiOut.supported()) {
-      const chs = [['', t.kind === 'pitched' ? tr('Channel {n}', { n: t.channel + 1 }) : tr('From the kit profile')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
+      // (drums: the channel the kit profile puts its keys on - the one of the snare - shown, e.g. to filter a VST to it)
+      const kitK = t.kind === 'drums' && TC.midi.keyFor(TC.drums.byId(38), TC.kits.ofTrack(S.doc, t), { replaced: new Map(), missing: new Set() });
+      const chs = [['', t.kind === 'pitched' ? tr('Channel {n}', { n: t.channel + 1 }) : tr('From the kit profile') + (kitK ? ' (' + tr('Channel {n}', { n: kitK.ch + 1 }) + ')' : '')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
       const curCh = Number.isInteger(t.midiCh) ? String(t.midiCh + 1) : '';
-      midi = `<div class="row"><label>${tr('Sound output')}</label><select data-action="setTrackMidiOut">${outputOptions(t)}</select></div>` +
+      midi = `<div class="row"><label>${tr('Sound output')}</label><select data-action="setTrackMidiOut">${outputOptions(t)}</select>` +
+        (t.midiOut ? btn('testTrackOut', undefined, '▶', false, tr('Test: one note to this output now'), 'icon') : '') + '</div>' +
         (t.midiOut ? `<div class="row"><label>${tr('Channel')}</label><select data-action="setTrackMidiCh">${chs.map(([v, l]) =>
           `<option value="${v}"${v === curCh ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>` : '');
     }
@@ -564,14 +588,13 @@
   }
 
   /**
-   * Where each track sounds: Tactus' sounds or a MIDI output - each its own (one VST plays one instrument, e.g. EZDrummer
-   * the drums, Falcon the melody). The same list as in the track settings, all in one place; lead, Tactus as well, MIDI off.
+   * Playback through MIDI: what holds for all tracks (lead, Tactus as well, MIDI off for now). The output itself is
+   * chosen at each track ("Plays on") - one VST plays one instrument, e.g. EZDrummer the drums, Falcon the melody.
    */
   function soundRow() {
     const MO = TC.midiOut;
     if (!MO || !MO.supported()) return '';
-    const st = S.settings, insts = TC.score.instruments(S.doc), chosen = MO.chosen();
-    const rows = insts.map((t) => `<div class="row"><label>${esc(t.name)}</label><select data-action="setOutputOf">${outputOptions(t, (v) => t.id + '|' + v)}</select></div>`).join('');
+    const st = S.settings, chosen = MO.chosen();
     let more = '';
     if (chosen) {
       if (MO.missing()) more += `<p class="hint warn">${tr('A MIDI output is not connected - is the virtual MIDI cable (e.g. loopMIDI) running?')}</p>`;
@@ -580,8 +603,8 @@
         <p class="hint tight">${tr('Sends the notes earlier, as much as the drum VST is late (its audio buffer). Set it with the metronome on until both sound together.')} <a class="help-link" href="hilfe.html#vst-wiedergabe" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></p>`;
       more += check('toggleMidiSynth', !!st.midiOutSynth, tr('Tactus sounds as well'));
     }
-    return `<h3 class="sub">${tr('Sound of each track')}</h3>${rows}
-      <p class="hint tight">${tr('Each track its own: Tactus sounds or a MIDI output (one VST per instrument). Channel and kit profile: track settings.')}</p>${more}`;
+    // (the output itself: at each track, "Plays on" - here only what holds for all of them)
+    return chosen ? more : `<p class="hint tight">${tr('MIDI (Cubase, a VST): at each track, "Plays on".')}</p>`;
   }
 
   /** Tactus' own sounds: synthesized or recorded (js/samples.js). */
@@ -714,13 +737,24 @@
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
-      // what is needed while writing; the rest is in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + tracksSection() + barSection() + chordSection() + repeatSection() + findSection() + playSection() + scoreSection() +
+      // what is needed while writing: the track (and a melody's scale), the bar and what belongs to it, the score -
+      // tracks and playback in their own window ("Tracks & sound…"), the rest in the settings window (⚙)
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
     }
-    if (dlg) {
+    if (dlg && dlgMode === 'tracks') {
+      // the window "Tracks & sound": the tracks and the playback (as the panel had them)
+      const body = dlg.querySelector('.settings-body'), keyT = 'T' + keyS + JSON.stringify(TC.midiOut && TC.midiOut.failed());
+      if ((force || keyT !== lastDlg) && !(!force && typing(body))) {
+        lastDlg = keyT;
+        const scroll = body.scrollTop, open = body.querySelector('details.kit-list[open]') !== null;
+        body.innerHTML = tracksSection() + playSection();
+        if (open && body.querySelector('details.kit-list')) body.querySelector('details.kit-list').open = true;
+        body.scrollTop = scroll;
+      }
+    } else if (dlg) {
       const body = dlg.querySelector('.settings-body');
       const keyD = JSON.stringify([S.settings, S.doc.page, TC.curTrack().fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length, TC.remote && [TC.remote.inputs().join(), TC.remote.isLearning(), TC.remote.active()]]);
       if ((force || keyD !== lastDlg) && !(!force && typing(body))) {
@@ -739,14 +773,18 @@
   // ---- Settings window (⚙ in the toolbar): drum kit, notation, page, view, keys ----------------
   // set once and then rarely touched - kept out of the panel, so the panel stays short
 
-  let dlg = null, lastDlg = '';
+  // the same window shows "Tracks & sound" (mode 'tracks'): the tracks and the playback - set up, then rarely touched
+  let dlg = null, lastDlg = '', dlgMode = 'settings';
   P.isSettingsOpen = () => !!dlg;
-  P.openSettings = function () {
-    if (dlg) return P.closeSettings();
+  P.openSettings = function (mode) {
+    mode = mode === 'tracks' ? 'tracks' : 'settings';
+    if (dlg && dlgMode === mode) return P.closeSettings();
+    if (dlg) P.closeSettings();
+    dlgMode = mode;
     dlg = document.createElement('div');
     dlg.className = 'dialog-backdrop';
     dlg.innerHTML = `<div class="dialog settings-dialog" role="dialog" aria-modal="true">
-      <header><h2>⚙ ${esc(tr('Settings'))}</h2><button type="button" class="icon" data-close title="${esc(tr('Close'))}">✕</button></header>
+      <header><h2>${mode === 'tracks' ? esc(tr('Tracks & sound')) : '⚙ ' + esc(tr('Settings'))}</h2><button type="button" class="icon" data-close title="${esc(tr('Close'))}">✕</button></header>
       <div class="settings-body"></div></div>`;
     dlg.addEventListener('pointerdown', (e) => { if (e.target === dlg) P.closeSettings(); });
     dlg.addEventListener('click', (e) => {
@@ -757,7 +795,7 @@
     document.body.appendChild(dlg);
     lastDlg = '';
     P.update(true);
-    document.getElementById('settings-btn').classList.add('active');
+    if (mode === 'settings') document.getElementById('settings-btn').classList.add('active');
   };
   P.closeSettings = function () {
     if (dlg) dlg.remove();

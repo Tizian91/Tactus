@@ -103,7 +103,14 @@
     return null;
   };
   /** Grid of the clickable positions for the input settings. */
+  /** The grids to choose (note panel "Grid"): '' = the note value's, else a value of its own ('16', '8t' a triplet eighth). */
+  TC.GRIDS = ['', '4', '8', '16', '32', '8t', '16t'];
   TC.gridTicks = (inp) => {
+    // a grid of its own (e.g. sixteenths while writing quarters: a chord on every sixteenth)
+    if (inp.grid && TC.GRIDS.includes(inp.grid)) {
+      const g = TC.valueTicks(parseInt(inp.grid, 10));
+      return /t$/.test(inp.grid) ? (g * 2) / 3 : g;
+    }
     const t = TC.valueTicks(inp.value);
     if (inp.triplet) return (t * 2) / 3;
     if (inp.dotted) return t / 2; // a dotted eighth may start on every sixteenth

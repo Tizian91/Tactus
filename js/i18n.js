@@ -356,6 +356,8 @@
     'Sound output': 'Spielt über',
     'Dynamics': 'Dynamik',
     'Hairpin': 'Gabel',
+    'Auto (note value)': 'Auto (wie Notenwert)',
+    'notes as long as the note value, on every place of the grid': 'Noten so lang wie der Notenwert, auf jeder Stelle des Rasters',
     'Keyswitches': 'Keyswitches',
     'way of playing': 'Spielweise',
     'before a note': 'vor einer Note',

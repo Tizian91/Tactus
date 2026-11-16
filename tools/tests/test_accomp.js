@@ -28,6 +28,9 @@ module.exports = function (T) {
   T.eq('a tapped slash chord: its bass below', AC.chordNotes(ch('C/G'), pt, 60).map((x) => x.pitch), [55, 60, 64]);
   T.eq('a tapped chord (guitar): the grip', AC.chordNotes(ch('G'), { program: 25 }, 60).map((x) => x.pitch), [43, 47, 50, 55, 59, 67]);
 
+  // ---- the click grid: that of the note value, or one of its own
+  T.eq('grid: auto (the note value; dotted: the half), own: 1/16, 1/8 triplet', [TC.gridTicks({ value: 4 }), TC.gridTicks({ value: 4, dotted: true }), TC.gridTicks({ value: 4, grid: '16' }), TC.gridTicks({ value: 4, grid: '8t' }), TC.gridTicks({ value: 8, grid: 'x' })], [960, 480, 240, 320, 480]);
+
   // ---- the instrument of a track decides how a chord is written - not its sound
   const bassT = { program: 0, inst: 'bass' }, ens = { program: 0, inst: 'ensemble' }, gtrOrgan = { program: 19, inst: 'guitar' };
   T.eq('bass: one tone - the root near the tapped place, a slash chord its bass', [AC.chordNotes(ch('C'), bassT, 40).map((x) => x.pitch), AC.chordNotes(ch('C/E'), bassT, 40).map((x) => x.pitch)], [[36], [40]]);

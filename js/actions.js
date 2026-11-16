@@ -14,6 +14,15 @@
   /** Note value 1 … 64. With notes selected: they get the new length. */
   // Note value, dotted, triplet: with notes selected they change the selected notes only (starting from the
   // value of the first one), otherwise they are the setting for the next notes - like accent and instrument.
+  /** The click grid: '' that of the note value (as before), else one of its own - e.g. sixteenths while writing quarters. */
+  A.setGrid = function (g) {
+    g = String(g || '');
+    if (!TC.GRIDS.includes(g)) return;
+    S.input.grid = g;
+    TC.saveSettings();
+    TC.refresh();
+    TC.interaction.refreshHover();
+  };
   A.setValue = function (v) {
     v = Number(v);
     if (!TC.VALUES.includes(v)) return;

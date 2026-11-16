@@ -49,6 +49,7 @@
         if (TC.drums.byId(inp.art)) S.input.art = inp.art;
         S.input.dotted = !!inp.dotted;
         S.input.triplet = !!inp.triplet && !S.input.dotted;
+        S.input.grid = TC.GRIDS.includes(inp.grid) ? inp.grid : '';
       }
     } catch (e) {
       /* ignore corrupt settings */

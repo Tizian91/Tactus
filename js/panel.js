@@ -65,15 +65,18 @@
     const inp = sel || S.input, inpNext = S.input;
     const vals = TC.VALUES.map((v, k) => btn('setValue', v, `<span class="mus-btn">${NOTE_GLYPH[v]}</span>`, inp.value === v,
       `${tr(VALUE_NAME[v])} (${k + 1})`)).join('');
-    const grid = TC.gridTicks(inpNext);
-    const gridName = inpNext.triplet ? `1/${inpNext.value} ${tr('triplet')}` : inpNext.dotted ? `1/${inpNext.value * 2}` : `1/${inpNext.value}`;
+    const grid = TC.gridTicks(inpNext), own = inpNext.grid;
+    const gridName = own ? `1/${parseInt(own, 10)}${/t$/.test(own) ? ' ' + tr('triplet') : ''}` : inpNext.triplet ? `1/${inpNext.value} ${tr('triplet')}` : inpNext.dotted ? `1/${inpNext.value * 2}` : `1/${inpNext.value}`;
+    // the grid: that of the note value, or one of its own (a quarter chord on every sixteenth)
+    const grids = TC.GRIDS.map((g) => `<option value="${g}"${g === (own || '') ? ' selected' : ''}>${g ? `1/${parseInt(g, 10)}${/t$/.test(g) ? ' ' + esc(tr('triplet')) : ''}` : esc(tr('Auto (note value)'))}</option>`).join('');
     return `<section><h3>${tr('Note value')}</h3>
       <div class="values">${vals}</div>
       <div class="btn-row two">
         ${btn('toggleDotted', undefined, `<span class="mus-btn sm"></span> ${tr('Dotted')}`, inp.dotted, tr('Dotted (.)'))}
         ${btn('toggleTriplet', undefined, `<b>3</b>&nbsp;${tr('Triplet')}`, inp.triplet, tr('Triplet (T)'))}
       </div>
-      <p class="hint">${tr('Click grid')}: <b>${gridName}</b> (${grid} ticks)${S.selection.size ? ' · ' + tr('the buttons change only the selected notes') : ''}</p>
+      <div class="row"><label>${tr('Click grid')}</label><select data-action="setGrid">${grids}</select></div>
+      <p class="hint">${tr('Click grid')}: <b>${gridName}</b> (${grid} ticks)${own ? ' · ' + tr('notes as long as the note value, on every place of the grid') : ''}${S.selection.size ? ' · ' + tr('the buttons change only the selected notes') : ''}</p>
     </section>`;
   }
 

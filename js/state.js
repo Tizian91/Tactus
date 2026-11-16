@@ -31,6 +31,7 @@ window.TC = window.TC || {};
       dotted: false,
       triplet: false,
       art: 42,              // drum articulation (drummap.js), 42 = hi-hat closed
+      grid: '',             // the click grid: '' that of the note value, else its own ('16', '8t' …: TC.GRIDS)
       chordMode: '',        // melody: a tap writes '' a tone, 'n' the chord there, 'd' / 'u' it struck down / up
       chordSize: '',        // … its tones: '' as the symbol, '3' a triad, '4' a four-note chord, '5' a power chord
       chordTight: false,    // … a guitar: a tight grip (four strings in the middle) instead of a full one

@@ -1063,6 +1063,17 @@ setTimeout(() => {
           const pwEv = gtr.bars[0].voices[0].find((e) => e.tick === 1920);
           ok('chords: "Power" in the panel - root, fifth, octave on the A string (C3 G3 C4)', !!pwBtn && !!pwEv && pwEv.notes.map((x) => x.pitch).sort((a, b) => a - b).join() === '48,55,60');
           TC.actions.setChordSize('');
+          // a grid of its own: quarter chords on the second sixteenth
+          TC.actions.setValue(4);
+          TC.refresh();
+          const gsel = document.querySelector('#panel-notes select[data-action="setGrid"]');
+          if (gsel) { gsel.value = '16'; gsel.dispatchEvent(new Event('change', { bubbles: true })); }
+          TC.actions.setChordMode('n');
+          click(1, 240, 4, { track: gtr });
+          const g16 = gtr.bars[1].voices[0].find((e) => e.tick === 240);
+          ok('grid 1/16 (note panel) with quarters: a chord on the second sixteenth, a quarter long', !!gsel && !!g16 && g16.dur === 960);
+          TC.actions.setGrid('');
+          TC.actions.setValue(8);
           TC.actions.setChordMode('');
           TC.score.setChord(S.doc, 1, 0, null);
           ok('chords: no chord symbol there - nothing written, said', (() => { TC.actions.setChordMode('n'); const before = gtr.bars[1].voices[0].length; click(1, 0, 4, { track: gtr }); TC.actions.setChordMode(''); return gtr.bars[1].voices[0].length === before || !!TC.score.chordAt(S.doc, 1, 0); })());

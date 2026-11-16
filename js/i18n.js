@@ -356,6 +356,8 @@
     'Sound output': 'Spielt über',
     'Dynamics': 'Dynamik',
     'Hairpin': 'Gabel',
+    'The chord does not fit there (another note in the way)': 'Der Akkord passt dort nicht hin (eine andere Note im Weg)',
+    'chord moved': 'Akkord verschoben',
     'Auto (note value)': 'Auto (wie Notenwert)',
     'notes as long as the note value, on every place of the grid': 'Noten so lang wie der Notenwert, auf jeder Stelle des Rasters',
     'Keyswitches': 'Keyswitches',

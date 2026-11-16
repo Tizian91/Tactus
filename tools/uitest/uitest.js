@@ -1054,13 +1054,33 @@ setTimeout(() => {
           mouse('pointermove', [hx, hy + 45], { ctrlKey: true });
           mouse('pointerup', [hx, hy + 45], { ctrlKey: true });
           ok('chords: a chord held and moved down - a down stroke, the tones stay', gev[0].notes.every((n) => n.stroke === 'd') && gev[0].notes.map((n) => n.pitch).sort((a, b) => a - b).join() === '48,52,55,60,64');
+          // dragged (no hold): the whole chord moves - all its tones to beat 3
+          S.selection.clear();
+          TC.refresh();
+          const gh2 = TC.render.headsInView().find((h) => h.track && h.track.id === gtr.id), sx3 = vr.left + vw.x + (TC.render.tickX(TC.render.layout.bars[0], 1920) + (gh2.wx - TC.render.tickX(TC.render.layout.bars[0], 0))) * vw.zoom, sy3 = vr.top + vw.y + gh2.wy * vw.zoom;
+          mouse('pointerdown', [vr.left + vw.x + gh2.wx * vw.zoom, sy3]);
+          mouse('pointermove', [sx3 - 20, sy3]);
+          mouse('pointermove', [sx3, sy3]);
+          mouse('pointerup', [sx3, sy3]);
+          const movedEv = gtr.bars[0].voices[0].find((e) => e.tick === 1920);
+          ok('chords: a chord dragged - all its tones move to beat 3 ' + gtr.bars[0].voices[0].map((e) => e.tick + ':' + e.notes.length).join(' '), !!movedEv && movedEv.notes.length === 5 && !gtr.bars[0].voices[0].some((e) => e.tick === 0));
+          const G = () => S.doc.tracks.find((t) => t.id === gtr.id); // (dragging a length rebuilds the tracks: look the track up again)
+          // held (Ctrl) and dragged sideways: the whole chord longer - to the end of the bar
+          const sx4 = vr.left + vw.x + (TC.render.tickX(TC.render.layout.bars[0], 3360) + (gh2.wx - TC.render.tickX(TC.render.layout.bars[0], 0))) * vw.zoom;
+          mouse('pointerdown', [sx3, sy3], { ctrlKey: true });
+          mouse('pointermove', [sx3 + 25, sy3], { ctrlKey: true });
+          mouse('pointermove', [sx4, sy3], { ctrlKey: true });
+          const lenMode = S.drag ? S.drag.mode : 'none';
+          mouse('pointerup', [sx4, sy3], { ctrlKey: true });
+          const longEv = G().bars[0].voices[0].find((e) => e.tick === 1920);
+          ok('chords: held and dragged sideways - the whole chord longer (' + (longEv && longEv.dur) + ' ' + lenMode + ')', !!longEv && longEv.notes.length === 5 && longEv.dur > 480);
           S.selection.clear();
           TC.actions.setChordMode('d');
           TC.refresh();
           const pwBtn = document.querySelector('#panel-notes [data-action="setChordSize"][data-value="5"]');
           if (pwBtn) pwBtn.click();
-          click(0, 1920, 4, { track: gtr });
-          const pwEv = gtr.bars[0].voices[0].find((e) => e.tick === 1920);
+          click(0, 2880, 4, { track: G() });
+          const pwEv = G().bars[0].voices[0].find((e) => e.tick === 2880);
           ok('chords: "Power" in the panel - root, fifth, octave on the A string (C3 G3 C4)', !!pwBtn && !!pwEv && pwEv.notes.map((x) => x.pitch).sort((a, b) => a - b).join() === '48,55,60');
           TC.actions.setChordSize('');
           // a grid of its own: quarter chords on the second sixteenth
@@ -1069,14 +1089,14 @@ setTimeout(() => {
           const gsel = document.querySelector('#panel-notes select[data-action="setGrid"]');
           if (gsel) { gsel.value = '16'; gsel.dispatchEvent(new Event('change', { bubbles: true })); }
           TC.actions.setChordMode('n');
-          click(1, 240, 4, { track: gtr });
-          const g16 = gtr.bars[1].voices[0].find((e) => e.tick === 240);
+          click(1, 240, 4, { track: G() });
+          const g16 = G().bars[1].voices[0].find((e) => e.tick === 240);
           ok('grid 1/16 (note panel) with quarters: a chord on the second sixteenth, a quarter long', !!gsel && !!g16 && g16.dur === 960);
           TC.actions.setGrid('');
           TC.actions.setValue(8);
           TC.actions.setChordMode('');
           TC.score.setChord(S.doc, 1, 0, null);
-          ok('chords: no chord symbol there - nothing written, said', (() => { TC.actions.setChordMode('n'); const before = gtr.bars[1].voices[0].length; click(1, 0, 4, { track: gtr }); TC.actions.setChordMode(''); return gtr.bars[1].voices[0].length === before || !!TC.score.chordAt(S.doc, 1, 0); })());
+          ok('chords: no chord symbol there - nothing written, said', (() => { TC.actions.setChordMode('n'); const before = G().bars[1].voices[0].length; click(1, 0, 4, { track: G() }); TC.actions.setChordMode(''); return G().bars[1].voices[0].length === before || !!TC.score.chordAt(S.doc, 1, 0); })());
           while (TC.history.undoStack.length > undoAcc) TC.actions.undo();
           ok('chords: undone', !S.doc.tracks.some((t) => t.name === 'Gitarre') && !S.doc.bars[0].chords);
           // the instrument (Tracks & sound): "Bass" - a bass sound and the bass clef suggested, a tapped chord: one tone

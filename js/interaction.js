@@ -760,6 +760,7 @@
 
   function dropMove(d) {
     const to = d.to, n = d.hit.note;
+    if (to && n.pitch !== undefined && n.chordNote && d.hit.ev.notes.length > 1) return dropChord(d, to);
     if (to && n.pitch !== undefined) {
       if (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.pitch === n.pitch) return;
       if (noteAt(to.bar, to.tick, null, d.hit.track, to.pitch)) return TC.ui.hint(tr('There is already such a note'));
@@ -788,6 +789,27 @@
     TC.selectBar(to.bar);
     TC.commit();
     TC.ui.status(`${where(to)} · ${TC.drums.label(to.art)} · ${tr('moved')}`);
+  }
+
+  /**
+   * A chord written as a chord, dragged: the whole chord moves (with the notes tied on from it) - sideways in time,
+   * up / down every tone by as many lines (tones of the scale) as the dragged one. One undo step.
+   */
+  function dropChord(d, to) {
+    const SC = TC.score, P = TC.pitch, ids = d.hit.ev.notes.map((x) => x.id);
+    const all = [...new Set(ids.concat(SC.tiedOn(S.doc, ids)))];
+    const delta = SC.absTick(S.doc, to.bar, to.tick) - SC.absTick(S.doc, d.hit.bar, d.hit.ev.tick), k = to.line - d.t.line;
+    if (!delta && !k) return;
+    const barOf = new Map(all.map((id) => [id, (SC.findNote(S.doc, id) || { bar: 0 }).bar]));
+    const lines = (x) => {
+      const sc = SC.scaleAt(d.hit.track, barOf.get(x.id) || 0), t = P.lineTone(P.noteSpell(x, sc).dia - k, sc);
+      return t.pitch >= 0 && t.pitch <= 127 ? { pitch: t.pitch, dia: t.dia } : null;
+    };
+    if (!SC.moveNotes(S.doc, all, delta, null, k ? lines : null)) return TC.ui.hint(tr('The chord does not fit there (another note in the way)'));
+    S.selection = new Set(ids);
+    TC.selectBar(to.bar);
+    TC.commit();
+    TC.ui.status(`${where(to)} · ${tr('chord moved')}`);
   }
 
   // ---- A row of notes (hold a note, then drag; mouse: Ctrl + drag) ------------------------------
@@ -1023,6 +1045,8 @@
       d.mel = d.hit.note.pitch !== undefined;
       if (d.mel) {
         // melody: the tied notes go along; up / down: by lines (tones of the scale of each note's bar)
+        // (a chord written as a chord: all its tones go along)
+        d.ids.slice().forEach((id) => { const h = SC.findNote(S.doc, id); if (h && h.note.chordNote) h.ev.notes.forEach((x) => { if (!d.ids.includes(x.id)) d.ids.push(x.id); }); });
         d.ids = [...new Set(d.ids.concat(SC.tiedOn(S.doc, d.ids)))];
         d.barOf = new Map(d.ids.map((id) => [id, (SC.findNote(S.doc, id) || { bar: 0 }).bar]));
         // (chords locked: where each note lands; a tied note follows the first note of its chain)

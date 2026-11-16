@@ -45,12 +45,16 @@
  *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
  *                                         inst: 'voice' | 'keys' | 'guitar' | 'bass' | 'ensemble' | 'pad'   the
  *                                                    instrument: how chords are written for it (js/accomp.js)
+ *                                         ksw: { tpl, name, c3, noteShift, poly, keys }   (only when set) the
+ *                                                    keyswitches of its VST (js/keyswitch.js)
  *                                         lh: true   piano: the lower staff (left hand) of the melody track right
  *                                                    before it - one instrument; sound, scale, mute / solo, hidden
  *                                                    and name follow the upper one (SC.syncHands)
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false,         // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *                          scale: null,           // melody: another scale from this bar on
+ *                          ks: [ { t, k } ]     (only when set) keyswitches of the track's VST at tick t (k: the id of a
+ *                                                 key of track.ksw, js/keyswitch.js): a way of playing, a slide, a stop
  *                          dyn: [ { t, v } | { t, w, len, to } ] } ] }   (only when set) dynamics of this track: from
  *                                                 tick t on the level v ('ppp' … 'fff', SC.DYN_LEVELS), or a hairpin w
  *                                                 ('cresc' | 'dim') len ticks long (over bar lines) to the level `to`
@@ -425,6 +429,8 @@
         if (TC.pitch && TC.pitch.VOICES[t.voice]) out.voice = t.voice;
         if (t.lh) out.lh = true;
         out.inst = TC.INSTRUMENTS.includes(t.inst) ? t.inst : TC.instFromProgram(out.program, !!t.lh);
+        // keyswitches of its VST (js/keyswitch.js) - kept with the score
+        if (t.ksw) { const k = TC.ksw ? TC.ksw.clean(t.ksw) : JSON.parse(JSON.stringify(t.ksw)); if (k) out.ksw = k; }
       }
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
@@ -434,6 +440,13 @@
         if (kind === 'pitched' && i > 0 && src && src.scale && TC.pitch) bar.scale = TC.pitch.cleanScale(src.scale); // a new scale from here
         const dyn = src && TC.score.cleanDyn(src.dyn, TC.barTicks(h.ts));
         if (dyn) bar.dyn = dyn;
+        // keyswitches written here (a way of playing, a slide …): { t, k } inside the bar, one per place and key
+        if (kind === 'pitched' && src && Array.isArray(src.ks)) {
+          const L = TC.barTicks(h.ts), seen = new Set();
+          const ks = src.ks.filter((m) => m && typeof m.k === 'string' && Number.isInteger(m.t) && m.t >= 0 && m.t < L && !seen.has(m.t + m.k) && seen.add(m.t + m.k))
+            .map((m) => ({ t: m.t, k: m.k.slice(0, 40) })).sort((a, b) => a.t - b.t);
+          if (ks.length) bar.ks = ks;
+        }
         const voices = src && Array.isArray(src.voices) ? src.voices : [];
         voices.slice(0, 4).forEach((v, vi) => {
           bar.voices[vi] = (Array.isArray(v) ? v : []).map((e) => {
@@ -688,7 +701,8 @@
     }));
     // (other dynamics: not the same bar - a %-bar would lose them)
     const dyn = track.bars[bi] && track.bars[bi].dyn;
-    return evs.sort().join(' ') + (dyn && !loose ? ' ~' + dyn.map((d) => d.t + (d.v || d.w + d.len)).join(',') : '');
+    const ks = track.bars[bi] && track.bars[bi].ks; // (other keyswitches: not the same bar either)
+    return evs.sort().join(' ') + (dyn && !loose ? ' ~' + dyn.map((d) => d.t + (d.v || d.w + d.len)).join(',') : '') + (ks && !loose ? ' ^' + ks.map((m) => m.t + m.k).join(',') : '');
   };
   /** Bar headers alike for a repeat (time signature, tempo, signs, chords … - line breaks do not count). */
   const sameHeader = (a, b) => {

@@ -175,11 +175,18 @@
         if (z.lyrRows) bars.forEach((b) => z.lyrY = Math.max(z.lyrY, lowestInk(b.parts[k]) + 1.5 * SP));
       }
       z.below = belowOf(z, under);
+      // keyswitches (ways of playing: P.M., dead …): a row right under the staff, under its lowest note (as between the
+      // staff and the tab of a guitar part) - the lyrics and the dynamics below it
+      if (track.ksw && !track.lh && track.bars.some((b) => b.ks)) {
+        z.ksY = Math.max(6.0 * SP, ...bars.map((b) => lowestInk(b.parts[k]) + 1.6 * SP));
+        if (z.lyrRows) z.lyrY = Math.max(z.lyrY, z.ksY + 2.2 * SP);
+        z.below = Math.max(belowOf(z, under), z.ksY + 1.4 * SP);
+      }
       // dynamics (ppp … fff, hairpins): a row under the staff - drums between the stems and the counting, a melody
       // under its lowest note or under its lyrics (a piano: once, under the right hand - its left hand has the same)
       if (!track.lh && track.bars.some((b) => b.dyn)) {
         const low = track.kind === 'pitched' ? Math.max(6.8 * SP, ...bars.map((b) => lowestInk(b.parts[k]) + 2.2 * SP)) : 9.6 * SP;
-        z.dynY = z.lyrRows ? lyrEnd(z) + 2.4 * SP : low;
+        z.dynY = z.lyrRows ? lyrEnd(z) + 2.4 * SP : z.ksY !== undefined ? Math.max(low, z.ksY + 2.4 * SP) : low;
         z.below = Math.max(z.below, z.dynY + 1.6 * SP + (under && track.kind === 'pitched' ? 3.4 * SP : 0));
       }
       dy += 4 * SP + (z.below + STAFF_ABOVE) * gap;
@@ -1068,6 +1075,49 @@
           const p0 = (a - w.abs) / (w.end - w.abs), p1 = (e - w.abs) / (w.end - w.abs);
           const h0 = (w.w === 'cresc' ? p0 : 1 - p0) * H / 2, h1 = (w.w === 'cresc' ? p1 : 1 - p1) * H / 2, yc = y - 0.45 * SP;
           o.push(line(x0, yc - h0, x1, yc - h1, 'hairpin'), line(x0, yc + h0, x1, yc + h1, 'hairpin'));
+        }
+      }
+    }
+
+    // keyswitches (ways of playing of the track's VST, js/keyswitch.js): their short names above the staff; a way of
+    // playing that holds ("P.M.") with a dashed line to the next one and a hook at its end ("open": just ends it)
+    for (const z of L.staves) {
+      const tk = z.track;
+      if (!tk.ksw || tk.lh || !TC.ksw) continue;
+      if (z.ksY === undefined) continue;
+      const y = z.ksY, at = TC.score.tickOf(doc), spans = []; // (under the staff: the stroke marks ⊓ / V stay above it)
+      for (const b of L.bars) {
+        if (b.hidden !== undefined) continue;
+        ((tk.bars[b.i] && tk.bars[b.i].ks) || []).forEach((m) => {
+          const k = TC.ksw.keyOf(tk, m.k);
+          if (!k) return;
+          const x = RD.tickX(b, m.t) - 0.4 * SP, txt = k.short || k.name;
+          if (!/^open$/i.test(txt)) OS(b, z).push(`<text class="ks-mark" x="${f(x)}" y="${f(y)}">${esc(txt)}</text>`);
+        });
+      }
+      // the lines of the ways of playing: from each to the next (in written order), over line breaks
+      const arts = [];
+      tk.bars.forEach((bar, bi) => ((bar && bar.ks) || []).forEach((m) => {
+        const k = TC.ksw.keyOf(tk, m.k);
+        if (k && k.kind === 'art') arts.push({ abs: at(bi, m.t), txt: k.short || k.name });
+      }));
+      arts.sort((a, b) => a.abs - b.abs);
+      arts.forEach((a, n) => { if (!/^open$/i.test(a.txt)) spans.push({ a: a.abs, e: n + 1 < arts.length ? arts[n + 1].abs : at(doc.bars.length, 0), w: a.txt.length * 0.6 * SP + 0.4 * SP }); });
+      for (const sp of spans) {
+        for (const s of L.systems) {
+          const fb = L.bars[s.first], lb = L.bars[s.last], s0 = at(fb.i, 0), s1 = at(lb.i, lb.L);
+          const a = Math.max(sp.a, s0), e = Math.min(sp.e, s1);
+          if (e <= a) continue;
+          const xOf = (abs) => {
+            for (let i = s.first; i <= s.last; i++) {
+              const b = L.bars[i], b0 = at(b.i, 0);
+              if (b.hidden === undefined && abs >= b0 && abs <= b0 + b.L) return abs === b0 + b.L ? b.x + b.w - 0.5 * SP : RD.tickX(b, abs - b0) - 0.6 * SP;
+            }
+            return s.end - 0.5 * SP;
+          };
+          const x0 = xOf(a) + (a === sp.a ? sp.w : 0), x1 = xOf(e), o = staffOut[s.i][z.k], ly = y - 0.35 * SP;
+          if (x1 - x0 > 0.5 * SP) o.push(line(x0, ly, x1, ly, 'ks-line'));
+          if (e === sp.e) o.push(line(x1, ly - 0.6 * SP, x1, ly, 'ks-end')); // (the hook points up, to the staff)
         }
       }
     }

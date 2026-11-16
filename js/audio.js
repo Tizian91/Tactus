@@ -473,6 +473,7 @@
       const when = t0 + at;
       if (when >= ctx.currentTime - 0.01) {
         if (h.click) AU.click(when, h.click, h.vel, cbus);
+        else if (h.ks !== undefined) { if (TC.midiOut && TC.midiOut.trackActive(h.trk)) TC.midiOut.note(h.ks, when, h.dur, 0.8, ctx, h.trk, true); } // (a keyswitch: MIDI only)
         else if (h.pitch !== undefined) AU.tone(h.pitch, when, h.dur, h.vel, bus, h.trk);
         else AU.hit(h.art, when, h.vel, h.choke, bus, h.trk);
       }

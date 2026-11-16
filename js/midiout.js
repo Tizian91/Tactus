@@ -151,9 +151,11 @@
    * track (its own MIDI channel, else track.channel); the track's program is sent once per output.
    */
   const programSent = new Map(); // output -> Map channel -> program
-  MO.note = function (pitch, when, dur, vel, ctx, track) {
+  MO.note = function (pitch, when, dur, vel, ctx, track, raw) {
     const o = portOf(track);
     if (!o) return;
+    // a VST that plays its notes shifted (keyswitch profile, e.g. Iron: a guitar an octave up) - not its keyswitches (raw)
+    if (!raw && track && track.ksw && track.ksw.noteShift) pitch = Math.max(0, Math.min(127, pitch + track.ksw.noteShift));
     const ch = track && Number.isInteger(track.midiCh) ? track.midiCh : track ? track.channel || 0 : 0;
     const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;

@@ -1393,6 +1393,59 @@
     TC.refresh();
     if (S.input.chordMode) TC.ui.hint(tr('Tap: the chord of the chord symbols there - hold a chord and move down / up: its stroke ↓ / ↑'));
   };
+  // ---- Keyswitches of a track's VST (js/keyswitch.js) ---------------------------------------------------------------
+  /** The keyswitch profile of the track being written: '' none, or a template (a copy goes into the track). */
+  A.setTrackKsw = function (tpl) {
+    const t = TC.curTrack();
+    if (!t || t.kind !== 'pitched') return;
+    if (!tpl) delete t.ksw;
+    else {
+      const p = TC.ksw.fromTemplate(tpl);
+      if (!p) return;
+      t.ksw = p;
+    }
+    TC.commit();
+    if (t.ksw) TC.ui.hint(tr('{name}: its ways of playing in the note panel; check the keys with ▶ (Tracks & sound).', { name: t.ksw.name }));
+  };
+  /** Which MIDI note the VST calls C3 (60 or 48) - all its keys and its notes move along. */
+  A.setKswC3 = function (v) {
+    const t = TC.curTrack();
+    if (!t || !t.ksw) return;
+    t.ksw.c3 = Number(v) === 48 ? 48 : 60;
+    TC.commit();
+  };
+  /** The key of one keyswitch of the profile (as the VST names it: 'F#2', 'Bb2'). value "id|name" */
+  A.setKswNote = function (value) {
+    const t = TC.curTrack(), v = String(value), k = v.indexOf('|');
+    const key = t && t.ksw && t.ksw.keys.find((x) => x.id === v.slice(0, k));
+    const name = v.slice(k + 1).trim().replace(/♯/g, '#').replace(/♭/g, 'b');
+    if (!key) return;
+    if (TC.ksw.noteOf(name, t.ksw.c3) === null) { TC.ui.hint(tr('"{name}" is no key - e.g. F#2, Bb2, C1', { name })); TC.refresh(); return; }
+    key.note = name.charAt(0).toUpperCase() + name.slice(1);
+    TC.commit();
+  };
+  /** ▶ a keyswitch of the track being written: its key now (the VST shows which way of playing it is). */
+  A.testKsw = function (id) {
+    const t = TC.curTrack(), k = TC.ksw.keyOf(t, id);
+    if (!k || k.midi === null) return;
+    TC.midiOut.init().then(() => {
+      if (!TC.midiOut.trackActive(t)) return TC.ui.hint(tr('The track plays with Tactus sounds - choose its MIDI output ("Plays on") to hear the VST.'));
+      TC.midiOut.note(k.midi, 0, 0.3, 0.8, null, t, true);
+      TC.ui.hint(tr('{name}: {key} (MIDI {n}) sent', { name: k.name, key: k.note, n: k.midi }));
+    });
+  };
+  /** A keyswitch at the chosen place of the selected bar (a way of playing, a slide, a stop) - the same once more: it goes. */
+  A.setKs = function (id) {
+    const t = TC.curTrack(), i = curBar(), at = chordTick(i), k = TC.ksw.keyOf(t, id);
+    if (!k || !t.bars[i]) return;
+    const bar = t.bars[i], list = (bar.ks || []).filter((m) => m.t !== at || TC.ksw.keyOf(t, m.k).kind !== k.kind || m.k === id);
+    const had = list.some((m) => m.t === at && m.k === id);
+    const out = had ? list.filter((m) => !(m.t === at && m.k === id)) : list.concat([{ t: at, k: id }]);
+    if (out.length) bar.ks = out.sort((a, b) => a.t - b.t);
+    else delete bar.ks;
+    TC.commit();
+    TC.ui.hint(had ? tr('{name} removed', { name: k.name }) : tr('{name} from here on', { name: k.name }));
+  };
   /** A guitar's tapped chords: a full grip (all strings from the bass) or a tight one (four strings in the middle). */
   A.setChordTight = function (v) {
     S.input.chordTight = v === true || v === 'true' || v === '1';

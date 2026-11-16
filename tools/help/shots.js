@@ -163,6 +163,31 @@ setTimeout(() => {
         setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => x.textContent.trim() === 'Akkorde'); if (h) h.scrollIntoView(); }, 200);
       }, 400);
     },
+    // keyswitches: a guitar played by UJAM Iron 2 - palm muted, then open with a slide, dead notes; the note panel
+    keyswitch() {
+      example('melodie');
+      setTimeout(() => {
+        const mel = S.doc.tracks.find((t) => t.kind === 'pitched');
+        const gt = TC.score.addTrack(S.doc, 'Iron', mel, 'pitched');
+        gt.inst = 'guitar';
+        gt.program = 30;
+        gt.clef = 'treble8';
+        gt.ksw = TC.ksw.fromTemplate('ujam-iron2');
+        TC.accomp.write(S.doc, gt, 0, 3, 'gEighths', 0);
+        gt.bars[0].ks = [{ t: 0, k: 'muted' }];
+        gt.bars[1].ks = [{ t: 1920, k: 'open' }, { t: 1920, k: 'slideUp' }];
+        gt.bars[2].ks = [{ t: 2880, k: 'dead' }];
+        gt.bars[3].ks = [{ t: 0, k: 'open' }];
+        TC.commit();
+        S.trackId = gt.id;
+        TC.selectBar(0);
+        S.chordSlot = 0;
+        A.togglePanel();
+        TC.refresh();
+        view(0.85, 10, -40);
+        setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => /Spielweise/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
+      }, 400);
+    },
     // MIDI import: track, where it comes from, grid, tempo, target
     import() {
       S.settings.importTarget = 'into';

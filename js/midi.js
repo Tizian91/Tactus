@@ -18,6 +18,7 @@
 (function (TC) {
   const M = (TC.midi = {});
   const NOTE_LEN = 120; // a 32nd: drum hits are short, the length does not matter to a drum VST
+  const KS_TICKS = 12; // a keyswitch goes this much before the notes it is for (js/keyswitch.js)
   const tr = (s, v) => (TC.tr ? TC.tr(s, v) : s.replace(/\{(\w+)\}/g, (m, k) => v[k]));
 
   /** Related instruments to fall back on when a profile has no key for one. */
@@ -166,9 +167,17 @@
                   before.off.t = Math.max(before.on + 1, Math.round(end - 10));
                   continue;
                 }
-                const sp = n.stroke ? msTicks(T.strum(e, n) * 1000) : 0; // (a stroke: the strings one after the other)
-                put(a + sp, 2, [0x90 | ch, n.pitch, v]);
-                const off = { t: Math.max(Math.round(a) + 1, Math.round(end - 10)), order: 1, bytes: [0x80 | ch, n.pitch, 0] };
+                // a stroke: the strings one after the other - or, a VST with stroke keys (Iron), its key just before the chord
+                const own = n.stroke && TC.ksw && TC.ksw.strums(track);
+                if (own && n === e.notes[0]) {
+                  const k = track.ksw.keys.find((x) => x.kind === (n.stroke === 'u' ? 'up' : 'down')), kn = k && TC.ksw.noteOf(k.note, track.ksw.c3);
+                  if (kn !== null && kn !== undefined) { put(Math.max(0, a - KS_TICKS), 0, [0x90 | ch, kn, 100]); put(Math.max(0, a - KS_TICKS) + NOTE_LEN, 1, [0x80 | ch, kn, 0]); }
+                }
+                const sp = n.stroke && !own ? msTicks(T.strum(e, n) * 1000) : 0;
+                // (a VST that plays its notes shifted - keyswitch profile, Iron: an octave up)
+                const p = track.ksw && track.ksw.noteShift ? Math.max(0, Math.min(127, n.pitch + track.ksw.noteShift)) : n.pitch;
+                put(a + sp, 2, [0x90 | ch, p, v]);
+                const off = { t: Math.max(Math.round(a) + 1, Math.round(end - 10)), order: 1, bytes: [0x80 | ch, p, 0] };
                 noteEv[ti].push(off);
                 held.set(key, { on: Math.round(a), end, off });
                 continue;
@@ -225,6 +234,17 @@
         });
       }
       t0 += L;
+    }
+    // keyswitches (js/keyswitch.js): a way of playing held while it holds, slides / stops at their place - a little before
+    if (TC.ksw && starts.length) {
+      tracks.forEach((track, ti) => {
+        if (!track.ksw) return;
+        const ch = melodyCh(track);
+        TC.ksw.events(doc, track, starts, (o, k) => o.t + sw(k), t0, null).forEach((x) => {
+          const on = Math.max(0, Math.round(x.at - KS_TICKS));
+          noteEv[ti].push({ t: on, order: 0, bytes: [0x90 | ch, x.key, 100] }, { t: Math.max(on + 1, Math.round(x.at + (x.hold || NOTE_LEN) - KS_TICKS - 1)), order: 1, bytes: [0x80 | ch, x.key, 0] });
+        });
+      });
     }
     // page turns: a note when the played bar is on another page (the first page at the start)
     const pt = opts.pageTurns;

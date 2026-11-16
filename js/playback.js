@@ -67,6 +67,8 @@
 
   /** A stroke (note.stroke 'd' / 'u'): how much later (seconds) this string of the chord sounds than the first one. */
   T.STRUM = 0.012;
+  /** A keyswitch goes this much (seconds) before the notes it is for. */
+  T.KS_LEAD = 0.02;
   T.strum = function (ev, n) {
     const order = ev.notes.slice().sort((a, b) => a.pitch - b.pitch), k = order.indexOf(n);
     return (n.stroke === 'u' ? order.length - 1 - k : k) * T.STRUM;
@@ -123,7 +125,14 @@
                   continue;
                 }
                 // a stroke (strummed guitar): the strings one after the other - down from the lowest, up from the highest
-                const sp = n.stroke ? T.strum(ev, n) : 0;
+                // (a VST with stroke keys - Iron: it strums the chord itself on its down / up key, sent just before)
+                const own = n.stroke && TC.ksw && TC.ksw.strums(track);
+                if (own && n === ev.notes[0]) {
+                  const k = track.ksw.keys.find((x) => x.kind === (n.stroke === 'u' ? 'up' : 'down'));
+                  const key = k && TC.ksw.noteOf(k.note, track.ksw.c3);
+                  if (key !== null && key !== undefined) hits.push({ t: t0 - T.KS_LEAD, ks: key, dur: 0.05, trk: track });
+                }
+                const sp = n.stroke && !own ? T.strum(ev, n) : 0;
                 const hit = { t: t0 + sp, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - sp - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1 };
                 hits.push(hit);
                 sounding.set(key, hit);
@@ -173,6 +182,16 @@
       if (opts.metronome) T.clickTicks(h).forEach((k, i) => hits.push({ t: t + k * spt, click: i === 0 ? 2 : 1, vel: 0.8 }));
       bars.push({ bar: bi, pass: o.pass, n: o.n, t0: t, t1: t + L * spt, spt, ts: h.ts });
       t += L * spt;
+    }
+    // keyswitches (js/keyswitch.js): a way of playing held while it holds, slides / stops at their place - each a little
+    // before the notes it is for (only through MIDI: js/audio.js)
+    if (TC.ksw) {
+      const order = bars.filter((b) => b.bar >= 0);
+      for (const track of doc.tracks) {
+        if (!track.ksw || !T.audible(doc, track) || !order.length) continue;
+        TC.ksw.events(doc, track, order, (o, k) => o.t0 + st(k) * o.spt, t, TC.ksw.artBefore(track, from))
+          .forEach((e) => hits.push({ t: e.at - T.KS_LEAD, ks: e.key, dur: e.hold || 0.05, trk: track }));
+      }
     }
     hits.forEach((x) => { x.t = Math.max(0, x.t); });
     hits.sort((a, b) => a.t - b.t);

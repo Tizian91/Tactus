@@ -787,3 +787,17 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - **Beispiele** (Datei → Beispiele, oder aus dem Handbuch „▶ Im Programm öffnen“ = `index.html?beispiel=…`):
   Groove, **Wiederholungen & Häuser** (1./2. Haus, %, Refrain 3×, Mehrtaktpause), **Sprünge** (D.S. al Coda).
 - Seitenansicht: eine Zeile vor einem erzwungenen Umbruch (Coda, neue Zeile) wird nicht mehr über die volle Breite gestreckt.
+
+### Keyswitches (Spielweisen eines Instrument-VSTs) ✅ (zum Ausprobieren, 2026-11-16)
+
+- Wunsch: Gitarren-VSTs wie **UJAM Iron 2 (Instrument Mode)** wie die Drums über eine Tastenkarte ansteuern; die Keyswitches nicht als
+  Noten, sondern als Anweisungen (P.M. …). Gebaut: `js/keyswitch.js` (`TC.ksw`) – Profil an der Spur (`track.ksw`: Vorlage `ujam-iron2`
+  nach der Tabelle aus dem Handbuch: open A#2, muted F#2, half G#2, dead D#2, Picking C2–A2, Slides C1/D1/E1, Pick Slide F1, Upstroke A1,
+  Downstroke B1, Stop G#1/A#1, Release C#2, Schalter Trigger / Strum Auto; `c3` 60 / 48, `noteShift` +12, `poly` 4), Marken
+  `bar.ks = [{ t, k }]`. Spielweisen („art“) werden gehalten bis zur nächsten (Latch an / aus egal), „once“ (Slides) kurz vor der Note,
+  „event“ (Stop, Release) an der Stelle; Anschläge ⊓ / V → Irons Down- / Upstroke-Taste (Tactus verteilt dann nicht selbst); Noten ans VST
+  +12; angetippte Akkorde bei `poly` ≤ 4 enge Griffe. Notenbild: Kürzel unter der Zeile, gehaltene mit gestrichelter Linie und Haken
+  („open“ ohne Text). Panel: „Spuren & Klang“ → Keyswitches (Vorlage, C3, Tasten prüfen ▶ / ändern), Noten-Panel „Spielweise“.
+  MusicXML: Text über den Noten. Tests: `test_keyswitch.js` (16), Klick-Test (2), Bild `keyswitch.png`, Handbuch Kap. 8 „Keyswitches“.
+- **Zu prüfen beim Nutzer:** C3 = 60 oder 48 bei Iron (▶ bei Muted), Upstroke A1 / Pick Slide F1 (aus dem Bild gelesen), was die sechs
+  Picking-Tasten C2 … A2 einzeln tun. **Offen:** eigene Profile anlegen / weitere Vorlagen; Spielweisen über das Notenmenü.

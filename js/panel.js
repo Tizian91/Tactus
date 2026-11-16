@@ -153,7 +153,7 @@
         <section><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
-        <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${accompSection(null)}${dynSection()}${lyricsSection(false)}`;
+        <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${accompSection(null)}${ksSection()}${dynSection()}${lyricsSection(false)}`;
     }
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
@@ -180,7 +180,7 @@
       ${accentRow(hit.note.accent || 0)}
       <div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
         ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
-    </section>${accompSection(hit)}${dynSection()}${lyricsSection(true)}`;
+    </section>${accompSection(hit)}${ksSection()}${dynSection()}${lyricsSection(true)}`;
   }
 
   /** Lyrics of the melody track being written: the verse, start typing (at the selected note), delete a verse. */
@@ -402,6 +402,32 @@
   }
 
   /**
+   * Ways of playing (keyswitches of the track's VST, js/keyswitch.js) at a place of the selected bar - muted, dead notes,
+   * a slide, a stop … (the same places as the chords and the dynamics). The same once more: it goes.
+   */
+  function ksSection() {
+    const t = TC.curTrack(), i = S.selBar, KS = TC.ksw;
+    if (!KS || !t.ksw) return '';
+    if (i === null || !S.doc.bars[i]) return `<section><h3>${tr('Way of playing')}</h3><p class="hint">${tr('Tap a bar: muted, dead notes, a slide … from a place in it.')}</p></section>`;
+    const ts = S.doc.bars[i].ts, slots = TC.score.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
+    const list = (t.bars[i] && t.bars[i].ks) || [], at = (x) => list.filter((m) => m.t === x);
+    const label = (m) => { const k = KS.keyOf(t, m.k); return k ? k.short || k.name : '?'; };
+    const short = (x) => { const c = TC.rhythm.countLabel(x, ts).split(' '); return c.length > 1 ? c[1] : c[0]; };
+    const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((x) =>
+      btn('setChordSlot', x, `<small>${esc(short(x))}</small><i>${esc(at(x).map(label).join(' ') || '·')}</i>`, x === slot, TC.rhythm.countLabel(x, ts), TC.rhythm.countLabel(x, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>` : '';
+    const here = new Set(at(slot).map((m) => m.k));
+    const group = (kind, title) => {
+      const keys = KS.scoreKeys(t).filter((k) => k.kind === kind);
+      return keys.length ? `<div class="row"><label>${tr(title)}</label></div><div class="ks-pal">${keys.map((k) => btn('setKs', k.id, esc(k.short || k.name), here.has(k.id), k.name)).join('')}</div>` : '';
+    };
+    return `<section><h3>${tr('Way of playing')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
+      ${where}
+      ${group('art', 'Holds until the next')}${group('once', 'Before the note here')}${group('event', 'Here')}
+      <p class="hint tight">${esc(tr('Keyswitches of {name} - written under the staff, sent to the VST before the notes. ↓ / ↑ strokes: its own stroke keys.', { name: t.ksw.name }))}</p>
+    </section>`;
+  }
+
+  /**
    * Dynamics of the selected bar: a level (ppp … fff) or a hairpin (cresc. / dim.) at a place (the same places as the
    * chords) - for the track being written (a piano: both hands) or all tracks. They play the notes softer / louder;
    * the notes stay as written.
@@ -569,7 +595,29 @@
     }
     const vol = Number.isInteger(t.volume) ? t.volume : 100;
     return `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="127" step="1" value="${vol}" data-trackvol title="${esc(tr('Fader of this track ({n}) - Tactus sounds softer / louder, through MIDI the channel volume (CC 7)', { n: vol }))}"></div>
-      ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}`;
+      ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}${kswRows(t)}`;
+  }
+
+  /**
+   * Keyswitches of a melody track's VST (js/keyswitch.js): the profile, which MIDI note the VST calls C3, and its keys -
+   * each with ▶ (sends it now: the VST shows which it is) and its key to correct.
+   */
+  function kswRows(t) {
+    if (t.kind !== 'pitched' || !TC.ksw) return '';
+    const p = t.ksw, opts = [['', tr('None')]].concat(TC.ksw.TEMPLATES.map((x) => [x.tpl, x.name]))
+      .map(([v, l]) => `<option value="${esc(v)}"${v === (p ? p.tpl : '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    let more = '';
+    if (p) {
+      const KIND = { art: 'way of playing', once: 'before a note', event: 'at its place', down: 'down stroke', up: 'up stroke', mode: 'switch' };
+      const rows = p.keys.map((k) => `<div class="ksw-row">${btn('testKsw', k.id, '▶', false, tr('Send this key now'), 'icon')}
+          <span class="ksw-name">${esc(k.name)} <span class="muted">${esc(tr(KIND[k.kind]))}</span></span>
+          <input type="text" class="ksw-note" data-kswnote data-id="${esc(k.id)}" value="${esc(k.note)}" maxlength="4" title="${esc(tr('Its key, as the VST names it (C3 = {n})', { n: p.c3 }))}"></div>`).join('');
+      more = `<div class="row"><label>C3 =</label><div class="seg">${btn('setKswC3', 60, 'MIDI 60', p.c3 !== 48, tr('C3 is middle C (Cubase, most VSTs)'))}${btn('setKswC3', 48, 'MIDI 48', p.c3 === 48, tr('C3 an octave lower'))}</div></div>
+        <p class="hint tight">${esc(tr('Notes go to the VST {n} semitones higher; at most {p} tones at a time (tapped chords: tight grips).', { n: p.noteShift, p: p.poly || '–' }))}</p>
+        <details class="ksw-list"><summary>${tr('Check / change the keys ({n})', { n: p.keys.length })}</summary>${rows}
+          <p class="hint tight">${tr('▶ sends the key: the VST should show that way of playing. Wrong everywhere: switch C3 above.')}</p></details>`;
+    }
+    return `<div class="row"><label>${tr('Keyswitches')}</label><select data-action="setTrackKsw">${opts}</select></div>${more}`;
   }
 
   /** All tempo changes of the score: click = go to the bar, ✕ = remove the change. */
@@ -802,7 +850,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst,
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst, TC.curTrack().ksw && TC.curTrack().ksw.keys.length, S.selBar !== null && JSON.stringify((TC.curTrack().bars[S.selBar] || {}).ks || 0),
       // (dynamics: the selected bar, its places and what the track has there)
       S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, hit && hit.ev.notes.map((n) => n.stroke || '').join(), TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
@@ -816,7 +864,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
@@ -910,6 +958,8 @@
       TC.actions.setAudioDelay(el.value);
     } else if (el.matches('input[data-clickvol]')) {
       TC.actions.setClickVol(el.value);
+    } else if (el.matches('input[data-kswnote]')) {
+      TC.actions.setKswNote(el.dataset.id + '|' + el.value);
     } else if (el.matches('input[data-trackvol]')) {
       TC.actions.setTrackVolume(el.value);
     } else if (el.matches('input[data-volume]')) {

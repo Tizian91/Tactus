@@ -32,7 +32,7 @@
     <li><a href="#takte">7. Takte und Form</a>
       <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
     <li><a href="#melodie">8. Melodie schreiben</a>
-      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde setzen</a></li></ol></li>
+      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde setzen</a></li><li><a href="#keyswitch">Keyswitches</a></li></ol></li>
     <li><a href="#notenblatt">9. Notenblatt und PDF</a></li>
     <li><a href="#wiedergabe">10. Wiedergabe und Klang</a>
       <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
@@ -527,6 +527,30 @@ Welcher Akkord es ist, bestimmst du im Akkord-Panel rechts (Stufenknopf oder ein
     Klang „Gitarre“ – sie startet in der Tonleiter des Stücks.</li>
 </ul>
 <figure><img src="help/img/akkordnoten.png" alt="Das Melodie-Beispiel mit einer Gitarre, die ihre Akkorde mit Ab- und Aufschlägen spielt"><figcaption>Eine Gitarre spielt die Akkorde des Melodie-Beispiels: echte Griffe, Ab- und Aufschläge (⊓ / V) darüber. Links das Noten-Panel mit <span class="ui">Akkorde → Setzen</span>.</figcaption></figure>
+
+<h3 id="keyswitch">Keyswitches: Spielweisen eines Gitarren-VSTs (UJAM Iron 2 …)</h3>
+<p>Viele Instrument-VSTs wechseln die Spielweise über sehr tiefe Tasten (Keyswitches): gedämpft, Dead Notes, Slides, Ab- und
+Aufschlag … Tactus schreibt sie nicht als Noten, sondern als <b>Anweisung unter die Notenzeile</b> (z. B. „P.M. – – – –┘“) und schickt beim
+Abspielen und im MIDI-Export die richtige Taste kurz vor die Noten.</p>
+<ol class="steps">
+  <li>Spur mit dem VST (z. B. Instrument <span class="ui">Gitarre</span>, <span class="ui">Spielt über</span> der MIDI-Ausgang von Iron):
+    in <span class="ui">Spuren &amp; Klang</span> bei der Spur <span class="ui">Keyswitches → UJAM Iron 2 (Instrument Mode)</span>.</li>
+  <li>Einmal prüfen: <span class="ui">Tasten prüfen / ändern</span> aufklappen, bei <span class="ui">Muted</span> auf <span class="ui">▶</span> – in
+    Iron muss „Muted“ aufleuchten. Liegt alles eine Oktave daneben: oben <span class="ui">C3 = MIDI 60 / 48</span> umschalten. Eine einzelne
+    falsche Taste lässt sich im Feld daneben ändern (z. B. <code>F#2</code>).</li>
+  <li>Spielweisen setzen: Takt antippen, im Noten-Panel links unter <span class="ui">Spielweise</span> die Stelle wählen und z. B.
+    <span class="ui">P.M.</span>. <b>Gilt bis zur nächsten</b> (open, P.M., ½ M., Dead, Picking): Tactus hält die Taste gedrückt, bis die nächste
+    kommt – das klappt mit Latch an und aus. <b>Vor der Note hier</b> (Slides): kurz vor der Note. <b>Hier</b> (Stop, Release): an der Stelle.
+    Dieselbe noch einmal antippen nimmt sie weg.</li>
+</ol>
+<ul>
+  <li><b>Ab- und Aufschlag</b> (⊓ / V an einem Akkord, siehe oben): mit dem Profil schickt Tactus Irons eigene Tasten Downstroke / Upstroke
+    – Iron schlägt den Akkord selbst an.</li>
+  <li>Iron spielt die Gitarre eine Oktave höher als sie klingt und höchstens <b>vier Töne</b> zugleich: Tactus schickt die Noten passend
+    verschoben, angetippte Akkorde werden enge Griffe (4 Saiten). Im Notenbild steht alles, wie es klingt.</li>
+  <li>Das Profil wird mit dem Stück gespeichert (auch deine geänderten Tasten). MusicXML schreibt die Spielweisen als Text über die Noten.</li>
+</ul>
+<figure><img src="help/img/keyswitch.png" alt="Eine Gitarre mit UJAM Iron 2: P.M. über anderthalb Takte, dann ein Slide und Dead Notes; links das Panel Spielweise"><figcaption>Eine Gitarren-Spur mit UJAM Iron 2: „P.M.“ gilt bis zum Open in Takt 2, dort ein Slide, in Takt 3 Dead Notes. Links das Noten-Panel mit den Spielweisen von Iron.</figcaption></figure>
 
 <!-- ================================================================================= -->
 <h2 id="notenblatt">9. Notenblatt und PDF</h2>

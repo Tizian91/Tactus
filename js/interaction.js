@@ -608,7 +608,9 @@
     const len = t.len || TC.inputTicks(S.input), stroke = S.input.chordMode === 'd' || S.input.chordMode === 'u' ? S.input.chordMode : null;
     // (the size chosen in the panel: as the symbol, a triad, a four-note chord, a power chord)
     const size = S.input.chordSize || '', ch = TC.accomp.resize(at.ch, size, TC.score.harmonyScale(S.doc, t.bar));
-    const notes = TC.accomp.chordNotes(ch, track, t.pitch, size, { tight: !!S.input.chordTight });
+    // (a VST playing at most four tones - Iron: its profile says so - gets the tight grips)
+    const tight = !!S.input.chordTight || !!(track.ksw && track.ksw.poly && track.ksw.poly <= 4);
+    const notes = TC.accomp.chordNotes(ch, track, t.pitch, size, { tight });
     let n = 0;
     notes.forEach((x) => {
       const note = TC.newPitchNote(x.pitch, x.dia, S.input);

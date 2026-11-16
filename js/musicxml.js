@@ -205,6 +205,11 @@
             else dir(`<wedge type="${d.w === 'cresc' ? 'crescendo' : 'diminuendo'}" number="1"/>`, d.t);
           });
           (stops.get(i) || []).forEach((s) => (s.v ? dir(`<dynamics><${s.v}/></dynamics>`, s.x) : dir('<wedge type="stop" number="1"/>', s.x)));
+          // keyswitches (ways of playing of the VST): their names above the staff (P.M., Dead, slide …)
+          if (TC.ksw && t.ksw) ((t.bars[i] && t.bars[i].ks) || []).forEach((m) => {
+            const k = TC.ksw.keyOf(t, m.k);
+            if (k) o.push(`<direction placement="above"><direction-type><words>${esc(k.short || k.name)}</words></direction-type>${off(m.t)}${stf}</direction>`);
+          });
         }
 
         // the notes: those the bar plays (a %-bar: the bar it repeats, for playback), voice by voice -

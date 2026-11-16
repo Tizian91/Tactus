@@ -1078,6 +1078,22 @@ setTimeout(() => {
           ok('instrument: a chord tapped on a bass - one tone, the root', bt.bars[0].voices[0].length === 1 && bt.bars[0].voices[0][0].notes.length === 1 && bt.bars[0].voices[0][0].notes[0].pitch % 12 === 0);
           TC.actions.setChordMode('');
           while (TC.history.undoStack.length > undoInst) TC.actions.undo();
+          // keyswitches: UJAM Iron 2 chosen at the track (Tracks & sound), P.M. set in the note panel - drawn above the staff
+          const undoKs = TC.history.undoStack.length, it = TC.score.addTrack(S.doc, 'Iron', null, 'pitched');
+          TC.commit();
+          TC.actions.selectTrack(it.id);
+          const kswSel = W('select[data-action="setTrackKsw"]');
+          if (kswSel) { kswSel.value = 'ujam-iron2'; kswSel.dispatchEvent(new Event('change', { bubbles: true })); }
+          ok('keyswitches: the Iron profile at the track, its keys listed with ▶', !!kswSel && !!it.ksw && WA('[data-action="testKsw"]').length === it.ksw.keys.length);
+          TC.panel.closeSettings();
+          TC.selectBar(0);
+          S.chordSlot = 0;
+          TC.refresh();
+          const pmBtn = document.querySelector('#panel-notes [data-action="setKs"][data-value="muted"]');
+          if (pmBtn) pmBtn.click();
+          ok('keyswitches: P.M. from the note panel - in the bar, written above the staff with its line', !!pmBtn && JSON.stringify(it.bars[0].ks) === '[{"t":0,"k":"muted"}]' &&
+            [...document.querySelectorAll('.score .ks-mark')].some((x) => x.textContent === 'P.M.') && !!document.querySelector('.score .ks-line'));
+          while (TC.history.undoStack.length > undoKs) TC.actions.undo();
           S.trackId = S.doc.tracks[0].id;
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');

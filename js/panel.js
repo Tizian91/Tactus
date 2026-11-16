@@ -479,7 +479,8 @@
     if (TC.midiOut && TC.midiOut.supported()) {
       // (drums: the channel the kit profile puts its keys on - the one of the snare - shown, e.g. to filter a VST to it)
       const kitK = t.kind === 'drums' && TC.midi.keyFor(TC.drums.byId(38), TC.kits.ofTrack(S.doc, t), { replaced: new Map(), missing: new Set() });
-      const chs = [['', t.kind === 'pitched' ? tr('Channel {n}', { n: t.channel + 1 }) : tr('From the kit profile') + (kitK ? ' (' + tr('Channel {n}', { n: kitK.ch + 1 }) + ')' : '')]].concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), String(k + 1)]));
+      const chs = [['', t.kind === 'pitched' ? tr('Channel {n} (default)', { n: (t.channel || 0) + 1 }) : tr('From the kit profile') + (kitK ? ' (' + tr('Channel {n}', { n: kitK.ch + 1 }) + ')' : '')]]
+        .concat(Array.from({ length: 16 }, (_, k) => [String(k + 1), tr('Channel {n}', { n: k + 1 })]));
       const curCh = Number.isInteger(t.midiCh) ? String(t.midiCh + 1) : '';
       midi = `<div class="row"><label>${tr('Sound output')}</label><select data-action="setTrackMidiOut">${outputOptions(t)}</select>` +
         (t.midiOut ? btn('testTrackOut', undefined, '▶', false, tr('Test: one note to this output now'), 'icon') : '') + '</div>' +

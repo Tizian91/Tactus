@@ -353,6 +353,7 @@
     'Like the score ({name})': 'Wie das Stück ({name})',
     'Like the panel ({name})': 'Wie im Panel ({name})',
     'Sound output': 'Spielt über',
+    'Channel {n} (default)': 'Kanal {n} (Standard)',
     'Tracks & sound…': 'Spuren & Klang…',
     'Tracks & sound': 'Spuren & Klang',
     'Tracks (add, order, mute / solo), the sound of each track (Tactus or a MIDI output), playback': 'Spuren (hinzufügen, Reihenfolge, stumm / solo), Klang jeder Spur (Tactus oder ein MIDI-Ausgang), Wiedergabe',

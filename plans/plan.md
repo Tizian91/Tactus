@@ -589,7 +589,8 @@ Kap. 8. **Nach Rückmeldung (2026-11-16): Schlagmuster sind „zu viel unter die
 Noten-Panel „Akkorde → Setzen: Ton · Akkord · ↓ · ↑“, ein Tipp setzt den Akkord der Akkordzeile dort (Gitarre: Griff, sonst ab dem
 angetippten Ton aufwärts, `AC.chordNotes`), Notenwert wie bei Tönen; `note.chordNote`: gehalten + runter / hoch = Ab- / Aufschlag (sonst
 ♯ / ♭); Menü ↓ / ↑ / –; Panel „Anschlag“ bei ausgewähltem Akkord. Die Muster (`AC.write`) bleiben im Code, ohne Knopf. Handbuch:
-Tabelle „Welche Akkorde kann ich eintippen?“. **Offen:** Akkord per Tipp in die
+Tabelle „Welche Akkorde kann ich eintippen?“. Danach: „Töne: wie Symbol · Dreiklang · Vierklang (Septime der Tonleiter) · Power“
+(`AC.resize`, Powerchord-Griff auf E- / A-Saite). **Offen:** Akkord per Tipp in die
 linke Hand; Gitarren-Lage wählbar (offen / höher).
 
 Ein gemeinsamer Kern für beide: aus den Akkordsymbolen Noten nach einem Muster. **Klavier (linke Hand):** Grundton + Akkord,

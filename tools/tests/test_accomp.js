@@ -28,6 +28,17 @@ module.exports = function (T) {
   T.eq('a tapped slash chord: its bass below', AC.chordNotes(ch('C/G'), pt, 60).map((x) => x.pitch), [55, 60, 64]);
   T.eq('a tapped chord (guitar): the grip', AC.chordNotes(ch('G'), { program: 25 }, 60).map((x) => x.pitch), [43, 47, 50, 55, 59, 67]);
 
+  // ---- the size of a tapped chord: triad, four-note chord (the seventh of the scale), power chord
+  const Cmaj = { l: 0, a: 0, id: 'major' }, ivOf = (s, size) => AC.resize(ch(s), size, Cmaj).iv;
+  T.eq('four-note chord from the scale: C → Cmaj7, G → G7, Dm → Dm7, H° → Hm7♭5', [ivOf('C', '4'), ivOf('G', '4'), ivOf('Dm', '4'), ivOf('Bdim', '4')], [[0, 4, 7, 11], [0, 4, 7, 10], [0, 3, 7, 10], [0, 3, 6, 10]]);
+  T.eq('… its own seventh kept (C7, Cdim7), a sixth chord gets a seventh', [ivOf('C7', '4'), ivOf('Cdim7', '4'), ivOf('C6', '4')], [[0, 4, 7, 10], [0, 3, 6, 9], [0, 4, 7, 11]]);
+  T.eq('triad: C7 → C E G, Cadd9 → C E G, Csus4 → C F G', [ivOf('C7', '3'), ivOf('Cadd9', '3'), ivOf('Csus4', '3')], [[0, 4, 7], [0, 4, 7], [0, 5, 7]]);
+  T.eq('as written: unchanged', AC.resize(ch('Cmaj9'), '', Cmaj), ch('Cmaj9'));
+  const pw = (s, tr, tap) => AC.chordNotes(AC.resize(ch(s), '5', Cmaj), tr, tap, '5').map((x) => x.pitch);
+  T.eq('power chord, guitar: E on the open E string, G on fret 3, C on the A string (fret 3)', [pw('E', { program: 25 }, 60), pw('G', { program: 25 }, 60), pw('C', { program: 25 }, 60)], [[40, 47, 52], [43, 50, 55], [48, 55, 60]]);
+  T.eq('power chord, piano: from the tapped tone (C4: C4 G4 C5)', pw('Cm7', pt, 60), [60, 67, 72]);
+  T.eq('a four-note chord on the guitar: a grip with the seventh (G7 from G in C major)', AC.chordNotes(AC.resize(ch('G'), '4', Cmaj), { program: 25 }, 60).map((x) => x.pitch % 12).includes(5), true);
+
   // ---- written into bars
   const doc = TC.emptyScore(3);
   TC.state.doc = doc;

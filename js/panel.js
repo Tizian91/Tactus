@@ -387,6 +387,9 @@
         ${btn('setChordMode', 'n', tr('Chord'), m === 'n', tr('A tap writes the chord of the chord symbols there'))}
         ${btn('setChordMode', 'd', '↓', m === 'd', tr('A chord struck down'))}
         ${btn('setChordMode', 'u', '↑', m === 'u', tr('A chord struck up'))}</div></div>
+      ${m ? `<div class="row"><label>${tr('Tones')}</label><div class="seg">${[['', 'As written', 'The chord of the symbol as it is'], ['3', 'Triad', 'Root, third, fifth (7, 6, add9 … left out)'],
+        ['4', 'Four-note chord', 'With the seventh: its own, else the one of the scale (C in C major: Cmaj7, G: G7)'], ['5', 'Power', 'Root, fifth, octave (a guitar: on its E or A string)']]
+        .map(([v, l, h]) => btn('setChordSize', v, tr(l), (S.input.chordSize || '') === v, tr(h))).join('')}</div></div>` : ''}
       <p class="hint tight">${tr(m ? 'Tap: the chord of the chord symbols there (panel "Bar · score" → Chords) - a guitar: a grip; else from the tapped tone up. Hold it, then down / up: its stroke.' : 'Chord: a tap writes the whole chord of the chord symbols there.')}</p>
     </section>`;
   }

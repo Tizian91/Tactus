@@ -1048,6 +1048,14 @@ setTimeout(() => {
           mouse('pointerup', [hx, hy + 45], { ctrlKey: true });
           ok('chords: a chord held and moved down - a down stroke, the tones stay', gev[0].notes.every((n) => n.stroke === 'd') && gev[0].notes.map((n) => n.pitch).sort((a, b) => a - b).join() === '48,52,55,60,64');
           S.selection.clear();
+          TC.actions.setChordMode('d');
+          TC.refresh();
+          const pwBtn = document.querySelector('#panel-notes [data-action="setChordSize"][data-value="5"]');
+          if (pwBtn) pwBtn.click();
+          click(0, 1920, 4, { track: gtr });
+          const pwEv = gtr.bars[0].voices[0].find((e) => e.tick === 1920);
+          ok('chords: "Power" in the panel - root, fifth, octave on the A string (C3 G3 C4)', !!pwBtn && !!pwEv && pwEv.notes.map((x) => x.pitch).sort((a, b) => a - b).join() === '48,55,60');
+          TC.actions.setChordSize('');
           TC.actions.setChordMode('');
           TC.score.setChord(S.doc, 1, 0, null);
           ok('chords: no chord symbol there - nothing written, said', (() => { TC.actions.setChordMode('n'); const before = gtr.bars[1].voices[0].length; click(1, 0, 4, { track: gtr }); TC.actions.setChordMode(''); return gtr.bars[1].voices[0].length === before || !!TC.score.chordAt(S.doc, 1, 0); })());

@@ -606,7 +606,9 @@
       return false;
     }
     const len = t.len || TC.inputTicks(S.input), stroke = S.input.chordMode === 'd' || S.input.chordMode === 'u' ? S.input.chordMode : null;
-    const notes = TC.accomp.chordNotes(at.ch, track, t.pitch);
+    // (the size chosen in the panel: as the symbol, a triad, a four-note chord, a power chord)
+    const size = S.input.chordSize || '', ch = TC.accomp.resize(at.ch, size, TC.score.harmonyScale(S.doc, t.bar));
+    const notes = TC.accomp.chordNotes(ch, track, t.pitch, size);
     let n = 0;
     notes.forEach((x) => {
       const note = TC.newPitchNote(x.pitch, x.dia, S.input);
@@ -619,7 +621,7 @@
     if (!n) { TC.refresh(); return false; }
     TC.commit();
     if (sound && S.settings.sound) notes.forEach((x, k) => TC.audio.previewTone(x.pitch, track, stroke ? (stroke === 'u' ? notes.length - 1 - k : k) * 0.012 : 0));
-    TC.ui.status(`${where(t)} · ${TC.pitch.chordName(at.ch, de())}${stroke ? ' ' + (stroke === 'd' ? '↓' : '↑') : ''}`);
+    TC.ui.status(`${where(t)} · ${TC.pitch.chordName(at.ch, de())}${size ? ' · ' + tr({ 3: 'Triad', 4: 'Four-note chord', 5: 'Power chord' }[size]) : ''}${stroke ? ' ' + (stroke === 'd' ? '↓' : '↑') : ''}`);
     return true;
   }
 

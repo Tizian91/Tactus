@@ -1376,6 +1376,11 @@
     TC.refresh();
     if (S.input.chordMode) TC.ui.hint(tr('Tap: the chord of the chord symbols there - hold a chord and move down / up: its stroke ↓ / ↑'));
   };
+  /** How many tones a tapped chord has: '' as its symbol, '3' a triad, '4' a four-note chord, '5' a power chord. */
+  A.setChordSize = function (v) {
+    S.input.chordSize = ['3', '4', '5'].includes(String(v)) ? String(v) : '';
+    TC.refresh();
+  };
   /** The stroke of the selected chords (their whole events): 'd' down, 'u' up, '' none. */
   A.setStroke = function (v) {
     const evs = new Set();

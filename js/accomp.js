@@ -235,12 +235,46 @@
   };
 
   /**
+   * A chord made smaller / bigger for writing (note panel "Tones"): size '' as the symbol, '3' a triad (root, third,
+   * fifth - 7, 6, add9 … go), '4' a four-note chord (its seventh, else the seventh of the scale there: C in C major
+   * Cmaj7, G G7, a diminished triad its minor seventh), '5' a power chord (root and fifth). The slash bass stays.
+   */
+  AC.resize = function (ch, size, scale) {
+    if (!size) return ch;
+    const q = P().qual(ch.q), iv = q ? q.iv : ch.iv || [0, 4, 7];
+    let out;
+    if (size === '5') out = [0, 7];
+    else {
+      const third = iv.find((i) => i >= 2 && i <= 5), fifth = iv.find((i) => i >= 6 && i <= 8);
+      out = [0].concat(third !== undefined ? [third] : [], [fifth !== undefined ? fifth : 7]);
+      if (size === '4') {
+        let sev = iv.find((i) => i === 10 || i === 11 || (i === 9 && ch.q === 'dim7')); // (a 6 chord's 9 is a sixth)
+        if (sev === undefined) {
+          const r = P().pc(ch.root.l, ch.root.a), s = scale ? P().scaleById(scale.id) : null;
+          const pcs = s ? s.iv.map((i) => mod(P().pc(scale.l, scale.a) + i, 12)) : [];
+          sev = [10, 11].concat(out.includes(6) ? [9] : []).find((i) => pcs.includes(mod(r + i, 12)));
+          if (sev === undefined) sev = 10;
+        }
+        out.push(sev);
+      }
+    }
+    return Object.assign({}, ch, { q: null, iv: out });
+  };
+
+  /**
    * A chord written with a tap (note panel "Write: chord"): its notes [{ pitch, dia }] - a guitar: a grip; else the
    * chord tones close together from the tapped pitch up (tapped higher: an inversion higher; a slash bass below them).
+   * size '5' (a power chord): root, fifth, octave - a guitar on its E or A string (frets 0 … 7, as played).
    */
-  AC.chordNotes = function (ch, track, tapped) {
+  AC.chordNotes = function (ch, track, tapped, size) {
     let pitches;
-    if (AC.isGuitar(track)) pitches = AC.voicing(ch, 'guitar');
+    if (size === '5') {
+      const r = P().pc(ch.root.l, ch.root.a);
+      let low;
+      if (AC.isGuitar(track)) low = mod(r - 4, 12) <= 7 ? 40 + mod(r - 4, 12) : 45 + mod(r - 9, 12);
+      else low = from(r, Math.max(0, Math.min(108, tapped)));
+      pitches = [low, low + 7, low + 12];
+    } else if (AC.isGuitar(track)) pitches = AC.voicing(ch, 'guitar');
     else {
       const pcs = [...new Set(P().chordPcs(ch))], base = Math.max(0, Math.min(115, tapped));
       // the chord tone at or right above the tapped pitch first, the others above it

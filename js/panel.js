@@ -97,7 +97,7 @@
       ${btn('toggleLock', undefined, `🔒 ${tr('Lock instrument')}`, lock, tr('A click anywhere in the column writes the selected instrument (L, or hold Shift)'), 'lock-btn')}
       <p class="hint tight">${lock ? tr('On: the height no longer matters.') : tr('Hold Shift: lock while held · L: switch')}</p>
       ${groups}
-      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: panel "Bar · score" → Tracks.') : tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
+      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: "Tracks & sound…" (panel "Bar · score").') : tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
   }
 
   function noteSection(hit) {
@@ -153,7 +153,7 @@
         <section><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
-        <p class="hint tight">${tr('Scale, clef and voice: panel "Bar · score" → Tracks.')}</p></section>${lyricsSection(false)}`;
+        <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${dynSection()}${lyricsSection(false)}`;
     }
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
@@ -180,7 +180,7 @@
       ${accentRow(hit.note.accent || 0)}
       <div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
         ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
-    </section>${lyricsSection(true)}`;
+    </section>${dynSection()}${lyricsSection(true)}`;
   }
 
   /** Lyrics of the melody track being written: the verse, start typing (at the selected note), delete a verse. */
@@ -371,7 +371,7 @@
    */
   function dynSection() {
     const i = S.selBar, SC = TC.score;
-    if (i === null || !S.doc.bars[i]) return '';
+    if (i === null || !S.doc.bars[i]) return `<section><h3>${tr('Dynamics')}</h3><p class="hint">${tr('Tap a bar (or write a note): p, f, crescendo … from a place in it.')}</p></section>`;
     const t = TC.curTrack(), ts = S.doc.bars[i].ts, slots = SC.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
     const list = SC.dynIn(t, i), lv = (x) => list.find((d) => d.t === x && d.v), wg = (x) => list.find((d) => d.t === x && d.w);
     const here = lv(slot), wedge = wg(slot);
@@ -750,14 +750,16 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind]);
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind,
+      // (dynamics: the selected bar, its places and what the track has there)
+      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, S.selBar !== null && TC.curTrack().bars[S.selBar] && TC.curTrack().bars[S.selBar].dyn]);
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;
       const scroll = notesRoot.scrollTop;
       // a melody track: no instruments - the tones come from the lines (and its scale)
       notesRoot.innerHTML = head(tr('Notes'), 'left') + toolSection() + valueSection() +
-        (TC.curTrack().kind === 'pitched' ? melodyNoteSection(hit && hit.note.pitch !== undefined ? hit : null) : instrumentSection(cur) + noteSection(hit));
+        (TC.curTrack().kind === 'pitched' ? melodyNoteSection(hit && hit.note.pitch !== undefined ? hit : null) : instrumentSection(cur) + noteSection(hit) + dynSection());
       notesRoot.scrollTop = scroll;
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
@@ -770,7 +772,7 @@
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing: the track (and a melody's scale), the bar and what belongs to it, the score -
       // tracks and playback in their own window ("Tracks & sound…"), the rest in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + dynSection() + repeatSection() + findSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;

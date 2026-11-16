@@ -48,11 +48,15 @@ module.exports = function (T) {
   dr.volume = 80;
   const m = TC.midi.read(TC.midi.build(doc, null, {}).bytes);
   const v = (k) => m.notes.filter((n) => n.t >= k * 3840 && n.t < (k + 1) * 3840).map((n) => n.vel);
-  T.eq('MIDI: mf 91, p softer, f louder', [v(0)[0], v(1)[0] === Math.round(0.72 * F[2] * 127), v(4)[0] === Math.round(0.72 * F[5] * 127)], [91, true, true]);
-  const raw = TC.midi.build(doc, null, {}).bytes;
-  const cc7 = (() => { for (let i = 0; i < raw.length - 2; i++) if ((raw[i] & 0xf0) === 0xb0 && raw[i + 1] === 7) return raw[i + 2]; return null; })();
-  T.eq('MIDI: the fader (80) as channel volume CC 7', cc7, 80);
+  T.eq('MIDI: mf, p softer, f louder (times the fader 0.8)', [v(1)[0] === Math.round(0.72 * F[2] * 0.8 * 127), v(4)[0] === Math.round(0.72 * F[5] * 0.8 * 127)], [true, true]);
+  const cc7 = (bytes) => { for (let i = 0; i < bytes.length - 2; i++) if ((bytes[i] & 0xf0) === 0xb0 && bytes[i + 1] === 7) return bytes[i + 2]; return null; };
+  T.eq('MIDI: the fader of a drum track (80): its strengths, no CC 7 (drum VSTs ignore it)', [v(0)[0], cc7(TC.midi.build(doc, null, {}).bytes)], [Math.round(0.72 * 0.8 * 127), null]);
   dr.volume = 100;
+  const md = TC.emptyScore(1), mt = SC.addTrack(md, 'Synth', null, 'pitched');
+  SC.place(md, mt, 0, 0, 0, 960, TC.newPitchNote(60, null, {}));
+  mt.volume = 70;
+  const mm = TC.midi.build(md, null, {}).bytes;
+  T.eq('MIDI: the fader of a melody track (70): channel volume CC 7, its strength stays', [cc7(mm), TC.midi.read(mm).notes.find((n) => n.note === 60).vel], [70, 91]);
 
   // ---- saved, loaded, copied; a bar with other dynamics is no %-bar
   const back = TC.normalizeDoc(JSON.parse(JSON.stringify(doc)));

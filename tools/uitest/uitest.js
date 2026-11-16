@@ -801,8 +801,13 @@ setTimeout(() => {
             sent.length = 0;
             TC.audio.preview(TC.newDrumNote(38, { accent: 1 }));
             const noteMsgs = sent.filter((m) => (m[0] & 0xf0) !== 0xb0); // (the fader: CC 7 once before)
-            ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127; CC 7 = 100 before it) ' + JSON.stringify(sent),
-              noteMsgs.length === 2 && noteMsgs[0].join() === [0x99, 38, 127].join() && noteMsgs[1][0] === 0x89 && sent.some((m) => m.join() === [0xb9, 7, 100].join()));
+            ok('MIDI output: a written note goes to the port (General MIDI: channel 10, 38, accent 127) ' + JSON.stringify(sent),
+              noteMsgs.length === 2 && noteMsgs[0].join() === [0x99, 38, 127].join() && noteMsgs[1][0] === 0x89);
+            dr.volume = 64;
+            sent.length = 0;
+            TC.audio.preview(TC.newDrumNote(38, {}));
+            ok('MIDI output: the fader of a drum track (64) - softer strength, no CC 7 (drum VSTs ignore it) ' + JSON.stringify(sent), sent.length === 2 && sent[0][2] === Math.round(0.72 * 0.64 * 127));
+            dr.volume = 100;
             TC.actions.setMidiLead(200);
             ok('MIDI output: lead 200 ms set in the panel', TC.midiOut.lead() === 0.2 && document.querySelector('input[data-midilead]').value === '200');
             // two outputs: a melody track on its own (Test Port 2), the drums on theirs, a track without one: Tactus' sounds
@@ -870,7 +875,7 @@ setTimeout(() => {
           TC.selectBar(0);
           S.chordSlot = 0;
           TC.panel.update(true);
-          const pBtn = document.querySelector('#panel-settings [data-action="setDyn"][data-value="p"]');
+          const pBtn = document.querySelector('#panel-notes [data-action="setDyn"][data-value="p"]'); // (the note panel, under the notes)
           if (pBtn) pBtn.click();
           ok('dynamics: p from the panel - in the track, drawn under the staff', !!pBtn && JSON.stringify(dt.bars[0].dyn) === '[{"t":0,"v":"p"}]' && !!document.querySelector('.score .mus.dyn'));
           TC.actions.setWedge('cresc');

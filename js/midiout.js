@@ -99,7 +99,10 @@
   /** A track's output is chosen but not there (not connected, or MIDI not allowed yet). */
   MO.missing = () => !S.settings.midiOff && S.doc.tracks.some((t) => t.midiOut && !byName(t.midiOut));
 
-  /** A track's fader (track.volume, 100 = as before): the channel volume CC 7, sent once per output and channel. */
+  /**
+   * A melody track's fader (track.volume, 100 = as before): the channel volume CC 7, sent once per output and channel
+   * (a synth keeps its sound). Drum tracks: the strength instead (MO.hit) - drum VSTs mostly ignore CC 7.
+   */
   const volSent = new Map();
   function volume(o, ch, track, at) {
     const vol = track && Number.isInteger(track.volume) ? TC.clamp(track.volume, 0, 127) : 100, k = o.name + ':' + ch;
@@ -135,8 +138,8 @@
     // makes up for the delay of the drum VST
     const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
-    const v = Math.max(1, Math.min(127, Math.round(vel * 127)));
-    volume(o, k.ch, track, at);
+    // (a drum track's fader: the strength - drum VSTs mostly ignore the channel volume CC 7, e.g. EZDrummer)
+    const v = Math.max(1, Math.min(127, Math.round(vel * TC.audio.trackGain(track) * 127)));
     if (send(o, [0x90 | k.ch, k.note, v], at)) {
       send(o, [0x80 | k.ch, k.note, 0], at + NOTE_MS);
       remember(o, k.ch);

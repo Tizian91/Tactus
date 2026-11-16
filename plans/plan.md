@@ -602,7 +602,8 @@ Exportieren. **Kein Griffbrett, keine Griffbilder, keine Tabulatur** (ausdrückl
   Takte, „Für alle Spuren“ (`S.dynAll`), Klavier: beide Hände. Notenbild: Bravura-Glyphen unter der Zeile (Melodie mit Text: unter dem
   Text), Gabeln über Zeilenumbrüche. MusicXML `<dynamics>` (+ `<sound dynamics>`), `<wedge>`.
 - Spur-Lautstärke (`track.volume`, war schon im Modell, ungenutzt): Regler in „Spuren & Klang“; Tactus-Klänge: Verstärkung, MIDI:
-  CC 7 (live einmal je Ausgang + Kanal, Export am Anfang, wenn ≠ 100) – Anschlagstärke unverändert.
+  Melodie über MIDI: CC 7 (live einmal je Ausgang + Kanal, Export am Anfang, wenn ≠ 100), Anschlag bleibt; Schlagzeug über MIDI: die
+  Anschlagstärke (EZDrummer 3 überhört CC 7 – beim Testen bemerkt). Panel: Dynamik im Noten-Panel links (unter den Noten, über dem Liedtext).
 - Tests: `test_dynamics.js` (21), Klick-Test (7), Bild `help/img/dynamik.png`, Handbuch Kap. 10 „Dynamik“.
 - Offen: Dynamik im Taktmenü; Gabel per Ziehen im Notenbild; Ausweichen, wenn Dynamik und Zählhilfe sich bei sehr tiefen Noten
   berühren.

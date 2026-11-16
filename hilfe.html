@@ -489,8 +489,8 @@ Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass 
   <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
 </ul>
 <h3 id="dynamik">Dynamik (ppp … fff) und Lautstärke der Spuren</h3>
-<p><b>Dynamik</b> sagt, wie stark ab einer Stelle gespielt wird: Takt antippen, im Panel <span class="ui">Dynamik</span> die Stelle im Takt
-wählen (wie bei den Akkorden) und eine Stufe <i>ppp pp p mp mf f ff fff</i>. Ohne Angabe spielt alles <i>mf</i> – wie bisher.</p>
+<p><b>Dynamik</b> sagt, wie stark ab einer Stelle gespielt wird: Takt antippen (oder eine Note setzen), im Abschnitt <span class="ui">Dynamik</span> die Stelle im Takt
+wählen (wie bei den Akkorden) und eine Stufe <i>ppp pp p mp mf f ff fff</i> – im Noten-Panel links, unter den Noten (bei Melodien über dem Liedtext). Ohne Angabe spielt alles <i>mf</i> – wie bisher.</p>
 <ul>
   <li><b>Gabeln:</b> <span class="ui">&lt; cresc.</span> (immer lauter) und <span class="ui">&gt; dim.</span> (immer leiser) gehen von der
     Stelle bis zum Ende der markierten Takte (<span class="ui">bis Takt</span> im Takt-Panel) – zur Stufe, die dort steht, sonst zwei Stufen
@@ -503,9 +503,9 @@ wählen (wie bei den Akkorden) und eine Stufe <i>ppp pp p mp mf f ff fff</i>. Oh
     Dieselbe Stufe noch einmal antippen nimmt sie wieder weg.</li>
 </ul>
 <p><b>Lautstärke einer Spur:</b> in <span class="ui">Spuren &amp; Klang</span> der Regler <span class="ui">Lautstärke</span> bei der Spur –
-wie ein Fader am Mischpult. Mit Tactus-Klängen wird die Spur leiser / lauter, über MIDI schickt Tactus die Kanal-Lautstärke (CC 7); die
-Anschlagstärke bleibt, so wechselt dein Drum-VST nicht die Samples.</p>
-<figure><img src="help/img/dynamik.png" alt="Gesang mp mit Crescendo zu f, Schlagzeug p mit Crescendo zu f; rechts das Panel Dynamik"><figcaption>Gesang <i>mp</i>, über zwei Takte lauter bis <i>f</i>; das Schlagzeug von <i>p</i> nach <i>f</i>. Rechts das Panel mit den Stufen und den Gabeln.</figcaption></figure>
+wie ein Fader am Mischpult. Mit Tactus-Klängen wird die Spur leiser / lauter. Über MIDI: eine <b>Melodie-Spur</b> bekommt die
+Kanal-Lautstärke (CC 7, ihr Klang bleibt), eine <b>Schlagzeug-Spur</b> schwächere Anschläge – Drum-VSTs wie EZDrummer überhören CC 7.</p>
+<figure><img src="help/img/dynamik.png" alt="Gesang mp mit Crescendo zu f, Schlagzeug p mit Crescendo zu f; links das Noten-Panel mit der Dynamik"><figcaption>Gesang <i>mp</i>, über zwei Takte lauter bis <i>f</i>; das Schlagzeug von <i>p</i> nach <i>f</i>. Links das Noten-Panel mit den Stufen und den Gabeln.</figcaption></figure>
 
 <h3 id="verzoegerung">Verzögerung ausgleichen</h3>
 <p>Bluetooth-Kopfhörer und manche Soundkarten spielen den Ton hörbar später, als der Cursor läuft. Feld

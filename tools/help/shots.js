@@ -138,10 +138,10 @@ setTimeout(() => {
         TC.commit();
         S.trackId = mel.id;
         TC.selectBar(1);
-        A.togglePanelRight();
+        A.togglePanel();
         TC.refresh();
         view(0.9, 10, -40);
-        setTimeout(() => { const h = [...document.querySelectorAll('#panel-settings h3')].find((x) => /Dynamik/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
+        setTimeout(() => { const h = [...document.querySelectorAll('#panel-notes h3')].find((x) => /Dynamik/.test(x.textContent)); if (h) h.scrollIntoView(); }, 200);
       }, 400);
     },
     // MIDI import: track, where it comes from, grid, tempo, target

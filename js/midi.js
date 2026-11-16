@@ -103,13 +103,10 @@
     const held = new Map(); // melody: the last note of each track, channel and pitch (a tied note lengthens it)
     tracks.forEach((track, ti) => {
       if (track.kind === 'pitched' && !track.lh) addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
-      // the track's volume (fader, 100 = as before): channel volume CC 7 at the start - the strengths stay
+      // a melody track's volume (fader, 100 = as before): channel volume CC 7 at the start - its strengths stay
+      // (a drum track's fader: its strengths, below - drum VSTs mostly ignore CC 7)
       const vol = Number.isInteger(track.volume) ? track.volume : 100;
-      if (vol !== 100 && !track.lh) {
-        const k = track.kind === 'drums' ? keyFor(TC.drums.byId(38), targetOf(track), { replaced: new Map(), missing: new Set() }) : null;
-        const ch = track.kind === 'pitched' ? melodyCh(track) : Number.isInteger(track.midiCh) ? track.midiCh : k ? k.ch : 9;
-        addTo(noteEv[ti])(0, 0, [0xb0 | ch, 7, TC.clamp(vol, 0, 127)]);
-      }
+      if (vol !== 100 && track.kind === 'pitched' && !track.lh) addTo(noteEv[ti])(0, 0, [0xb0 | melodyCh(track), 7, TC.clamp(vol, 0, 127)]);
     });
     // dynamics (ppp … fff, hairpins) of each track: the strengths of its notes (as heard)
     const dynOf = tracks.map((t) => TC.score.dynFactor(doc, t));
@@ -184,7 +181,8 @@
                 put(t, 2, [0x90 | k.ch, k.note, v]);
                 put(t + NOTE_LEN, 1, [0x80 | k.ch, k.note, 0]);
               };
-              const f = df(bi, e.tick), at = t0 + sw(e.tick), vel = T.velocity(n) * f; // swing: an offbeat comes later
+              // (the dynamics, and the drum track's fader)
+              const f = df(bi, e.tick) * (Number.isInteger(track.volume) ? track.volume / 100 : 1), at = t0 + sw(e.tick), vel = T.velocity(n) * f; // swing: an offbeat comes later
               if (n.orn === 'flam') hit(at - msTicks(30), 0.35 * f);
               if (n.orn === 'drag') {
                 hit(at - msTicks(60), 0.33 * f);

@@ -33,6 +33,7 @@ window.TC = window.TC || {};
       art: 42,              // drum articulation (drummap.js), 42 = hi-hat closed
       chordMode: '',        // melody: a tap writes '' a tone, 'n' the chord there, 'd' / 'u' it struck down / up
       chordSize: '',        // … its tones: '' as the symbol, '3' a triad, '4' a four-note chord, '5' a power chord
+      chordTight: false,    // … a guitar: a tight grip (four strings in the middle) instead of a full one
       accent: 0,            // 0 none, 1 accent (>), 2 marcato (^)
       ghost: false,         // ghost note: head in parentheses, played softly
       head: 'auto',         // notehead: 'auto' = as the drum map says

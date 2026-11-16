@@ -1019,6 +1019,7 @@ setTimeout(() => {
           const undoAcc = TC.history.undoStack.length;
           const gtr = TC.score.addTrack(S.doc, 'Gitarre', null, 'pitched');
           gtr.program = 25;
+          gtr.inst = 'guitar';
           TC.score.setChord(S.doc, 0, 0, { name: 'C' });
           TC.commit();
           TC.actions.selectTrack(gtr.id);
@@ -1061,6 +1062,22 @@ setTimeout(() => {
           ok('chords: no chord symbol there - nothing written, said', (() => { TC.actions.setChordMode('n'); const before = gtr.bars[1].voices[0].length; click(1, 0, 4, { track: gtr }); TC.actions.setChordMode(''); return gtr.bars[1].voices[0].length === before || !!TC.score.chordAt(S.doc, 1, 0); })());
           while (TC.history.undoStack.length > undoAcc) TC.actions.undo();
           ok('chords: undone', !S.doc.tracks.some((t) => t.name === 'Gitarre') && !S.doc.bars[0].chords);
+          // the instrument (Tracks & sound): "Bass" - a bass sound and the bass clef suggested, a tapped chord: one tone
+          const undoInst = TC.history.undoStack.length, bt = TC.score.addTrack(S.doc, 'Bass', null, 'pitched');
+          TC.score.setChord(S.doc, 0, 0, { name: 'C' });
+          TC.commit();
+          TC.actions.selectTrack(bt.id);
+          const instSel = W('select[data-action="setTrackInstrument"]');
+          if (instSel) { instSel.value = 'bass'; instSel.dispatchEvent(new Event('change', { bubbles: true })); }
+          TC.panel.closeSettings();
+          ok('instrument: Bass chosen - a bass sound and the bass clef suggested', !!instSel && bt.inst === 'bass' && bt.program === 33 && bt.clef === 'bass');
+          TC.actions.setChordMode('n');
+          TC.selectBar(0);
+          TC.refresh();
+          click(0, 0, 6, { track: bt });
+          ok('instrument: a chord tapped on a bass - one tone, the root', bt.bars[0].voices[0].length === 1 && bt.bars[0].voices[0][0].notes.length === 1 && bt.bars[0].voices[0][0].notes[0].pitch % 12 === 0);
+          TC.actions.setChordMode('');
+          while (TC.history.undoStack.length > undoInst) TC.actions.undo();
           S.trackId = S.doc.tracks[0].id;
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');

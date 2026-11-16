@@ -28,6 +28,19 @@ module.exports = function (T) {
   T.eq('a tapped slash chord: its bass below', AC.chordNotes(ch('C/G'), pt, 60).map((x) => x.pitch), [55, 60, 64]);
   T.eq('a tapped chord (guitar): the grip', AC.chordNotes(ch('G'), { program: 25 }, 60).map((x) => x.pitch), [43, 47, 50, 55, 59, 67]);
 
+  // ---- the instrument of a track decides how a chord is written - not its sound
+  const bassT = { program: 0, inst: 'bass' }, ens = { program: 0, inst: 'ensemble' }, gtrOrgan = { program: 19, inst: 'guitar' };
+  T.eq('bass: one tone - the root near the tapped place, a slash chord its bass', [AC.chordNotes(ch('C'), bassT, 40).map((x) => x.pitch), AC.chordNotes(ch('C/E'), bassT, 40).map((x) => x.pitch)], [[36], [40]]);
+  T.eq('bass, power chord: root and fifth (the A nearest the tapped E2: A2)', AC.chordNotes(ch('A'), bassT, 40, '5').map((x) => x.pitch), [45, 52]);
+  T.eq('strings / choir / brass: four parts spread (C tapped on G4: C3 E3 C4 G4)', AC.chordNotes(ch('C'), ens, 67).map((x) => x.pitch), [48, 52, 60, 67]);
+  T.eq('a guitar played with an organ sound still gets grips (the instrument decides)', AC.chordNotes(ch('C'), gtrOrgan, 60).map((x) => x.pitch), [48, 52, 55, 60, 64]);
+  T.eq('a guitar sound on a voice track: no grip, close from the tapped tone', AC.chordNotes(ch('C'), { program: 25, inst: 'voice' }, 60).map((x) => x.pitch), [60, 64, 67]);
+  const tg = AC.chordNotes(ch('G7'), { inst: 'guitar' }, 60, '', { tight: true }).map((x) => x.pitch);
+  T.eq('a tight guitar grip: four strings, four different tones (G7)', [tg.length, new Set(tg.map((p) => p % 12)).size, tg[0] % 12], [4, 4, 7]);
+  T.eq('the instrument a sound suggests (older scores)', [25, 33, 0, 48, 89, 53, 73].map((p) => TC.instFromProgram(p)), ['guitar', 'bass', 'keys', 'ensemble', 'pad', 'voice', 'voice']);
+  const old = TC.normalizeDoc({ bars: [{}], tracks: [{ kind: 'pitched', program: 30 }, { kind: 'pitched', program: 0 }, { kind: 'pitched', program: 53, lh: true }] });
+  T.eq('loaded without an instrument: from the sound (a left hand: keys)', old.tracks.map((t) => t.inst), ['guitar', 'keys', 'keys']);
+
   // ---- the size of a tapped chord: triad, four-note chord (the seventh of the scale), power chord
   const Cmaj = { l: 0, a: 0, id: 'major' }, ivOf = (s, size) => AC.resize(ch(s), size, Cmaj).iv;
   T.eq('four-note chord from the scale: C → Cmaj7, G → G7, Dm → Dm7, H° → Hm7♭5', [ivOf('C', '4'), ivOf('G', '4'), ivOf('Dm', '4'), ivOf('Bdim', '4')], [[0, 4, 7, 11], [0, 4, 7, 10], [0, 3, 7, 10], [0, 3, 6, 10]]);
@@ -44,6 +57,7 @@ module.exports = function (T) {
   TC.state.doc = doc;
   const gt = SC.addTrack(doc, 'Gitarre', null, 'pitched');
   gt.program = 25;
+  gt.inst = 'guitar';
   gt.clef = 'treble8';
   SC.setChord(doc, 0, 0, { name: 'C' });
   SC.setChord(doc, 1, 0, { name: 'G' });

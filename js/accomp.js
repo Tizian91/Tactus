@@ -30,7 +30,22 @@
   ];
   AC.byId = (id) => AC.PATTERNS.find((p) => p.id === id) || null;
   /** Is the track's sound a guitar (General MIDI 24 … 31)? */
-  AC.isGuitar = (track) => !!track && track.program >= 24 && track.program <= 31;
+  /**
+   * The instrument of a melody track (track.inst) - how chords are written for it, not how it sounds (its sound is
+   * free): voice (singing, a melody), keys (piano, organ), guitar (grips), bass (the root), ensemble (strings, choir,
+   * brass: four parts spread), pad (synth / pad: close).
+   */
+  AC.INSTRUMENTS = [
+    { id: 'voice', en: 'Voice / melody', de: 'Gesang / Melodie', program: 53, clef: 'treble' },
+    { id: 'keys', en: 'Piano / keys', de: 'Klavier / Keys', program: 0, clef: 'treble' },
+    { id: 'guitar', en: 'Guitar', de: 'Gitarre', program: 25, clef: 'treble8' },
+    { id: 'bass', en: 'Bass', de: 'Bass', program: 33, clef: 'bass' },
+    { id: 'ensemble', en: 'Strings / choir / brass', de: 'Streicher / Chor / Bläser', program: 48, clef: 'treble' },
+    { id: 'pad', en: 'Synth / pad', de: 'Synth / Fläche', program: 89, clef: 'treble' },
+  ];
+  AC.inst = (id) => AC.INSTRUMENTS.find((x) => x.id === id) || null;
+  AC.instFromProgram = (p, lh) => TC.instFromProgram(p, lh);
+  AC.isGuitar = (track) => !!track && (track.inst ? track.inst === 'guitar' : track.program >= 24 && track.program <= 31);
   /** The pattern to start with: a guitar strums, a piano's left hand plays bass + chord, else held chords. */
   AC.defaultFor = (track) => (AC.isGuitar(track) ? 'gDDU' : track && track.lh ? 'pBassChord' : 'pBlock');
 
@@ -61,15 +76,16 @@
    * more the fifth may go), open strings liked, near the grip before (`near`: its position). [pitches low → high]
    * (null: none found - then close tones like a piano).
    */
-  function guitarVoicing(ch, near) {
+  function guitarVoicing(ch, near, tight) {
     const pcs = [...new Set(P().chordPcs(ch))], bpc = bassPc(ch), root = P().pc(ch.root.l, ch.root.a);
     const fifth = mod(root + 7, 12), need = pcs.filter((pc) => !(pcs.length >= 4 && pc === fifth && pc !== bpc));
     let best = null;
-    for (let low = 0; low <= 2; low++) { // the bass on the 6th, 5th or 4th string
+    // (tight: four strings next to each other in the middle - A D G B or D G B e - one tone each)
+    for (let low = tight ? 1 : 0; low <= 2; low++) { // the bass on the 6th, 5th or 4th string
       for (let pos = 0; pos <= 9; pos++) {
         // each string from `low` up: its frets in the window pos … pos+3 (and open) that give a chord tone
         const opts = STRINGS.map((open, s) => {
-          if (s < low) return [null];
+          if (s < low || (tight && s > low + 3)) return [null];
           const list = [];
           for (let f = pos === 0 ? 0 : pos; f <= pos + 3; f++) if (pcs.includes(mod(open + f, 12))) list.push(f);
           if (pos > 0 && pcs.includes(mod(open, 12)) && !list.includes(0)) list.push(0);
@@ -80,6 +96,7 @@
           if (s === STRINGS.length) {
             const pitches = acc.map((f, k) => (f === null ? null : STRINGS[k] + f)).filter((p) => p !== null);
             if (mod(pitches[0], 12) !== bpc) return;
+            if (tight && (pitches.length !== 4 || new Set(pitches.map((p) => mod(p, 12))).size < Math.min(4, pcs.length))) return; // (four strings: every tone once)
             const have = new Set(pitches.map((p) => mod(p, 12)));
             if (!need.every((pc) => have.has(pc))) return;
             const fretted = acc.filter((f) => f !== null && f > 0);
@@ -102,7 +119,7 @@
 
   AC.voicing = function (ch, kind, o = {}) {
     if (kind === 'guitar') {
-      const g = guitarVoicing(ch, o.near);
+      const g = guitarVoicing(ch, o.near, o.tight);
       if (g) return g.pitches;
       const v = pianoVoicing(ch, 'treble8');
       return [v.bass - 12].concat(v.tones.map((p) => p - 12));
@@ -262,24 +279,43 @@
   };
 
   /**
-   * A chord written with a tap (note panel "Write: chord"): its notes [{ pitch, dia }] - a guitar: a grip; else the
-   * chord tones close together from the tapped pitch up (tapped higher: an inversion higher; a slash bass below them).
-   * size '5' (a power chord): root, fifth, octave - a guitar on its E or A string (frets 0 … 7, as played).
+   * A chord written with a tap (note panel "Write: chord"): its notes [{ pitch, dia }] - by the track's instrument:
+   *   guitar   a grip (o.tight: four strings in the middle, one tone each), a power chord on its E or A string
+   *   bass     one tone: the bass of the chord (slash bass / root) nearest the tapped pitch (a power chord: root + fifth)
+   *   ensemble four parts spread (strings, choir, brass): close from the tapped tone down as the top, the second
+   *            highest an octave lower (drop 2); a triad doubles its root
+   *   else     (voice, keys, pad) close together from the tapped pitch up (tapped higher: an inversion higher), a slash
+   *            bass below them
+   * size '5' (a power chord): root, fifth, octave.
    */
-  AC.chordNotes = function (ch, track, tapped, size) {
+  AC.chordNotes = function (ch, track, tapped, size, o = {}) {
+    const inst = (track && track.inst) || (AC.isGuitar(track) ? 'guitar' : 'voice'), tap = Math.max(0, Math.min(115, tapped));
+    const r = P().pc(ch.root.l, ch.root.a);
     let pitches;
-    if (size === '5') {
-      const r = P().pc(ch.root.l, ch.root.a);
-      let low;
-      if (AC.isGuitar(track)) low = mod(r - 4, 12) <= 7 ? 40 + mod(r - 4, 12) : 45 + mod(r - 9, 12);
-      else low = from(r, Math.max(0, Math.min(108, tapped)));
+    if (inst === 'bass') {
+      // one tone (a power chord: root and fifth) - the octave nearest the tapped place
+      const b = size === '5' ? r : bassPc(ch), low = from(b, tap - 6);
+      pitches = size === '5' ? [low, low + 7] : [low];
+    } else if (size === '5') {
+      const low = inst === 'guitar' ? (mod(r - 4, 12) <= 7 ? 40 + mod(r - 4, 12) : 45 + mod(r - 9, 12)) : from(r, Math.min(108, tap));
       pitches = [low, low + 7, low + 12];
-    } else if (AC.isGuitar(track)) pitches = AC.voicing(ch, 'guitar');
+    } else if (inst === 'guitar') pitches = AC.voicing(ch, 'guitar', { tight: o.tight });
     else {
-      const pcs = [...new Set(P().chordPcs(ch))], base = Math.max(0, Math.min(115, tapped));
-      // the chord tone at or right above the tapped pitch first, the others above it
-      const first = pcs.map((pc) => from(pc, base)).sort((a, b) => a - b)[0];
-      pitches = pcs.map((pc) => from(pc, first)).sort((a, b) => a - b);
+      const pcs = [...new Set(P().chordPcs(ch))];
+      if (inst === 'ensemble') {
+        // four parts: the tapped tone's chord tone on top, the others close below it, then the second highest an octave lower
+        const top = pcs.map((pc) => from(pc, tap)).sort((a, b) => a - b)[0];
+        const four = pcs.length >= 4 ? pcs.slice(0, 4) : pcs.concat([r]);
+        const close = four.map((pc) => from(pc, top - 11)).sort((a, b) => a - b);
+        for (let k = 1; k < close.length; k++) if (close[k] === close[k - 1]) close[k - 1] -= 12; // (the doubled root: an octave lower)
+        close.sort((a, b) => a - b);
+        close[close.length - 2] -= 12; // (drop 2: the second highest an octave down)
+        pitches = close.sort((a, b) => a - b);
+      } else {
+        // the chord tone at or right above the tapped pitch first, the others above it
+        const first = pcs.map((pc) => from(pc, tap)).sort((a, b) => a - b)[0];
+        pitches = pcs.map((pc) => from(pc, first)).sort((a, b) => a - b);
+      }
       if (ch.bass) {
         const b = bassPc(ch);
         if (mod(pitches[0], 12) !== b) pitches = [from(b, pitches[0] - 12)].concat(pitches.filter((p) => mod(p, 12) !== b));

@@ -43,6 +43,8 @@
  *                mute, solo, profile, profileName, midiOut, midiCh,
  *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass', scale: { l, a, id } (js/pitch.js),
  *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
+ *                                         inst: 'voice' | 'keys' | 'guitar' | 'bass' | 'ensemble' | 'pad'   the
+ *                                                    instrument: how chords are written for it (js/accomp.js)
  *                                         lh: true   piano: the lower staff (left hand) of the melody track right
  *                                                    before it - one instrument; sound, scale, mute / solo, hidden
  *                                                    and name follow the upper one (SC.syncHands)
@@ -241,6 +243,21 @@
     return (de ? 'Programm ' : 'Program ') + (p + 1);
   };
 
+  /**
+   * Instruments of melody tracks (track.inst): how chords are written for it (js/accomp.js) - its sound is free.
+   * The one a sound suggests: older scores (they had none) once when loaded.
+   */
+  TC.INSTRUMENTS = ['voice', 'keys', 'guitar', 'bass', 'ensemble', 'pad'];
+  TC.instFromProgram = function (p, lh) {
+    if (lh) return 'keys';
+    if (p >= 24 && p <= 31) return 'guitar';
+    if (p >= 32 && p <= 39) return 'bass';
+    if (p >= 0 && p <= 23) return 'keys';
+    if ((p >= 40 && p <= 51) || (p >= 56 && p <= 63)) return 'ensemble';
+    if (p >= 88 && p <= 95) return 'pad';
+    return 'voice';
+  };
+
   TC.newTrack = function (kind = 'drums', bars = 0) {
     const t = {
       id: TC.uid('t'),
@@ -265,6 +282,7 @@
       t.clef = 'treble';
       t.scale = { l: 0, a: 0, id: 'major' }; // C major
       t.voice = '';
+      t.inst = 'voice';  // the instrument (how chords are written; the sound is free)
     }
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
     return t;
@@ -406,6 +424,7 @@
         out.scale = TC.pitch ? TC.pitch.cleanScale(t.scale) : out.scale;
         if (TC.pitch && TC.pitch.VOICES[t.voice]) out.voice = t.voice;
         if (t.lh) out.lh = true;
+        out.inst = TC.INSTRUMENTS.includes(t.inst) ? t.inst : TC.instFromProgram(out.program, !!t.lh);
       }
       out.bars = doc.bars.map((h, i) => {
         const src = Array.isArray(t.bars) ? t.bars[i] : null;
@@ -506,7 +525,7 @@
   // with lh: true (left hand, lower staff). Each staff has its own notes, voices and clef; the rest is the instrument's.
 
   /** What both hands of a piano share (the upper one decides; SC.syncHands copies it). */
-  SC.HAND_SHARED = ['name', 'program', 'volume', 'mute', 'solo', 'hidden', 'midiOut', 'midiCh', 'channel'];
+  SC.HAND_SHARED = ['name', 'program', 'volume', 'mute', 'solo', 'hidden', 'midiOut', 'midiCh', 'channel', 'inst'];
   /** The left hand (lower staff) of a piano's upper track, or null. */
   SC.leftHand = function (doc, t) {
     const n = t && !t.lh ? doc.tracks[doc.tracks.indexOf(t) + 1] : null;

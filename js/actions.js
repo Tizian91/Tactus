@@ -410,6 +410,7 @@
   A.addPiano = function () {
     const t = TC.score.addTrack(S.doc, TC.score.freeTrackName(S.doc, tr('Piano')), TC.curTrack(), 'pitched');
     t.program = 0;
+    t.inst = 'keys';
     TC.score.setPiano(S.doc, t, true);
     S.trackId = t.id;
     S.selection.clear();
@@ -435,6 +436,22 @@
     S.selection.clear();
     TC.commit();
     TC.ui.hint(tr(on ? 'Two staves: tap the lower one to write the left hand' : 'One staff again'));
+  };
+  /**
+   * Melody track being written: its instrument (how chords are written for it - its sound stays free). A sound and a
+   * clef that fit it are set once (both can be changed after); a range (soprano …) only for a voice.
+   */
+  A.setTrackInstrument = function (v) {
+    const t = TC.curTrack(), def = TC.accomp && TC.accomp.inst(v);
+    if (!t || t.kind !== 'pitched' || !def) return;
+    const piano = TC.score.isPiano(S.doc, t);
+    t.inst = v;
+    t.program = def.program;
+    if (!piano) t.clef = def.clef;
+    if (v !== 'voice') t.voice = '';
+    sync(t);
+    TC.commit();
+    TC.ui.hint(tr('Instrument: {name} - a sound and a clef that fit it (both can be changed)', { name: de() ? def.de : def.en }));
   };
   /** Melody track being written: clef. */
   A.setTrackClef = function (clef) {
@@ -1375,6 +1392,11 @@
     TC.saveSettings();
     TC.refresh();
     if (S.input.chordMode) TC.ui.hint(tr('Tap: the chord of the chord symbols there - hold a chord and move down / up: its stroke ↓ / ↑'));
+  };
+  /** A guitar's tapped chords: a full grip (all strings from the bass) or a tight one (four strings in the middle). */
+  A.setChordTight = function (v) {
+    S.input.chordTight = v === true || v === 'true' || v === '1';
+    TC.refresh();
   };
   /** How many tones a tapped chord has: '' as its symbol, '3' a triad, '4' a four-note chord, '5' a power chord. */
   A.setChordSize = function (v) {

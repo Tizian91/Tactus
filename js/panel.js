@@ -219,10 +219,14 @@
       `<optgroup label="${esc(de() ? dname : en)}">` + list.map(([p, sen, sde]) => opt(p, de() ? sde : sen, p === t.program)).join('') + '</optgroup>').join('');
     // piano (two staves): no voice range; the clef is the one of the staff being written
     const piano = TC.score.isPiano(S.doc, t);
-    return `<div class="row"><label>${tr('Sound')}</label><select data-action="setTrackProgram">${sounds}</select></div>
+    // the instrument: how chords are written for it (its sound below is free)
+    const insts = (TC.accomp ? TC.accomp.INSTRUMENTS : []).map((x) => opt(x.id, de() ? x.de : x.en, (t.inst || 'voice') === x.id)).join('');
+    return `<div class="row"><label>${tr('Instrument')}</label><select data-action="setTrackInstrument">${insts}</select></div>
+      <p class="hint tight">${tr('How chords are written for it (guitar: grips, bass: the root …). The sound is free.')}</p>
+      <div class="row"><label>${tr('Sound')}</label><select data-action="setTrackProgram">${sounds}</select></div>
       ${check('togglePiano', piano, tr('Two staves (piano: right and left hand)'))}
       ${piano ? `<p class="hint tight">${tr(t.lh ? 'You are writing the left hand (lower staff). Tap the upper staff for the right hand.' : 'You are writing the right hand (upper staff). Tap the lower staff for the left hand.')}</p>` : ''}
-      ${piano ? '' : `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>`}
+      ${piano || (t.inst && t.inst !== 'voice') ? '' : `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>`}
       <div class="row"><label>${tr(piano ? (t.lh ? 'Clef (lower staff)' : 'Clef (upper staff)') : 'Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>`;
   }
   /** Melody track: its scale from the selected bar on (a change here) - in the panel, next to the bar it belongs to. */
@@ -387,6 +391,9 @@
         ${btn('setChordMode', 'n', tr('Chord'), m === 'n', tr('A tap writes the chord of the chord symbols there'))}
         ${btn('setChordMode', 'd', '↓', m === 'd', tr('A chord struck down'))}
         ${btn('setChordMode', 'u', '↑', m === 'u', tr('A chord struck up'))}</div></div>
+      ${m && TC.accomp.isGuitar(t) ? `<div class="row"><label>${tr('Grip')}</label><div class="seg">
+        ${btn('setChordTight', 'false', tr('Full'), !S.input.chordTight, tr('All strings from the bass up - full, for strumming'))}
+        ${btn('setChordTight', 'true', tr('Tight (4 strings)'), !!S.input.chordTight, tr('Four strings in the middle, one tone each - slim, for picking or short chords'))}</div></div>` : ''}
       ${m ? `<div class="row"><label>${tr('Tones')}</label><div class="seg">${[['', 'As written', 'The chord of the symbol as it is'], ['3', 'Triad', 'Root, third, fifth (7, 6, add9 … left out)'],
         ['4', 'Four-note chord', 'With the seventh: its own, else the one of the scale (C in C major: Cmaj7, G: G7)'], ['5', 'Power', 'Root, fifth, octave (a guitar: on its E or A string)']]
         .map(([v, l, h]) => btn('setChordSize', v, tr(l), (S.input.chordSize || '') === v, tr(h))).join('')}</div></div>` : ''}
@@ -795,7 +802,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind,
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst,
       // (dynamics: the selected bar, its places and what the track has there)
       S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, hit && hit.ev.notes.map((n) => n.stroke || '').join(), TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
@@ -809,7 +816,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

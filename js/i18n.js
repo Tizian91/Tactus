@@ -842,6 +842,27 @@
     'Two fingers': 'Zwei Finger',
     'Scroll and zoom': 'Scrollen und zoomen',
     'Fingers write notes (off: only pen and mouse; a finger selects and scrolls)': 'Finger setzt Noten (aus: nur Stift und Maus; der Finger wählt aus und scrollt)',
+    // lyrics
+    Lyrics: 'Liedtext',
+    Verse: 'Strophe',
+    'Verse {n}': 'Strophe {n}',
+    'A new verse': 'Eine neue Strophe',
+    'Type lyrics': 'Text schreiben',
+    'Type lyrics under the notes': 'Text unter die Noten schreiben',
+    'Type lyrics from this note': 'Text ab dieser Note schreiben',
+    'Ctrl+L · or tap a syllable': 'Strg+L · oder eine Silbe antippen',
+    'Space: next note · "-" between the syllables of a word (Son-ne) · Space on an empty field: the syllable goes on over this note. Pasted text spreads over the notes.':
+      'Leertaste: nächste Note · „-“ zwischen den Silben eines Wortes (Son-ne) · Leertaste im leeren Feld: die Silbe davor geht über diese Note weiter. Eingefügter Text verteilt sich auf die Noten.',
+    'Delete verse {n}': 'Strophe {n} löschen',
+    'The verses after it move up': 'Die Strophen danach rücken nach',
+    'Delete verse {n} of the lyrics of "{track}"?': 'Strophe {n} des Liedtexts von „{track}“ löschen?',
+    'Lyrics (Ctrl+L)': 'Liedtext (Strg+L)',
+    'Lyrics: only in a melody track': 'Liedtext: nur in einer Melodie-Spur',
+    'Lyrics: write the notes first, then their syllables': 'Liedtext: erst die Noten schreiben, dann ihre Silben',
+    'Lyrics: that was the last note': 'Liedtext: das war die letzte Note',
+    'Space: next note · - : syllable · Enter: done': 'Leertaste: nächste Note · - : Silbe · Enter: fertig',
+    'Ctrl+L': 'Strg+L',
+    'Type lyrics (melody: at the selected note)': 'Liedtext schreiben (Melodie: ab der ausgewählten Note)',
   };
 
   TC.getLang = () => (TC.state && TC.state.settings && TC.state.settings.lang) || 'de';

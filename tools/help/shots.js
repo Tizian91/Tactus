@@ -91,6 +91,20 @@ setTimeout(() => {
     bspwiederholungen() { example('wiederholungen'); },
     bspspruenge() { example('spruenge'); },
     bspmelodie() { example('melodie'); setTimeout(() => view(1.05, -10, -70), 300); },
+    // lyrics: the melody example, the second verse being typed (the field under the 2nd note)
+    liedtext() {
+      example('melodie');
+      setTimeout(() => {
+        const t = S.doc.tracks[0], slots = TC.score.lyricSlots(S.doc, t);
+        TC.score.spreadLyrics(slots, 0, 1, TC.score.splitLyrics('Dann'));
+        TC.commit();
+        view(1.35, -40, -150);
+        TC.lyrics.open(t, slots[1].ev, 1);
+        const f = document.querySelector('.lyric-edit');
+        f.value = 'kommt';
+        f.dispatchEvent(new Event('input'));
+      }, 400);
+    },
     // MIDI import: track, where it comes from, grid, tempo, target
     import() {
       S.settings.importTarget = 'into';

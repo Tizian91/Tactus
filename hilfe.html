@@ -32,7 +32,7 @@
     <li><a href="#takte">7. Takte und Form</a>
       <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
     <li><a href="#melodie">8. Melodie schreiben</a>
-      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li></ol></li>
+      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li></ol></li>
     <li><a href="#notenblatt">9. Notenblatt und PDF</a></li>
     <li><a href="#wiedergabe">10. Wiedergabe und Klang</a>
       <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
@@ -419,7 +419,23 @@ Melodie, nur mit Schlagzeug. Takt antippen (über oder unter den Linien), dann i
 gibt es eine Zeile <span class="ui">Akkorde</span>: eine eigene Datei bzw. MIDI-Spur mit einer Fläche auf Kanal 15 und den Akkordnamen als Text.</p>
 <p><b>Klang und Export:</b> Die Melodie spielt mit dem Tactus-Synthesizer oder über MIDI auf jedem Instrument-VST (Kanal und Klang der
 Spur). <span class="ui">MIDI exportieren</span> und <span class="ui">MusicXML</span> nehmen Tonhöhen, Tonart, Schlüssel und Haltebögen mit.</p>
-<figure><img src="help/img/bspmelodie.png" alt="Beispiel Melodie: Gesang in a-Moll über einem Groove, mit Haltebogen und Gis"><figcaption>Gesang in a-Moll über einem Groove: Haltebogen über den Taktstrich, das Gis als bewusster Halbton, darüber die Akkorde (Am · Dm · C · E7); die Akkordtöne sind auf den Linien hinterlegt.</figcaption></figure>
+<h3 id="liedtext">Liedtext</h3>
+<p>Der Text steht unter den Noten, eine Silbe pro Note. So geht's los: eine Note der Melodie halten → <span class="ui">✎ Liedtext</span>,
+im Noten-Panel <span class="ui">Liedtext → Text schreiben</span> oder <kbd>Strg</kbd>+<kbd>L</kbd>. Unter der Note öffnet sich ein kleines Feld:</p>
+<ul>
+  <li><b>Leertaste</b>: die Silbe ist fertig, weiter zur nächsten Note.</li>
+  <li><b>-</b> (Bindestrich): das Wort geht weiter – <i>Son-ne</i> tippst du als <kbd>Son</kbd> <kbd>-</kbd> <kbd>ne</kbd>. Zwischen den Silben steht dann ein Strich.</li>
+  <li><b>Leertaste im leeren Feld</b> (oder <kbd>_</kbd>): diese Note bekommt keine Silbe, die Silbe davor wird über sie gesungen (Melisma, mit einer Linie darunter).</li>
+  <li><kbd>Tab</kbd> / <kbd>⇧</kbd>+<kbd>Tab</kbd>, die Pfeile am Textende: Note vor und zurück; <kbd>↑</kbd> <kbd>↓</kbd>: Strophe darüber / darunter; <kbd>Enter</kbd>: fertig.</li>
+  <li><b>Einfügen</b>: Einen ganzen Text (z. B. aus den Notizen) ins Feld einfügen – er verteilt sich auf die Noten, mit <i>-</i> und <i>_</i> wie oben.</li>
+</ul>
+<p>Eine Silbe antippen ändert sie (und tippt von dort weiter). Gebundene Noten bekommen keine eigene Silbe, Text gibt es nur an
+Stimme 1. <b>Mehrere Strophen</b>: im Panel unter <span class="ui">Strophe</span> die Nummer wählen (<span class="ui">+</span> = neue Strophe);
+sie stehen untereinander, mit „1.“, „2.“ davor. Alles, was in einem Zug getippt wird, ist ein Rückgängig-Schritt.</p>
+<p><b>Export:</b> MusicXML schreibt den Text mit Silbentrennung und Strophen (Guitar Pro, MuseScore). Der MIDI-Export schreibt jede Silbe
+als Lyric-Ereignis (Karaoke); bei einer Wiederholung kommt im zweiten Durchgang die zweite Strophe.</p>
+<figure><img src="help/img/liedtext.png" alt="Liedtext unter der Melodie, die zweite Strophe wird getippt"><figcaption>Liedtext unter der Melodie: „sin - gen“ mit Silbenstrich, „zur ___“ über zwei Noten gesungen. Die zweite Strophe wird gerade getippt.</figcaption></figure>
+<figure><img src="help/img/bspmelodie.png" alt="Beispiel Melodie: Gesang in a-Moll über einem Groove, mit Haltebogen, Gis und Liedtext"><figcaption>Gesang in a-Moll über einem Groove: Haltebogen über den Taktstrich, das Gis als bewusster Halbton, darüber die Akkorde (Am · Dm · C · E7), darunter der Text; die Akkordtöne sind auf den Linien hinterlegt.</figcaption></figure>
 <p><a class="open" href="index.html?beispiel=melodie">▶ Beispiel im Programm öffnen: Melodie</a> – abspielen, dann selbst eine Note halten und hoch ziehen.</p>
 
 <!-- ================================================================================= -->

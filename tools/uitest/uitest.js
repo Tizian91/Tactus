@@ -839,6 +839,25 @@ setTimeout(() => {
           click(2, 0, 9, { track: mt });
           ok('melody: voice 2 from the panel, a tap writes there ' + mt.bars[2].voices.map((v) => v.length).join('/'), !!v2 && mt.bars[2].voices[0].length === 1 && (mt.bars[2].voices[1] || []).length === 1);
           TC.actions.setMelodyVoice(0);
+          // lyrics: typed into the field under the notes - Space / "-" move on, pasted text spreads, one undo step
+          [0, 960, 1920, 2880].forEach((t) => click(3, t, 7, { track: mt }));
+          S.selection.clear();
+          const undoBefore = TC.history.undoStack.length;
+          TC.actions.startLyrics();
+          const lf = () => document.querySelector('.lyric-edit');
+          const type = (s) => { lf().value = s; lf().dispatchEvent(new Event('input')); };
+          ok('lyrics: Ctrl+L / panel opens the field under the first note', !!lf() && S.lyricEdit && S.lyricEdit.ev === mt.bars[2].voices[0][0]);
+          type('Hal-');
+          ok('lyrics: "-" moves on to the next note', S.lyricEdit && S.lyricEdit.ev !== mt.bars[2].voices[0][0] && lf().value === '');
+          type('lo Welt, wie geht');
+          const syl = TC.score.lyricSlots(S.doc, mt).map((s) => TC.score.lyricOf(s.ev, 0));
+          ok('lyrics: typed / pasted text spreads over the notes ' + syl.join('|'), syl.slice(0, 4).join('|') === 'Hal-|lo|Welt,|wie' && lf().value === 'geht');
+          lf().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+          const drawn = [...document.querySelectorAll('.score .lyric')].map((e) => e.textContent).join(' ');
+          ok('lyrics: Enter closes, drawn under the notes ' + drawn, !lf() && !S.lyricEdit && /Hal - lo Welt, wie geht/.test(drawn));
+          ok('lyrics: one undo step', TC.history.undoStack.length === undoBefore + 1);
+          TC.actions.undo();
+          ok('lyrics: undone at once', TC.score.lyricVerses(S.doc.tracks.find((t) => t.id === mt.id)) === 0);
           S.doc.view.x = 190; TC.refresh();
           const pre = document.createElement('pre');
           pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';

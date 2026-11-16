@@ -153,7 +153,7 @@
         <section><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
-        <p class="hint tight">${tr('Scale, clef and voice: panel "Bar · score" → Tracks.')}</p></section>`;
+        <p class="hint tight">${tr('Scale, clef and voice: panel "Bar · score" → Tracks.')}</p></section>${lyricsSection(false)}`;
     }
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
@@ -180,6 +180,19 @@
       ${accentRow(hit.note.accent || 0)}
       <div class="btn-row">${btn('deleteSelection', undefined, '🗑 ' + tr('Delete'), false, tr('Delete (Del)'), 'danger')}
         ${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
+    </section>${lyricsSection(true)}`;
+  }
+
+  /** Lyrics of the melody track being written: the verse, start typing (at the selected note), delete a verse. */
+  function lyricsSection(sel) {
+    const t = TC.curTrack(), n = TC.score.lyricVerses(t), cur = Math.min(S.lyricVerse || 0, n);
+    const verses = Array.from({ length: Math.min(TC.score.LYRIC_VERSES, n + 1) }, (_, v) =>
+      btn('setLyricVerse', v, n === v ? '+' : String(v + 1), v === cur, n === v ? tr('A new verse') : tr('Verse {n}', { n: v + 1 }))).join('');
+    return `<section><h3>${tr('Lyrics')}</h3>
+      ${n ? `<div class="row"><label>${tr('Verse')}</label><div class="seg">${verses}</div></div>` : ''}
+      <div class="btn-row">${btn('startLyrics', undefined, '✎ ' + tr(sel ? 'Type lyrics from this note' : n ? 'Type lyrics' : 'Type lyrics under the notes'), false, tr('Ctrl+L · or tap a syllable'), 'wide')}</div>
+      <p class="hint tight">${tr('Space: next note · "-" between the syllables of a word (Son-ne) · Space on an empty field: the syllable goes on over this note. Pasted text spreads over the notes.')}</p>
+      ${cur < n ? `<div class="btn-row">${btn('deleteLyricVerse', cur, '🗑 ' + tr('Delete verse {n}', { n: cur + 1 }), false, tr('The verses after it move up'), 'danger')}</div>` : ''}
     </section>`;
   }
 

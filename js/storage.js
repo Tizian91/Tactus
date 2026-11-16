@@ -342,7 +342,7 @@
 
   /**
    * Example "Melody": a singing voice in A minor over a simple groove - tones of the scale, a G♯ by hand
-   * (the leading tone), a note tied over the bar line, a quarter-note rhythm with eighths.
+   * (the leading tone), a note tied over the bar line, a quarter-note rhythm with eighths, lyrics.
    */
   ST.melodyDoc = function () {
     const doc = TC.emptyScore(4), SC = TC.score;
@@ -377,6 +377,8 @@
     // chord symbols: scale degrees of A minor (Am, Dm, C), and E7 typed (its G♯ is the leading tone of the melody)
     [[0, 0, { deg: 1 }], [1, 0, { deg: 4 }], [1, 1920, { deg: 1 }], [2, 0, { deg: 3 }], [3, 0, { name: 'E7' }], [3, 1920, { deg: 1 }]]
       .forEach(([bar, t, c]) => SC.setChord(doc, bar, t, c));
+    // lyrics: a syllable per note, "zur" sung over two notes (melisma)
+    SC.spreadLyrics(SC.lyricSlots(doc, mel), 0, 0, SC.splitLyrics('Wenn der Tag sinkt zur_ Ruh, sin-gen wir still ein Lied.'));
     return doc;
   };
 

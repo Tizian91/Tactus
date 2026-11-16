@@ -304,6 +304,18 @@ details > summary { list-style-position: outside; }
 .score .sticking { font-size: 11px; font-weight: 700; text-anchor: middle; fill: var(--text); }
 .score .count { font-size: 9px; text-anchor: middle; fill: var(--muted); }
 .score .count.beat { font-weight: 700; font-size: 10px; fill: var(--label); }
+/* lyrics (js/render.js LYR_FONT: the same font, its width is measured) */
+.score .lyric { font-size: 14px; fill: var(--ink); }
+.score .lyric.hyphen { text-anchor: middle; }
+.score .lyric-n { font-size: 14px; text-anchor: end; fill: var(--ink); }
+.score .lyric-ext { stroke: var(--ink); stroke-width: 1; }
+/* the field the lyrics are typed into, under the note (js/lyrics.js) */
+#viewport input.lyric-edit { position: absolute; z-index: 30; box-sizing: content-box; padding: 1px 4px; margin: 0; min-width: 2.5em;
+  border: 1.5px solid var(--accent); border-radius: 4px; background: var(--input-bg); color: var(--text);
+  font: 14px "Segoe UI", system-ui, -apple-system, sans-serif; text-align: center; outline: none; transform-origin: 50% 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+.lyric-help { position: absolute; z-index: 30; font-size: 11px; color: var(--muted); background: var(--panel);
+  padding: 1px 6px; border-radius: 4px; white-space: nowrap; pointer-events: none; opacity: 0.92; }
 .score .play-cursor { fill: var(--accent); opacity: 0.85; }
 .score .play-bar { fill: var(--accent); opacity: 0.07; }
 .score .loop-range { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 3; opacity: 0.6; }

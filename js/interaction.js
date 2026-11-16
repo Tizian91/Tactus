@@ -253,6 +253,20 @@
   }
 
   function onPointerDown(e) {
+    // lyrics (js/lyrics.js): a tap on a syllable (or under a note, in the rows of the lyrics) types there; while
+    // typing, a tap elsewhere only ends it
+    if ((e.button === 0 || e.pointerType === 'touch') && !touches.size && !S.drag && !A().isPerforming()) {
+      const ly = TC.render.lyricAt(I.toWorld(e.clientX, e.clientY));
+      if (ly) {
+        e.preventDefault();
+        if (TC.curTrack() !== ly.track) A().selectTrack(ly.track.id);
+        return TC.lyrics.open(ly.track, ly.ev, ly.v);
+      }
+      if (TC.lyrics.isOpen()) {
+        e.preventDefault();
+        return TC.lyrics.close();
+      }
+    }
     vp.focus({ preventScroll: true });
     const touch = e.pointerType === 'touch';
     if (touch) {
@@ -1150,6 +1164,11 @@
         TC.commit();
       }),
     }));
+    // lyrics: type the syllable of this note (and on from there)
+    items.push('-', { label: '✎ ' + tr('Lyrics (Ctrl+L)'), action: () => {
+      S.selection = new Set([n.id]);
+      A().startLyrics();
+    } });
     items.push('-', { label: '🗑 ' + tr('Delete'), action: () => { S.selection = new Set(ids); A().deleteSelection(); } });
     TC.menu.open(items, e.clientX + 14, e.clientY - 24);
   }
@@ -1292,6 +1311,7 @@
       else if (lk === 'c' && !isTyping(e)) A().copyBar();
       else if (lk === 'v' && !isTyping(e)) A().pasteBar();
       else if (lk === 'd') A().duplicateBar();
+      else if (lk === 'l' && TC.curTrack() && TC.curTrack().kind === 'pitched') A().startLyrics(); // lyrics (as in MuseScore)
       else if (lk === 'a' && !isTyping(e)) A().selectAll();
       else if ((k === 'ArrowUp' || k === 'ArrowDown') && S.selection.size && !isTyping(e)) A().octaveSelection(k === 'ArrowUp' ? 1 : -1); // melody: an octave
       else if (k === '+' || k === '=') A().zoomIn();

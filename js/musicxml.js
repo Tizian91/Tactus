@@ -11,7 +11,7 @@
  *   notehead (x, ⊗, diamond …), ghost note (in brackets), accent / strong accent, flam / drag (grace
  *   notes), roll (tremolo strokes), sticking (R / L as text under the note), %-bars (measure repeat,
  *   with the notes written for playback), time signatures, tempo and tempo changes, swing as text,
- *   bar texts (rehearsal marks), repeats (|: :| n×), endings (1. / 2.), segno / coda / Fine / To Coda /
+ *   lyrics (melody: <lyric> per verse, syllables, melisma), bar texts (rehearsal marks), repeats (|: :| n×), endings (1. / 2.), segno / coda / Fine / To Coda /
  *   D.C. / D.S. (with their <sound> for playback), line breaks of the page view.
  */
 (function (TC) {
@@ -23,6 +23,9 @@
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   /** Melody: the written sign of a note -> <accidental>. */
   const ACC_NAME = { 2: 'double-sharp', 1: 'sharp', 0: 'natural', '-1': 'flat', '-2': 'flat-flat' };
+  /** The syllables of a note (js/model.js SC.lyricInfo): a <lyric> per verse; the word sung over the next notes: <extend/>. */
+  const lyricXml = (list) => (list || []).map((y) => `<lyric number="${y.v + 1}" placement="below"><syllabic>${y.syllabic}</syllabic><text>${esc(y.text)}</text>` +
+    (y.endNote ? '<extend/>' : '') + '</lyric>').join('');
   /** Melody: <mode> of a key, when the key signature is the scale's own (C major, A minor, D dorian …). */
   const MODES = { major: 'major', minor: 'minor', dorian: 'dorian', phrygian: 'phrygian', lydian: 'lydian', mixolydian: 'mixolydian', locrian: 'locrian' };
   function keyMode(scale, fifths) {
@@ -134,6 +137,7 @@
     tracks.forEach((t, k) => {
       o.push(`<part id="${pid(k)}">`);
       const one = D.oneLine(t);
+      const lyr = t.kind === 'pitched' ? TC.score.lyricInfo(doc, t) : null; // lyrics: syllables of voice 1
       let ts = null, run = meta.tempo;
       bars.forEach((h, i) => {
         const L = TC.barTicks(h.ts);
@@ -233,7 +237,8 @@
                   (sign !== undefined ? `<accidental>${ACC_NAME[sign]}</accidental>` : '') + tm +
                   (two ? `<stem>${stem}</stem>` : '') + // (two voices in the bar: voice 1 up, voice 2 down; one voice: the reader decides)
                   (c === 0 && bm ? bm.map((b, lv) => `<beam number="${lv + 1}">${b}</beam>`).join('') : '') +
-                  (nots.length ? `<notations>${nots.join('')}</notations>` : '') + '</note>');
+                  (nots.length ? `<notations>${nots.join('')}</notations>` : '') +
+                  (c === 0 && vi === 0 && !it.cont && it.tick === it.ev.tick && lyr ? lyricXml(lyr.get(it.ev)) : '') + '</note>');
               });
               continue;
             }

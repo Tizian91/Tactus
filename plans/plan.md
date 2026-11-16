@@ -46,7 +46,7 @@ Song-Datenbanken.
 | **2: Notenblatt** | Seitenansicht A4 mit Zeilen- und Seitenumbruch, Kopf mit Titel / Interpret / Tempo, **PDF** über den Druckdialog (wie MindMapper `printPages`), Takt-Texte, Taktnummern, Velocity, Wiederholungen | ✅ Seitenansicht + PDF (Velocity, Wiederholungen offen) |
 | **3: Wiedergabe** | Web Audio: synthetisierte Schlagzeugklänge (später eingebettete Samples), mitlaufender Cursor, Metronom, Schleife, Tempo | ✅ Grundfunktion fertig (Samples später) |
 | **4: Teilen & Austausch** | ~~GitHub Pages~~ ✅ (https://tizian91.github.io/Tactus/), Teilen per Link (Stück komprimiert im `#`-Teil der Adresse), MIDI-Export, MusicXML-Export (Import in Guitar Pro) | |
-| **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | ✅ Melodie-Spur (Schritt A), ✅ Stufenakkorde (Schritt B), weiter mit Klaviersystem, Liedtext – siehe „Phase 5 – Melodien“ |
+| **5: Notensystem** | Violin- / Bassschlüssel, Tonarten, Vorzeichen, Haltebögen über Taktgrenzen, mehrere Spuren untereinander | ✅ Melodie-Spur (Schritt A), ✅ Stufenakkorde (Schritt B), ✅ Liedtext (Schritt C), weiter mit Klaviersystem – siehe „Phase 5 – Melodien“ |
 | **6: Tabulatur** | Saiten / Bünde, Stimmungen, Tabulatur unter dem Notensystem, Bend / Slide | |
 | **7: Extras** | .gp-Export (Guitar Pro 7/8), MIDI-Eingang (Aufnahme), Kopieren / Einfügen von Takten, Volta-Klammern | |
 
@@ -236,7 +236,7 @@ Eine Regel für Maus, Stift und Finger:
 5. ~~Samples~~ ✅  6. Vorlagen für kostenlose VSTs: ~~MT Power Drum Kit 2, General MIDI~~ ✅ (SSD 5.5 Free offen)
 7. ~~Drummaps für andere DAWs (Reaper, Studio One)~~ ✅  8. ~~Handbuch / Hilfeseite mit ⓘ-Links, Beispielstücke~~ ✅
 9. ~~Mehrere Spuren~~ ✅ (siehe unten)  10. ~~MusicXML-Export~~ ✅ (in Guitar Pro getestet, siehe unten)
-11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ → B ✅ → E → C → D, siehe „Phase 5 – Melodien“)
+11. **Melodien** (Gesangsmelodie, Tonleitern, Stufenakkorde, Klaviersystem, Liedtext; Reihenfolge A ✅ → B ✅ → C ✅ → E → D, danach Gitarren-Begleitung G, siehe „Phase 5 – Melodien“)
 
 ## Mehrere Spuren (als Nächstes)
 
@@ -308,7 +308,7 @@ Schritte:
   „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
   `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
 
-## Phase 5 – Melodien (Schritt A ✅, Schritt B ✅ – als Nächstes: Schritt E Klaviersystem)
+## Phase 5 – Melodien (Schritt A ✅, B ✅, C Liedtext ✅ – als Nächstes: Schritt E Klaviersystem)
 
 Tactus als kreatives Werkzeug auf niedrigem Niveau: beim Songschreiben eine **Gesangsmelodie aus dem Kopf** schnell als Noten
 festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Einspielen (dafür gibt es die DAW).
@@ -316,7 +316,7 @@ festhalten – im Tactus-Stil oft einfacher als in der DAW. Nicht das Ziel: Eins
 **Leitlinie:** Eine neue Spur „Melodie“ geht sofort ohne Einrichtung (Violinschlüssel, C-Dur, weicher Klang). Tonleiter, Schlüssel,
 Stimmlage nur auf Wunsch. Bei Melodien ist **die Tonhöhe das Kreative**, der Anschlag Feinschliff.
 
-**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → **E Klaviersystem** → C Liedtext → D Komfort.
+**Reihenfolge:** A ✅ → B Stufenakkorde ✅ → C Liedtext ✅ (vorgezogen, 2026-11-16) → **E Klaviersystem** → D Komfort → G Gitarren-Begleitung.
 
 ### Stand nach Schritt B (2026-11-15, noch nicht committet / nicht online)
 
@@ -516,11 +516,34 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 - Export: MusicXML ein Part mit `<staves>2</staves>` (Guitar Pro / MuseScore erkennen ein Klavier), MIDI eine Spur.
 - Bis dahin: zwei Melodie-Spuren „Klavier rechts / links“ (Violin- / Bassschlüssel) gehen schon.
 
-### Schritt C – Liedtext
+### Schritt C – Liedtext ✅ (zum Ausprobieren, 2026-11-16)
 
 - Silben unter den Noten: Note antippen → Text, Leertaste / Tab springt zur nächsten Note, „-“ verbindet Silben, „_“ für Melismen.
 - Mehrere Strophen (Zeilen) untereinander; MusicXML `<lyric>`, MIDI als Lyric-Events.
 - **Auch im Klaviersystem:** Text an den Noten der rechten Hand, gezeichnet zwischen den beiden Zeilen (wie in Klavier-Gesang-Noten).
+  → offen, kommt mit Schritt E.
+
+**Gebaut:**
+- Daten: `note.lyr = ['Lie-', 'Son-']` (eine Silbe je Strophe, ein „-“ am Ende = das Wort geht weiter), an der **ersten Note eines
+  Ereignisses in Stimme 1**. Stellen für Silben (`SC.lyricSlots`): die Ereignisse der Stimme 1 in Taktreihenfolge (wie geschrieben,
+  nicht wie gespielt – die Strophen ersetzen die Wiederholungen), ohne %-Takte und ohne Ereignisse, die nur gebundene Noten halten.
+  Höchstens 8 Strophen, 40 Zeichen je Silbe. Teilen-Link, Speichern, Kopieren nehmen den Text mit.
+- Eingabe (`js/lyrics.js`): kleines Feld unter der Note. Start: Notenmenü „✎ Liedtext“, Noten-Panel „Liedtext“ (mit Strophe 1 / 2 /
+  + und „Strophe löschen“), **Strg+L**, Silbe antippen (auch unter einer Note ohne Silbe, sobald die Spur Text hat). Leertaste = weiter,
+  „-“ = Silbe, Leertaste im leeren Feld / „_“ = Note auslassen (Melisma), Tab / ⇧Tab / ← → am Rand, Rücktaste im leeren Feld = zurück,
+  ↑ ↓ = Strophe, Enter = fertig, Esc = dieses Feld unverändert. **Eingefügter Text verteilt sich** (`SC.splitLyrics` / `spreadLyrics`).
+  Die Trenner werden aus dem Text gelesen, nicht aus den Tasten (Bildschirmtastatur). Alles in einem Zug = ein Rückgängig-Schritt.
+  Die Ansicht rollt mit (auch über der Bildschirmtastatur, `visualViewport`).
+- Zeichnen (`js/render.js`): eine Zeile je Strophe unter der Notenzeile (tiefer unter tiefen Noten / Stimme-2-Hälsen), Silben mittig,
+  „-“ in der Mitte zwischen den Silben eines Wortes, Melisma-Linie (Wort endet, die nächsten Noten ohne Silbe bis zur Pause; nicht
+  bei der letzten Silbe einer Strophe – sonst eine Linie hinter einer halb getippten Strophe), „1.“ / „2.“ vor der ersten Silbe.
+  **Takte werden breiter**, damit Silben nicht ineinanderlaufen (`lyricRoom`, Breite gemessen per Canvas); die Zählhilfe rückt darunter.
+- Export: MusicXML `<lyric number>` mit `<syllabic>` und `<extend/>`; MIDI Lyric-Ereignisse (Wortende mit Leerzeichen), Strophe n
+  im n-ten Durchgang einer Wiederholung. Wiederholungen finden: andere Worte = nicht derselbe Takt (kein %).
+- Tests: `test_lyrics.js` (alle 730 Prüfungen grün), Klick-Test 243 ok (6 neue), Handbuch Kapitel 8 „Liedtext“ mit Bild, Beispiel
+  „Melodie“ mit Text.
+- **Zum Ausprobieren:** Tippen mit der Bildschirmtastatur auf Tablet / Handy (Android meldet keine Tasten, iPad schon), Rollen über der
+  Tastatur, Silbe antippen mit dem Finger, sehr lange Wörter in der Seitenansicht.
 
 ### Schritt D – Komfort
 
@@ -528,6 +551,19 @@ Klammer. Löst „Melodie oben, Akkorde unten“ ohne zweite Stimme: jede Zeile 
 - **Stufen-Hilfe** unter den Noten (1 2 3 … oder do re mi), abschaltbar wie die Zählhilfe.
 - **Tonumfang:** Noten außerhalb der gewählten Stimmlage rot markiert.
 - **Rhythmus übernehmen:** Rhythmus einer anderen Spur (z. B. Bassdrum) in die Melodie-Spur einfügen, nur die Töne fehlen dann.
+
+### Schritt G – Gitarren-Begleitung aus den Akkorden (Wunsch 2026-11-16, nach E / D)
+
+Die Akkordsymbole nicht nur über den Takten, sondern **als Noten in eine Spur einfügen** – eine Begleitgitarre zum Mitspielen /
+Exportieren. **Kein Griffbrett, keine Griffbilder, keine Tabulatur** (ausdrücklich nicht gewünscht).
+- Eine Melodie-Spur „Gitarre“ (Klang Nylon / Steel / E-Gitarre): „Akkorde als Noten einfügen“ für Takte / das ganze Stück.
+- **Spielweise wählbar:** angeschlagen (ein Akkord pro Akkordwechsel, gehalten), **Ab-/Aufschlag nach einem Muster** (z. B.
+  ↓ ↓↑ ↑↓↑ in Achteln, eigene Muster aus ↓ ↑ und Pausen), gezupft (Grundton + Akkordtöne nacheinander). Ab- / Aufschlag als Zeichen
+  über der Note (MusicXML `<down-bow>` / `<up-bow>` bzw. Guitar Pro „stroke“), beim Abspielen leicht versetzt (Strum: tief → hoch
+  bzw. hoch → tief, ein paar ms je Saite).
+- **Gitarren-Eigenheiten in der Lage:** 4–6 Töne in einer gitarrentypischen Lage (Grundton im Bass, Umfang E2 … etwa E5, offene
+  Akkorde bevorzugt), Wechsel zwischen den Akkorden mit kleinen Sprüngen; Schrägstrich-Akkorde mit ihrem Bass.
+- Danach von Hand änderbar wie jede Melodie; ein neuer Akkord ändert die eingefügten Noten nicht von selbst.
 
 ### Später
 

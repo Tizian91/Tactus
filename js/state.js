@@ -82,6 +82,8 @@ window.TC = window.TC || {};
       loop: false,          // playback repeats (the selected bar, or everything)
       volume: 0.8,
     },
+    lyricVerse: 0,          // lyrics: the verse typed into (0 = 1st), see js/lyrics.js
+    lyricEdit: null,        // … while typing: { track (id), ev, v, bar } - the field under that note
     clipboard: null,        // copied bar (TC.score.copyBar)
     file: { handle: null, name: 'Untitled.tactus.json', saved: false },
     dirty: false,

@@ -145,6 +145,8 @@
   // its own top line), so RD.toLocal() also says which staff a point is on.
   const STAFF_ABOVE = 5 * SP;     // room above a staff under another one (notes and accents above it)
   const staffBelow = (under) => (under ? 12.4 : 8.4) * SP; // … below a staff (with sticking / counting)
+  /** Room below staff z: its lyrics (then the counting under them), else staffBelow. */
+  const belowOf = (z, under) => (z.lyrRows ? Math.max(staffBelow(under), lyrEnd(z) + (under ? 3.4 : 1.6) * SP) : staffBelow(under));
   /** The tracks with a staff: every shown one (the one being written always). */
   RD.shownTracks = (doc) => doc.tracks.filter((t) => !t.hidden || t === TC.curTrack());
   /** The staves of the shown tracks (bars: their parts in the same order). */
@@ -154,11 +156,110 @@
     let dy = 0;
     return tracks.map((track, k) => {
       const under = !!S.settings.showCounts || bars.some((b) => hasSticking(b.parts[k]));
-      const z = { k, track, dy, one: TC.drums.oneLine(track), below: staffBelow(under) };
+      const z = { k, track, dy, one: TC.drums.oneLine(track) };
+      // melody: the rows of the lyrics (a verse each; the one being typed counts), under the lowest note of the track
+      if (track.kind === 'pitched') {
+        const ed = S.lyricEdit && S.lyricEdit.track === track.id ? S.lyricEdit.v + 1 : 0;
+        z.lyrRows = Math.max(TC.score.lyricVerses(track), ed);
+        z.lyrY = LYR_Y;
+        if (z.lyrRows) bars.forEach((b) => z.lyrY = Math.max(z.lyrY, lowestInk(b.parts[k]) + 1.5 * SP));
+      }
+      z.below = belowOf(z, under);
       dy += 4 * SP + (z.below + STAFF_ABOVE) * gap;
       return z;
     });
   }
+  /** The lowest ink of a melody bar (heads, stems of voice 2 pointing down), for the row of the lyrics. */
+  function lowestInk(p) {
+    let y = 0;
+    if (!p.pitch) return y;
+    p.voices.forEach((items, vi) => items.forEach((it) => {
+      if (it.kind !== 'note') return;
+      it.ev.notes.forEach((n) => {
+        const sp = p.pitch.spell.get(n.id), l = sp ? sp.line : 4;
+        y = Math.max(y, stepY(l) + 0.6 * SP, vi % 2 ? stepY(l) + STEM : 0);
+      });
+    }));
+    return y;
+  }
+
+  // ---- Lyrics: under a melody staff, a row per verse, a syllable centred under its note
+  const LYR_Y = 8.0 * SP;   // baseline of the first verse (lower under low notes)
+  const LYR_DY = 2.1 * SP;  // from verse to verse
+  const LYR_FONT = '14px "Segoe UI", system-ui, -apple-system, sans-serif'; // (as .score .lyric in css/app.css)
+  /** Baseline of the last verse of staff z. */
+  const lyrEnd = (z) => z.lyrY + (z.lyrRows - 1) * LYR_DY;
+  let measure = null;
+  const widths = new Map();
+  /** Width of a syllable as drawn (measured once; without a canvas, e.g. in the tests: estimated). */
+  const lyrW = (RD.lyricWidth = function (text) {
+    if (widths.has(text)) return widths.get(text);
+    if (measure === null) {
+      try {
+        measure = typeof document !== 'undefined' && document.createElement ? document.createElement('canvas').getContext('2d') : false;
+        if (measure) measure.font = LYR_FONT;
+      } catch (e) {
+        measure = false;
+      }
+    }
+    const w = measure ? measure.measureText(text).width : text.length * 7.6;
+    widths.set(text, w);
+    return w;
+  });
+  /**
+   * The syllables of a bar of a melody track (lyricInfo: SC.lyricInfo of the track): the scale the bar needs so they
+   * do not run into each other (and the last one stays inside the bar), and the room before the first one (`lead`, in
+   * world units at that scale).
+   */
+  function lyricRoom(info, track, i, L) {
+    const verses = new Map();
+    (track.bars[i].voices[0] || []).forEach((ev) => (info.get(ev) || []).forEach((y) => {
+      if (!verses.has(y.v)) verses.set(y.v, []);
+      verses.get(y.v).push({ t: ev.tick, w: lyrW(y.text), hy: y.hyphen });
+    }));
+    let scale = 0;
+    const firsts = [];
+    for (const list of verses.values()) {
+      list.sort((a, c) => a.t - c.t);
+      list.forEach((a, k) => {
+        const c = list[k + 1];
+        if (c && c.t > a.t) scale = Math.max(scale, ((a.w + c.w) / 2 + (a.hy ? 1.6 : 0.8) * SP) / (c.t - a.t));
+        if (!c && L > a.t) scale = Math.max(scale, (a.w / 2 + (a.hy ? 0.6 : 0.2) * SP) / (L - a.t));
+      });
+      if (list.length) firsts.push(list[0]);
+    }
+    return { scale, lead: (sc) => Math.max(0, ...firsts.map((a) => a.w / 2 + 0.3 * SP - HEAD_OFF - a.t * sc)) };
+  }
+  /** Where the syllable of event ev (bar, verse v) of a track is drawn: { x, y } in the view (centre, baseline), or null. */
+  RD.lyricPos = function (track, bar, ev, v) {
+    const L = RD.layout, b = L && L.bars[bar], z = L && L.staves.find((q) => q.track === track);
+    if (!b || !z || z.lyrY === undefined) return null;
+    const s = L.systems[b.sys];
+    return { x: RD.tickX(b, ev.tick) + s.tx, y: s.ty + z.dy + z.lyrY + v * LYR_DY, zoomed: LYR_DY };
+  };
+  /**
+   * A point of the view (world units) in the lyrics of a melody staff that has some: the note there { track, bar, ev, v }
+   * (the syllable under the point, else the nearest note of voice 1 in that bar), or null.
+   */
+  RD.lyricAt = function (p) {
+    const L = RD.layout, q = L && RD.toLocal(p);
+    if (!q || !q.staff || !q.staff.lyrRows) return null;
+    const z = q.staff, y = q.y - z.lyrY; // (from the baseline of the first verse)
+    if (y < -1.2 * SP || y > (z.lyrRows - 1) * LYR_DY + 0.8 * SP) return null;
+    const v = TC.clamp(Math.round((y + 0.4 * SP) / LYR_DY), 0, z.lyrRows - 1);
+    const b = RD.barAt(q.x);
+    if (!b || b.hidden !== undefined || b.parts[z.k].simile) return null;
+    const slots = TC.score.lyricSlots(S.doc, z.track).filter((s) => s.bar === b.i);
+    let best = null, bd = Infinity;
+    for (const s of slots) {
+      const d = Math.abs(RD.tickX(b, s.ev.tick) - q.x);
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    return best && bd < 4 * SP ? { track: z.track, bar: b.i, ev: best.ev, v } : null;
+  };
   /** Is bar b a %-bar in a track (default: the one being written)? */
   RD.simileAt = (b, track) => {
     const p = track && b.parts ? b.parts.find((q) => q.track === track) : null;
@@ -280,6 +381,8 @@
     const doc = S.doc, cur = TC.curTrack(), page = RD.isPage(), MARGIN = margin();
     const grid = TC.gridTicks(S.input);
     const tracks = RD.shownTracks(doc);
+    // lyrics of the melody tracks (js/model.js SC.lyricInfo): syllables, hyphens, melisma lines
+    const lyrInfo = new Map(tracks.filter((t) => TC.score.lyricVerses(t)).map((t) => [t, TC.score.lyricInfo(doc, t)]));
     const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');
@@ -292,7 +395,11 @@
       let finest = L;
       parts.forEach((p) => p.voices.forEach((items) => items.forEach((it) => { if (!it.measure) finest = Math.min(finest, it.dur); })));
       // endless: a finer click grid widens the bar; page: the notes alone decide (as printed)
-      const scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
+      let scale = page ? Math.max(PAGE_QUARTER / TC.TPQ, PAGE_NOTE / finest) : Math.max(QUARTER / TC.TPQ, MIN_CELL / grid, (2.4 * SP) / finest);
+      // lyrics: wide enough that the syllables do not run into each other; room before the first one
+      const rooms = parts.filter((p) => !p.simile && lyrInfo.has(p.track)).map((p) => lyricRoom(lyrInfo.get(p.track), p.track, i, L));
+      rooms.forEach((r) => { scale = Math.max(scale, r.scale); });
+      const lyrLead = Math.max(0, ...rooms.map((r) => r.lead(scale)));
       // (an ending going back without a :| of its own - a later ending waits: drawn with :|, js/model.js SC.endingGoesBack)
       const rs = !!h.repeatStart, re = h.repeatEnd > 1 ? h.repeatEnd : TC.score.endingGoesBack(doc, i) ? 2 : 0;
       const own = parts.find((p) => p.track === cur) || parts[0];
@@ -301,7 +408,7 @@
       const accW = parts.some((p) => p.pitch && p.pitch.accAt0) ? ACC_ROOM : 0;
       // simile / voices: of the track being written; allSimile: "%" in every staff (one % with a number)
       return { i, L, ts: h.ts, beam: h.beam, simile: own.simile, allSimile: parts.every((p) => p.simile), parts, scale, showTs, rs, re, volta: h.volta || null,
-        ksW, accW, tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0) + ksW + accW, voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '',
+        ksW, accW, tsW: (showTs ? TS_W : 0) + (rs ? REP_W : 0) + ksW + Math.max(accW, lyrLead), voices: own.voices, marker: h.marker || '', mark: h.mark || '', end: h.end || '', jump: h.jump || '',
         chords: TC.pitch ? TC.score.chordsIn(doc, i) : [], scaleText: scaleText(doc, parts, i) };
     });
     const sv = staves(tracks, bars), lastSv = sv[sv.length - 1];
@@ -397,7 +504,7 @@
         const lg = (doc.page.lineGap || 100) / 100;
         s.above = ((text ? 9.8 : 7.2) + (ln.some((b) => b.chords.length) ? 2.2 : 0)) * SP * lg; // (chord symbols: a row more)
         if (k === 0) s.above = Math.max(s.above, 9.8 * SP); // (the first line: room for the tempo under the title)
-        s.below = staffBelow(under) * lg;
+        s.below = belowOf(lastSv, under) * lg;
         const h = s.above + stackH + s.below;
         if (yRel + h > PAGE_H - MARGIN && yRel > MARGIN + 1) {
           pageNo++;
@@ -424,7 +531,7 @@
     }
     const last = systems[systems.length - 1];
     RD.layout = {
-      bars, systems, pages, page, grid, margin: MARGIN, heads: [], map: [], mapSys: 0, mapTrack: null, staves: sv, stackH,
+      bars, systems, pages, page, grid, margin: MARGIN, heads: [], lyrInfo, map: [], mapSys: 0, mapTrack: null, staves: sv, stackH,
       width: page ? PAGE_W : last.end,
       add: { x: last.end + 1.5 * SP, y: 0, w: 3 * SP, h: 4 * SP },
     };
@@ -528,6 +635,7 @@
     world.setAttribute('transform', `translate(${f(v.x + mx)},${f(v.y + my)}) scale(${v.zoom})`);
     svg.style.transform = '';
     shown = { x: v.x, y: v.y, zoom: v.zoom, w, h, mx, my };
+    if (TC.lyrics && TC.lyrics.isOpen()) TC.lyrics.place(false); // (the field typing lyrics stays under its note)
   };
 
   /**
@@ -842,6 +950,45 @@
       }
     }
     staffNow = null;
+
+    // lyrics: under each melody staff a row per verse - the syllable under its note, "-" between the syllables of a
+    // word, a line under the notes a word is sung over (melisma); several verses: "1." "2." before the first syllable
+    for (const z of L.staves) {
+      const info = L.lyrInfo.get(z.track);
+      if (!info) continue;
+      const firstOf = new Set();
+      const many = z.lyrRows > 1;
+      for (const b of L.bars) {
+        if (b.hidden !== undefined || b.parts[z.k].simile) continue;
+        const o = OS(b, z), s = L.systems[b.sys];
+        for (const ev of z.track.bars[b.i].voices[0] || []) {
+          for (const y of info.get(ev) || []) {
+            const x = RD.tickX(b, ev.tick), ly = z.lyrY + y.v * LYR_DY, w = lyrW(y.text);
+            // a word sung over several notes: from the note on (left-aligned), else centred under it
+            const x1 = y.endNote ? x - 0.65 * SP : x - w / 2, x2 = x1 + w;
+            const ed = S.lyricEdit && S.lyricEdit.ev === ev && S.lyricEdit.v === y.v && !plain; // (being typed: the field shows it)
+            if (!ed) o.push(`<text class="lyric" x="${f(x1)}" y="${f(ly)}">${esc(y.text)}</text>`);
+            if (many && !firstOf.has(y.v)) {
+              firstOf.add(y.v);
+              o.push(`<text class="lyric-n" x="${f(x1 - 0.5 * SP)}" y="${f(ly)}">${y.v + 1}.</text>`);
+            }
+            if (y.hyphen && y.next) {
+              // the hyphen: in the middle of the gap to the next syllable (on this line), else after the syllable
+              const nb = L.bars[y.next.bar], nx = nb && nb.sys === b.sys ? RD.tickX(nb, y.next.ev.tick) : null;
+              const ny = (info.get(y.next.ev) || []).find((q) => q.v === y.v);
+              const nl = nx === null || !ny ? null : ny.endNote ? nx - 0.65 * SP : nx - lyrW(ny.text) / 2;
+              const hx = nl !== null && nl - x2 > 0.5 * SP ? (x2 + nl) / 2 : x2 + 0.7 * SP;
+              o.push(`<text class="lyric hyphen" x="${f(hx)}" y="${f(ly)}">-</text>`);
+            } else if (y.endNote) {
+              // melisma: a line under the notes of the word, to the end of the last of them (on this line)
+              const eb = L.bars[y.endNote.bar];
+              const ex = eb && eb.sys === b.sys ? RD.tickX(eb, y.endNote.ev.tick) + 0.7 * SP : s.end - 0.6 * SP;
+              if (ex - x2 > 0.6 * SP) o.push(line(x2 + 0.25 * SP, ly + 0.15 * SP, ex, ly + 0.15 * SP, 'lyric-ext'));
+            }
+          }
+        }
+      }
+    }
 
     // chord symbols above the first staff: one row per line, above its highest note (as in a lead sheet)
     const chordRow = new Map();
@@ -1191,6 +1338,7 @@
     if (!S.settings.showCounts) return;
     const ticks = new Set();
     const beat = (4 * TC.TPQ) / b.ts[1];
+    const countY = staffNow && staffNow.lyrRows ? lyrEnd(staffNow) + 2.0 * SP : COUNT_Y; // (under the lyrics)
     for (let t = 0; t < b.L; t += beat) ticks.add(t);
     b.voices.forEach((items) => items.forEach((it) => { if (it.kind === 'note' && !it.cont) ticks.add(it.tick); }));
     const de = TC.getLang() === 'de';
@@ -1199,7 +1347,7 @@
       const p = TC.rhythm.countLabel(t, b.ts).split(' ');
       const main = p.length === 1;
       const text = main ? p[0] : SHORT[p[1]] || '·';
-      out.push(`<text class="count${main ? ' beat' : ''}" x="${f(RD.tickX(b, t))}" y="${f(COUNT_Y)}">${esc(text)}</text>`);
+      out.push(`<text class="count${main ? ' beat' : ''}" x="${f(RD.tickX(b, t))}" y="${f(countY)}">${esc(text)}</text>`);
     }
   }
 

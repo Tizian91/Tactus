@@ -48,6 +48,7 @@ const FILES = [
   'js/actions.js',
   'js/panel.js',
   'js/interaction.js',
+  'js/lyrics.js',
   'js/playback.js',
   'js/audio.js',
   'js/storage.js',

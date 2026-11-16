@@ -443,6 +443,29 @@
   A.alterSelection = function (dir) {
     if (changeChains((h, sc) => TC.pitch.alter(TC.pitch.noteSpell(h.note, sc), Number(dir)))) TC.commit();
   };
+  // ---- Lyrics (js/lyrics.js) -------------------------------------------------------------
+  /** Type lyrics: at the selected note, else at the first note without a syllable (verse: S.lyricVerse). */
+  A.startLyrics = () => TC.lyrics.start();
+  /** The verse to type into (0 = 1st); the field is open: it moves to that verse. */
+  A.setLyricVerse = function (v) {
+    S.lyricVerse = TC.clamp(Number(v) || 0, 0, TC.score.LYRIC_VERSES - 1);
+    TC.refresh();
+  };
+  /** Delete a verse of the lyrics of the track being written (the verses after it move up). */
+  A.deleteLyricVerse = function (v) {
+    const t = TC.curTrack();
+    v = Number(v) || 0;
+    if (!t || !confirm(tr('Delete verse {n} of the lyrics of "{track}"?', { n: v + 1, track: t.name }))) return;
+    t.bars.forEach((b) => (b.voices[0] || []).forEach((ev) => ev.notes.forEach((n) => {
+      if (!n.lyr) return;
+      n.lyr.splice(v, 1);
+      while (n.lyr.length && !n.lyr[n.lyr.length - 1]) n.lyr.pop();
+      if (!n.lyr.length) delete n.lyr;
+    })));
+    S.lyricVerse = Math.max(0, Math.min(S.lyricVerse, TC.score.lyricVerses(t) - 1));
+    TC.commit();
+  };
+
   /** The first selected melody note: a tie to the next note on / off (only the same tone right after it). */
   A.toggleTie = function () {
     const id = selectedIds()[0], h = id && TC.score.findNote(S.doc, id);

@@ -22,6 +22,7 @@
     ['Ctrl+click', 'Select several notes'],
     ['Space', 'Play / stop'], ['Ctrl+C / V / D', 'Copy / paste / duplicate the bar'],
     ['Del', 'Delete selected notes'], ['Ctrl+Z / Y', 'Undo / redo'],
+    ['Ctrl+L', 'Type lyrics (melody: at the selected note)'],
     ['Wheel', 'Scroll (Ctrl: zoom, Shift: up/down)'], ['Space+drag', 'Move the view'],
   ];
 })(window.TC);

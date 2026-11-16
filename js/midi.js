@@ -103,6 +103,8 @@
     tracks.forEach((track, ti) => {
       if (track.kind === 'pitched') addTo(noteEv[ti])(0, 0, [0xc0 | melodyCh(track), track.program || 0]);
     });
+    // lyrics: a lyric event per syllable (karaoke: the word ends with a space); verse n on the n-th pass of a repeat
+    const lyrOf = tracks.map((t) => (TC.score.lyricVerses(t) ? TC.score.lyricInfo(doc, t) : null));
 
     // chord symbols (opts.chords): a MIDI track of their own, a pad on channel 15
     const chordEv = [], CHORD_CH = Number.isInteger(doc.harmony && doc.harmony.midiCh) ? doc.harmony.midiCh : TC.timeline.CHORD_TRACK.channel;
@@ -134,6 +136,13 @@
       tracks.forEach((track, ti) => { // every track on the keys of its kit profile
         const tgt = targetOf(track), put = addTo(noteEv[ti]);
         const src = TC.score.sourceBar(doc, bi, track);
+        if (lyrOf[ti] && src === bi) {
+          for (const e of track.bars[bi].voices[0] || []) {
+            const list = lyrOf[ti].get(e);
+            const y = list && (list.find((q) => q.v === o.pass - 1) || list.find((q) => q.v === 0));
+            if (y && e.tick < L) put(t0 + sw(e.tick), 0, meta(0x05, text(y.text + (y.hyphen ? '' : ' '))));
+          }
+        }
         for (const voice of track.bars[src].voices) {
           const ends = track.kind === 'drums' && R ? R.ends(voice, h.ts, doc.bars[src].beam, track.fill) : null;
           for (const e of voice) {

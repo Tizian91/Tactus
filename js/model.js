@@ -53,6 +53,9 @@
  *                         stick: '' | 'R' | 'L' }       sticking (right / left hand), written under the staff
  *              pitched: { id, pitch, dia, accent, ghost, vel }   pitch: MIDI note (sounding), dia: how it is spelled
  *                                                                (place on the staff, see js/pitch.js; null = from the scale)
+ *                         lyr: ['Lie-', 'Son-']   (only when set) lyrics: the syllable of each verse (1st, 2nd ...); a
+ *                                                 trailing "-" joins it to the next syllable of the word ('' = none).
+ *                                                 Kept on the first note of an event in voice 1 (SC.lyricOf).
  *              (later)  tab: { id, string, fret, ... }
  *
  * Time is counted in ticks: 960 per quarter note (as in Guitar Pro / MIDI files).
@@ -291,6 +294,11 @@
     out.trem = [1, 2, 3].includes(n.trem) ? n.trem : 0;
     out.stick = n.stick === 'R' || n.stick === 'L' ? n.stick : '';
     if (kind !== 'drums' && n.tie) out.tie = true; // melody: tied on from the note before (same pitch)
+    if (kind !== 'drums' && Array.isArray(n.lyr)) { // lyrics: a syllable per verse
+      const lyr = n.lyr.slice(0, SC.LYRIC_VERSES).map((x) => SC.cleanSyllable(x));
+      while (lyr.length && !lyr[lyr.length - 1]) lyr.pop();
+      if (lyr.length) out.lyr = lyr;
+    }
     return out;
   }
 
@@ -563,6 +571,7 @@
       const ns = ev.notes.map((n) => {
         let k = n.pitch !== undefined ? 'p' + n.pitch + (n.tie ? 't' : '') + ':' + ev.dur : 'a' + n.art;
         if (!loose) k += [n.accent || 0, n.ghost ? 1 : 0, n.vel || '', n.orn || '', n.trem || 0, n.stick || '', n.head || ''].join(',');
+        if (n.lyr) k += '"' + n.lyr.join('|'); // (other words: not the same bar - a %-bar would lose them)
         return k;
       }).sort();
       if (ns.length) evs.push(ev.tick + '=' + ns.join('+'));
@@ -1519,4 +1528,120 @@
     id: TC.uid('n'), art, accent: inp.accent || 0, ghost: !!inp.ghost, head: inp.head || 'auto', vel: null,
     orn: inp.orn || null, trem: inp.trem || 0, stick: inp.stick || '',
   });
+
+  // ---- Lyrics ---------------------------------------------------------------------------------
+  // A syllable belongs to an event of voice 1 of a melody track (kept on its first note: n.lyr[verse]).
+  // The notes a syllable can go on ("slots"): the events of voice 1, in the order of the bars (as written,
+  // not as played: the verses take the place of the repeats), without the ones only holding tied notes.
+
+  SC.LYRIC_VERSES = 8;
+  /** A syllable as stored: one line, no spaces at the ends, at most 40 characters ("Lie-" keeps its hyphen). */
+  SC.cleanSyllable = (x) => (typeof x === 'string' ? x.replace(/\s+/g, ' ').trim().slice(0, 40) : '');
+  /** The syllable of an event in verse v ('' = none). */
+  SC.lyricOf = function (ev, v) {
+    for (const n of ev.notes) if (n.lyr && n.lyr[v]) return n.lyr[v];
+    return '';
+  };
+  /** Set the syllable of an event in verse v ('' removes it); it is kept on the first note. */
+  SC.setLyric = function (ev, v, text) {
+    text = SC.cleanSyllable(text);
+    ev.notes.forEach((n, k) => {
+      const lyr = (n.lyr || []).slice();
+      while (lyr.length <= v) lyr.push('');
+      lyr[v] = k === 0 ? text : '';
+      while (lyr.length && !lyr[lyr.length - 1]) lyr.pop();
+      if (lyr.length) n.lyr = lyr;
+      else delete n.lyr;
+    });
+  };
+  /** Is an event only the going on of tied notes (not struck again: no syllable of its own)? */
+  SC.tiedOnly = (doc, track, bi, vi, ev) => ev.notes.length > 0 && ev.notes.every((n) => SC.tiedFrom(doc, track, bi, vi, ev, n));
+  /** The places of syllables in a melody track: [{ bar, ev }] in the order of the bars (see above). */
+  SC.lyricSlots = function (doc, track) {
+    const out = [];
+    if (!track || track.kind !== 'pitched') return out;
+    track.bars.forEach((bar, bi) => {
+      if (bar.simile || bi >= doc.bars.length) return;
+      const L = TC.barTicks(doc.bars[bi].ts);
+      (bar.voices[0] || []).forEach((ev) => {
+        if (ev.tick < L && ev.notes.length && !SC.tiedOnly(doc, track, bi, 0, ev)) out.push({ bar: bi, ev });
+      });
+    });
+    return out;
+  };
+  /** How many verses a track has (up to the last one with a syllable). */
+  SC.lyricVerses = function (track) {
+    let n = 0;
+    if (!track || track.kind !== 'pitched') return 0;
+    track.bars.forEach((b) => (b.voices[0] || []).forEach((ev) => ev.notes.forEach((x) => { if (x.lyr) n = Math.max(n, x.lyr.length); })));
+    return n;
+  };
+  /** Does any melody track have lyrics? */
+  SC.hasLyrics = (doc) => doc.tracks.some((t) => SC.lyricVerses(t) > 0);
+  /**
+   * Typed or pasted text as syllables, one per note: words split at spaces, a "-" inside a word splits it
+   * into syllables ("Son-nen-schein" -> "Son-", "nen-", "schein"); "_" alone, or at the end of a word, leaves
+   * a note out (the syllable before is sung over it: a melisma). Returns [text | null] - null = leave this note out.
+   */
+  SC.splitLyrics = function (text) {
+    const out = [];
+    String(text || '').split(/\s+/).forEach((word) => {
+      if (!word) return;
+      const m = /^(.*?)(_*)$/.exec(word), body = m[1], skip = m[2].length;
+      const parts = body.split('-');
+      parts.forEach((p, k) => {
+        if (!p) return; // ("-" alone, "--": no empty syllables)
+        out.push(k < parts.length - 1 ? p + '-' : p); // (a hyphen at the end: "Lie-" - the word goes on at the next note)
+      });
+      for (let k = 0; k < skip; k++) out.push(null);
+    });
+    return out;
+  };
+  /**
+   * Write syllables (SC.splitLyrics) into verse v from slot `from` on (slots: SC.lyricSlots); a null leaves that
+   * note as it is. Returns the index of the slot after the last one used (more syllables than notes: the rest is left).
+   */
+  SC.spreadLyrics = function (slots, from, v, syllables) {
+    let k = from;
+    for (const s of syllables) {
+      if (k >= slots.length) break;
+      if (s !== null) SC.setLyric(slots[k].ev, v, s);
+      k++;
+    }
+    return k;
+  };
+  /**
+   * Every syllable of a track as it is written out: Map ev -> [{ v, text, syllabic, hyphen, next, endNote }] - text
+   * without the hyphen; syllabic 'single' | 'begin' | 'middle' | 'end' (MusicXML); hyphen: the word goes on, next: the
+   * slot { bar, ev } of the next syllable of this verse; endNote: the word ends here and the notes after it have no
+   * syllable of this verse up to a rest or the next syllable (a melisma: a line under them up to endNote).
+   */
+  SC.lyricInfo = function (doc, track) {
+    const slots = SC.lyricSlots(doc, track), out = new Map(), verses = SC.lyricVerses(track);
+    // does the event of slot b follow the one of slot a without a rest between?
+    const touches = (a, b) => {
+      if (a.bar === b.bar) return a.ev.tick + a.ev.dur >= b.ev.tick;
+      if (b.bar !== a.bar + 1 || b.ev.tick > 0) return false;
+      return a.ev.tick + a.ev.dur >= TC.barTicks(doc.bars[a.bar].ts);
+    };
+    for (let v = 0; v < verses; v++) {
+      let open = false, last = null; // open: the syllable before ends in "-"
+      slots.forEach((s, k) => {
+        const raw = SC.lyricOf(s.ev, v);
+        if (!raw) return;
+        const hy = /-$/.test(raw) && raw.length > 1, text = hy ? raw.slice(0, -1) : raw;
+        const info = { v, text, syllabic: open ? (hy ? 'middle' : 'end') : hy ? 'begin' : 'single', hyphen: hy, next: null, endNote: null };
+        if (last) last.next = s;
+        last = info;
+        open = hy;
+        if (!hy) {
+          for (let j = k + 1; j < slots.length && !SC.lyricOf(slots[j].ev, v) && touches(slots[j - 1], slots[j]); j++) info.endNote = slots[j];
+        }
+        if (!out.has(s.ev)) out.set(s.ev, []);
+        out.get(s.ev).push(info);
+      });
+      if (last) last.endNote = null; // (the last syllable of a verse: no line - a verse not typed to its end yet)
+    }
+    return out;
+  };
 })(window.TC);

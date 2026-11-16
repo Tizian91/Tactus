@@ -46,8 +46,8 @@
     ].map(([id, name, short, note, kind, group]) => Object.assign({ id, name, short, note, kind }, group ? { group } : {})),
   }, {
     // UJAM Virtual Bassist Rowdy, Instrument Mode (the manual: the lowest octave C0 … B0; play range C3 … E5 - a bass, sent
-    // two octaves up: to check with a low E, "Shift notes" in the profile)
-    tpl: 'ujam-rowdy', v: 1, name: 'UJAM Virtual Bassist Rowdy (Instrument Mode)', c3: 60, noteShift: 24, poly: 1, init: [],
+    // an octave up - checked with a low E, 2026-11-17)
+    tpl: 'ujam-rowdy', v: 2, name: 'UJAM Virtual Bassist Rowdy (Instrument Mode)', c3: 60, noteShift: 12, poly: 1, init: [],
     keys: [
       ['slide1', 'Slide 1 (pre-intro)', 'sl. 1', 'C0', 'once', '', 'note'], ['slide2', 'Slide 2 (pre-intro)', 'sl. 2', 'D0', 'once', '', 'note'],
       ['slide3', 'Slide 3 (pre-intro)', 'sl. 3', 'E0', 'once', '', 'note'],

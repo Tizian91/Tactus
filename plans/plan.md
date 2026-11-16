@@ -803,5 +803,5 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   beim Start unsichtbar); Stroke-Tasten werden gehalten, solange der Akkord klingt; Gruppen `mute` (open / P.M. / ½ M. / Dead) und `pick`;
   „open“ sichtbar; Slides / Stop / Release eigene Reihe. Alte Iron-Profile werden beim Laden auf die Vorlage gebracht. **Noch zu prüfen:** was die sechs
   Picking-Tasten C2 … A2 einzeln tun (laut Nutzer: Härtegrade). Zweite Vorlage **UJAM Virtual Bassist Rowdy** (2026-11-17): C0–E0 Slides
-  (span „note“: nur über die Note), C#0 / F#0 Legato, G0 Silent Dead (Umschalter), A0 / B0 Dead, Bb0 Full Stop; Noten +24 (zu prüfen),
+  (span „note“: nur über die Note), C#0 / F#0 Legato, G0 Silent Dead (Umschalter), A0 / B0 Dead, Bb0 Full Stop; Noten +12 (geprüft),
   „Noten verschieben“ im Profil wählbar. **Offen:** eigene Profile anlegen / weitere Vorlagen; Spielweisen über das Notenmenü.

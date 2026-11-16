@@ -356,6 +356,7 @@
     'Sound output': 'Spielt über',
     'Dynamics': 'Dynamik',
     'Hairpin': 'Gabel',
+    'End of the hairpin from bar {n}: {v} (from here on)': 'Ende der Gabel aus Takt {n}: {v} (gilt ab hier)',
     'set': 'setzen',
     'Here': 'Hier',
     'to the end of bar {n}': 'bis zum Ende von Takt {n}',

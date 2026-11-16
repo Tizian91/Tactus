@@ -376,7 +376,11 @@
     const list = SC.dynIn(t, i), lv = (x) => list.find((d) => d.t === x && d.v), wg = (x) => list.find((d) => d.t === x && d.w);
     const here = lv(slot), wedge = wg(slot);
     const short = (x) => { const c = TC.rhythm.countLabel(x, ts).split(' '); return c.length > 1 ? c[1] : c[0]; };
-    const mark = (x) => (lv(x) ? lv(x).v : '') + (wg(x) ? (wg(x).w === 'cresc' ? '<' : '>') : '') || '·';
+    // (the end of a hairpin with its own level - "pp < ff": ff where it ends, also in a later bar)
+    const at = SC.tickOf(S.doc), ending = SC.dynEvents(S.doc, t).wedges.filter((w) => w.sign);
+    const endAt = (x) => ending.find((w) => w.end === at(i, x));
+    const mark = (x) => (lv(x) ? lv(x).v : endAt(x) ? endAt(x).toV : '') + (wg(x) ? (wg(x).w === 'cresc' ? '<' : '>') : '') || '·';
+    const endHere = !here && endAt(slot);
     const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((x) =>
       btn('setChordSlot', x, `<small>${esc(short(x))}</small><i>${esc(mark(x))}</i>`, x === slot, TC.rhythm.countLabel(x, ts), TC.rhythm.countLabel(x, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>` : '';
     const levels = SC.DYN_LEVELS.map((v) => btn('setDyn', v, `<span class="dyn-txt">${v}</span>`, !!here && here.v === v, tr('{v} from here on', { v }))).join('');
@@ -390,6 +394,7 @@
       ${where}
       <div class="dyn-pal">${levels}</div>
       ${here ? `<div class="btn-row">${btn('clearDyn', 'v', '✕ ' + esc(here.v), false, tr('Remove'))}</div>` : ''}
+      ${endHere ? `<p class="hint tight">${esc(tr('End of the hairpin from bar {n}: {v} (from here on)', { n: endHere.bar + 1, v: endHere.toV }))}</p>` : ''}
       <div class="row wedge-row"><label>${tr('Hairpin')}</label><select data-action="setWedgeFrom" class="dyn-sel">${lvOpts(d.from)}</select>
         <span class="wedge-sign">${up ? '&lt;' : '&gt;'}</span><select data-action="setWedgeTo" class="dyn-sel">${lvOpts(d.to)}</select></div>
       <div class="row"><label>${tr('to bar')}</label><select data-action="setWedgeEnd" class="narrow">${ends}</select></div>
@@ -762,7 +767,7 @@
     const lang = S.settings.lang;
     const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind,
       // (dynamics: the selected bar, its places and what the track has there)
-      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, S.selBar !== null && TC.curTrack().bars[S.selBar] && TC.curTrack().bars[S.selBar].dyn]);
+      S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
       lastNotes = keyN;
       const cur = hit ? hit.note.art : S.input.art;

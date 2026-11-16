@@ -892,6 +892,13 @@ setTimeout(() => {
           ok('dynamics: "pp < ff" to bar 2 set in one go - pp written, the hairpin with ff, ff drawn at its end ' + JSON.stringify(dt.bars[0].dyn) + ' signs ' + document.querySelectorAll('.score .mus.dyn').length + ' lvl ' + TC.score.levelAt(S.doc, dt, 2, 0),
             JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'pp' }, { t: 0, w: 'cresc', len: TC.barTicks(S.doc.bars[0].ts) + TC.barTicks(S.doc.bars[1].ts), to: 'ff' }]) && document.querySelectorAll('.score .mus.dyn').length >= 2 &&
             TC.score.levelAt(S.doc, dt, 2, 0) === 6);
+          TC.selectBar(2);
+          S.chordSlot = 0;
+          TC.refresh();
+          const endSlot = document.querySelector('#panel-notes [data-action="setChordSlot"][data-value="0"]');
+          ok('dynamics: bar 3 shows where the hairpin ends - ff on its 1, and says so', !!endSlot && /ff/.test(endSlot.textContent) && /Takt 1: ff/.test(document.getElementById('panel-notes').textContent));
+          TC.selectBar(0);
+          TC.refresh();
           TC.actions.setDyn('pp');
           TC.actions.setDyn('p');
           ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));

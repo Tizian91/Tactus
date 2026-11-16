@@ -1311,6 +1311,7 @@
       else if (lk === 'c' && !isTyping(e)) A().copyBar();
       else if (lk === 'v' && !isTyping(e)) A().pasteBar();
       else if (lk === 'd') A().duplicateBar();
+      else if (lk === 'l' && e.shiftKey) A().toggleLyrics();
       else if (lk === 'l' && TC.curTrack() && TC.curTrack().kind === 'pitched') A().startLyrics(); // lyrics (as in MuseScore)
       else if (lk === 'a' && !isTyping(e)) A().selectAll();
       else if ((k === 'ArrowUp' || k === 'ArrowDown') && S.selection.size && !isTyping(e)) A().octaveSelection(k === 'ArrowUp' ? 1 : -1); // melody: an octave

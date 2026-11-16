@@ -446,6 +446,12 @@
   // ---- Lyrics (js/lyrics.js) -------------------------------------------------------------
   /** Type lyrics: at the selected note, else at the first note without a syllable (verse: S.lyricVerse). */
   A.startLyrics = () => TC.lyrics.start();
+  /** Show or hide the lyrics (they can make bars wide); saved with the score, kept in the exports. */
+  A.toggleLyrics = function () {
+    if (TC.lyrics.isOpen()) TC.lyrics.close();
+    S.doc.page.lyrics = S.doc.page.lyrics === false;
+    TC.commit();
+  };
   /** The verse to type into (0 = 1st); the field is open: it moves to that verse. */
   A.setLyricVerse = function (v) {
     S.lyricVerse = TC.clamp(Number(v) || 0, 0, TC.score.LYRIC_VERSES - 1);

@@ -856,6 +856,15 @@ setTimeout(() => {
           const drawn = [...document.querySelectorAll('.score .lyric')].map((e) => e.textContent).join(' ');
           ok('lyrics: Enter closes, drawn under the notes ' + drawn, !lf() && !S.lyricEdit && /Hal - lo Welt, wie geht/.test(drawn));
           ok('lyrics: one undo step', TC.history.undoStack.length === undoBefore + 1);
+          TC.actions.toggleLyrics();
+          ok('lyrics: hidden - nothing drawn, no room taken (bar width, row)', !document.querySelector('.score .lyric') && !TC.render.layout.lyrInfo.size &&
+            !TC.render.layout.staves.some((z) => z.lyrRows) && S.doc.page.lyrics === false && TC.score.lyricVerses(S.doc.tracks.find((t) => t.id === mt.id)) === 1);
+          TC.actions.startLyrics();
+          ok('lyrics: hidden, but shown while typing', !!lf() && !!document.querySelector('.score .lyric'));
+          lf().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          ok('lyrics: hidden again after typing', !lf() && !document.querySelector('.score .lyric'));
+          TC.actions.toggleLyrics();
+          ok('lyrics: shown again', S.doc.page.lyrics !== false && !!document.querySelector('.score .lyric'));
           TC.actions.undo();
           ok('lyrics: undone at once', TC.score.lyricVerses(S.doc.tracks.find((t) => t.id === mt.id)) === 0);
           S.doc.view.x = 190; TC.refresh();

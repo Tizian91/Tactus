@@ -97,10 +97,11 @@ module.exports = function (T) {
     tracks: [{ kind: 'drums' }], page: { barsPerLine: 4, barNumbers: 'every' } });
   T.eq('page: markers and line breaks loaded (bar 1 never breaks)',
     pd.bars.map((h) => [h.marker, h.lineBreak]), [['Intro', false], ['Chorus', true], ['', false]]);
-  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true });
+  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
   T.eq('page: defaults and bad values', [TC.emptyScore(1).page, TC.normalizeDoc({ bars: [{}], page: { barsPerLine: 99, barNumbers: 'x', margin: 13, header: 'no' } }).page],
-    [{ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true }, { barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true }]);
-  T.eq('page: margin and running header loaded', TC.normalizeDoc({ bars: [{}], page: { margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true } }).page,
-    { barsPerLine: 0, barNumbers: 'system', margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true });
+    [{ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true }, { barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true }]);
+  T.eq('page: margin and running header loaded', TC.normalizeDoc({ bars: [{}], page: { margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true } }).page,
+    { barsPerLine: 0, barNumbers: 'system', margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
   T.eq('page: scale names off is kept', TC.normalizeDoc({ bars: [{}], page: { scaleNames: false } }).page.scaleNames, false);
+  T.eq('page: lyrics hidden is kept', TC.normalizeDoc({ bars: [{}], page: { lyrics: false } }).page.lyrics, false);
 };

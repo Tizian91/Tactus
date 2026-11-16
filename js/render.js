@@ -160,7 +160,7 @@
       // melody: the rows of the lyrics (a verse each; the one being typed counts), under the lowest note of the track
       if (track.kind === 'pitched') {
         const ed = S.lyricEdit && S.lyricEdit.track === track.id ? S.lyricEdit.v + 1 : 0;
-        z.lyrRows = Math.max(TC.score.lyricVerses(track), ed);
+        z.lyrRows = RD.lyricsShown(track) ? Math.max(TC.score.lyricVerses(track), ed) : 0;
         z.lyrY = LYR_Y;
         if (z.lyrRows) bars.forEach((b) => z.lyrY = Math.max(z.lyrY, lowestInk(b.parts[k]) + 1.5 * SP));
       }
@@ -184,6 +184,8 @@
   }
 
   // ---- Lyrics: under a melody staff, a row per verse, a syllable centred under its note
+  /** Lyrics of a melody track drawn: the switch of the score (page.lyrics), and always while they are being typed. */
+  RD.lyricsShown = (track) => (S.doc.page && S.doc.page.lyrics !== false) || !!(S.lyricEdit && S.lyricEdit.track === track.id);
   const LYR_Y = 8.0 * SP;   // baseline of the first verse (lower under low notes)
   const LYR_DY = 2.1 * SP;  // from verse to verse
   const LYR_FONT = '14px "Segoe UI", system-ui, -apple-system, sans-serif'; // (as .score .lyric in css/app.css)
@@ -382,7 +384,7 @@
     const grid = TC.gridTicks(S.input);
     const tracks = RD.shownTracks(doc);
     // lyrics of the melody tracks (js/model.js SC.lyricInfo): syllables, hyphens, melisma lines
-    const lyrInfo = new Map(tracks.filter((t) => TC.score.lyricVerses(t)).map((t) => [t, TC.score.lyricInfo(doc, t)]));
+    const lyrInfo = new Map(tracks.filter((t) => RD.lyricsShown(t) && TC.score.lyricVerses(t)).map((t) => [t, TC.score.lyricInfo(doc, t)]));
     const bars = doc.bars.map((h, i) => {
       const L = TC.barTicks(h.ts);
       const showTs = i === 0 || h.ts.join('/') !== doc.bars[i - 1].ts.join('/');

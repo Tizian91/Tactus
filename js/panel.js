@@ -188,7 +188,10 @@
     const t = TC.curTrack(), n = TC.score.lyricVerses(t), cur = Math.min(S.lyricVerse || 0, n);
     const verses = Array.from({ length: Math.min(TC.score.LYRIC_VERSES, n + 1) }, (_, v) =>
       btn('setLyricVerse', v, n === v ? '+' : String(v + 1), v === cur, n === v ? tr('A new verse') : tr('Verse {n}', { n: v + 1 }))).join('');
+    const shown = S.doc.page.lyrics !== false;
     return `<section><h3>${tr('Lyrics')}</h3>
+      ${n ? check('toggleLyrics', shown, tr('Show lyrics (Ctrl+Shift+L)')) : ''}
+      ${n && !shown ? `<p class="hint tight">${tr('Hidden: the bars are narrow again. While typing, the lyrics show.')}</p>` : ''}
       ${n ? `<div class="row"><label>${tr('Verse')}</label><div class="seg">${verses}</div></div>` : ''}
       <div class="btn-row">${btn('startLyrics', undefined, '✎ ' + tr(sel ? 'Type lyrics from this note' : n ? 'Type lyrics' : 'Type lyrics under the notes'), false, tr('Ctrl+L · or tap a syllable'), 'wide')}</div>
       <p class="hint tight">${tr('Space: next note · "-" between the syllables of a word (Son-ne) · Space on an empty field: the syllable goes on over this note. Pasted text spreads over the notes.')}</p>
@@ -601,6 +604,7 @@
       <p class="hint tight">${tr('Space between the lines of the page view, where a line breaks (PDF too).')}</p>
       ${check('togglePageHeader', pg.header, tr('Title and page number on the following pages'))}
       ${S.doc.tracks.some((t) => t.kind === 'pitched') ? check('toggleScaleNames', pg.scaleNames !== false, tr('Write the scale above the music ("D minor", "In-Sen on D")')) : ''}
+      ${S.doc.tracks.some((t) => TC.score.lyricVerses(t)) ? check('toggleLyrics', pg.lyrics !== false, tr('Show lyrics (Ctrl+Shift+L)')) : ''}
       ${check('toggleMultiRest', pg.multiRest, tr('Combine empty bars (multi-bar rest)'))}
       <div class="row"><label>${tr('%-bars')}</label><select data-action="setSimileMode">${[['single', 'Each one as it is'], ['count', 'Narrow, counted (2, 3, 4 …)'], ['combine', 'One % with the number']]
         .map(([k, l]) => `<option value="${k}"${k === pg.simile ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select></div>

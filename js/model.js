@@ -1865,6 +1865,21 @@
     return l;
   };
   /**
+   * The level a track plays at a place: (bar, tick) -> 0 … 7 (index in SC.DYN_LEVELS, mf = 4) - inside a hairpin
+   * between its start and end level (a fraction). For a VST whose loudness follows a controller (js/keyswitch.js KS.dynCC).
+   */
+  SC.dynLevel = function (doc, track) {
+    const ev = SC.dynEvents(doc, track), at = SC.tickOf(doc);
+    return (bi, tick) => {
+      const x = at(bi, tick);
+      const w = ev.wedges.find((q) => q.abs <= x && x < q.end);
+      if (w) return w.from + (w.to - w.from) * (x - w.abs) / (w.end - w.abs);
+      let l = SC.DYN_MF;
+      for (const m of ev.marks) if (m.abs <= x) l = m.lvl; else break;
+      return l;
+    };
+  };
+  /**
    * How strongly a track plays at a place: (bar, tick) -> factor (1 = mf) - the level written before it, or
    * inside a hairpin the way from its start level to its end level.
    */

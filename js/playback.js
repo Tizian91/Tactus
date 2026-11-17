@@ -69,6 +69,8 @@
   T.STRUM = 0.012;
   /** A keyswitch goes this much (seconds) before the notes it is for. */
   T.KS_LEAD = 0.02;
+  /** A controller value of the dynamics (profile.dyn) goes this much (seconds) before the notes at its place. */
+  T.CC_LEAD = 0.01;
   T.strum = function (ev, n) {
     const order = ev.notes.slice().sort((a, b) => a.pitch - b.pitch), k = order.indexOf(n);
     return (n.stroke === 'u' ? order.length - 1 - k : k) * T.STRUM;
@@ -191,6 +193,12 @@
         if (!track.ksw || !T.audible(doc, track) || !order.length) continue;
         TC.ksw.events(doc, track, order, (o, k) => o.t0 + st(k) * o.spt, t, TC.ksw.artBefore(track, from))
           .forEach((e) => hits.push({ t: e.at - T.KS_LEAD, ks: e.key, dur: e.hold || 0.05, trk: track }));
+      }
+      // dynamics through a controller (profile.dyn - Iconica: the modulation wheel), a little before the notes
+      for (const track of doc.tracks) {
+        if (!track.ksw || !track.ksw.dyn || !T.audible(doc, track) || !order.length) continue;
+        TC.ksw.dynCC(doc, track, order, (o, k) => o.t0 + st(k) * o.spt)
+          .forEach((e) => hits.push({ t: e.at - T.CC_LEAD, cc: track.ksw.dyn.cc, val: e.val, trk: track }));
       }
     }
     hits.forEach((x) => { x.t = Math.max(0, x.t); });

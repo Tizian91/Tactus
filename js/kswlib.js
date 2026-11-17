@@ -41,7 +41,7 @@
   /** The copy a track takes (lib: where it came from). null if the profile has no keys yet. */
   L.toTrack = function (id) {
     const p = L.byId(id);
-    if (!p || !p.keys.length) return null;
+    if (!p || (!p.keys.length && !p.dyn)) return null;
     const c = JSON.parse(JSON.stringify(p));
     delete c.id;
     return Object.assign(c, { tpl: '', lib: p.id });
@@ -244,6 +244,12 @@
           <label>${tr('Shift notes')} <select data-f="noteShift">${[-24, -12, 0, 12, 24, 36].map((n) => `<option value="${n}"${n === p.noteShift ? ' selected' : ''}>${n > 0 ? '+' : ''}${n}</option>`).join('')}</select></label>
           <label title="${esc(tr('How many tones the VST plays at a time (a tapped chord is written for it); empty: any'))}">${tr('Tones at a time')} <input type="number" data-f="poly" min="0" max="16" value="${p.poly || ''}" placeholder="–"></label>
         </div>
+        <div class="ksw-head" title="${esc(tr('For a VST whose loudness follows a controller (e.g. Iconica: the modulation wheel) - the dynamics of the score (ppp … fff, cresc. / dim.) are sent as this controller as well'))}">
+          <label>${tr('Dynamics through')} <select data-f="dynCC"><option value="0">${tr('– (strength only)')}</option>${KS.DYN_CCS.map(([n, name]) => `<option value="${n}"${p.dyn && p.dyn.cc === n ? ' selected' : ''}>${esc(tr(name))}</option>`).join('')}</select></label>
+          ${p.dyn ? `<label>ppp = <input type="number" data-f="dynLo" min="0" max="127" value="${p.dyn.lo}"></label>
+          <label>fff = <input type="number" data-f="dynHi" min="0" max="127" value="${p.dyn.hi}"></label>
+          <span class="muted">mf = ${KS.dynValue(p.dyn, TC.score.DYN_MF)}</span>` : ''}
+        </div>
         <p class="hint tight">${tr('Type the key of the VST at each way of playing it has (as the VST names it: C0, F#1, Bb2 - counted from its C3); empty: the VST has none. A way of playing holds until the next one of its group.')}</p>${midiHint}${miss}
         ${twice.length ? `<p class="hint warn"><b>${tr('The same key twice:')}</b> ${twice.join(' · ')}</p>` : ''}
         ${cats}${sw}${oldRows}`;
@@ -348,7 +354,7 @@
         break;
       }
       case 'use':
-        if (!p.keys.length) { TC.ui.hint(tr('The profile has no keys yet.')); break; }
+        if (!p.keys.length && !p.dyn) { TC.ui.hint(tr('The profile has no keys and no dynamics yet.')); break; }
         TC.actions.setTrackKsw('lib:' + p.id);
         draw();
         break;
@@ -428,6 +434,17 @@
     const f = el.dataset.f, k = el.dataset.id && p.keys.find((x) => x.id === el.dataset.id);
     if (f === 'c3') { p.c3 = Number(el.value) === 48 ? 48 : 60; return changed(false); }
     if (f === 'noteShift') { p.noteShift = Math.max(-36, Math.min(36, parseInt(el.value, 10) || 0)); return changed(false); }
+    if (f === 'dynCC') {
+      const cc = parseInt(el.value, 10);
+      if (cc) p.dyn = KS.cleanDyn(Object.assign({}, p.dyn, { cc }));
+      else delete p.dyn;
+      return changed(true);
+    }
+    if (f === 'dynLo' || f === 'dynHi') {
+      if (!p.dyn) return;
+      p.dyn[f === 'dynLo' ? 'lo' : 'hi'] = Math.max(0, Math.min(127, parseInt(el.value, 10) || 0));
+      return changed(true);
+    }
     if (f === 'poly') { const n = parseInt(el.value, 10); p.poly = n > 0 ? Math.min(16, n) : 0; return changed(false); }
     if (!k) return;
     if (f === 'name') { k.name = el.value.trim().slice(0, 60) || k.id; return changed(false); }

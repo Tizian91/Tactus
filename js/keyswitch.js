@@ -134,12 +134,55 @@
     const keys = p.keys.filter((k) => k && typeof k.id === 'string' && !seen.has(k.id) && seen.add(k.id) && KS.noteOf(k.note) !== null && (KS.cat(k.id) || KS.KINDS.includes(k.kind)))
       .map((k) => KS.cat(k.id) ? KS.catKey(k.id, k.note) : Object.assign({ id: k.id.slice(0, 40), name: String(k.name || k.id).slice(0, 60), short: String(k.short || '').slice(0, 12), note: k.note, kind: k.kind },
         typeof k.group === 'string' && k.group ? { group: k.group.slice(0, 20) } : {}, k.span === 'note' ? { span: 'note' } : {}));
-    if (!keys.length && !empty) return null;
+    const dyn = KS.cleanDyn(p.dyn);
+    if (!keys.length && !dyn && !empty) return null;
     const ids = new Set(keys.map((k) => k.id));
     return Object.assign({ tpl: typeof p.tpl === 'string' ? p.tpl : '', v: Number.isInteger(p.v) ? p.v : 1 },
       typeof p.lib === 'string' && p.lib ? { lib: p.lib.slice(0, 40) } : {}, { name: String(p.name || 'Keyswitches').slice(0, 60), c3: p.c3 === 48 ? 48 : 60,
         noteShift: Number.isInteger(p.noteShift) && Math.abs(p.noteShift) <= 36 ? p.noteShift : 0, poly: Number.isInteger(p.poly) && p.poly > 0 ? Math.min(p.poly, 16) : 0,
-        init: Array.isArray(p.init) ? p.init.filter((id) => ids.has(id)) : [], keys });
+        init: Array.isArray(p.init) ? p.init.filter((id) => ids.has(id)) : [] }, dyn ? { dyn } : {}, { keys });
+  };
+
+  // ---- Dynamics through a controller (Iconica: the loudness on the modulation wheel) ----------------------------
+  // profile.dyn = { cc, lo, hi }: the dynamics of the score (ppp … fff, hairpins) also sent as controller cc - ppp = lo,
+  // fff = hi, the levels between evenly; a hairpin glides (a step every KS.DYN_STEP ticks). The notes' strengths stay.
+
+  /** The controllers offered: [number, name]. */
+  KS.DYN_CCS = [[1, 'CC 1 (modulation wheel)'], [11, 'CC 11 (expression)'], [2, 'CC 2 (breath)']];
+  KS.DYN_STEP = 120; // a 32nd
+  /** profile.dyn cleaned, or null (off). */
+  KS.cleanDyn = function (d) {
+    if (!d || typeof d !== 'object' || !KS.DYN_CCS.some(([n]) => n === d.cc)) return null;
+    const v = (x, def) => (Number.isInteger(x) ? Math.max(0, Math.min(127, x)) : def);
+    return { cc: d.cc, lo: v(d.lo, 20), hi: v(d.hi, 127) };
+  };
+  /** The value a level (0 … 7, a fraction inside a hairpin) sends. */
+  KS.dynValue = (d, lvl) => Math.round(d.lo + (d.hi - d.lo) * lvl / (TC.score.DYN_LEVELS.length - 1));
+  /**
+   * The controller values of a track as played - [{ at, val }] (only where the value changes; the value that holds
+   * at the start first of all, so the VST does not keep an old one). order / timeOf as in KS.events.
+   */
+  KS.dynCC = function (doc, track, order, timeOf) {
+    const d = track && track.ksw && track.ksw.dyn;
+    if (!d || !order.length) return [];
+    const SC = TC.score, lvl = SC.dynLevel(doc, track), ev = SC.dynEvents(doc, track), abs = SC.tickOf(doc);
+    const out = [];
+    let last = null;
+    for (const o of order) {
+      const L = TC.barTicks(doc.bars[o.bar].ts), a0 = abs(o.bar, 0), ticks = new Set([0]);
+      ev.marks.forEach((m) => { if (m.abs >= a0 && m.abs < a0 + L) ticks.add(m.abs - a0); });
+      ev.wedges.forEach((w) => {
+        if (w.end <= a0 || w.abs >= a0 + L) return;
+        for (let t = Math.max(0, w.abs - a0); t < Math.min(L, w.end - a0); t += KS.DYN_STEP) ticks.add(t);
+        if (w.end - a0 < L) ticks.add(w.end - a0);
+      });
+      [...ticks].sort((x, y) => x - y).forEach((t) => {
+        const val = KS.dynValue(d, lvl(o.bar, t));
+        if (val !== last) out.push({ at: timeOf(o, t), val });
+        last = val;
+      });
+    }
+    return out;
   };
   /** The key of a keyswitch of a track (its MIDI note), or null. */
   KS.keyOf = (track, id) => {

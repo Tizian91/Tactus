@@ -244,6 +244,10 @@
           const on = Math.max(0, Math.round(x.at - KS_TICKS));
           noteEv[ti].push({ t: on, order: 0, bytes: [0x90 | ch, x.key, 100] }, { t: Math.max(on + 1, Math.round(x.at + (x.hold || NOTE_LEN) - KS_TICKS - 1)), order: 1, bytes: [0x80 | ch, x.key, 0] });
         });
+        // dynamics through a controller (profile.dyn - Iconica: the modulation wheel), before the notes at its place
+        if (track.ksw.dyn) TC.ksw.dynCC(doc, track, starts, (o, k) => o.t + sw(k)).forEach((x) => {
+          noteEv[ti].push({ t: Math.max(0, Math.round(x.at)), order: 0, bytes: [0xb0 | ch, track.ksw.dyn.cc, x.val] });
+        });
       });
     }
     // page turns: a note when the played bar is on another page (the first page at the start)

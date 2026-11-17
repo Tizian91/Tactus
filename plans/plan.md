@@ -831,3 +831,10 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   Note-On → Taste, C3 = 60); Controller / anderer Kanal / doppelt / unbekannt als Liste. Notenbild: Bravura-Artikulationen am Kopf,
   Tremolo als 3 Striche (mit Fähnchen), MusicXML `<staccato/>` … `<tremolo>`. Getestet mit der Violins-Map von Iconica Sketch (7 von 7
   Slots erkannt). `expressionmap/` in .gitignore. Tests `test_kswlib.js` (32).
+
+### Dynamik als Controller (Keyswitch-Profil `dyn`)
+- Profil-Feld `dyn: { cc, lo, hi }` (CC 1 / 11 / 2; Vorgabe 20 … 127): die Dynamik der Spur (ppp … fff, Gabeln) geht zusätzlich als
+  Controller raus - für VSTs, deren Lautstärke am Modulationsrad hängt (Iconica). ppp = lo, fff = hi, Stufen gleichmäßig dazwischen.
+  `SC.dynLevel` (Stufe 0 … 7, in einer Gabel gebrochen), `KS.dynCC` (Werte nur bei Änderung, Gabel alle 32stel, am Anfang der geltende
+  Wert). Abspielen: Hits `{ cc, val }` 10 ms vor den Noten (`MO.cc`, nur MIDI); MIDI-Export: vor den Noten derselben Stelle.
+  Ein Profil nur mit Dynamik (ohne Tasten) gilt. Anschlagstärke bleibt wie bisher. Tests `test_kswlib.js` (41).

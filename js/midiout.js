@@ -174,6 +174,15 @@
       hold(o, ch, pitch, offAt);
     }
   };
+  /** A controller value (the dynamics of a keyswitch profile, js/keyswitch.js KS.dynCC) at audio time `when`. */
+  MO.cc = function (ctl, val, when, ctx, track) {
+    const o = portOf(track);
+    if (!o) return;
+    const ch = Number.isInteger(track.midiCh) ? track.midiCh : track.channel || 0;
+    const lat = ctx ? TC.audio.outputDelay() : 0;
+    const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
+    send(o, [0xb0 | ch, ctl, Math.max(0, Math.min(127, Math.round(val)))], at);
+  };
   /**
    * Notes sent whose release is still to come (a keyswitch held for bars, a long tone): on stop each gets a real
    * note off - "all notes off" (CC 123) is ignored by many VSTs, and a held keyswitch (palm mute) would stay pressed.

@@ -1415,7 +1415,7 @@
       const lib = /^lib:/.test(tpl) && TC.kswLib;
       const p = lib ? TC.kswLib.toTrack(tpl.slice(4)) : TC.ksw.fromTemplate(tpl);
       if (!p) {
-        if (lib) { TC.ui.hint(tr('The profile has no keys yet.')); TC.refresh(); }
+        if (lib) { TC.ui.hint(tr('The profile has no keys and no dynamics yet.')); TC.refresh(); }
         return;
       }
       t.ksw = p;

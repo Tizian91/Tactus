@@ -258,7 +258,9 @@ details > summary { list-style-position: outside; }
 .score .grid { stroke: var(--grid); stroke-width: 1; }
 .score .grid.beat { stroke: var(--grid-beat); }
 .score .line-band { fill: var(--band); }
-.score .bar-sel { fill: var(--accent-soft); opacity: 0.7; }
+/* (in the score no "opacity" - it makes an effect group, and everything drawn over it is sorted into layers again on each change
+   of the preview / cursor: 150 ms a frame with a bar selected; fill-opacity / stroke-opacity look the same and cost nothing) */
+.score .bar-sel { fill: var(--accent-soft); fill-opacity: 0.7; }
 .score .barno { font-size: 10px; fill: var(--muted); }
 .score .staff-name { font-size: 10px; font-weight: 600; fill: var(--muted); }
 .score .staff-name.cur { fill: var(--accent); }
@@ -311,35 +313,35 @@ input.ksw-note { width: 46px; }
 .score .tuplet { font-size: 30px; }
 .score .note.sel .mus, .score .note.sel .stem { fill: var(--accent); stroke: var(--accent); }
 .score .note .hsel { fill: var(--accent); }
-.score .ghost { fill: var(--ghost); opacity: 0.45; }
-.score .hover-col { fill: var(--accent); opacity: 0.06; }
-.score .hover-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.8; }
+.score .ghost { fill: var(--ghost); fill-opacity: 0.45; }
+.score .hover-col { fill: var(--accent); fill-opacity: 0.06; }
+.score .hover-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-opacity: 0.8; }
 .score .add-box { fill: var(--panel); stroke: var(--border); stroke-width: 1; rx: 5; }
 .score .add-plus { font-size: 22px; fill: var(--muted); text-anchor: middle; }
 .score .add-bar:hover .add-box { stroke: var(--accent); }
 .score .dm-label { font-size: 9px; font-weight: 600; fill: var(--label); text-anchor: end; cursor: pointer; }
 .score .dm-label.sel { fill: var(--accent); }
 .score .dm-label.hl { fill: var(--accent); font-size: 10.5px; }
-.score .dm-label.pale { opacity: 0.4; font-weight: 400; }
-.score .dm-lead.pale { opacity: 0.4; }
-.score .line-out { fill: var(--label); opacity: 0.07; }
-.score .line-chord { fill: var(--accent, #2b6cde); opacity: 0.27; }
-.score .line-chord.line-root { opacity: 0.5; } /* the root of the chord, wherever it is on the staff */
-.score .len-bar { fill: var(--accent); opacity: 0.18; }
-.score .len-stop { fill: var(--accent); opacity: 0.9; }
-.score .dm-lead { fill: none; stroke: var(--muted); stroke-width: 0.5; stroke-dasharray: 1 2; opacity: 0.7; }
-.score .dm-lead.sel { stroke: var(--accent); opacity: 0.6; }
-.score .dm-lead.hl { stroke: var(--accent); stroke-width: 1; stroke-dasharray: none; opacity: 1; }
-.score .hover-band { fill: var(--accent); opacity: 0.16; }
-.score .hover-col.lock { opacity: 0.12; }
-.score .vel-box { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; opacity: 0.95; }
+.score .dm-label.pale { fill-opacity: 0.4; font-weight: 400; }
+.score .dm-lead.pale { stroke-opacity: 0.4; }
+.score .line-out { fill: var(--label); fill-opacity: 0.07; }
+.score .line-chord { fill: var(--accent, #2b6cde); fill-opacity: 0.27; }
+.score .line-chord.line-root { fill-opacity: 0.5; } /* the root of the chord, wherever it is on the staff */
+.score .len-bar { fill: var(--accent); fill-opacity: 0.18; }
+.score .len-stop { fill: var(--accent); fill-opacity: 0.9; }
+.score .dm-lead { fill: none; stroke: var(--muted); stroke-width: 0.5; stroke-dasharray: 1 2; stroke-opacity: 0.7; }
+.score .dm-lead.sel { stroke: var(--accent); stroke-opacity: 0.6; }
+.score .dm-lead.hl { stroke: var(--accent); stroke-width: 1; stroke-dasharray: none; stroke-opacity: 1; }
+.score .hover-band { fill: var(--accent); fill-opacity: 0.16; }
+.score .hover-col.lock { fill-opacity: 0.12; }
+.score .vel-box { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; fill-opacity: 0.95; stroke-opacity: 0.95; }
 .score .vel-seg { fill: var(--grid-beat); }
 .score .vel-seg.on { fill: var(--accent); }
 .score .erase-ring { fill: var(--danger); fill-opacity: 0.08; stroke: var(--danger); stroke-width: 1.2; stroke-dasharray: 3 2; }
 .score .erase-ring.on { fill-opacity: 0.22; stroke-dasharray: none; }
 .score .sel-frame { fill: var(--accent); fill-opacity: 0.08; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; }
-.score .hover-bar { fill: var(--accent); opacity: 0.05; stroke: var(--accent); stroke-width: 1; stroke-opacity: 0.35; }
-.score .hover-label-bg { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; opacity: 0.92; }
+.score .hover-bar { fill: var(--accent); fill-opacity: 0.05; stroke: var(--accent); stroke-width: 1; stroke-opacity: 0.02; }
+.score .hover-label-bg { fill: var(--panel); stroke: var(--accent-border); stroke-width: 0.6; fill-opacity: 0.92; stroke-opacity: 0.92; }
 .score .hover-label { font-size: 9px; font-weight: 600; fill: var(--accent); }
 .score .mus.mid { text-anchor: middle; }
 .score .mus.grace { font-size: 24px; }
@@ -359,9 +361,9 @@ input.ksw-note { width: 46px; }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
 .lyric-help { position: absolute; z-index: 30; font-size: 11px; color: var(--muted); background: var(--panel);
   padding: 1px 6px; border-radius: 4px; white-space: nowrap; pointer-events: none; opacity: 0.92; }
-.score .play-cursor { fill: var(--accent); opacity: 0.85; }
-.score .play-bar { fill: var(--accent); opacity: 0.07; }
-.score .loop-range { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 3; opacity: 0.6; }
+.score .play-cursor { fill: var(--accent); fill-opacity: 0.85; }
+.score .play-bar { fill: var(--accent); fill-opacity: 0.07; }
+.score .loop-range { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 3; stroke-opacity: 0.6; }
 
 /* ---- Status bar ------------------------------------------------------------- */
 
@@ -443,7 +445,7 @@ input.ksw-note { width: 46px; }
   #print-root svg:last-child { break-after: auto; page-break-after: auto; }
 }
 .score.print { --ink: #000; --staff: #000; --text: #000; --label: #222; --muted: #555; background: #fff; }
-.score .break-mark { font-size: 16px; font-weight: 700; fill: var(--accent); opacity: 0.8; }
+.score .break-mark { font-size: 16px; font-weight: 700; fill: var(--accent); fill-opacity: 0.8; }
 
 /* ---- Dialog (kit profiles, js/kits.js) ---- */
 .dialog-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }

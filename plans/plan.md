@@ -864,3 +864,7 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - Ansicht mit mittlerer Maustaste / Finger / zwei Fingern gehalten (`I.holdingView`): eine Pause zeichnet nicht neu (jedes Neuzeichnen
   rastert das große Bild samt Rand neu – nah herangezoomt ein spürbarer Ruck); neu gezeichnet erst beim Verlassen des Bilds oder beim
   Loslassen (`RD.settleView`). Offen, falls nötig: nur Takte nahe der Ansicht zeichnen; Rand an den Zoom anpassen.
+- Hover-Vorschau ruckelte (gemessen über Edge DevTools-Protokoll: ~170 ms pro Mausbewegung, fast alles „Layerize“): ein einziges
+  Rechteck mit CSS `opacity` (ausgewählter Takt `.bar-sel`) machte eine Effekt-Gruppe; bei jeder Änderung der Vorschau sortierte der
+  Browser alles darüber neu in Ebenen. Im Notenbild jetzt nur `fill-opacity` / `stroke-opacity` (sieht gleich aus): ~10× schneller.
+  Messung: Edge headless mit --remote-debugging-port, Tracing, Input.dispatchMouseEvent (Skript nicht im Repo).

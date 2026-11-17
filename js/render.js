@@ -11,7 +11,10 @@
  *   #score (svg)
  *     #world    translate(view) scale(zoom): everything below in world units
  *       .static the score, rebuilt by TC.render.draw()
+ *   #overlay (svg, the same size and view; pointer-events none - changing it does not repaint the score)
+ *     #world-over  the same transform as #world
  *       .hover  preview of the note under the pointer, rebuilt by TC.render.drawHover()
+ *       .play   playback cursor (TC.render.drawCursor) · .selrect  frame of the select tool
  *
  * World units: SP = one staff space at zoom 1 (px). Staff steps ("lines") count half
  * spaces from the top line downwards (0 = top line, 8 = bottom line), as in drummap.js.
@@ -51,7 +54,7 @@
   const FLAG_DOWN = (n) => String.fromCharCode(0xe241 + 2 * (n - 1));
   const ACCENT = { 1: ['', '', 1.356], 2: ['', '', 0.94] };
 
-  let svg, world, stat, hov, play, selg;
+  let svg, world, stat, hov, play, selg, ovl, world2, dyng;
   let staffNow = null; // the staff drawVoice draws into (its heads remember the track and the staff)
   let signers = new Map(); // track -> signsAt(bar, tick) of its keyswitches (staccato dots, tremolo strokes …)
   const signsOf = (track, bi, tick) => {
@@ -66,18 +69,62 @@
     svg = document.getElementById('score');
     world = document.getElementById('world');
     stat = world.querySelector('.static');
-    hov = world.querySelector('.hover');
-    play = world.querySelector('.play');
-    if (!play) {
-      play = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      play.setAttribute('class', 'play');
-      world.appendChild(play);
+    // what changes while playing or pointing (cursor, note preview, selection frame) lives in a light SVG of its own over
+    // the score: changing it does not make the browser paint the whole score again (slow with a fine grid or zoomed in)
+    ovl = document.getElementById('overlay');
+    if (!ovl) {
+      const NS = 'http://www.w3.org/2000/svg';
+      ovl = document.createElementNS(NS, 'svg');
+      ovl.setAttribute('id', 'overlay');
+      ovl.setAttribute('class', 'score overlay');
+      ovl.setAttribute('aria-hidden', 'true');
+      ovl.appendChild(document.createElementNS(NS, 'g')).setAttribute('id', 'world-over');
+      svg.after(ovl);
     }
-    selg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    selg.setAttribute('class', 'selrect');
-    world.appendChild(selg);
+    world2 = ovl.querySelector('#world-over');
+    const layer = (cls) => {
+      let g = world2.querySelector('.' + cls) || world.querySelector('.' + cls);
+      if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', cls); }
+      world2.appendChild(g); // (moved over from the score, where an older page had it)
+      return g;
+    };
+    hov = layer('hover');
+    play = layer('play');
+    selg = layer('selrect');
+    dyng = layer('dyndrag');
   };
 
+
+  /**
+   * Where a dragged handle of a dynamics sign / hairpin would go (js/interaction.js): a dashed line at the place in
+   * its bar, with the place written above it ({ bar, x, label }); null removes it. In the overlay: the score is not drawn again.
+   */
+  RD.drawDynDrag = function (m) {
+    const L = RD.layout, b = m && L && L.bars[m.bar];
+    if (!b) return void (dyng.innerHTML = '');
+    const s = L.systems[b.sys], hh = L.stackH + 7 * SP;
+    dyng.innerHTML = onLine(s, line(m.x, -3.5 * SP, m.x, -3.5 * SP + hh, 'dyn-drag') +
+      `<text class="dyn-drag-label" x="${f(m.x + 4)}" y="${f(-4 * SP)}">${esc(m.label)}</text>`);
+  };
+  /**
+   * The places a dynamics sign or hairpin end can be dragged to in a track: every note and rest (their start and end, any
+   * voice) and every bar start / end - [{ bar, t, abs, x, end }] (end: the end of a bar, drawn before its bar line).
+   */
+  RD.dynSnaps = function (track) {
+    const L = RD.layout, at = TC.score.tickOf(S.doc), out = [];
+    if (!L || !track) return out;
+    for (const b of L.bars) {
+      if (b.hidden !== undefined) continue;
+      const ticks = new Set([0]);
+      (track.bars[b.i] ? track.bars[b.i].voices : []).forEach((v) => v.forEach((ev) => {
+        if (ev.tick < b.L) ticks.add(ev.tick);
+        if (ev.tick + ev.dur < b.L) ticks.add(ev.tick + ev.dur);
+      }));
+      ticks.forEach((t) => out.push({ bar: b.i, t, abs: at(b.i, t), x: RD.tickX(b, t) }));
+      out.push({ bar: b.i, t: b.L, abs: at(b.i, b.L), x: b.x + b.w - 0.6 * SP, end: true });
+    }
+    return out;
+  };
   /** Selection frame (select tool) in view coordinates { x1, y1, x2, y2 }; null removes it. */
   RD.drawRect = function (r) {
     if (!r) return void (selg.innerHTML = '');
@@ -674,13 +721,17 @@
     const v = S.doc.view, vp = svg.parentElement, w = vp.clientWidth, h = vp.clientHeight;
     const mx = Math.min(1600, w), my = Math.min(1600, h);
     if (!shown || shown.w !== w || shown.h !== h) {
-      svg.style.left = -mx + 'px';
-      svg.style.top = -my + 'px';
-      svg.style.width = w + 2 * mx + 'px';
-      svg.style.height = h + 2 * my + 'px';
+      for (const el of [svg, ovl]) {
+        el.style.left = -mx + 'px';
+        el.style.top = -my + 'px';
+        el.style.width = w + 2 * mx + 'px';
+        el.style.height = h + 2 * my + 'px';
+      }
     }
-    world.setAttribute('transform', `translate(${f(v.x + mx)},${f(v.y + my)}) scale(${v.zoom})`);
-    svg.style.transform = '';
+    const tf = `translate(${f(v.x + mx)},${f(v.y + my)}) scale(${v.zoom})`;
+    world.setAttribute('transform', tf);
+    world2.setAttribute('transform', tf);
+    svg.style.transform = ovl.style.transform = '';
     shown = { x: v.x, y: v.y, zoom: v.zoom, w, h, mx, my };
     if (TC.lyrics && TC.lyrics.isOpen()) TC.lyrics.place(false); // (the field typing lyrics stays under its note)
   };
@@ -697,7 +748,7 @@
     // the visible part, in the picture: it must lie inside it
     const x0 = (c.mx - tx) / k, x1 = (w + c.mx - tx) / k, y0 = (c.my - ty) / k, y1 = (h + c.my - ty) / k;
     if (k < 0.6 || k > 1.6 || x0 < 0 || y0 < 0 || x1 > w + 2 * c.mx || y1 > h + 2 * c.my) return RD.applyView();
-    svg.style.transform = k === 1 ? `translate(${f(tx)}px,${f(ty)}px)` : `translate(${f(tx)}px,${f(ty)}px) scale(${k})`;
+    svg.style.transform = ovl.style.transform = k === 1 ? `translate(${f(tx)}px,${f(ty)}px)` : `translate(${f(tx)}px,${f(ty)}px) scale(${k})`;
     clearTimeout(settle);
     settle = setTimeout(RD.applyView, 200);
   };
@@ -1051,18 +1102,26 @@
     }
 
     // dynamics: the level as a sign (p, mf, ff …) at its place, hairpins as a wedge from their place to their end
-    // (over line breaks: a piece in each line, opening as far as it has come)
+    // (over line breaks: a piece in each line, opening as far as it has come). Each can be tapped (data-dyn: track|bar|t|kind,
+    // js/interaction.js) - the selected one in the colour of a selection; a hairpin has a wider area to hit than its lines.
+    const dsel = !S.selection.size && S.dynSel;
+    const dynAttr = (tr, bar, t, k) => ` data-dyn="${esc(tr.id)}|${bar}|${t}|${k}"`;
+    const isSel = (tr, bar, t, k) => !!dsel && dsel.track === tr.id && dsel.bar === bar && dsel.t === t && !!dsel.w === (k === 'w');
+    // (selected: the sign itself is the handle to drag it - h 'v'; the end level of a hairpin moves its end - h 'e')
+    const dynGlyph = (ch, x, y, tr, bar, t, k, h) => `<text class="mus dyn${isSel(tr, bar, t, k) ? ' sel' : ''}"${dynAttr(tr, bar, t, k)}${h && isSel(tr, bar, t, k) ? ` data-dynh="${h}"` : ''} x="${f(x)}" y="${f(y)}">${ch}</text>`;
+    // a round handle at an end of the selected hairpin (h 's' start, 'e' end), with a wide area to hit
+    const handle = (x, y, h) => `<circle class="dyn-handle-hit" data-dynh="${h}" cx="${f(x)}" cy="${f(y)}" r="${f(1.4 * SP)}"/><circle class="dyn-handle" data-dynh="${h}" cx="${f(x)}" cy="${f(y)}" r="${f(0.45 * SP)}"/>`;
     for (const z of L.staves) {
       if (z.dynY === undefined) continue;
       const tr = z.track, y = z.dynY, H = 1.5 * SP, at = TC.score.tickOf(doc), signW = (v) => v.length * 1.25 * SP + 0.3 * SP;
-      const DYN_G = { p: '\uE520', m: '\uE521', f: '\uE522' };
+      const DYN_G = { p: '', m: '', f: '' };
       const levelAt = new Map(); // (abs tick -> level written there: a hairpin starts after it / ends before it)
       for (const b of L.bars) {
         if (b.hidden !== undefined) continue;
         TC.score.dynIn(tr, b.i).forEach((d) => {
           if (!d.v) return;
           levelAt.set(at(b.i, d.t), d.v);
-          OS(b, z).push(glyph(d.v.split('').map((c) => DYN_G[c]).join(''), RD.tickX(b, d.t) - 0.5 * SP, y, 'dyn'));
+          OS(b, z).push(dynGlyph(d.v.split('').map((c) => DYN_G[c]).join(''), RD.tickX(b, d.t) - 0.5 * SP, y, tr, b.i, d.t, 'v', 'v'));
         });
       }
       const ev = TC.score.dynEvents(doc, tr);
@@ -1090,13 +1149,18 @@
             const nb = L.bars.find((b) => b.hidden === undefined && b.sys === s.i && at(b.i, 0) === w.end);
             const inBar = L.bars.find((b) => b.hidden === undefined && b.sys === s.i && at(b.i, 0) < w.end && w.end < at(b.i, 0) + b.L);
             const sx = nb ? RD.tickX(nb, 0) - 0.5 * SP : inBar ? RD.tickX(inBar, w.end - at(inBar.i, 0)) - 0.5 * SP : x1 - signW(w.toV) + 0.3 * SP;
-            o.push(glyph(w.toV.split('').map((c) => DYN_G[c]).join(''), sx, y, 'dyn'));
+            o.push(dynGlyph(w.toV.split('').map((c) => DYN_G[c]).join(''), sx, y, tr, w.bar, w.t, 'w', 'e')); // (tapped: its hairpin)
             x1 = Math.min(x1, sx - 0.5 * SP);
           }
           if (x1 - x0 < SP) continue;
           const p0 = (a - w.abs) / (w.end - w.abs), p1 = (e - w.abs) / (w.end - w.abs);
           const h0 = (w.w === 'cresc' ? p0 : 1 - p0) * H / 2, h1 = (w.w === 'cresc' ? p1 : 1 - p1) * H / 2, yc = y - 0.45 * SP;
-          o.push(line(x0, yc - h0, x1, yc - h1, 'hairpin'), line(x0, yc + h0, x1, yc + h1, 'hairpin'));
+          const sel = isSel(tr, w.bar, w.t, 'w'), cls = 'hairpin' + (sel ? ' sel' : '');
+          o.push(`<rect class="dyn-hit"${dynAttr(tr, w.bar, w.t, 'w')} x="${f(x0)}" y="${f(yc - H / 2 - 0.5 * SP)}" width="${f(x1 - x0)}" height="${f(H + SP)}"/>`,
+            line(x0, yc - h0, x1, yc - h1, cls), line(x0, yc + h0, x1, yc + h1, cls));
+          // selected: a handle at its start and at its end (on the line where they are), to drag them
+          if (sel && !plain && a === w.abs) o.push(handle(x0, yc, 's'));
+          if (sel && !plain && e === w.end) o.push(handle(x1, yc, 'e'));
         }
       }
     }

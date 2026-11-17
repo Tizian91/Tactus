@@ -236,8 +236,9 @@ details > summary { list-style-position: outside; }
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #viewport.space-pan { cursor: grab; }
 #viewport.panning { cursor: grabbing; }
-#score { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none;
+#score, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none;
   will-change: transform; transform-origin: 0 0; } /* (larger than the viewport, moved as a layer: render.js moveView) */
+#overlay { pointer-events: none; } /* (cursor, note preview, selection frame: a layer of its own over the score, render.js RD.init) */
 
 .score .mus { font-family: Bravura; font-size: 40px; fill: var(--ink); }
 .score .mus-sm { font-family: Bravura; font-size: 22px; }
@@ -263,7 +264,17 @@ details > summary { list-style-position: outside; }
 .score .staff-name.cur { fill: var(--accent); }
 .score .brace { fill: var(--ink); }
 .score .mus.dyn { font-size: 40px; }
-.score .hairpin { stroke: var(--ink); stroke-width: 1.2; }
+.score .hairpin { stroke: var(--ink); stroke-width: 1.2; pointer-events: none; }
+.score .hairpin.sel { stroke: var(--accent); stroke-width: 1.8; }
+.score .mus.dyn.sel { fill: var(--accent); }
+.score .dyn-hit { fill: transparent; cursor: pointer; }
+.score .dyn-handle { fill: var(--canvas, #fff); stroke: var(--accent); stroke-width: 2; cursor: ew-resize; }
+.score .dyn-handle-hit { fill: transparent; cursor: ew-resize; }
+.score .mus.dyn[data-dynh] { cursor: ew-resize; }
+.score .dyn-drag { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 3; }
+.score .dyn-drag-label { fill: var(--accent); font-size: 13px; font-weight: 600; }
+.score .mus.dyn[data-dyn] { cursor: pointer; }
+@media print { .score .dyn-hit { display: none; } }
 .dyn-pal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0; }
 .dyn-txt { font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 700; font-size: 16px; }
 .wedge-row select.dyn-sel { flex: 1; min-width: 0; font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 700; }

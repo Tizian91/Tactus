@@ -42,6 +42,47 @@
   /** Is the instrument lock on (switch, or Shift held)? */
   I.locked = (e) => !!(S.input.lock || shiftDown || (e && e.shiftKey));
 
+  /**
+   * A handle of the selected dynamics sign / hairpin being dragged (S.drag.mode 'dynh'): the place nearest to the pointer
+   * among the notes, rests and bar ends of its track - a hairpin's start stays before its end, its end after its start.
+   * Shown as a dashed line with the place (js/render.js drawDynDrag); set when released (A.moveDynSel).
+   */
+  function dynHandleMove(e) {
+    const d = S.drag, p = I.toLocal(e.clientX, e.clientY);
+    if (!p || !moved(d, e)) return;
+    let best = null;
+    for (const s of d.snaps) {
+      if (d.which === 'e' ? s.abs <= d.a0 : s.end || (d.which === 's' && s.abs >= d.e0)) continue;
+      if (!best || Math.abs(s.x - p.x) < Math.abs(best.x - p.x)) best = s;
+    }
+    d.to = best;
+    if (!best) return TC.render.drawDynDrag(null);
+    const ts = S.doc.bars[best.bar].ts;
+    const label = best.end ? tr('end of bar {n}', { n: best.bar + 1 }) : tr('Bar {n}', { n: best.bar + 1 }) + ', ' + TC.rhythm.countLabel(best.t, ts);
+    TC.render.drawDynDrag({ bar: best.bar, x: best.x, label });
+    TC.ui.status(label);
+  }
+
+  /** Select the notes of a track from the first one selected up to note `id` (both ways, over bar lines, every voice). */
+  function selectNotesUpTo(id) {
+    const to = TC.score.findNote(S.doc, id);
+    if (!to) return;
+    const at = TC.score.tickOf(S.doc), b = at(to.bar, to.ev.tick);
+    let a = null;
+    for (const x of S.selection) {
+      const h = TC.score.findNote(S.doc, x);
+      if (h && h.track === to.track) a = a === null ? at(h.bar, h.ev.tick) : Math.min(a, at(h.bar, h.ev.tick));
+    }
+    if (a === null) { S.selection = new Set([id]); return; }
+    const lo = Math.min(a, b), hi = Math.max(a, b), ids = new Set();
+    to.track.bars.forEach((bar, bi) => bar.voices.forEach((v) => v.forEach((ev) => {
+      const x = at(bi, ev.tick);
+      if (x >= lo && x <= hi) ev.notes.forEach((n) => ids.add(n.id));
+    })));
+    S.selection = ids;
+    TC.selectBar(to.bar);
+  }
+
   /** The note of instrument `art` (melody: of pitch `pitch`) at `tick` in a bar of a track (any voice), or null. */
   function noteAt(bi, tick, art, track = TC.curTrack(), pitch) {
     for (const voice of track.bars[bi].voices) {
@@ -285,6 +326,23 @@
       return;
     }
     if (S.drag) return; // another pointer is busy (pen and finger at once)
+    // a handle of the selected dynamics sign / hairpin: dragged, it snaps to the notes and rests of its track
+    const hz = !A().isPerforming() && toolOf(e) !== 'erase' && e.target && e.target.closest ? e.target.closest('[data-dynh]') : null;
+    const dsel = hz && A().dynSelected();
+    if (dsel) {
+      try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
+      const a0 = TC.score.absTick(S.doc, dsel.bar, dsel.t);
+      S.drag = { mode: 'dynh', id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e, which: hz.getAttribute('data-dynh'), a0, e0: dsel.w ? a0 + dsel.d.len : null, snaps: TC.render.dynSnaps(dsel.track), to: null };
+      return;
+    }
+    // a dynamics sign or hairpin tapped: selected (changed in the panel); the eraser removes it
+    const dz = !A().isPerforming() && e.target && e.target.closest ? e.target.closest('[data-dyn]') : null;
+    if (dz) {
+      const [tid, bar, t, kind] = dz.getAttribute('data-dyn').split('|');
+      A().selectDyn(tid, Number(bar), Number(t), kind);
+      if (toolOf(e) === 'erase') A().clearDyn();
+      return;
+    }
     try { vp.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
     // stage view: nothing is written; a tap in the right / left third turns the page, dragging moves it
     if (A().isPerforming()) return startPan(e);
@@ -364,6 +422,7 @@
       case 'aim': return aimMove(e);
       case 'move': return moveMove(e);
       case 'write': return dragWrite(e);
+      case 'dynh': return dynHandleMove(e);
       case 'note':
         if (!moved(d, e) && !stepped(d, e)) return;
         clearTimeout(holdTimer);
@@ -438,6 +497,10 @@
     }
     if (d.mode === 'vel') finishVel(d);
     if (d.mode === 'alter' || d.mode === 'len') finishMelodyEdit(d);
+    if (d.mode === 'dynh') {
+      TC.render.drawDynDrag(null);
+      if (!cancelled && d.to && moved(d, e)) A().moveDynSel(d.which, d.to.abs);
+    }
     if (e.pointerType === 'touch') clearHover();
     else {
       I.hoverKey = null;
@@ -461,6 +524,7 @@
     if (S.drag && (S.drag.mode === 'alter' || S.drag.mode === 'len')) finishMelodyEdit(S.drag);
     if (S.drag && S.drag.mode === 'erase') finishErase(S.drag);
     if (S.drag && S.drag.mode === 'smove') finishSelMove(S.drag, true);
+    if (S.drag && S.drag.mode === 'dynh') TC.render.drawDynDrag(null);
     TC.render.drawRect(null);
     S.drag = null;
     clearHover();
@@ -691,6 +755,13 @@
       TC.refresh();
       const [a, b] = TC.barRange();
       TC.ui.hint(tr('Bars {a}–{b} selected', { a: a + 1, b: b + 1 }));
+      return;
+    }
+    S.dynSel = null;
+    if (t.kind === 'head' && e.shiftKey && S.selection.size) {
+      // Shift + tap a note: the notes from the one selected before up to this one (e.g. a hairpin to its target note)
+      selectNotesUpTo(t.head.id);
+      TC.refresh();
       return;
     }
     TC.selectBar(t.bar);

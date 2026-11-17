@@ -356,7 +356,7 @@ setTimeout(() => {
   const [vx, vy] = at(nb2, 1440, 3), cK = { ctrlKey: true };
   mouse('pointerdown', [vx, vy], cK);
   mouse('pointermove', [vx + 1, vy - 20], cK);
-  ok('strength meter shown while held', !!document.querySelector('#score .vel-seg.on'));
+  ok('strength meter shown while held', !!document.querySelector('#overlay .vel-seg.on'));
   mouse('pointermove', [vx + 1, vy - 40], cK);
   mouse('pointerup', [vx + 1, vy - 40], cK);
   ok('up: accent ' + JSON.stringify([vn().accent, vn().ghost]), vn().accent === 1 && !vn().ghost && voice(nb2, 0).join() === '1440:480:38');
@@ -381,9 +381,9 @@ setTimeout(() => {
   mouse('pointerdown', at(nb3, -150, -5));
   mouse('pointermove', at(nb3, 300, 1));
   mouse('pointermove', at(nb3, 600, 1));
-  ok('frame drawn while dragging', !!document.querySelector('#score .sel-frame'));
+  ok('frame drawn while dragging', !!document.querySelector('#overlay .sel-frame'));
   mouse('pointerup', at(nb3, 600, 1));
-  ok('frame selects the hi-hats at 1 and 1+ ' + S.selection.size, S.selection.size === 2 && !document.querySelector('#score .sel-frame'));
+  ok('frame selects the hi-hats at 1 and 1+ ' + S.selection.size, S.selection.size === 2 && !document.querySelector('#overlay .sel-frame'));
   mouse('pointerdown', at(nb3, 0, -1));
   mouse('pointermove', at(nb3, 960, -1));
   mouse('pointermove', at(nb3, 1920, -1));
@@ -876,49 +876,81 @@ setTimeout(() => {
           ok('chords: a typed chord is shown', [...document.querySelectorAll('.chord-sym')].some((e) => e.textContent === 'F♯m7/C♯'));
           TC.actions.clearBarChords(0);
           ok('chords: removed', !S.doc.bars[0].chords && !document.querySelector('.chord-sym'));
-          // dynamics: p from the panel (drawn under the staff), a crescendo to the end of the bar, for all tracks; the fader
+          // dynamics: the notes are the help to find the place - p at a tapped note, a hairpin from the first selected note to
+          // the target note (its start or its end), signs and hairpins tapped in the score and changed in the panel
           const undoDyn = TC.history.undoStack.length, dt = TC.curTrack();
+          const evs0 = dt.bars[0].voices.flat().filter((ev) => ev.notes.length).sort((a, b) => a.tick - b.tick);
+          const ticks0 = [...new Set(evs0.map((ev) => ev.tick))];
+          const evAt = (tk) => evs0.find((ev) => ev.tick === tk);
           TC.selectBar(0);
-          S.chordSlot = 0;
+          S.selection = new Set([evAt(ticks0[0]).notes[0].id]);
           TC.panel.update(true);
-          const pBtn = document.querySelector('#panel-notes [data-action="setDyn"][data-value="p"]'); // (the note panel, under the notes)
+          const pBtn = document.querySelector('#panel-notes [data-action="setDyn"][data-value="p"]'); // (the note panel)
           if (pBtn) pBtn.click();
-          ok('dynamics: p from the panel - in the track, drawn under the staff', !!pBtn && JSON.stringify(dt.bars[0].dyn) === '[{"t":0,"v":"p"}]' && !!document.querySelector('.score .mus.dyn'));
-          // the hairpin row: "from" is the level sounding here (p) - kept, no second sign; "to" two steps on (mf)
-          const wd = TC.actions.wedgeDraft();
-          document.querySelector('#panel-notes [data-action="makeWedge"]').click();
-          ok('dynamics: hairpin from the level here (' + wd.from + ' < ' + wd.to + '), no second sign - two lines',
-            wd.from === 'p' && wd.to === 'mf' && JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'p' }, { t: 0, w: 'cresc', len: TC.barTicks(S.doc.bars[0].ts), to: 'mf' }]) && document.querySelectorAll('.score .hairpin').length === 2);
-          // "pp < ff" to bar 2: chosen in the panel, set in one go - pp at its start, ff at its end
+          ok('dynamics: p at the tapped note - in the track, drawn under the staff', !!pBtn && JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: ticks0[0], v: 'p' }]) && !!document.querySelector('.score .mus.dyn'));
+          ok('dynamics: no beats to choose any more in the panel', !document.querySelector('#panel-notes .chord-slots [data-action="setChordSlot"]') || !/Dynami/.test(document.querySelector('#panel-notes .chord-slots').closest('section').textContent));
+          // a hairpin: the first note, then the target note (Shift) - up to its start (the target note has the new level)
+          const k2 = ticks0[Math.min(2, ticks0.length - 1)];
+          S.selection = new Set([evAt(ticks0[0]).notes[0].id, evAt(k2).notes[0].id]);
+          TC.panel.update(true);
           const selIn = (a, v) => { const el = document.querySelector(`#panel-notes select[data-action="${a}"]`); el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); };
-          selIn('setWedgeFrom', 'pp');
-          selIn('setWedgeTo', 'ff');
-          selIn('setWedgeEnd', '1');
-          document.querySelector('#panel-notes [data-action="makeWedge"]').click();
-          ok('dynamics: "pp < ff" to bar 2 set in one go - pp written, the hairpin with ff, ff drawn at its end ' + JSON.stringify(dt.bars[0].dyn) + ' signs ' + document.querySelectorAll('.score .mus.dyn').length + ' lvl ' + TC.score.levelAt(S.doc, dt, 2, 0),
-            JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'pp' }, { t: 0, w: 'cresc', len: TC.barTicks(S.doc.bars[0].ts) + TC.barTicks(S.doc.bars[1].ts), to: 'ff' }]) && document.querySelectorAll('.score .mus.dyn').length >= 2 &&
-            TC.score.levelAt(S.doc, dt, 2, 0) === 6);
-          TC.selectBar(2);
-          S.chordSlot = 0;
-          TC.refresh();
-          const endSlot = document.querySelector('#panel-notes [data-action="setChordSlot"][data-value="0"]');
-          ok('dynamics: bar 3 shows where the hairpin ends - ff on its 1, and says so', !!endSlot && /ff/.test(endSlot.textContent) && /Takt 1: ff/.test(document.getElementById('panel-notes').textContent));
-          TC.selectBar(0);
-          TC.refresh();
-          TC.actions.setDyn('pp');
-          TC.actions.setDyn('p');
-          ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));
-          // a hairpin only a quarter long: "p < f" from 1 to 2 of bar 1 - f drawn there, f holds from 2 on
           selIn('setWedgeTo', 'f');
-          selIn('setWedgeEnd', '0');
-          selIn('setWedgeEndT', '960');
-          const endOpts = [...document.querySelectorAll('#panel-notes select[data-action="setWedgeEndT"] option')].map((o) => o.textContent);
           document.querySelector('#panel-notes [data-action="makeWedge"]').click();
-          ok('dynamics: a hairpin a quarter long (to bar 1, beat 2) - f drawn, f from beat 2 on ' + JSON.stringify(dt.bars[0].dyn) + ' ' + endOpts.join('|'),
-            JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'p' }, { t: 0, w: 'cresc', len: 960, to: 'f' }]) && endOpts.includes('Zählzeit 2') && endOpts[endOpts.length - 1] === 'Ende' &&
-            TC.score.levelAt(S.doc, dt, 0, 960) === 5 && [...document.querySelectorAll('.score .mus.dyn')].length >= 2 && document.querySelectorAll('.score .hairpin').length === 2);
-          TC.actions.setDyn('p');
-          ok('dynamics: p once more - it goes, the hairpin stays', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["cresc"]');
+          const wd0 = (dt.bars[0].dyn || []).find((d) => d.w);
+          ok('dynamics: hairpin "p < f" from the first selected note up to the start of the target note ' + JSON.stringify(dt.bars[0].dyn),
+            !!wd0 && wd0.t === ticks0[0] && wd0.len === k2 - ticks0[0] && wd0.to === 'f' && TC.score.levelAt(S.doc, dt, 0, k2) === 5 && document.querySelectorAll('.score .hairpin').length === 2);
+          // tapped in the score: selected (coloured), the panel shows it on top; the switch: up to the end of the target note
+          const hitRect = document.querySelector('.score .dyn-hit');
+          if (hitRect) hitRect.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 7, pointerType: 'mouse', clientX: 1, clientY: 1 }));
+          ok('dynamics: the hairpin tapped in the score - selected, its section on top of the panel', !!hitRect && !!S.dynSel && S.dynSel.w && document.querySelectorAll('.score .hairpin.sel').length === 2 &&
+            !!document.querySelector('#panel-notes section.has-sel [data-action="setWedgeToEnd"]'));
+          const endBtn = document.querySelector('#panel-notes [data-action="setWedgeToEnd"][data-value="1"]');
+          if (endBtn) endBtn.click();
+          const k2end = Math.min(TC.barTicks(S.doc.bars[0].ts), k2 + evAt(k2).dur);
+          ok('dynamics: switched to the end of the target note ' + JSON.stringify(dt.bars[0].dyn), (dt.bars[0].dyn || []).some((d) => d.w && d.len === k2end - ticks0[0]));
+          selIn('setWedgeTo', 'ff');
+          ok('dynamics: its end level changed in the panel', (dt.bars[0].dyn || []).some((d) => d.w && d.to === 'ff'));
+          // its handles dragged: they snap to the notes - the start (the p at it goes along), then the end; each undone
+          const dragHandle = (h, tick, css) => {
+            const el = document.querySelector(css || `#score .dyn-handle[data-dynh="${h}"]`);
+            if (!el) return false;
+            const r0 = el.getBoundingClientRect(), y = r0.top + r0.height / 2, vr = vp.getBoundingClientRect(), v = S.doc.view;
+            const x = vr.left + v.x + TC.render.tickX(TC.render.layout.bars[0], tick) * v.zoom;
+            const ev = (type, cx) => new PointerEvent(type, { clientX: cx, clientY: y, button: 0, buttons: 1, bubbles: true, pointerId: 9, pointerType: 'mouse' });
+            el.dispatchEvent(ev('pointerdown', r0.left + r0.width / 2));
+            vp.dispatchEvent(ev('pointermove', x));
+            const shown = !!document.querySelector('#overlay .dyn-drag');
+            vp.dispatchEvent(ev('pointerup', x));
+            return shown;
+          };
+          const wEnd = ticks0[0] + (dt.bars[0].dyn.find((d) => d.w) || {}).len;
+          const shownS = dragHandle('s', ticks0[1]);
+          const ws = (dt.bars[0].dyn || []).find((d) => d.w);
+          ok('dynamics: the start handle dragged to the 2nd note - the hairpin starts there, its end stays, the p went along ' + JSON.stringify(dt.bars[0].dyn),
+            shownS && !!ws && ws.t === ticks0[1] && ws.t + ws.len === wEnd && (dt.bars[0].dyn || []).some((d) => d.v === 'p' && d.t === ticks0[1]) && !!S.dynSel && S.dynSel.t === ticks0[1]);
+          dragHandle('s', ticks0[0]);
+          ok('dynamics: … dragged back - as before, the p too', (dt.bars[0].dyn || []).some((d) => d.w && d.t === ticks0[0] && ticks0[0] + d.len === wEnd) && (dt.bars[0].dyn || []).some((d) => d.v === 'p' && d.t === ticks0[0]));
+          dragHandle('e', ticks0[1]);
+          ok('dynamics: the end handle dragged to the 2nd note ' + JSON.stringify(dt.bars[0].dyn), (dt.bars[0].dyn || []).some((d) => d.w && d.t === ticks0[0] && d.len === ticks0[1] - ticks0[0]));
+          dragHandle('e', wEnd >= TC.barTicks(S.doc.bars[0].ts) ? TC.barTicks(S.doc.bars[0].ts) : wEnd);
+          ok('dynamics: … and back to where it ended ' + JSON.stringify(dt.bars[0].dyn), (dt.bars[0].dyn || []).some((d) => d.w && d.t === ticks0[0] && ticks0[0] + d.len === wEnd));
+          TC.actions.selectDyn(dt.id, 0, ticks0[0], 'w');
+          // a sign tapped: another level
+          const sign = document.querySelector('.score .mus.dyn[data-dyn$="|v"]');
+          if (sign) sign.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 8, pointerType: 'mouse', clientX: 1, clientY: 1 }));
+          const mpBtn = document.querySelector('#panel-notes section.has-sel [data-action="setDyn"][data-value="mp"]');
+          if (mpBtn) mpBtn.click();
+          ok('dynamics: the p tapped in the score becomes mp from the panel', !!sign && !!mpBtn && (dt.bars[0].dyn || []).some((d) => d.v === 'mp' && d.t === ticks0[0]));
+          dragHandle('v', ticks0[1], '#score .mus.dyn.sel[data-dynh="v"]');
+          ok('dynamics: the selected mp dragged to the 2nd note - it stands there, the hairpin stays ' + JSON.stringify(dt.bars[0].dyn),
+            (dt.bars[0].dyn || []).some((d) => d.v === 'mp' && d.t === ticks0[1]) && !(dt.bars[0].dyn || []).some((d) => d.v && d.t === ticks0[0]) && (dt.bars[0].dyn || []).some((d) => d.w && d.t === ticks0[0]));
+          dragHandle('v', ticks0[0], '#score .mus.dyn.sel[data-dynh="v"]');
+          ok('dynamics: … and back', (dt.bars[0].dyn || []).some((d) => d.v === 'mp' && d.t === ticks0[0]));
+          TC.actions.selectNone();
+          ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));
+          S.selection = new Set([evAt(ticks0[0]).notes[0].id]);
+          TC.actions.setDyn('mp');
+          ok('dynamics: mp once more - it goes, the hairpin stays', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["cresc"]');
           TC.actions.toggleDynAll();
           TC.actions.setDyn('ff');
           ok('dynamics: "for all tracks" - every track gets it', S.doc.tracks.every((t) => (t.bars[0].dyn || []).some((d) => d.v === 'ff')));

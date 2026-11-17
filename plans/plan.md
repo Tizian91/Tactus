@@ -844,3 +844,18 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   („bis Takt 1, Zählzeit 2“). Zielstufe im Notenbild an der Note der Endstelle (wie eine Angabe dort), MusicXML ebenso. Klick-Test.
 - Dynamik auch über Pitchbend (`dyn.cc = 'pb'`, UJAM Virtual Pianist: Stärke am Pitchbend): `KS.dynMsg` baut CC oder Pitchbend
   (Wert 0 … 127 → 14 Bit, 127 = ganz oben), Abspielen und MIDI-Export.
+
+### Dynamik an Noten als Positionshilfe (Schritt 1 von 2)
+- Kein Zählzeit-Raster mehr in der Dynamik: Stufe an der ersten markierten Note (ohne Note: Taktanfang), Gabel von der ersten bis zur
+  letzten markierten Note (`A.dynPlace`), Schalter „bis Anfang / Ende der Zielnote“ (`toEnd`; eine Note: über sie). Shift + Tippen auf
+  eine Note markiert bis zu ihr (`selectNotesUpTo`). Bleibt an der Stelle im Takt (nicht an die Note gebunden).
+- Zeichen und Gabeln im Notenbild antippbar (`data-dyn`, Gabel mit breiter Trefferfläche `.dyn-hit`), ausgewählt `S.dynSel` (farbig),
+  Panel-Abschnitt oben: Stufe ändern, Gabel von / bis / Anfang-Ende ändern, Entfernen; Radierer entfernt direkt. Klick-Test.
+- Schritt 2: Anfasser zum Ziehen (`data-dynh`: Gabel s / e als Kreise, ein ausgewähltes Zeichen selbst, das Zielzeichen = Ende); rasten
+  an Anfang / Ende jeder Note und Pause und an Taktenden ein (`RD.dynSnaps`), Vorschau als Linie im Overlay (`RD.drawDynDrag`),
+  `A.moveDynSel` (Startstufe wandert mit; schon belegte Stelle abgelehnt). Klick-Tests.
+
+### Schnellere Darstellung beim Abspielen
+- Cursor, Noten-Vorschau, Auswahlrahmen und Anfasser-Vorschau in eigenem SVG `#overlay` über `#score` (gleiche Größe und View,
+  pointer-events none). Vorher lag der Cursor im Noten-SVG: jedes Bild malte das ganze Notenbild neu – langsam bei feinem Raster
+  (breitere Takte) oder nah herangezoomt, während der Ton stabil blieb.

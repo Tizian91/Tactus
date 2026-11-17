@@ -686,6 +686,7 @@
   };
 
   A.selectNone = function () {
+    S.dynSel = null;
     S.selection.clear();
     TC.selectBar(null);
     TC.refresh();
@@ -1330,83 +1331,213 @@
     const where = tr('Bar {n}', { n: i + 1 }) + (t ? ', ' + TC.rhythm.countLabel(t, S.doc.bars[i].ts) : '');
     TC.ui.hint(x ? `${where}: ${TC.pitch.chordName(x.ch, de())}` : `${where}: ${tr('no chord')}`);
   };
-  // ---- Dynamics (ppp … fff, hairpins): at the place chosen in the panel (the same places as the chords) -----------
+  // ---- Dynamics (ppp … fff, hairpins) --------------------------------------------------------------------------------
+  // Where they go: the selected notes of the track being written are the help to find the place - a level at the first
+  // of them, a hairpin from the first up to the last (its start, or its end: the switch). They stay at that place in
+  // the bar (not tied to the note). A sign or hairpin tapped in the score is selected (S.dynSel) and changed in the panel.
+
   /** The tracks a dynamic goes into: the one being written (a piano: both hands) - or all of them (panel switch). */
   const dynTracks = () => (S.dynAll ? S.doc.tracks.slice() : TC.score.handsOf(S.doc, TC.curTrack()));
-  /** A level (ppp … fff) at the chosen place of the selected bar - the same once more: it goes. */
+  /** The events of a track as [{ bar, t, abs, end }] (every voice; end within its bar). */
+  const dynEvs = (track) => {
+    const at = TC.score.tickOf(S.doc), out = [];
+    track.bars.forEach((b, bi) => {
+      const L = TC.barTicks(S.doc.bars[bi].ts);
+      b.voices.forEach((v) => v.forEach((ev) => { if (ev.tick < L) out.push({ bar: bi, t: ev.tick, abs: at(bi, ev.tick), end: at(bi, Math.min(L, ev.tick + ev.dur)) }); }));
+    });
+    return out;
+  };
+  /**
+   * Where a dynamic goes now: { bar, t, abs, toStart, toEnd, one } from the selected notes of the track being written
+   * (first one: the place; last one: its start / end, where a hairpin can go) - or, no note selected, the start of the
+   * selected bar ({ bare: true }); null: nothing chosen.
+   */
+  A.dynPlace = function () {
+    const tk = TC.curTrack(), at = TC.score.tickOf(S.doc), list = [];
+    for (const id of S.selection) {
+      const h = TC.score.findNote(S.doc, id);
+      if (!h || !TC.score.handsOf(S.doc, tk).includes(h.track)) continue;
+      const L = TC.barTicks(S.doc.bars[h.bar].ts), abs = at(h.bar, h.ev.tick);
+      list.push({ bar: h.bar, t: h.ev.tick, abs, end: at(h.bar, Math.min(L, h.ev.tick + h.ev.dur)) });
+    }
+    if (!list.length) return S.selBar === null ? null : { bar: S.selBar, t: 0, abs: at(S.selBar, 0), bare: true };
+    list.sort((a, b) => a.abs - b.abs || a.end - b.end);
+    const a = list[0], z = list[list.length - 1];
+    return { bar: a.bar, t: a.t, abs: a.abs, toStart: z.abs, toEnd: Math.max(z.end, a.end), one: z.abs === a.abs };
+  };
+
+  /** The sign or hairpin selected in the score: { track, bar, t, d (the entry), w (a hairpin?) } - or null (gone). */
+  A.dynSelected = function () {
+    const s = !S.selection.size && S.dynSel, tk = s && S.doc.tracks.find((x) => x.id === s.track); // (notes selected: they count)
+    const d = tk && TC.score.dynIn(tk, s.bar).find((x) => x.t === s.t && (s.w ? x.w : x.v));
+    return d ? { track: tk, bar: s.bar, t: s.t, d, w: !!s.w } : null;
+  };
+  /** Select a sign ('v') or hairpin ('w') of the score (tapped there); the notes are deselected. */
+  A.selectDyn = function (trackId, bar, t, kind) {
+    const tk = S.doc.tracks.find((x) => x.id === trackId);
+    if (!tk) return;
+    if (tk !== TC.curTrack() && !tk.lh) A.selectTrack(tk.id);
+    S.selection.clear();
+    TC.selectBar(bar);
+    S.dynSel = { track: tk.id, bar, t, w: kind === 'w' };
+    S.wedgeDraft = null;
+    TC.refresh();
+  };
+  /** The tracks a change of the selected sign / hairpin goes into: its own (a piano: both hands), or all (panel switch). */
+  const selTracks = (sel) => (S.dynAll ? S.doc.tracks.slice() : TC.score.handsOf(S.doc, TC.curTrack()).includes(sel.track) ? TC.score.handsOf(S.doc, TC.curTrack()) : [sel.track]);
+
+  /** A level (ppp … fff): the selected sign becomes it - else at the place (first selected note); the same once more: it goes. */
   A.setDyn = function (v) {
     if (!TC.score.DYN_LEVELS.includes(v)) return;
-    const i = curBar(), t = chordTick(i), cur = TC.score.dynIn(TC.curTrack(), i).find((d) => d.t === t && d.v);
-    const off = cur && cur.v === v;
+    const sel = A.dynSelected();
+    if (sel && !sel.w) {
+      if (sel.d.v === v) return;
+      selTracks(sel).forEach((tk) => TC.score.setDyn(S.doc, tk, sel.bar, sel.t, { v }));
+      TC.commit();
+      return TC.ui.hint(tr('{v} from here on - the notes stay as written', { v }));
+    }
+    const p = A.dynPlace();
+    if (!p) return TC.ui.hint(tr('Tap a note first: the sign goes there'));
+    const cur = TC.score.dynIn(TC.curTrack(), p.bar).find((d) => d.t === p.t && d.v), off = cur && cur.v === v;
     let n = 0;
-    dynTracks().forEach((tr) => { if (TC.score.setDyn(S.doc, tr, i, t, { v: off ? null : v })) n++; });
+    dynTracks().forEach((tk) => { if (TC.score.setDyn(S.doc, tk, p.bar, p.t, { v: off ? null : v })) n++; });
     if (!n) return;
     TC.commit();
     TC.ui.hint(off ? tr('Dynamic removed') : tr('{v} from here on - the notes stay as written', { v }));
   };
+
   /**
-   * A hairpin (cresc. / dim.) from the chosen place of the selected bar to the end of the selected bars ("to bar" in
-   * the bar panel) - to the next level written there, else two steps louder / softer. The same once more: it goes.
-   */
-  A.setWedge = function (w) {
-    if (w !== 'cresc' && w !== 'dim') return;
-    const R = TC.barRange() || [curBar(), curBar()], i = R[0], t = S.selBar === i ? chordTick(i) : 0;
-    const at = TC.score.tickOf(S.doc), len = at(R[1], TC.barTicks(S.doc.bars[R[1]].ts)) - at(i, t);
-    const cur = TC.score.dynIn(TC.curTrack(), i).find((d) => d.t === t && d.w);
-    const off = cur && cur.w === w && cur.len === len;
-    let n = 0;
-    dynTracks().forEach((tk) => { if (TC.score.setDyn(S.doc, tk, i, t, { w: off ? null : w, len })) n++; });
-    if (!n) return;
-    TC.commit();
-    TC.ui.hint(off ? tr('Hairpin removed') : tr(w === 'cresc' ? 'Crescendo to the end of bar {n}' : 'Diminuendo to the end of bar {n}', { n: R[1] + 1 }));
-  };
-  /**
-   * The hairpin being set up in the panel ("pp < ff to bar 4, beat 2"): { bar, t, from, to, end, endT } - from: the level
-   * sounding at the place (unless chosen), to: two steps on (louder; from ff on: softer), end: the last selected bar (or
-   * this one), endT: where in it it ends (its length in ticks = the end of the bar; else a place of the panel's grid).
-   * What was chosen holds only for this place (S.wedgeDraft).
+   * The hairpin being set up in the panel ("pp < ff"): { bar, t, from, to, toEnd, end } - from the first selected note
+   * to the last one: at its start, or (toEnd, the switch; one note: always) at its end. from: the level sounding there
+   * (unless chosen), to: two steps on (louder; from ff on: softer). null: no notes selected.
    */
   A.wedgeDraft = function () {
-    const SC = TC.score, L = SC.DYN_LEVELS, i = curBar(), t = chordTick(i), d = S.wedgeDraft;
-    const mine = d && d.bar === i && d.t === t ? d : {};
-    const from = mine.from || L[SC.levelAt(S.doc, TC.curTrack(), i, t)], fi = L.indexOf(from);
+    const SC = TC.score, L = SC.DYN_LEVELS, p = A.dynPlace();
+    if (!p || p.bare) return null;
+    const d = S.wedgeDraft, mine = d && d.abs === p.abs ? d : {};
+    const from = mine.from || L[SC.levelAt(S.doc, TC.curTrack(), p.bar, p.t)], fi = L.indexOf(from);
     const to = mine.to || L[fi >= L.length - 2 ? fi - 2 : fi + 2];
-    const R = TC.barRange(), end = Number.isInteger(mine.end) && mine.end >= i && mine.end < S.doc.bars.length ? mine.end : R && R[1] > i ? R[1] : i;
-    const BL = TC.barTicks(S.doc.bars[end].ts), endT = A.wedgeEnds(i, t, end).includes(mine.endT) ? mine.endT : BL;
-    return { bar: i, t, from, to, end, endT };
-  };
-  /** Where a hairpin from (bar i, tick t) can end in bar `end`: the places of the panel's grid after its start, and the bar's end. */
-  A.wedgeEnds = function (i, t, end) {
-    const BL = TC.barTicks(S.doc.bars[end].ts);
-    return TC.score.chordSlots(S.doc, end, chordGrid()).filter((x) => x > 0 && (end > i || x > t)).concat(BL);
-  };
-  /** "to the end of bar 4" / "to bar 4, beat 2" - the end of a hairpin (bar, tick in it). */
-  A.wedgeEndText = function (bar, tick) {
-    const h = S.doc.bars[bar];
-    return !h || tick >= TC.barTicks(h.ts) ? tr('to the end of bar {n}', { n: bar + 1 }) : tr('to bar {n}, beat {b}', { n: bar + 1, b: TC.rhythm.countLabel(tick, h.ts) });
+    const toEnd = p.one || !!mine.toEnd;
+    return { bar: p.bar, t: p.t, abs: p.abs, from, to, toEnd, one: p.one, end: toEnd ? p.toEnd : p.toStart };
   };
   const draftSet = (k, v) => {
-    S.wedgeDraft = Object.assign(A.wedgeDraft(), { [k]: v });
+    S.wedgeDraft = Object.assign(A.wedgeDraft() || {}, { [k]: v });
     TC.refresh();
   };
-  A.setWedgeFrom = (v) => { if (TC.score.DYN_LEVELS.includes(v)) draftSet('from', v); };
-  A.setWedgeTo = (v) => { if (TC.score.DYN_LEVELS.includes(v)) draftSet('to', v); };
-  A.setWedgeEnd = (v) => draftSet('end', Number(v));
-  A.setWedgeEndT = (v) => draftSet('endT', Number(v));
-  /** Set the hairpin of the panel: its start level at the place, the hairpin to its end, its end level. */
+  /**
+   * The note a hairpin ends at (its start or its end) - for the switch: { atEnd, other } (other: the end, if it ends at
+   * the start of the note, or the start, if it ends at its end), or null (no note there).
+   */
+  const wedgeTarget = (track, end) => {
+    const evs = dynEvs(track), s = evs.find((e) => e.abs === end && e.end > end);
+    if (s) return { atEnd: false, other: s.end };
+    const e = evs.find((x) => x.end === end && x.abs < end);
+    return e ? { atEnd: true, other: e.abs } : null;
+  };
+  A.wedgeTargetOf = (sel) => wedgeTarget(sel.track, TC.score.absTick(S.doc, sel.bar, sel.t) + sel.d.len);
+  /** Change the selected hairpin: { from, to, len } (from: the level written at its start). */
+  const editWedge = (sel, what) => {
+    selTracks(sel).forEach((tk) => {
+      const d = TC.score.dynIn(tk, sel.bar).find((x) => x.t === sel.t && x.w);
+      if (what.from) TC.score.setDyn(S.doc, tk, sel.bar, sel.t, { v: what.from });
+      if (!d) return;
+      const to = what.to || d.to, len = what.len || d.len;
+      const up = TC.score.DYN_LEVELS.indexOf(to) > TC.score.levelAt(S.doc, tk, sel.bar, sel.t);
+      TC.score.setDyn(S.doc, tk, sel.bar, sel.t, Object.assign({ w: to ? (up ? 'cresc' : 'dim') : d.w, len }, to ? { to } : {}));
+    });
+    TC.commit();
+  };
+  A.setWedgeFrom = (v) => {
+    if (!TC.score.DYN_LEVELS.includes(v)) return;
+    const sel = A.dynSelected();
+    if (sel && sel.w) return editWedge(sel, { from: v });
+    draftSet('from', v);
+  };
+  A.setWedgeTo = (v) => {
+    if (!TC.score.DYN_LEVELS.includes(v)) return;
+    const sel = A.dynSelected();
+    if (sel && sel.w) return editWedge(sel, { to: v });
+    draftSet('to', v);
+  };
+  /** The switch: the hairpin goes up to the start (false) or the end (true) of its target note. */
+  A.setWedgeToEnd = (on) => {
+    on = on === true || on === 'true' || on === '1' || on === 1;
+    const sel = A.dynSelected();
+    if (sel && sel.w) {
+      const g = A.wedgeTargetOf(sel), a = TC.score.absTick(S.doc, sel.bar, sel.t);
+      if (g && g.atEnd !== on && g.other > a) editWedge(sel, { len: g.other - a });
+      return;
+    }
+    draftSet('toEnd', on);
+  };
+  /** Set the hairpin of the panel: its start level at the first selected note, the hairpin up to the last, its end level. */
   A.makeWedge = function () {
-    const d = A.wedgeDraft(), L = TC.score.DYN_LEVELS, a = L.indexOf(d.from), b = L.indexOf(d.to);
+    const d = A.wedgeDraft();
+    if (!d) return TC.ui.hint(tr('Select the notes of the hairpin first: the first one, then (Shift) the target note'));
+    const L = TC.score.DYN_LEVELS, a = L.indexOf(d.from), b = L.indexOf(d.to);
     if (a === b) return TC.ui.hint(tr('From and to are the same level - choose a louder or softer one'));
-    const at = TC.score.tickOf(S.doc), len = at(d.end, d.endT) - at(d.bar, d.t);
+    const len = d.end - d.abs;
     if (len <= 0) return;
     dynTracks().forEach((tk) => {
       // (its start level only when it is not the one sounding there anyway - a hairpin goes on from the level before it)
-      if (TC.score.DYN_LEVELS[TC.score.levelAt(S.doc, tk, d.bar, d.t)] !== d.from) TC.score.setDyn(S.doc, tk, d.bar, d.t, { v: d.from });
+      if (L[TC.score.levelAt(S.doc, tk, d.bar, d.t)] !== d.from) TC.score.setDyn(S.doc, tk, d.bar, d.t, { v: d.from });
       TC.score.setDyn(S.doc, tk, d.bar, d.t, { w: b > a ? 'cresc' : 'dim', len, to: d.to });
     });
     S.wedgeDraft = null;
+    S.dynSel = { track: TC.curTrack().id, bar: d.bar, t: d.t, w: true };
+    S.selection.clear();
     TC.commit();
-    TC.ui.hint(d.from + ' ' + (b > a ? '<' : '>') + ' ' + d.to + ' ' + A.wedgeEndText(d.end, d.endT));
+    TC.ui.hint(d.from + ' ' + (b > a ? '<' : '>') + ' ' + d.to + ' – ' + tr('tap it in the score: change it, drag its ends'));
+  };
+  /**
+   * A handle of the selected sign / hairpin dragged to the place `abs` (js/interaction.js): 'v' the sign moves there,
+   * 's' the hairpin starts there (its end stays; a level written at its start goes along), 'e' it ends there.
+   */
+  A.moveDynSel = function (which, abs) {
+    const sel = A.dynSelected(), SC = TC.score;
+    if (!sel) return;
+    const a = SC.absTick(S.doc, sel.bar, sel.t), tracks = selTracks(sel);
+    if (which === 'e') {
+      if (!sel.w || abs <= a || abs === a + sel.d.len) return;
+      editWedge(sel, { len: abs - a });
+      return TC.ui.hint(tr('The hairpin ends {where}', { where: placeText(SC.atAbs(S.doc, abs - 1), true) }));
+    }
+    const q = SC.atAbs(S.doc, abs);
+    if (!q || abs === a || (sel.w && abs >= a + sel.d.len)) return;
+    const kind = sel.w ? 'w' : 'v';
+    if (tracks.some((tk) => SC.dynIn(tk, q.bar).some((x) => x.t === q.tick && x[kind]))) {
+      TC.refresh();
+      return TC.ui.hint(tr(sel.w ? 'Another hairpin starts there already' : 'Another sign stands there already'));
+    }
+    tracks.forEach((tk) => {
+      const here = SC.dynIn(tk, sel.bar), lv = here.find((x) => x.t === sel.t && x.v), w = here.find((x) => x.t === sel.t && x.w);
+      if (!sel.w) {
+        if (!lv) return;
+        SC.setDyn(S.doc, tk, sel.bar, sel.t, { v: null });
+        SC.setDyn(S.doc, tk, q.bar, q.tick, { v: lv.v });
+        return;
+      }
+      if (!w) return;
+      const end = a + w.len;
+      SC.setDyn(S.doc, tk, sel.bar, sel.t, { w: null });
+      // (the level it starts from, written at its start: goes along - unless one stands there already)
+      if (lv && !SC.dynIn(tk, q.bar).some((x) => x.t === q.tick && x.v)) {
+        SC.setDyn(S.doc, tk, sel.bar, sel.t, { v: null });
+        SC.setDyn(S.doc, tk, q.bar, q.tick, { v: lv.v });
+      }
+      SC.setDyn(S.doc, tk, q.bar, q.tick, Object.assign({ w: w.w, len: end - abs }, w.to ? { to: w.to } : {}));
+    });
+    S.dynSel = { track: sel.track.id, bar: q.bar, t: q.tick, w: sel.w };
+    TC.commit();
+    TC.ui.hint(tr(sel.w ? 'The hairpin starts {where}' : 'The sign stands {where}', { where: placeText(q, false) }));
+  };
+  /** "in bar 3 on 2+" / "at the end of bar 3" (end: q is the last tick before the place). */
+  const placeText = (q, end) => {
+    if (!q) return '';
+    const h = S.doc.bars[q.bar], L = TC.barTicks(h.ts);
+    if (end && q.tick + 1 >= L) return tr('at the end of bar {n}', { n: q.bar + 1 });
+    const t = end ? q.tick + 1 : q.tick;
+    return tr('in bar {n} on {beat}', { n: q.bar + 1, beat: TC.rhythm.countLabel(t, h.ts) });
   };
   // ---- Chords written like notes (js/interaction.js writeChord): a tap writes the chord of the chord symbols there
   /** What a tap writes in a melody track: '' a tone, 'n' a chord, 'd' a chord struck down ↓, 'u' up ↑. */
@@ -1529,12 +1660,20 @@
     TC.commit();
   };
 
-  /** Remove the level ('v') or the hairpin ('w') at the chosen place of the selected bar. */
+  /** Remove the selected sign / hairpin - else the level ('v') or the hairpin ('w') at the place (first selected note). */
   A.clearDyn = function (kind) {
-    const i = curBar(), t = chordTick(i);
+    const sel = A.dynSelected();
     let n = 0;
-    dynTracks().forEach((tk) => { if (TC.score.setDyn(S.doc, tk, i, t, kind === 'w' ? { w: null } : { v: null })) n++; });
+    if (sel) {
+      selTracks(sel).forEach((tk) => { if (TC.score.setDyn(S.doc, tk, sel.bar, sel.t, sel.w ? { w: null } : { v: null })) n++; });
+      S.dynSel = null;
+    } else {
+      const p = A.dynPlace();
+      if (!p) return;
+      dynTracks().forEach((tk) => { if (TC.score.setDyn(S.doc, tk, p.bar, p.t, kind === 'w' ? { w: null } : { v: null })) n++; });
+    }
     if (n) TC.commit();
+    else TC.refresh();
   };
   /** Dynamics for the track being written only, or for all tracks at once (not part of the score). */
   A.toggleDynAll = function () {

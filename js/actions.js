@@ -1479,7 +1479,7 @@
     TC.midiOut.init().then(() => {
       if (!TC.midiOut.trackActive(t)) return TC.ui.hint(tr('The track plays with Tactus sounds - choose its MIDI output ("Plays on") to hear the VST.'));
       TC.midiOut.note(k.midi, 0, 0.3, 0.8, null, t, true);
-      TC.ui.hint(tr('{name}: {key} (MIDI {n}) sent', { name: k.name, key: k.note, n: k.midi }));
+      TC.ui.hint(tr('{name}: {key} (MIDI {n}) sent', { name: tr(k.name), key: k.note, n: k.midi }));
     });
   };
   /** A keyswitch at the chosen place of the selected bar (a way of playing, a slide, a stop) - the same once more: it goes. */
@@ -1494,7 +1494,7 @@
     if (out.length) bar.ks = out.sort((a, b) => a.t - b.t);
     else delete bar.ks;
     TC.commit();
-    TC.ui.hint(had ? tr('{name} removed', { name: k.name }) : tr('{name} from here on', { name: k.name }));
+    TC.ui.hint(had ? tr('{name} removed', { name: tr(k.name) }) : tr('{name} from here on', { name: tr(k.name) }));
   };
   /** A guitar's tapped chords: a full grip (all strings from the bass) or a tight one (four strings in the middle). */
   A.setChordTight = function (v) {

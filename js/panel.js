@@ -414,18 +414,18 @@
     if (i === null || !S.doc.bars[i]) return `<section><h3>${tr('Way of playing')}</h3><p class="hint">${tr('Tap a bar: muted, dead notes, a slide … from a place in it.')}</p></section>`;
     const ts = S.doc.bars[i].ts, slots = TC.score.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
     const list = (t.bars[i] && t.bars[i].ks) || [], at = (x) => list.filter((m) => m.t === x);
-    const label = (m) => { const k = KS.keyOf(t, m.k); return k ? k.short || k.name : '?'; };
+    const label = (m) => { const k = KS.keyOf(t, m.k); return k ? KS.label(k) : '?'; };
     const short = (x) => { const c = TC.rhythm.countLabel(x, ts).split(' '); return c.length > 1 ? c[1] : c[0]; };
     const where = slots.length > 1 ? `<div class="chord-slots" style="grid-template-columns: repeat(${Math.min(8, slots.length)}, 1fr)">${slots.map((x) =>
       btn('setChordSlot', x, `<small>${esc(short(x))}</small><i>${esc(at(x).map(label).join(' ') || '·')}</i>`, x === slot, TC.rhythm.countLabel(x, ts), TC.rhythm.countLabel(x, ts).includes(' ') ? 'off-beat' : '')).join('')}</div>` : '';
     const here = new Set(at(slot).map((m) => m.k));
     const group = (kind, title, g) => {
       const keys = KS.scoreKeys(t).filter((k) => k.kind === kind && (g === undefined || (k.group || '') === g));
-      return keys.length ? `<div class="row"><label>${tr(title)}</label></div><div class="ks-pal">${keys.map((k) => btn('setKs', k.id, esc(k.short || k.name), here.has(k.id), k.name)).join('')}</div>` : '';
+      return keys.length ? `<div class="row"><label>${tr(title)}</label></div><div class="ks-pal">${keys.map((k) => btn('setKs', k.id, esc(KS.label(k)), here.has(k.id), tr(k.name))).join('')}</div>` : '';
     };
     // the ways of playing by their group (one of a group holds at a time; picking is its own)
     const groups = [...new Set(KS.scoreKeys(t).filter((k) => k.kind === 'art').map((k) => k.group || ''))];
-    const GROUP = { mute: 'Muting (one holds)', pick: 'Picking', '': 'Holds until the next' };
+    const GROUP = { mute: 'Muting (one holds)', pick: 'Picking', legato: 'Legato', art: 'Ways of playing (one holds until the next)', sord: 'Mute (sordino)', '': 'Holds until the next' };
     return `<section><h3>${tr('Way of playing')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
       ${where}
       ${groups.map((g) => group('art', GROUP[g] || g, g)).join('')}${group('once', 'Before the note here')}${group('event', 'Here')}
@@ -623,7 +623,7 @@
     if (p) {
       const KIND = { art: 'way of playing', once: 'before a note', event: 'at its place', down: 'down stroke', up: 'up stroke', mode: 'switch' };
       const rows = p.keys.map((k) => `<div class="ksw-row">${btn('testKsw', k.id, '▶', false, tr('Send this key now'), 'icon')}
-          <span class="ksw-name">${esc(k.name)} <span class="muted">${esc(tr(KIND[k.kind]))}</span></span>
+          <span class="ksw-name">${esc(tr(k.name))} <span class="muted">${esc(tr(KIND[k.kind]))}</span></span>
           <input type="text" class="ksw-note" data-kswnote data-id="${esc(k.id)}" value="${esc(k.note)}" maxlength="4" title="${esc(tr('Its key, as the VST names it (C3 = {n})', { n: p.c3 }))}"></div>`).join('');
       more = `<div class="row"><label>C3 =</label><div class="seg">${btn('setKswC3', 60, 'MIDI 60', p.c3 !== 48, tr('C3 is middle C (Cubase, most VSTs)'))}${btn('setKswC3', 48, 'MIDI 48', p.c3 === 48, tr('C3 an octave lower'))}</div></div>
         <div class="row"><label>${tr('Shift notes')}</label><select data-action="setKswShift">${[-12, 0, 12, 24, 36].map((n) => `<option value="${n}"${n === p.noteShift ? ' selected' : ''}>${n > 0 ? '+' : ''}${n}</option>`).join('')}</select></div>

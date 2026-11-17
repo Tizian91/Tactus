@@ -53,6 +53,14 @@
 
   let svg, world, stat, hov, play, selg;
   let staffNow = null; // the staff drawVoice draws into (its heads remember the track and the staff)
+  let signers = new Map(); // track -> signsAt(bar, tick) of its keyswitches (staccato dots, tremolo strokes …)
+  const signsOf = (track, bi, tick) => {
+    if (!track || !track.ksw || track.kind !== 'pitched' || !TC.ksw) return [];
+    if (!signers.has(track)) signers.set(track, TC.ksw.signer(track));
+    return signers.get(track)(bi, tick);
+  };
+  // SMuFL articulations (Bravura): [above, below, width in spaces]
+  const ARTIC = { stacc: ['', '', 0.28], staccmo: ['', '', 0.28], ten: ['', '', 1.35], port: ['', '', 1.35] };
 
   RD.init = function () {
     svg = document.getElementById('score');
@@ -177,13 +185,14 @@
       z.below = belowOf(z, under);
       // keyswitches (ways of playing: P.M., dead …): a row right under the staff, under its lowest note (as between the
       // staff and the tab of a guitar part) - the lyrics and the dynamics below it
-      if (track.ksw && !track.lh && track.bars.some((b) => b.ks)) {
+      // (only those with a text: staccato, tremolo … are signs at the notes)
+      if (track.ksw && !track.lh && TC.ksw && track.bars.some((b) => (b.ks || []).some((m) => TC.ksw.markText(TC.ksw.keyOf(track, m.k))))) {
         z.ksY = Math.max(6.0 * SP, ...bars.map((b) => lowestInk(b.parts[k]) + 1.6 * SP));
         // a row per group of ways of playing (muting, picking …), then one for slides / stops / release - only the rows
         // used, in the order of the profile: they do not cover each other (nor their lines)
         const rowOf = (x) => (x.kind === 'art' ? 'g:' + (x.group || '') : x.kind === 'once' || x.kind === 'event' ? 'once' : null);
         const used = new Set();
-        track.bars.forEach((b) => (b.ks || []).forEach((m) => { const x = TC.ksw && TC.ksw.keyOf(track, m.k); if (x && rowOf(x)) used.add(rowOf(x)); }));
+        track.bars.forEach((b) => (b.ks || []).forEach((m) => { const x = TC.ksw.keyOf(track, m.k); if (x && rowOf(x) && TC.ksw.markText(x)) used.add(rowOf(x)); }));
         const rows = [];
         track.ksw.keys.forEach((x) => { const r = rowOf(x); if (r && used.has(r) && !rows.includes(r)) rows.push(r); });
         z.ksRow = new Map(rows.map((r, n) => [r, z.ksY + n * 1.5 * SP]));
@@ -707,6 +716,7 @@
     const L = RD.computeLayout();
     const doc = S.doc, page = L.page;
     const out = [];
+    signers = new Map(); // (the signs of the ways of playing at the notes: worked out once per drawing)
     const lines = L.systems.map(() => []); // markup of each line, in staff coordinates (of the first staff)
     const O = (b) => lines[b.sys];
     // … and of each staff of each line, in its own staff coordinates (drawn at translate(0, dy))
@@ -1099,10 +1109,10 @@
       for (const b of L.bars) {
         if (b.hidden !== undefined) continue;
         ((tk.bars[b.i] && tk.bars[b.i].ks) || []).forEach((m) => {
-          const k = TC.ksw.keyOf(tk, m.k);
-          if (!k) return;
+          const k = TC.ksw.keyOf(tk, m.k), txt = TC.ksw.markText(k);
+          if (!k || !txt) return; // (staccato, tremolo …: signs at the notes, no text)
           // (a way of playing in the first row - "open" too; a slide, a stop, release in the row under it)
-          const x = RD.tickX(b, m.t) - 0.4 * SP, txt = k.short || k.name;
+          const x = RD.tickX(b, m.t) - 0.4 * SP;
           OS(b, z).push(`<text class="ks-mark${k.kind === 'art' ? '' : ' once'}" x="${f(x)}" y="${f(z.ksRowOf(k))}">${esc(txt)}</text>`);
         });
       }
@@ -1110,12 +1120,12 @@
       const arts = [];
       tk.bars.forEach((bar, bi) => ((bar && bar.ks) || []).forEach((m) => {
         const k = TC.ksw.keyOf(tk, m.k);
-        if (k && k.kind === 'art') arts.push({ abs: at(bi, m.t), txt: k.short || k.name, g: k.group || '', y: z.ksRowOf(k) });
+        if (k && k.kind === 'art') arts.push({ abs: at(bi, m.t), txt: TC.ksw.markText(k), line: TC.ksw.hasLine(k), g: k.group || '', y: z.ksRowOf(k) });
       }));
       arts.sort((a, b) => a.abs - b.abs);
-      // (to the next way of playing of its group - "open" has no line)
+      // (to the next way of playing of its group - only those that have one: P.M., dead … - not "let ring", "pizz.")
       arts.forEach((a, n) => {
-        if (/^(open|let ring)$/i.test(a.txt)) return;
+        if (!a.line || !a.txt) return;
         const next = arts.slice(n + 1).find((x) => x.g === a.g);
         spans.push({ a: a.abs, e: next ? next.abs : at(doc.bars.length, 0), w: a.txt.length * 0.6 * SP + 0.4 * SP, y: a.y });
       });
@@ -1275,12 +1285,14 @@
       const mainW = (up ? lo : hi).w;
       const stemX = up ? x + mainW / 2 - 0.06 * SP : x - mainW / 2 + 0.06 * SP;
       const flags = TC.rhythm.flags(it.base);
-      const trem = Math.max(0, ...it.ev.notes.map((n) => n.trem || 0)); // roll strokes need a longer stem
+      // (a melody under a keyswitch "tremolo": three strokes with its flags / beams - an unmeasured tremolo)
+      const sg = pinfo ? signsOf(track, b.i, it.ev.tick) : [];
+      const trem = Math.max(sg.includes('trem') ? Math.max(1, 3 - flags) : 0, ...it.ev.notes.map((n) => n.trem || 0)); // roll strokes need a longer stem
       const extra = Math.max(0, flags - 2) * BEAM_GAP + (trem ? (trem + 0.5) * TREM_GAP : 0);
       const startY = up ? stepY(lo.line) - lo.head.stem * SP : stepY(hi.line) + hi.head.stem * SP;
       let endY = up ? stepY(hi.line) - STEM - extra : stepY(lo.line) + STEM + extra;
       if (pinfo) endY = up ? Math.min(endY, stepY(4)) : Math.max(endY, stepY(4)); // far off the staff: the stem reaches the middle line
-      geo.set(it, { x, heads, stemX, startY, endY, flags, trem, up });
+      geo.set(it, { x, heads, stemX, startY, endY, flags, trem, up, sg });
     }
     // beams: flat, at the outermost stem end of the group
     for (const g of beams) {
@@ -1369,8 +1381,19 @@
       if (orn) drawGrace(out, q, orn);
       // accents and techniques: outside, at the stem end
       const marks = [];
-      const acc = Math.max(...it.ev.notes.map((n) => n.accent || 0));
+      // (a keyswitch "accented" / "marcato" holding here: > / ^ at each note, as a written accent)
+      const sg = it.cont ? [] : q.sg || [];
+      const acc = Math.max(...it.ev.notes.map((n) => n.accent || 0), sg.includes('marc') ? 2 : sg.includes('acc') ? 1 : 0);
       if (acc) marks.push(['acc', acc]);
+      // staccato, staccatissimo, tenuto, portato (keyswitches holding here): at the head, away from the stem - in a space
+      // when inside the staff
+      for (const s of sg.filter((x) => ARTIC[x])) {
+        const below = up, [ga, gb, w] = ARTIC[s];
+        let y = below ? stepY(q.heads[q.heads.length - 1].line) + 1.0 * SP : stepY(q.heads[0].line) - 1.0 * SP;
+        if (y > -0.2 * SP && y < 4.2 * SP) y = below ? (Math.ceil(y / SP - 0.5) + 0.5) * SP : (Math.floor(y / SP + 0.5) - 0.5) * SP;
+        out.push(glyph(below ? gb : ga, q.x - (w * SP) / 2, y + (below ? -0.1 * SP : 0.1 * SP), 'head'));
+        if (!below) b.top = Math.min(b.top || 0, y - 0.6 * SP);
+      }
       it.ev.notes.forEach((n) => {
         const art = TC.drums.byId(n.art);
         if (art && art.tech === 'choke' && !marks.some((m) => m[0] === 'choke')) marks.push(['choke']);

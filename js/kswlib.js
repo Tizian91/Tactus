@@ -46,15 +46,43 @@
     delete c.id;
     return Object.assign(c, { tpl: '', lib: p.id });
   };
-  /** A new key for a profile: the key after the last one (a free one), a way of playing. */
-  L.newKey = function (p) {
+  /**
+   * The key of a way of playing of the catalog in a profile: note '' takes it out, else it is set (the keys in the order
+   * of the catalog, the switches after them). Returns false when the note is no key.
+   */
+  L.setKey = function (p, id, note) {
+    if (!KS.cat(id)) return false;
+    const name = String(note || '').trim().replace(/♯/g, '#').replace(/♭/g, 'b');
+    if (name && KS.noteOf(name, p.c3) === null) return false;
+    p.keys = p.keys.filter((k) => k.id !== id);
+    p.init = p.init.filter((x) => x !== id);
+    if (name) p.keys.push(KS.catKey(id, name.charAt(0).toUpperCase() + name.slice(1)));
+    const at = (k) => { const i = KS.CATALOG.findIndex((c) => c.id === k.id); return i < 0 ? KS.CATALOG.length : i; };
+    p.keys = p.keys.map((k, i) => [k, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map((x) => x[0]);
+    return true;
+  };
+  /** A new switch of the VST (not in the score): on the key after the highest one used. */
+  L.newSwitch = function (p) {
     const used = new Set(p.keys.map((k) => KS.noteOf(k.note, p.c3)));
-    let n = p.keys.length ? Math.max(...used) + 1 : KS.noteOf('C0', p.c3);
+    let n = used.size ? Math.max(...used) + 1 : KS.noteOf('C0', p.c3);
     while (used.has(n) && n < 127) n++;
     const ids = new Set(p.keys.map((k) => k.id));
-    let i = p.keys.length + 1;
-    while (ids.has('key' + i)) i++;
-    return { id: 'key' + i, name: tr('Way of playing {n}', { n: i }), short: '', note: KS.nameOf(Math.min(127, n), p.c3), kind: 'art' };
+    let i = 1;
+    while (ids.has('sw' + i)) i++;
+    return KS.modeKey('sw' + i, tr('Switch {n}', { n: i }), KS.nameOf(Math.min(127, n), p.c3));
+  };
+  /** A profile from a Cubase expression map: { profile, missed } (slots it could not take), or null. */
+  L.fromExpressionMap = function (text, name) {
+    const r = KS.fromExpressionMap(text, name);
+    if (!r) return null;
+    r.profile = L.clean(Object.assign(r.profile, { id: newId() }));
+    return r;
+  };
+  /** Keys of a profile that two ways of playing share (a typing slip): their names. */
+  L.sameKeys = function (p) {
+    const by = new Map();
+    p.keys.forEach((k) => { const n = KS.noteOf(k.note, p.c3); by.set(n, (by.get(n) || []).concat(k)); });
+    return [...by.values()].filter((l) => l.length > 1);
   };
   /** The tracks of a score that use an own profile take it as it is now; how many changed. */
   L.syncScore = function (doc) {
@@ -107,8 +135,10 @@
   };
 
   // ---- Dialog -----------------------------------------------------------------------------
+  // The ways of playing are Tactus' (the catalog, by category and group): each gets the key of the VST that plays it;
+  // the switches of the VST (trigger mode …) are named here. Keys of a profile made before the catalog stay editable.
 
-  let root = null, cur = null, touched = false;
+  let root = null, cur = null, touched = false, missed = null; // missed: { id, list } the slots an import could not take
   L.isOpen = () => !!root;
 
   /** The dialog; id: the profile shown first. */
@@ -134,6 +164,7 @@
   L.close = function () {
     if (root) root.remove();
     root = null;
+    missed = null;
     const doc = TC.state && TC.state.doc;
     if (touched && doc) {
       const n = L.syncScore(doc);
@@ -146,24 +177,27 @@
     if (TC.refresh) TC.refresh();
   };
 
-  const KINDS = () => [
-    ['art', tr('Way of playing (holds until the next)')], ['once', tr('Before a note (slide …)')], ['event', tr('At its place (stop …)')],
-    ['down', tr('Down stroke ↓')], ['up', tr('Up stroke ↑')], ['mode', tr('Switch (only ▶, at the start)')],
-  ];
+  // the rows of the catalog under a heading per group (one of a group holds at a time)
+  const SUB = (c) => (c.kind === 'art' ? { art: 'Ways of playing (one holds until the next)', sord: 'Mute (sordino)', mute: 'Muting (one holds)', pick: 'Picking', legato: 'Legato' }[c.group] || c.group
+    : { once: 'Before the note (held over it)', event: 'At its place', down: 'Strokes (the VST strums)', up: 'Strokes (the VST strums)' }[c.kind]);
+  const SIGN = { stacc: 'a dot at each note', staccmo: 'a wedge at each note', ten: 'a line at each note', port: 'a line and a dot at each note',
+    acc: '> at each note', marc: '^ at each note', trem: 'strokes through each stem' };
+  const written = (c) => (c.sign ? tr(SIGN[c.sign]) + (c.short ? ` · „${c.short}“` : '') : c.short ? `„${c.short}“` : '—') + (c.line ? ' - - -┘' : '');
 
-  function extraCell(p, k) {
-    if (k.kind === 'art') {
-      return `<input type="text" data-f="group" data-id="${esc(k.id)}" value="${esc(k.group || '')}" maxlength="20" placeholder="${esc(tr('group'))}"
-        title="${esc(tr('Ways of playing of one group replace each other (e.g. "mute": open / muted / dead). Empty: all without a group are one group.'))}">`;
+  function catRows(p, c0) {
+    const have = new Map(p.keys.map((k) => [k.id, k]));
+    let sub = null, rows = '';
+    for (const c of KS.CATALOG.filter((x) => x.cat === c0)) {
+      const s = SUB(c);
+      if (s !== sub) { sub = s; rows += `<tr class="ksw-sub"><td colspan="4">${esc(tr(s))}</td></tr>`; }
+      const k = have.get(c.id);
+      rows += `<tr class="${k ? '' : 'none'}">
+        <td class="name">${esc(tr(c.name))}${c.def ? ` <span class="muted" title="${esc(tr('Sent at the start when nothing else is written before - a VST does not stay in what was played last'))}">(${esc(tr('start'))})</span>` : ''}</td>
+        <td class="muted">${esc(written(c))}</td>
+        <td><input type="text" class="ksw-note" data-cat="${c.id}" value="${esc(k ? k.note : '')}" maxlength="4" placeholder="—"></td>
+        <td>${k ? `<button type="button" class="icon play" data-k="play" data-id="${c.id}" title="${esc(tr('Send this key now'))}">▶</button>` : ''}</td></tr>`;
     }
-    if (k.kind === 'once') {
-      return `<select data-f="span" data-id="${esc(k.id)}" title="${esc(tr('How long the key is held'))}">
-        <option value="">${esc(tr('this and the next note'))}</option><option value="note"${k.span === 'note' ? ' selected' : ''}>${esc(tr('this note only'))}</option></select>`;
-    }
-    if (k.kind === 'mode') {
-      return `<label class="check" title="${esc(tr('Sent unseen when playing starts (e.g. a trigger mode the VST needs)'))}"><input type="checkbox" data-f="init" data-id="${esc(k.id)}"${p.init.includes(k.id) ? ' checked' : ''}> ${esc(tr('at the start'))}</label>`;
-    }
-    return '';
+    return rows;
   }
 
   function draw() {
@@ -174,34 +208,50 @@
     let body;
     if (!p) {
       body = `<div class="kit-empty"><p>${tr('No own keyswitch profile yet.')}</p>
-        <p class="hint">${tr('A profile says which low key of an instrument VST plays which way of playing (muted, slide, staccato, pizz. …). Tactus writes them as directions in the score and sends the keys before the notes.')}</p>
-        <p class="hint">${tr('Start empty and add the keys of the VST\'s key chart, or copy a template of a similar VST and correct it.')}</p>
-        <button type="button" data-k="blank">${tr('New, empty…')}</button> <button type="button" data-k="template">${tr('New from template…')}</button>
+        <p class="hint">${tr('Tactus knows the ways of playing (staccato, pizz., tremolo, palm mute, slides …) - how they are written and how long they hold. A profile only says which key of your VST plays each one.')}</p>
+        <p class="hint">${tr('Load the expression map of the VST (Cubase), start empty and type the keys of its key chart, or copy a template of a similar VST.')}</p>
+        <button type="button" data-k="xmap">${tr('Load expression map…')}</button> <button type="button" data-k="blank">${tr('New, empty…')}</button> <button type="button" data-k="template">${tr('New from template…')}</button>
         ${t && t.ksw ? ` <button type="button" data-k="fromTrack">${tr('From this track…')}</button>` : ''}</div>`;
     } else {
-      const kinds = KINDS();
-      const rows = p.keys.map((k) => `<tr>
-          <td><button type="button" class="icon play" data-k="play" data-id="${esc(k.id)}" title="${esc(tr('Send this key now'))}">▶</button></td>
-          <td><input type="text" data-f="name" data-id="${esc(k.id)}" value="${esc(k.name)}" maxlength="60"></td>
-          <td><input type="text" class="ksw-short" data-f="short" data-id="${esc(k.id)}" value="${esc(k.short)}" maxlength="12" placeholder="—"></td>
-          <td><input type="text" class="ksw-note" data-f="note" data-id="${esc(k.id)}" value="${esc(k.note)}" maxlength="4"></td>
-          <td><select data-f="kind" data-id="${esc(k.id)}">${kinds.map(([v, l]) => `<option value="${v}"${v === k.kind ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></td>
-          <td>${extraCell(p, k)}</td>
-          <td><button type="button" class="icon" data-k="delKey" data-id="${esc(k.id)}" title="${esc(tr('Remove this key'))}">✕</button></td></tr>`).join('');
       const midiHint = t && TC.midiOut && TC.midiOut.trackActive(t) ? ''
         : `<p class="hint tight">${tr('▶ sends a key to the MIDI output of the track being written - it has none now (at the track: "Plays on").')}</p>`;
+      const miss = missed && missed.id === p.id && missed.list.length ? `<p class="hint warn"><b>${tr('Not taken from the expression map - type their keys at the fitting way of playing:')}</b> ${missed.list.map((m) =>
+        esc(m.name) + (m.note ? ` (${esc(m.note)})` : '') + (m.why === 'other' ? ' – ' + esc(tr('sends a controller or another channel')) : m.why === 'twice' ? ' – ' + esc(tr('a second slot of the same way of playing')) : '')).join(' · ')}</p>` : '';
+      const twice = L.sameKeys(p).map((l) => l.map((k) => esc(tr(k.name))).join(' / ') + ' = ' + esc(l[0].note));
+      const used = (c0) => p.keys.some((k) => KS.cat(k.id) && KS.cat(k.id).cat === c0);
+      const anyCat = KS.CATS.some(([c0]) => used(c0));
+      const cats = KS.CATS.map(([c0, title]) => `<details class="ksw-cat"${used(c0) || (!anyCat && c0 === 'orch') ? ' open' : ''}><summary>${esc(tr(title))} <span class="muted">(${p.keys.filter((k) => KS.cat(k.id) && KS.cat(k.id).cat === c0).length})</span></summary>
+          <table class="kit-table ksw-table"><thead><tr><th>${tr('Way of playing')}</th><th>${tr('Written')}</th><th>${tr('Key')}</th><th></th></tr></thead><tbody>${catRows(p, c0)}</tbody></table></details>`).join('');
+      const modes = p.keys.filter((k) => k.kind === 'mode' && !KS.cat(k.id));
+      const sw = `<details class="ksw-cat"${modes.length ? ' open' : ''}><summary>${tr('Switches of this VST (not in the score)')} <span class="muted">(${modes.length})</span></summary>
+          <p class="hint tight">${tr('E.g. a trigger mode the VST needs: "at the start" sends it unseen when playing starts.')}</p>
+          ${modes.length ? `<table class="kit-table ksw-table"><tbody>${modes.map((k) => `<tr>
+            <td><input type="text" data-f="name" data-id="${esc(k.id)}" value="${esc(k.name)}" maxlength="60"></td>
+            <td><input type="text" class="ksw-note" data-f="note" data-id="${esc(k.id)}" value="${esc(k.note)}" maxlength="4"></td>
+            <td><label class="check"><input type="checkbox" data-f="init" data-id="${esc(k.id)}"${p.init.includes(k.id) ? ' checked' : ''}> ${tr('at the start')}</label></td>
+            <td><button type="button" class="icon play" data-k="play" data-id="${esc(k.id)}" title="${esc(tr('Send this key now'))}">▶</button></td>
+            <td><button type="button" class="icon" data-k="delKey" data-id="${esc(k.id)}" title="${esc(tr('Remove this key'))}">✕</button></td></tr>`).join('')}</tbody></table>` : ''}
+          <p><button type="button" data-k="addSwitch">+ ${tr('Switch')}</button></p></details>`;
+      // keys of a profile made before the catalog (free names): still there, to be moved onto the catalog
+      const old = p.keys.filter((k) => k.kind !== 'mode' && !KS.cat(k.id));
+      const oldRows = old.length ? `<details class="ksw-cat" open><summary>${tr('Own keys (from before) - better: set their key at the way of playing above')} <span class="muted">(${old.length})</span></summary>
+          <table class="kit-table ksw-table"><tbody>${old.map((k) => `<tr><td class="name">${esc(k.name)}</td><td class="muted">${esc(k.short ? '„' + k.short + '“' : '')}</td>
+            <td><input type="text" class="ksw-note" data-f="note" data-id="${esc(k.id)}" value="${esc(k.note)}" maxlength="4"></td>
+            <td><button type="button" class="icon play" data-k="play" data-id="${esc(k.id)}" title="${esc(tr('Send this key now'))}">▶</button></td>
+            <td><button type="button" class="icon" data-k="delKey" data-id="${esc(k.id)}" title="${esc(tr('Remove this key'))}">✕</button></td></tr>`).join('')}</tbody></table></details>` : '';
       body = `<div class="ksw-head">
           <label>C3 = <select data-f="c3"><option value="60"${p.c3 !== 48 ? ' selected' : ''}>MIDI 60</option><option value="48"${p.c3 === 48 ? ' selected' : ''}>MIDI 48</option></select></label>
           <label>${tr('Shift notes')} <select data-f="noteShift">${[-24, -12, 0, 12, 24, 36].map((n) => `<option value="${n}"${n === p.noteShift ? ' selected' : ''}>${n > 0 ? '+' : ''}${n}</option>`).join('')}</select></label>
           <label title="${esc(tr('How many tones the VST plays at a time (a tapped chord is written for it); empty: any'))}">${tr('Tones at a time')} <input type="number" data-f="poly" min="0" max="16" value="${p.poly || ''}" placeholder="–"></label>
         </div>
-        <p class="hint tight">${tr('Key: as the VST names it (C0, F#1, Bb2 - counted from its C3). Text: written in the score (empty: not written, e.g. "open"). Ways of playing hold until the next one of their group; a key "before a note" is held over the note; one "at its place" is struck there.')}</p>${midiHint}
-        ${p.keys.length ? `<table class="kit-table ksw-table"><thead><tr><th></th><th>${tr('Name')}</th><th>${tr('Text in the score')}</th><th>${tr('Key')}</th><th>${tr('Kind')}</th><th></th><th></th></tr></thead><tbody>${rows}</tbody></table>` : `<p>${tr('No keys yet.')}</p>`}
-        <p><button type="button" data-k="addKey">+ ${tr('Key')}</button></p>`;
+        <p class="hint tight">${tr('Type the key of the VST at each way of playing it has (as the VST names it: C0, F#1, Bb2 - counted from its C3); empty: the VST has none. A way of playing holds until the next one of its group.')}</p>${midiHint}${miss}
+        ${twice.length ? `<p class="hint warn"><b>${tr('The same key twice:')}</b> ${twice.join(' · ')}</p>` : ''}
+        ${cats}${sw}${oldRows}`;
     }
     box.innerHTML = `<header><h2>${tr('Keyswitch profiles')} <a class="help-link" href="hilfe.html#keyswitch-profile" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
       <div class="kit-bar">
         ${L.list.length ? `<select data-k="pick">${opts}</select>` : ''}
+        <button type="button" data-k="xmap" title="${esc(tr('Cubase expression map (.expressionmap): the keys of its sound slots'))}">${tr('Load expression map…')}</button>
         <button type="button" data-k="blank">${tr('New, empty…')}</button>
         <button type="button" data-k="template">${tr('New from template…')}</button>
         ${t && t.ksw ? `<button type="button" data-k="fromTrack" title="${esc(tr('The keyswitches of the track being written, as corrected there'))}">${tr('From this track…')}</button>` : ''}
@@ -218,13 +268,15 @@
       </footer>`;
   }
 
-  /** Saved; drawn again when the table changes (not for a typed name: the focus stays where it went). */
+  /** Saved; drawn again (keeping the scroll and which sections are open). */
   function changed(redraw) {
     touched = true;
     L.save();
     if (!redraw) return;
     const body = root.querySelector('.kit-body'), scroll = body.scrollTop;
+    const open = [...root.querySelectorAll('details.ksw-cat')].map((d) => d.open);
     draw();
+    root.querySelectorAll('details.ksw-cat').forEach((d, i) => { if (open[i] !== undefined) d.open = open[i]; });
     root.querySelector('.kit-body').scrollTop = scroll;
   }
 
@@ -250,6 +302,7 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   const fileName = (s) => s.replace(/[\\/:*?"<>|]+/g, '-');
+  const askName = (def) => prompt(tr('Name of the VST (e.g. "UJAM Virtual Guitarist Carbon", "Iconica Sketch Strings"):'), def || '');
 
   function add(q) {
     L.list.push(q);
@@ -263,15 +316,27 @@
     const p = L.byId(cur), t = TC.curTrack && TC.curTrack();
     switch (b.dataset.k) {
       case 'close': L.close(); break;
+      case 'xmap':
+        pickFile('.expressionmap,.xml', (text, fname) => {
+          const r = L.fromExpressionMap(text, fname.replace(/\.(expressionmap|xml)$/i, ''));
+          if (!r || !r.profile) { alert(tr('This is not a Cubase expression map.')); return; }
+          const name = askName(r.profile.name);
+          if (name === null) return;
+          if (name.trim()) r.profile.name = name.trim().slice(0, 60);
+          missed = { id: r.profile.id, list: r.missed };
+          add(r.profile);
+          TC.ui.hint(tr('{n} ways of playing taken from the expression map', { n: r.profile.keys.length }));
+        });
+        break;
       case 'blank': {
-        const name = prompt(tr('Name of the VST (e.g. "UJAM Virtual Guitarist Carbon", "Iconica Sketch Strings"):'), '');
+        const name = askName('');
         if (name && name.trim()) add(L.blank(name.trim()));
         break;
       }
       case 'template': {
         const r = b.getBoundingClientRect();
         TC.menu.open(KS.TEMPLATES.map((x) => ({ label: x.name, action: () => {
-          const name = prompt(tr('Name of the VST (e.g. "UJAM Virtual Guitarist Carbon", "Iconica Sketch Strings"):'), tr('{name} (copy)', { name: x.name }));
+          const name = askName(tr('{name} (copy)', { name: x.name }));
           if (name && name.trim()) add(L.fromTemplate(x.tpl, name.trim()));
         } })), r.left, r.bottom + 2);
         break;
@@ -307,8 +372,8 @@
           L.open();
         }
         break;
-      case 'addKey':
-        p.keys.push(L.newKey(p));
+      case 'addSwitch':
+        p.keys.push(L.newSwitch(p));
         changed(true);
         { const ins = root.querySelectorAll('input[data-f="name"]'); if (ins.length) { ins[ins.length - 1].focus(); ins[ins.length - 1].select(); } }
         break;
@@ -323,7 +388,7 @@
         TC.midiOut.init().then(() => {
           if (!t || !TC.midiOut.trackActive(t)) return TC.ui.hint(tr('▶ sends a key to the MIDI output of the track being written - it has none now (at the track: "Plays on").'));
           TC.midiOut.note(n, 0, 0.3, 0.8, null, t, true);
-          TC.ui.hint(tr('{name}: {key} (MIDI {n}) sent', { name: k.name, key: k.note, n }));
+          TC.ui.hint(tr('{name}: {key} (MIDI {n}) sent', { name: tr(k.name), key: k.note, n }));
         });
         break;
       }
@@ -349,40 +414,32 @@
     }
   }
 
+  const badKey = (name) => TC.ui.hint(tr('"{name}" is no key - e.g. F#2, Bb2, C1', { name }));
+
   function onChange(e) {
     const el = e.target, p = L.byId(cur);
     if (el.dataset.k === 'pick') { cur = el.value; draw(); return; }
-    if (!p || !el.dataset.f) return;
+    if (!p) return;
+    if (el.dataset.cat) {
+      // the key of a way of playing of the catalog ('': the VST has none)
+      if (!L.setKey(p, el.dataset.cat, el.value)) { badKey(el.value.trim()); el.value = (p.keys.find((k) => k.id === el.dataset.cat) || {}).note || ''; return; }
+      return changed(true);
+    }
     const f = el.dataset.f, k = el.dataset.id && p.keys.find((x) => x.id === el.dataset.id);
     if (f === 'c3') { p.c3 = Number(el.value) === 48 ? 48 : 60; return changed(false); }
     if (f === 'noteShift') { p.noteShift = Math.max(-36, Math.min(36, parseInt(el.value, 10) || 0)); return changed(false); }
     if (f === 'poly') { const n = parseInt(el.value, 10); p.poly = n > 0 ? Math.min(16, n) : 0; return changed(false); }
     if (!k) return;
     if (f === 'name') { k.name = el.value.trim().slice(0, 60) || k.id; return changed(false); }
-    if (f === 'short') { k.short = el.value.trim().slice(0, 12); return changed(false); }
-    if (f === 'group') { if (el.value.trim()) k.group = el.value.trim().slice(0, 20); else delete k.group; return changed(false); }
-    if (f === 'span') { if (el.value === 'note') k.span = 'note'; else delete k.span; return changed(false); }
     if (f === 'init') {
       p.init = p.init.filter((id) => id !== k.id).concat(el.checked ? [k.id] : []);
       return changed(false);
     }
     if (f === 'note') {
       const name = el.value.trim().replace(/♯/g, '#').replace(/♭/g, 'b');
-      if (KS.noteOf(name, p.c3) === null) {
-        TC.ui.hint(tr('"{name}" is no key - e.g. F#2, Bb2, C1', { name }));
-        el.value = k.note;
-        return;
-      }
+      if (KS.noteOf(name, p.c3) === null) { badKey(name); el.value = k.note; return; }
       k.note = name.charAt(0).toUpperCase() + name.slice(1);
-      el.value = k.note;
-      return changed(false);
-    }
-    if (f === 'kind' && KS.KINDS.includes(el.value)) {
-      k.kind = el.value;
-      if (k.kind !== 'art') delete k.group;
-      if (k.kind !== 'once') delete k.span;
-      if (k.kind !== 'mode') p.init = p.init.filter((id) => id !== k.id);
-      changed(true);
+      return changed(true);
     }
   }
 })(window.TC);

@@ -1,19 +1,29 @@
 'use strict';
 /*
- * Keyswitches of an instrument VST (e.g. UJAM Iron 2 in its Instrument Mode): low keys that change how the notes are
- * played - muted, dead notes, a slide, a down stroke … In the score they are directions above the staff ("P.M. - - -┘",
- * "Dead", "slide"), not notes; playing / exporting, Tactus sends their keys before the notes.
+ * Keyswitches of an instrument VST (UJAM Iron 2, a Virtual Bassist, an orchestral library …): low keys that change how
+ * the notes are played - muted, a slide, staccato, pizz., tremolo … In the score they are directions under the staff
+ * ("P.M. - - -┘", "pizz.") or signs at each note (staccato dots, tremolo strokes), not notes; playing / exporting,
+ * Tactus sends their keys before the notes.
+ *
+ * The ways of playing are given by Tactus (KS.CATALOG, like the drum instruments of a kit profile): name, how they are
+ * written, how long they hold. A profile only says which key of the VST plays each one (and has switches of its own).
  *
  *   track.ksw = { tpl, name, c3, keys: [{ id, name, short, note, kind }] }   (only when set; saved with the score)
  *     c3     the MIDI note the VST calls C3 (60 or 48) - its keys and its play range follow it
  *     init   keys sent at the start, unseen (Iron: trigger mode on - else its notes do not play)
  *     group  ways of playing of one group replace each other (Iron: open / muted / half / dead; picking its own)
+ *     def    the way of playing of its group sent at the start when none is written before (ord., let ring …): a VST
+ *            that latches its keys does not stay in what was played before (a P.M. taken out of the score)
  *     span   a slide ('once'): held over the note at its place and the next one (default), or 'note' only that one
- *     kind   'art'   a way of playing (dead, muted, half muted, open, picking): held until the next one of its group
+ *     sign   written at each note while it holds: 'stacc' dot, 'staccmo' wedge, 'ten' line, 'port' line and dot,
+ *            'acc' >, 'marc' ^, 'trem' strokes through the stem
+ *     line   a dashed line to the next one of its group (P.M. - - -┘)
+ *     kind   'art'   a way of playing: held until the next one of its group (with latch on or off)
  *            'once'  before the note at its place (a slide)
  *            'event' at its place (stop, release)
  *            'down' / 'up'  sent before a chord struck down / up (note.stroke) - the VST strums it itself
- *            'mode'  a switch of the VST (trigger mode, strum auto …): only with ▶, not in the score
+ *            'mode'  a switch of the VST (trigger mode, strum auto …): only with ▶ or at the start, not in the score -
+ *                    named by the profile (the only keys not in the catalog)
  *     note   the key as the VST names it, counted from its C3 ('C1' … 'B2')
  *   bar.ks = [{ t, k }]   a keyswitch k (its id) at tick t of a track's bar
  *
@@ -24,38 +34,69 @@
   const KS = (TC.ksw = {});
   const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-  // UJAM Iron 2, Instrument Mode (the manual's key switch table; play range C3 … F5 = D2 … F4, four tones at a time)
+  // ---- The ways of playing Tactus knows (their names in English - js/i18n.js translates them) -----------------------
+  // [id, name, short (text in the score, '' none), kind, group, more]
+  const cat = (c, list) => list.map(([id, name, short, kind, group, more]) => Object.assign({ id, cat: c, name, short, kind }, group ? { group } : {}, more || {}));
+  KS.CATS = [['orch', 'Strings · winds · orchestra'], ['guitar', 'Guitar · bass']];
+  KS.CATALOG = [].concat(cat('orch', [
+    ['sus', 'Sustain (ord.)', 'ord.', 'art', 'art', { def: true }], ['vib', 'Sustain vibrato', 'vib.', 'art', 'art'],
+    ['nonvib', 'Sustain non vibrato', 'non vib.', 'art', 'art'], ['legato', 'Legato', 'legato', 'art', 'art'],
+    ['stacc', 'Staccato', '', 'art', 'art', { sign: 'stacc' }], ['staccmo', 'Staccatissimo', '', 'art', 'art', { sign: 'staccmo' }],
+    ['spicc', 'Spiccato', 'spicc.', 'art', 'art', { sign: 'stacc' }], ['portato', 'Portato', '', 'art', 'art', { sign: 'port' }],
+    ['tenuto', 'Tenuto', '', 'art', 'art', { sign: 'ten' }], ['accented', 'Accented', '', 'art', 'art', { sign: 'acc' }],
+    ['marc', 'Marcato', '', 'art', 'art', { sign: 'marc' }], ['trem', 'Tremolo', '', 'art', 'art', { sign: 'trem' }],
+    ['trill1', 'Trill (half tone)', 'tr ½', 'art', 'art'], ['trill2', 'Trill (whole tone)', 'tr', 'art', 'art'],
+    ['pizz', 'Pizzicato', 'pizz.', 'art', 'art'], ['bartok', 'Bartók pizzicato', 'Bartók pizz.', 'art', 'art'],
+    ['colLegno', 'Col legno', 'col legno', 'art', 'art'], ['harm', 'Harmonics', 'harm.', 'art', 'art'],
+    ['sulPont', 'Sul ponticello', 'sul pont.', 'art', 'art'], ['sulTasto', 'Sul tasto', 'sul tasto', 'art', 'art'],
+    ['flaut', 'Flautando', 'flaut.', 'art', 'art'], ['flz', 'Flutter tongue', 'flz.', 'art', 'art'],
+    ['senzaSord', 'Senza sordino', 'senza sord.', 'art', 'sord', { def: true }], ['conSord', 'Con sordino', 'con sord.', 'art', 'sord'],
+  ]), cat('guitar', [
+    ['open', 'Let ring (open)', 'let ring', 'art', 'mute', { def: true }], ['muted', 'Muted (palm mute)', 'P.M.', 'art', 'mute', { line: true }],
+    ['half', 'Half muted', '½ M.', 'art', 'mute', { line: true }], ['dead', 'Dead notes', 'Dead', 'art', 'mute', { line: true }],
+    ['pick1', 'Picking 1', 'pick', 'art', 'pick', { line: true }], ['pick2', 'Picking 2', 'pick 2', 'art', 'pick', { line: true }],
+    ['pick3', 'Picking 3', 'pick 3', 'art', 'pick', { line: true }], ['pick4', 'Picking 4', 'pick 4', 'art', 'pick', { line: true }],
+    ['pick5', 'Picking 5', 'pick 5', 'art', 'pick', { line: true }], ['pick6', 'Picking 6', 'pick 6', 'art', 'pick', { line: true }],
+    ['legOff', 'Legato off', 'non leg.', 'art', 'legato', { def: true }], ['legOn', 'Legato on', 'legato', 'art', 'legato', { line: true }],
+    ['slideUp', 'Slide up', 'sl. ↗', 'once'], ['slideDown', 'Slide down', 'sl. ↘', 'once'],
+    ['slideUpDown', 'Slide up & down', 'sl. ↗↘', 'once'], ['pickSlide', 'Pick slide', 'p. sl.', 'once'],
+    ['slide1', 'Slide 1 (pre-intro)', 'sl. 1', 'once', '', { span: 'note' }], ['slide2', 'Slide 2 (pre-intro)', 'sl. 2', 'once', '', { span: 'note' }],
+    ['slide3', 'Slide 3 (pre-intro)', 'sl. 3', 'once', '', { span: 'note' }],
+    ['down', 'Downstroke', '↓', 'down'], ['up', 'Upstroke', '↑', 'up'],
+    ['stopDown', 'Stop (downstroke)', 'stop ↓', 'event'], ['stopUp', 'Stop (upstroke)', 'stop ↑', 'event'],
+    ['stop', 'Full stop', 'stop', 'event'], ['release', 'Release', 'rel.', 'event'],
+    ['dead1', 'Dead note 1', 'x', 'event'], ['dead2', 'Dead note 2', 'x 2', 'event'],
+    ['deadMode', 'Silent dead notes (on / off)', 'dead ⇄', 'event'],
+  ]));
+  KS.cat = (id) => KS.CATALOG.find((x) => x.id === id) || null;
+  /** A key of a profile: a way of playing of the catalog on a key of the VST (its properties from the catalog). */
+  KS.catKey = function (id, note) {
+    const c = KS.cat(id);
+    if (!c) return null;
+    const k = Object.assign({}, c, { note });
+    delete k.cat;
+    return k;
+  };
+  /** A switch of the VST (named by the profile, not in the score). */
+  KS.modeKey = (id, name, note) => ({ id, name, short: '', note, kind: 'mode' });
+
+  // ---- Templates: the keys of a VST on the catalog ----------------------------------------------------------------
   KS.TEMPLATES = [{
+    // UJAM Iron 2, Instrument Mode (the manual's key switch table; play range C3 … F5 = D2 … F4, four tones at a time)
     // (checked with Iron 2: C3 = 60; C1 is free - the slides start on D1; D#1 trigger mode on is needed, else the
     // notes do not play: sent at the start, unseen; open / muted / half / dead exclude each other, picking is its own)
     // (v: the version of the template - a profile saved with an older one is brought to it when loaded)
     tpl: 'ujam-iron2', v: 2, name: 'UJAM Iron 2 (Instrument Mode)', c3: 60, noteShift: 12, poly: 4, init: ['trigOn'],
-    keys: [
-      ['open', 'Let ring (open)', 'let ring', 'A#2', 'art', 'mute'], ['muted', 'Muted (palm mute)', 'P.M.', 'F#2', 'art', 'mute'],
-      ['half', 'Half muted', '½ M.', 'G#2', 'art', 'mute'], ['dead', 'Dead notes', 'Dead', 'D#2', 'art', 'mute'],
-      ['pick1', 'Picking (C2)', 'pick', 'C2', 'art', 'pick'], ['pick2', 'Picking (D2)', 'pick 2', 'D2', 'art', 'pick'],
-      ['pick3', 'Picking (E2)', 'pick 3', 'E2', 'art', 'pick'], ['pick4', 'Picking (F2)', 'pick 4', 'F2', 'art', 'pick'],
-      ['pick5', 'Picking (G2)', 'pick 5', 'G2', 'art', 'pick'], ['pick6', 'Picking (A2)', 'pick 6', 'A2', 'art', 'pick'],
-      ['slideUp', 'Slide up', 'sl. ↗', 'D1', 'once'], ['slideDown', 'Slide down', 'sl. ↘', 'E1', 'once'],
-      ['slideUpDown', 'Slide up & down', 'sl. ↗↘', 'F1', 'once'], ['pickSlide', 'Pick slide', 'p. sl.', 'G1', 'once'],
-      ['up', 'Upstroke', '↑', 'A1', 'up'], ['down', 'Downstroke', '↓', 'B1', 'down'],
-      ['stopUp', 'Stop (upstroke)', 'stop ↑', 'G#1', 'event'], ['stopDown', 'Stop (downstroke)', 'stop ↓', 'A#1', 'event'],
-      ['release', 'Release', 'rel.', 'C#2', 'event'],
-      ['trigOff', 'Trigger mode off', '', 'C#1', 'mode'], ['trigOn', 'Trigger mode on', '', 'D#1', 'mode'],
-      ['noArtStrum', 'Disable articulation strumming', '', 'F#1', 'mode'], ['strumAuto', 'Strum – auto', '', 'B2', 'mode'],
-    ].map(([id, name, short, note, kind, group]) => Object.assign({ id, name, short, note, kind }, group ? { group } : {})),
+    keys: Object.entries({ open: 'A#2', muted: 'F#2', half: 'G#2', dead: 'D#2', pick1: 'C2', pick2: 'D2', pick3: 'E2', pick4: 'F2', pick5: 'G2', pick6: 'A2',
+      slideUp: 'D1', slideDown: 'E1', slideUpDown: 'F1', pickSlide: 'G1', up: 'A1', down: 'B1', stopUp: 'G#1', stopDown: 'A#1', release: 'C#2' })
+      .map(([id, note]) => KS.catKey(id, note)).concat([KS.modeKey('trigOff', 'Trigger mode off', 'C#1'), KS.modeKey('trigOn', 'Trigger mode on', 'D#1'),
+        KS.modeKey('noArtStrum', 'Disable articulation strumming', 'F#1'), KS.modeKey('strumAuto', 'Strum – auto', 'B2')]),
   }, {
     // UJAM Virtual Bassist Rowdy, Instrument Mode (the manual: the lowest octave C0 … B0; play range C3 … E5 - a bass, sent
     // an octave up - checked with a low E, 2026-11-17)
     tpl: 'ujam-rowdy', v: 2, name: 'UJAM Virtual Bassist Rowdy (Instrument Mode)', c3: 60, noteShift: 12, poly: 1, init: [],
-    keys: [
-      ['slide1', 'Slide 1 (pre-intro)', 'sl. 1', 'C0', 'once', '', 'note'], ['slide2', 'Slide 2 (pre-intro)', 'sl. 2', 'D0', 'once', '', 'note'],
-      ['slide3', 'Slide 3 (pre-intro)', 'sl. 3', 'E0', 'once', '', 'note'],
-      ['legOff', 'Legato off', 'non leg.', 'C#0', 'art', 'legato'], ['legOn', 'Legato on', 'legato', 'F#0', 'art', 'legato'],
-      ['deadMode', 'Silent dead note (the keys play dead notes - on / off)', 'dead ⇄', 'G0', 'event'],
-      ['dead1', 'Dead note 1', 'x', 'A0', 'event'], ['dead2', 'Dead note 2', 'x 2', 'B0', 'event'],
-      ['stop', 'Full stop', 'stop', 'A#0', 'event'],
-    ].map(([id, name, short, note, kind, group, span]) => Object.assign({ id, name, short, note, kind }, group ? { group } : {}, span ? { span } : {})),
+    keys: Object.entries({ slide1: 'C0', slide2: 'D0', slide3: 'E0', legOff: 'C#0', legOn: 'F#0', deadMode: 'G0', dead1: 'A0', dead2: 'B0', stop: 'A#0' })
+      .map(([id, note]) => KS.catKey(id, note)),
   }];
   KS.KINDS = ['art', 'once', 'event', 'down', 'up', 'mode'];
   KS.template = (id) => KS.TEMPLATES.find((x) => x.tpl === id) || null;
@@ -87,8 +128,11 @@
     // mode, no groups): the corrected template, keeping which C3 was chosen
     const tpl = KS.template(p.tpl);
     if (tpl && (!Array.isArray(p.init) || (p.v || 1) < (tpl.v || 1))) p = Object.assign(KS.fromTemplate(p.tpl), { c3: p.c3 });
-    const keys = p.keys.filter((k) => k && typeof k.id === 'string' && KS.KINDS.includes(k.kind) && KS.noteOf(k.note) !== null)
-      .map((k) => Object.assign({ id: k.id.slice(0, 40), name: String(k.name || k.id).slice(0, 60), short: String(k.short || '').slice(0, 12), note: k.note, kind: k.kind },
+    // a way of playing of the catalog: as the catalog says (only its key from the profile); a switch: as named; a key
+    // of a profile made before the catalog: as it was
+    const seen = new Set();
+    const keys = p.keys.filter((k) => k && typeof k.id === 'string' && !seen.has(k.id) && seen.add(k.id) && KS.noteOf(k.note) !== null && (KS.cat(k.id) || KS.KINDS.includes(k.kind)))
+      .map((k) => KS.cat(k.id) ? KS.catKey(k.id, k.note) : Object.assign({ id: k.id.slice(0, 40), name: String(k.name || k.id).slice(0, 60), short: String(k.short || '').slice(0, 12), note: k.note, kind: k.kind },
         typeof k.group === 'string' && k.group ? { group: k.group.slice(0, 20) } : {}, k.span === 'note' ? { span: 'note' } : {}));
     if (!keys.length && !empty) return null;
     const ids = new Set(keys.map((k) => k.id));
@@ -102,6 +146,12 @@
     const k = track && track.ksw && track.ksw.keys.find((x) => x.id === id);
     return k ? Object.assign({ midi: KS.noteOf(k.note, track.ksw.c3) }, k) : null;
   };
+  /** The text of a keyswitch in the score ('' none: a way of playing written as signs at the notes, e.g. staccato). */
+  KS.markText = (k) => (k ? (KS.cat(k.id) ? k.short : k.short || k.name) : '');
+  /** Does a way of playing draw a dashed line to the next one of its group (P.M. - - -┘)? (before the catalog: all but "open") */
+  KS.hasLine = (k) => !!k && k.kind === 'art' && (KS.cat(k.id) ? !!KS.cat(k.id).line : !/^(open|let ring)$/i.test(k.short || k.name));
+  /** The button text of a keyswitch (the note panel): its text, else its name. */
+  KS.label = (k) => (k ? k.short || (TC.tr ? TC.tr(k.name) : k.name) : '');
   /** The keyswitches of a track that go into the score (ways of playing, slides, stops). */
   KS.scoreKeys = (track) => (track && track.ksw ? track.ksw.keys.filter((k) => k.kind === 'art' || k.kind === 'once' || k.kind === 'event') : []);
   /** Does the track strum with the VST's own stroke keys (then Tactus does not spread a stroke itself)? */
@@ -132,6 +182,12 @@
     (track.ksw.init || []).forEach((id) => { const k = KS.keyOf(track, id); if (k && k.midi !== null) out.push({ at: start, key: k.midi, hold: 0, init: true }); });
     // the ways of playing that hold where the playing starts (set before it)
     (startArts || []).forEach((id) => { const k = KS.keyOf(track, id); if (k) art.set(k.group || 'art', { at: start, key: k.midi }); });
+    // … else the way of playing of its group to start from (ord., let ring): a VST that latches its keys does not keep
+    // what was played last (a P.M. taken out of the score)
+    track.ksw.keys.forEach((k) => {
+      const g = k.group || 'art', midi = k.def && k.kind === 'art' ? KS.noteOf(k.note, track.ksw.c3) : null;
+      if (midi !== null && !art.has(g)) art.set(g, { at: start, key: midi, def: true });
+    });
     for (const o of order) {
       const bar = track.bars[o.bar];
       for (const m of (bar && bar.ks) || []) {
@@ -140,7 +196,8 @@
         const at = timeOf(o, m.t), g = k.group || 'art';
         if (k.kind === 'art') {
           const before = art.get(g);
-          if (before) out.push({ at: before.at, key: before.key, hold: Math.max(0, at - before.at) });
+          // (the start's way of playing replaced right there: not sent at all)
+          if (before && !(before.def && at - before.at <= 1e-9)) out.push({ at: before.at, key: before.key, hold: Math.max(0, at - before.at) });
           art.set(g, { at, key: k.midi });
         } else if (k.kind === 'once') {
           // a slide: held from the note here up to the end of the next note (that one too) - else the VST does not slide
@@ -162,5 +219,84 @@
       for (let j = list.length - 1; j >= 0; j--) if (!got.has(list[j].group || 'art')) got.set(list[j].group || 'art', list[j].id);
     }
     return [...got.values()];
+  };
+
+  /**
+   * The signs written at the notes of a track (staccato dots, tremolo strokes …): signsAt(bi, tick) gives those of the
+   * ways of playing that hold there (in written order, bar by bar) - [] when none. Made once per drawing / export.
+   */
+  KS.signer = function (track) {
+    if (!track || !track.ksw || !track.ksw.keys.some((k) => k.sign)) return () => [];
+    const starts = [], now = new Map(); // (per bar: the ways of playing holding at its start, by group)
+    const marks = (bi) => ((track.bars[bi] && track.bars[bi].ks) || []).map((m) => ({ t: m.t, k: KS.keyOf(track, m.k) })).filter((m) => m.k && m.k.kind === 'art');
+    for (let bi = 0; bi < track.bars.length; bi++) {
+      starts.push(new Map(now));
+      marks(bi).forEach((m) => now.set(m.k.group || 'art', m.k));
+    }
+    return (bi, tick) => {
+      const at = new Map(starts[bi] || now);
+      marks(bi).forEach((m) => { if (m.t <= tick) at.set(m.k.group || 'art', m.k); });
+      return [...new Set([...at.values()].map((k) => k.sign).filter(Boolean))];
+    };
+  };
+
+  // ---- Cubase expression maps (*.expressionmap) ----------------------------------------------------------------------
+
+  // the names of a sound slot that say which way of playing it is (the first that fits; English as the makers write them)
+  const MATCH = [
+    [/non.?vib|senza vib|no vib/, 'nonvib'], [/bart/, 'bartok'], [/pizz/, 'pizz'], [/col.?legno/, 'colLegno'], [/staccatissimo/, 'staccmo'],
+    [/spicc/, 'spicc'], [/stacc|short/, 'stacc'], [/portato|loure/, 'portato'], [/tenuto/, 'tenuto'], [/marcato/, 'marc'], [/accent/, 'accented'],
+    [/trem/, 'trem'], [/trill.*(half|minor|m2|semi)|(half|minor|semi).*trill/, 'trill1'], [/trill/, 'trill2'], [/harm/, 'harm'],
+    [/pont/, 'sulPont'], [/tasto/, 'sulTasto'], [/flaut/, 'flaut'], [/flutter|flz/, 'flz'], [/con.?sord|muted/, 'conSord'], [/senza.?sord/, 'senzaSord'],
+    [/legato|slur/, 'legato'], [/vib/, 'vib'], [/sus|long|arco|ord/, 'sus'],
+  ];
+  /** The way of playing (catalog id) a slot name stands for, or null. */
+  KS.matchName = function (name) {
+    const s = String(name || '').toLowerCase();
+    const m = MATCH.find(([re]) => re.test(s));
+    return m ? m[1] : null;
+  };
+  const xmlAttr = (s) => s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  /**
+   * Reads a Cubase expression map: its sound slots, each with its name and the MIDI it sends - keys (note on) only;
+   * a slot that sends a controller, a program change or switches the channel is listed as not taken.
+   * Returns { name, slots: [{ name, notes: [MIDI], other: true|false }] } or null (no expression map).
+   */
+  KS.readExpressionMap = function (text) {
+    const src = String(text || '');
+    if (!/<InstrumentMap\b/.test(src)) return null;
+    const name = (/<InstrumentMap>\s*<string name="name" value="([^"]*)"/.exec(src) || [])[1] || '';
+    const slots = src.split(/<obj class="PSoundSlot"/).slice(1).map((part) => {
+      const nm = (/<member name="name">\s*<string name="s" value="([^"]*)"/.exec(part) || [])[1] || '';
+      const msgs = (/<member name="midiMessages">([\s\S]*?)<\/member>/.exec(part) || [])[1] || '';
+      const ev = [...msgs.matchAll(/<obj class="POutputEvent"[\s\S]*?<int name="status" value="(\d+)"\/>\s*<int name="data1" value="(\d+)"\/>/g)]
+        .map((m) => ({ status: +m[1], data1: +m[2] }));
+      const notes = ev.filter((e) => e.status >> 4 === 9).map((e) => e.data1);
+      // (the action's own channel: the last <int name="channel"> before its key - -1: the track's)
+      const action = (/<obj class="PSlotMidiAction"[\s\S]*?<\/member>\s*<int name="channel" value="(-?\d+)"\/>/.exec(part) || [])[1];
+      return { name: xmlAttr(nm), notes, other: ev.some((e) => e.status >> 4 !== 9) || (action !== undefined && +action !== -1) };
+    });
+    return { name: xmlAttr(name), slots };
+  };
+  /**
+   * A profile from an expression map: each slot with one key on the way of playing its name says (the part all names
+   * begin with left out: "Violins2 Staccato" -> "Staccato"). C3 = 60 as in Cubase.
+   * Returns { profile: { name, c3, noteShift, poly, init, keys }, missed: [{ name, note }] } (slots not taken).
+   */
+  KS.fromExpressionMap = function (text, fallbackName) {
+    const map = KS.readExpressionMap(text);
+    if (!map) return null;
+    const words = map.slots.map((s) => s.name.split(/\s+/));
+    let pre = 0;
+    while (words.length > 1 && words.every((w) => w.length > pre + 1 && w[pre] === words[0][pre])) pre++;
+    const keys = [], missed = [];
+    map.slots.forEach((s, i) => {
+      const label = words[i].slice(pre).join(' ') || s.name, note = s.notes.length === 1 ? KS.nameOf(s.notes[0], 60) : '';
+      const id = KS.matchName(label);
+      if (id && note && !s.other && !keys.some((k) => k.id === id)) keys.push(KS.catKey(id, note));
+      else missed.push({ name: label, note: s.notes.map((n) => KS.nameOf(n, 60)).join(' + '), why: s.other ? 'other' : !note ? 'keys' : id ? 'twice' : 'unknown' });
+    });
+    keys.sort((a, b) => KS.CATALOG.findIndex((c) => c.id === a.id) - KS.CATALOG.findIndex((c) => c.id === b.id));
+    return { profile: { tpl: '', v: 1, name: map.name || fallbackName || 'Expression map', c3: 60, noteShift: 0, poly: 0, init: [], keys }, missed };
   };
 })(window.TC);

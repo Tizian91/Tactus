@@ -283,6 +283,11 @@ input.ksw-note { width: 46px; }
 .ksw-table select { max-width: 230px; }
 .ksw-table label.check { white-space: nowrap; font-size: 12px; }
 .ksw-dialog footer .hint { color: var(--muted); font-size: 12px; }
+.ksw-cat { margin: 6px 0; }
+.ksw-cat > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.ksw-table tr.ksw-sub td { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; padding-top: 8px; border-top: none; }
+.ksw-table tr.none td.name { color: var(--muted); }
+.ksw-table td.muted { font-size: 12px; }
 .score .ks-mark { font-size: 11px; font-style: italic; font-weight: 600; fill: var(--ink); }
 .score .ks-line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; }
 .score .ks-end { stroke: var(--ink); stroke-width: 1; }

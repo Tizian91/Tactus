@@ -77,6 +77,7 @@
   X.harmonyXml = harmonyXml;
 
   X.build = function (doc, opts = {}) {
+    const signer = new Map(); // track -> the signs of its keyswitches at the notes (js/keyswitch.js)
     // a part per instrument: a piano is one part with two staves (its left hand: staff 2, voices 5 …)
     const tracks = (opts.tracks || doc.tracks).filter((t) => !t.lh);
     const lhOf = (t) => (t.kind === 'pitched' ? TC.score.leftHand(doc, t) : null);
@@ -208,7 +209,7 @@
           // keyswitches (ways of playing of the VST): their names above the staff (P.M., Dead, slide …)
           if (TC.ksw && t.ksw) ((t.bars[i] && t.bars[i].ks) || []).forEach((m) => {
             const k = TC.ksw.keyOf(t, m.k);
-            if (k) o.push(`<direction placement="above"><direction-type><words>${esc(k.short || k.name)}</words></direction-type>${off(m.t)}${stf}</direction>`);
+            if (k && TC.ksw.markText(k)) o.push(`<direction placement="above"><direction-type><words>${esc(TC.ksw.markText(k))}</words></direction-type>${off(m.t)}${stf}</direction>`);
           });
         }
 
@@ -227,6 +228,7 @@
         const used = voices.map((items) => items.some((it) => it.kind === 'note'));
         // melody: how each note is spelled and which ones carry a sign (as drawn)
         // (a note tied on from before carries no sign again)
+        const signs = mel && TC.ksw ? (signer.has(t) ? signer : signer.set(t, TC.ksw.signer(t))).get(t) : null; // (staccato, tremolo … of the keyswitches)
         const sb = mel ? P.spellBar([].concat(...voices.map((items, vi) => items.filter((it) => it.kind === 'note')
           .map((it) => it.ev.notes.map((n) => ({ tick: it.tick, n,
             cont: it.cont || (it.tick === it.ev.tick && !!TC.score.tiedFrom(doc, t, src, vi, it.ev, n)) }))))).flat(), scale, t.clef) : null;
@@ -256,7 +258,11 @@
             if (mel) {
               // melody: pitch (as spelled), its sign, ties within the bar (it.tie / it.cont), accents
               const ns = it.ev.notes.slice().sort((x, y) => x.pitch - y.pitch);
-              const bm = beams.get(it), acc = Math.max(...ns.map((n) => n.accent || 0));
+              // (the ways of playing holding here that are signs at the notes: staccato, tremolo …)
+              const sg = signs && !it.cont ? signs(i, it.ev.tick) : [];
+              const bm = beams.get(it), acc = Math.max(...ns.map((n) => n.accent || 0), sg.includes('marc') ? 2 : sg.includes('acc') ? 1 : 0);
+              const artic = { stacc: '<staccato/>', staccmo: '<staccatissimo/>', ten: '<tenuto/>', port: '<detached-legato/>' };
+              const more = sg.map((s) => artic[s] || '').join('');
               ns.forEach((n, c) => {
                 const sp = sb.spell.get(n.id), step = 'CDEFGAB'[((sp.dia % 7) + 7) % 7], oct = Math.floor(sp.dia / 7);
                 const sign = sb.acc.get(it.tick + ':' + n.id);
@@ -267,7 +273,8 @@
                 if (tStop) nots.push('<tied type="stop"/>');
                 if (tStart) nots.push('<tied type="start"/>');
                 if (c === 0 && tupN) nots.push(tupN);
-                if (c === 0 && acc && !it.cont) nots.push(`<articulations>${acc > 1 ? '<strong-accent type="up"/>' : '<accent/>'}</articulations>`);
+                if (c === 0 && ((acc && !it.cont) || more)) nots.push(`<articulations>${acc && !it.cont ? (acc > 1 ? '<strong-accent type="up"/>' : '<accent/>') : ''}${more}</articulations>`);
+                if (c === 0 && sg.includes('trem')) nots.push(`<ornaments><tremolo type="single">${Math.max(1, 3 - TC.rhythm.flags(it.base))}</tremolo></ornaments>`);
                 const stroke = c === 0 && !it.cont && (ns.find((x) => x.stroke) || {}).stroke; // (a strummed chord: down / up)
                 if (stroke) nots.push(`<technical><${stroke === 'u' ? 'up-bow' : 'down-bow'}/></technical>`);
                 o.push('<note>' + (c ? '<chord/>' : '') + `<pitch><step>${step}</step>${sp.a ? `<alter>${sp.a}</alter>` : ''}<octave>${oct}</octave></pitch>` +

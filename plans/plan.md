@@ -817,3 +817,17 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   Spuren des Stücks, die ein geändertes Profil benutzen, es (ein Undo-Schritt). Tests `test_kswlib.js` (18).
 - **Als Nächstes:** Spielweisen an der Note (Staccato-Punkt, Tremolo-Striche – Taste nur für diese Note, danach zurück) und Import von
   Cubase-Expression-Maps (Iconica Sketch) – Expression Maps kommen vom Nutzer.
+
+### Spielweisen von Tactus vorgegeben, Expression Maps, Zeichen an den Noten ✅ (zum Ausprobieren, 2026-11-17)
+
+- Wunsch: die Spielweisen gibt Tactus vor (wie die Drum-Instrumente), im Profil nur die Taste je Spielweise; Expression Maps laden; ein
+  Keyswitch gilt immer bis zum nächsten (Latch egal); eine aus den Noten genommene Spielweise darf nicht weiterklingen. Gebaut:
+  `KS.CATALOG` (Streicher · Bläser · Orchester: Sustain/ord., vib., non vib., Legato, Staccato, Staccatissimo, Spiccato, Portato, Tenuto,
+  Akzent, Marcato, Tremolo, Triller ½ / 1, Pizz., Bartók, col legno, harm., sul pont., sul tasto, flaut., flz., senza / con sord.; Gitarre ·
+  Bass: die Tasten von Iron / Rowdy) mit `sign` (Zeichen an jeder Note), `line` (gestrichelt), `def` (Start-Spielweise der Gruppe:
+  ord., senza sord., let ring, Legato aus – beim Start gesendet, wenn vorher nichts steht). Vorlagen Iron / Rowdy aus dem Katalog (gleiche
+  Ids und Tasten), eigene Schalter (`mode`) frei benannt, Tasten älterer Profile bleiben. Dialog: Tabelle je Kategorie und Gruppe, Taste
+  eintragen / leeren, ▶, doppelte Tasten gewarnt. `KS.fromExpressionMap`: Sound-Slots (Name ohne gemeinsamen Vorsatz → Spielweise,
+  Note-On → Taste, C3 = 60); Controller / anderer Kanal / doppelt / unbekannt als Liste. Notenbild: Bravura-Artikulationen am Kopf,
+  Tremolo als 3 Striche (mit Fähnchen), MusicXML `<staccato/>` … `<tremolo>`. Getestet mit der Violins-Map von Iconica Sketch (7 von 7
+  Slots erkannt). `expressionmap/` in .gitignore. Tests `test_kswlib.js` (32).

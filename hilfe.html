@@ -564,29 +564,40 @@ Abspielen und im MIDI-Export die richtige Taste kurz vor die Noten.</p>
 <figure><img src="help/img/keyswitch.png" alt="Eine Gitarre mit UJAM Iron 2: P.M. über anderthalb Takte, dann ein Slide und Dead Notes; links das Panel Spielweise"><figcaption>Eine Gitarren-Spur mit UJAM Iron 2: „P.M.“ gilt bis zum „let ring“ in Takt 2, dort ein Slide, in Takt 3 Dead Notes. Links das Noten-Panel mit den Spielweisen von Iron.</figcaption></figure>
 
 <h4 id="keyswitch-profile">Eigene Keyswitch-Profile (jedes Instrument-VST)</h4>
-<p>Für ein VST ohne Vorlage – ein anderer UJAM-Gitarrist oder -Bassist, Streicher, Bläser … – legst du das Profil selbst an, einmal.
-Danach steht es an jeder Spur unter <span class="ui">Keyswitches → Eigene Profile</span>, in jedem Stück.</p>
+<p>Für ein VST ohne Vorlage – ein anderer UJAM-Gitarrist oder -Bassist, Iconica Sketch, andere Streicher, Bläser … – legst du das Profil
+selbst an, einmal. Danach steht es an jeder Spur unter <span class="ui">Keyswitches → Eigene Profile</span>, in jedem Stück.</p>
+<p><b>Die Spielweisen gibt Tactus vor</b> – wie die Instrumente bei den Kit-Profilen: Sustain (ord.), Legato, Staccato, Spiccato,
+Tremolo, Pizzicato, Col legno, Con sordino … (Streicher · Bläser · Orchester) und Let ring, P.M., Dead, Picking, Slides, Stopps,
+Ab- / Aufschlag (Gitarre · Bass). Tactus weiß, wie jede geschrieben wird und wie lange sie gilt; im Profil trägst du nur ein, auf
+welcher Taste deines VSTs sie liegt.</p>
 <ol class="steps">
-  <li><span class="ui">Spuren &amp; Klang</span> → bei der Spur <span class="ui">Keyswitch-Profile…</span> (oder <span class="ui">⚙ Einstellungen → Keyswitches</span>, wie die Kit-Profile unter Drum-Kit). Dann
-    <span class="ui">Neu, leer…</span> (Name des VSTs) oder <span class="ui">Neu aus Vorlage…</span> – z. B. Rowdy kopieren und für einen
-    anderen Virtual Bassist nur die Tasten anpassen.</li>
-  <li>Mit <span class="ui">+ Taste</span> jede Taste aus der Tastenübersicht des VSTs eintragen: <b>Name</b>, <b>Text in den Noten</b>
-    (z. B. „stacc.“, „pizz.“, „trem.“ – leer: wird nicht geschrieben), <b>Taste</b> (so wie das VST sie nennt, z. B. <code>C0</code>,
-    <code>F#1</code>) und <b>Art</b>:
+  <li><span class="ui">Spuren &amp; Klang</span> → bei der Spur <span class="ui">Keyswitch-Profile…</span> (oder <span class="ui">⚙ Einstellungen → Keyswitches</span>,
+    wie die Kit-Profile unter Drum-Kit). Dann eins von:
     <ul>
-      <li><b>Spielweise</b> – gilt bis zur nächsten ihrer <b>Gruppe</b> (z. B. alle Artikulationen eines Streicher-VSTs in einer Gruppe
-        „art“; Dämpfen und Picking bei Iron in zwei Gruppen, weil sie zugleich gelten).</li>
-      <li><b>Vor einer Note</b> – ein Slide o. Ä.: gehalten über diese und die nächste Note oder nur über diese.</li>
-      <li><b>An der Stelle</b> – Stopp, Release, Dead Note: an der Stelle angeschlagen.</li>
-      <li><b>Abschlag / Aufschlag</b> – die eigenen Strum-Tasten des VSTs für ⊓ / V an einem Akkord.</li>
-      <li><b>Schalter</b> – kommt nicht in die Noten; mit <span class="ui">am Anfang</span> schickt Tactus ihn beim Start unsichtbar
-        (z. B. Irons Trigger Mode).</li>
+      <li><span class="ui">Expression Map laden…</span> – die Cubase-Expression-Map des VSTs (<code>.expressionmap</code>): Tactus erkennt
+        jeden Sound-Slot an seinem Namen („Violins2 Staccato“ → Staccato) und übernimmt seine Taste. Was es nicht zuordnen kann (ein
+        unbekannter Name, ein Slot mit Controller oder anderem Kanal), steht danach in einer Liste – dessen Taste trägst du von Hand ein.</li>
+      <li><span class="ui">Neu, leer…</span> – und die Tasten aus der Tastenübersicht des VSTs eintragen.</li>
+      <li><span class="ui">Neu aus Vorlage…</span> – z. B. Rowdy kopieren und für einen anderen Virtual Bassist nur die Tasten anpassen.</li>
     </ul></li>
-  <li>Mit <span class="ui">▶</span> jede Taste prüfen (die Spur, die gerade geschrieben wird, braucht dafür den MIDI-Ausgang des VSTs).
-    Oben noch <span class="ui">C3 =</span>, <span class="ui">Noten verschieben</span> und <span class="ui">Töne gleichzeitig</span> passend
-    einstellen. Dann <span class="ui">Für diese Spur nehmen</span>.</li>
+  <li>In der Tabelle bei jeder Spielweise, die das VST hat, seine <b>Taste</b> eintragen (so wie das VST sie nennt, z. B. <code>C0</code>,
+    <code>F#1</code>, <code>Bb2</code>) – leer lassen, was es nicht hat. <span class="ui">▶</span> schickt die Taste zum Prüfen (die Spur, die
+    gerade geschrieben wird, braucht dafür den MIDI-Ausgang des VSTs). Dieselbe Taste doppelt wird angezeigt.</li>
+  <li>Oben noch <span class="ui">C3 =</span>, <span class="ui">Noten verschieben</span> und <span class="ui">Töne gleichzeitig</span>
+    passend einstellen. Dann <span class="ui">Für diese Spur nehmen</span>.</li>
 </ol>
 <ul>
+  <li><b>Im Notenbild:</b> Staccato, Staccatissimo, Tenuto, Portato, Akzent und Marcato stehen als Zeichen an <b>jeder Note</b>, solange sie
+    gelten; Tremolo als drei Striche durch jeden Hals (mit Fähnchen / Balken zusammen). Pizz., col legno, con sord., ord. … stehen als
+    Text unter der Zeile, P.M., Dead und Picking mit gestrichelter Linie bis zur nächsten. MusicXML schreibt die Zeichen als
+    Artikulationen an die Noten.</li>
+  <li><b>Wie lange eine Spielweise gilt:</b> bis zur nächsten ihrer Gruppe (z. B. Staccato bis Sustain oder Legato; con sord. bis senza
+    sord.). Tactus hält die Taste so lange gedrückt – das klappt, ob das VST die Tasten einrastet (Latch) oder nicht.</li>
+  <li><b>Start-Spielweise:</b> Jede Gruppe hat eine (Sustain/ord., senza sord., let ring, Legato aus – „(Start)“ in der Tabelle). Steht
+    vorher nichts anderes, schickt Tactus sie beim Abspielen und im MIDI-Export am Anfang. Nimmst du eine Spielweise aus den Noten,
+    spielt das VST beim nächsten Abspielen also nicht mehr in ihr weiter.</li>
+  <li><b>Schalter dieses VSTs</b> (z. B. Irons Trigger Mode) kommen nicht in die Noten: Name und Taste frei, mit
+    <span class="ui">am Anfang</span> schickt Tactus ihn beim Start unsichtbar.</li>
   <li>Schon an einer Spur Tasten korrigiert? <span class="ui">Als eigenes Profil speichern…</span> (in <span class="ui">Spuren &amp; Klang</span>)
     macht daraus ein Profil – für andere Spuren und Songs.</li>
   <li>Änderst du ein eigenes Profil, übernehmen die Spuren des offenen Stücks, die es benutzen, die Änderung beim Schließen des Dialogs
@@ -594,8 +605,6 @@ Danach steht es an jeder Spur unter <span class="ui">Keyswitches → Eigene Prof
   <li>Mit <b>Dropbox</b> verbunden, liegen die Profile im App-Ordner von Tactus unter <code>Keyswitch-Profile</code> und sind auf allen Geräten da –
     wie die Kit-Profile. Ohne Dropbox: <span class="ui">Profile exportieren</span> / <span class="ui">importieren</span> (oder nur
     <span class="ui">Dieses exportieren</span>, um eins weiterzugeben).</li>
-  <li>Klassische Spielweisen wie Staccato oder Tremolo stehen bisher als Text in den Noten (nicht als Punkt / Striche an der Note) und gelten
-    bis zur nächsten Spielweise.</li>
 </ul>
 
 <!-- ================================================================================= -->

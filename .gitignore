@@ -16,3 +16,6 @@ samples-src/
 
 # Import tests (exports of other programs, generated variants)
 xmltest/
+
+# Cubase expression maps of the user (not part of Tactus)
+expressionmap/

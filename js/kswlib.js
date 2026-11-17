@@ -435,7 +435,7 @@
     if (f === 'c3') { p.c3 = Number(el.value) === 48 ? 48 : 60; return changed(false); }
     if (f === 'noteShift') { p.noteShift = Math.max(-36, Math.min(36, parseInt(el.value, 10) || 0)); return changed(false); }
     if (f === 'dynCC') {
-      const cc = parseInt(el.value, 10);
+      const cc = el.value === 'pb' ? 'pb' : parseInt(el.value, 10);
       if (cc) p.dyn = KS.cleanDyn(Object.assign({}, p.dyn, { cc }));
       else delete p.dyn;
       return changed(true);

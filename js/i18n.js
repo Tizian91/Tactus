@@ -434,6 +434,7 @@
     'CC 1 (modulation wheel)': 'CC 1 (Modulationsrad)',
     'CC 11 (expression)': 'CC 11 (Expression)',
     'CC 2 (breath)': 'CC 2 (Breath)',
+    'Pitch bend (UJAM Virtual Pianist)': 'Pitchbend (UJAM Virtual Pianist)',
     'For a VST whose loudness follows a controller (e.g. Iconica: the modulation wheel) - the dynamics of the score (ppp … fff, cresc. / dim.) are sent as this controller as well': 'Für ein VST, dessen Lautstärke einem Controller folgt (z. B. Iconica: das Modulationsrad) – die Dynamik der Noten (ppp … fff, cresc. / dim.) geht zusätzlich als dieser Controller raus',
     // the ways of playing Tactus knows (js/keyswitch.js KS.CATALOG) and the dialog of the keyswitch profiles
     'Strings · winds · orchestra': 'Streicher · Bläser · Orchester',

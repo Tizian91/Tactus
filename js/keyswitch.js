@@ -147,8 +147,15 @@
   // profile.dyn = { cc, lo, hi }: the dynamics of the score (ppp … fff, hairpins) also sent as controller cc - ppp = lo,
   // fff = hi, the levels between evenly; a hairpin glides (a step every KS.DYN_STEP ticks). The notes' strengths stay.
 
-  /** The controllers offered: [number, name]. */
-  KS.DYN_CCS = [[1, 'CC 1 (modulation wheel)'], [11, 'CC 11 (expression)'], [2, 'CC 2 (breath)']];
+  /** What the dynamics can go through: [controller number, or 'pb' pitch bend; name]. */
+  KS.DYN_CCS = [[1, 'CC 1 (modulation wheel)'], [11, 'CC 11 (expression)'], [2, 'CC 2 (breath)'], ['pb', 'Pitch bend (UJAM Virtual Pianist)']];
+  /** The MIDI message of a dynamics value (0 … 127) on channel ch: a controller, or pitch bend ('pb': 14 bits, 127 = all the way up). */
+  KS.dynMsg = function (cc, ch, val) {
+    const v = Math.max(0, Math.min(127, Math.round(val)));
+    if (cc !== 'pb') return [0xb0 | ch, cc, v];
+    const b = Math.round(v / 127 * 16383);
+    return [0xe0 | ch, b & 127, b >> 7];
+  };
   KS.DYN_STEP = 120; // a 32nd
   /** profile.dyn cleaned, or null (off). */
   KS.cleanDyn = function (d) {

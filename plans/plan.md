@@ -842,3 +842,5 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 ### Gabeln bis zu einer Stelle im Takt
 - Panel „bis Takt“ + Stelle (`A.wedgeEnds`: Raster des Noten-Panels nach dem Anfang, dazu „Ende“; Entwurf `endT`), `A.wedgeEndText`
   („bis Takt 1, Zählzeit 2“). Zielstufe im Notenbild an der Note der Endstelle (wie eine Angabe dort), MusicXML ebenso. Klick-Test.
+- Dynamik auch über Pitchbend (`dyn.cc = 'pb'`, UJAM Virtual Pianist: Stärke am Pitchbend): `KS.dynMsg` baut CC oder Pitchbend
+  (Wert 0 … 127 → 14 Bit, 127 = ganz oben), Abspielen und MIDI-Export.

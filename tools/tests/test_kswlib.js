@@ -131,9 +131,14 @@ module.exports = function (T) {
   const mb = Array.from(TC.midi.build(dd, null, { tracks: [ic] }).bytes);
   const hasCC = (v) => mb.some((b, i) => (b & 0xf0) === 0xb0 && mb[i + 1] === 1 && mb[i + 2] === v);
   T.eq('… MIDI export: CC 1 with p and f', [hasCC(51), hasCC(96)], [true, true]);
+  T.eq('… pitch bend (Virtual Pianist): 14 bits, 0 / about the middle / all the way up', [KS.dynMsg('pb', 0, 0), KS.dynMsg('pb', 2, 64), KS.dynMsg('pb', 0, 127), KS.dynMsg(1, 3, 51)],
+    [[0xe0, 0, 0], [0xe2, 64, 64], [0xe0, 127, 127], [0xb3, 1, 51]]);
+  ic.ksw.dyn = KS.cleanDyn({ cc: 'pb', lo: 20, hi: 127 });
+  const pb = Array.from(TC.midi.build(dd, null, { tracks: [ic] }).bytes), b51 = Math.round(51 / 127 * 16383);
+  T.eq('… pitch bend kept in the profile; the MIDI export sends p as pitch bend', [ic.ksw.dyn.cc, pb.some((b, i) => (b & 0xf0) === 0xe0 && pb[i + 1] === (b51 & 127) && pb[i + 2] === b51 >> 7)], ['pb', true]);
   TC.state.doc = dd;
   const tl = TC.timeline.build(dd);
-  T.eq('… playback: controller hits for the track (MIDI only)', tl.hits.filter((h) => h.cc === 1 && h.trk === ic).length, cc.length);
+  T.eq('… playback: controller hits for the track, here pitch bend (MIDI only)', tl.hits.filter((h) => h.cc === 'pb' && h.trk === ic).length, cc.length);
   ic.ksw = KS.clean({ name: 'x', keys: [] });
   T.eq('… a track profile with neither keys nor dynamics is none', ic.ksw, null);
 };

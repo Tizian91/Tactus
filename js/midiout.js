@@ -181,7 +181,7 @@
     const ch = Number.isInteger(track.midiCh) ? track.midiCh : track.channel || 0;
     const lat = ctx ? TC.audio.outputDelay() : 0;
     const at = performance.now() + Math.max(0, (ctx ? when - ctx.currentTime : 0) + lat - MO.lead()) * 1000;
-    send(o, [0xb0 | ch, ctl, Math.max(0, Math.min(127, Math.round(val)))], at);
+    send(o, TC.ksw.dynMsg(ctl, ch, val), at); // (a controller, or pitch bend)
   };
   /**
    * Notes sent whose release is still to come (a keyswitch held for bars, a long tone): on stop each gets a real

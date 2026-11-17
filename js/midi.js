@@ -246,7 +246,7 @@
         });
         // dynamics through a controller (profile.dyn - Iconica: the modulation wheel), before the notes at its place
         if (track.ksw.dyn) TC.ksw.dynCC(doc, track, starts, (o, k) => o.t + sw(k)).forEach((x) => {
-          noteEv[ti].push({ t: Math.max(0, Math.round(x.at)), order: 0, bytes: [0xb0 | ch, track.ksw.dyn.cc, x.val] });
+          noteEv[ti].push({ t: Math.max(0, Math.round(x.at)), order: 0, bytes: TC.ksw.dynMsg(track.ksw.dyn.cc, ch, x.val) });
         });
       });
     }

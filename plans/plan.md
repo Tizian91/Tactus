@@ -805,3 +805,15 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   Picking-Tasten C2 … A2 einzeln tun (laut Nutzer: Härtegrade). Zweite Vorlage **UJAM Virtual Bassist Rowdy** (2026-11-17): C0–E0 Slides
   (span „note“: nur über die Note), C#0 / F#0 Legato, G0 Silent Dead (Umschalter), A0 / B0 Dead, Bb0 Full Stop; Noten +12 (geprüft),
   „Noten verschieben“ im Profil wählbar. **Offen:** eigene Profile anlegen / weitere Vorlagen; Spielweisen über das Notenmenü.
+
+### Eigene Keyswitch-Profile (Bibliothek wie die Kit-Profile) ✅ (zum Ausprobieren, 2026-11-17)
+
+- Wunsch: für jedes Instrument-VST (weitere UJAM, Iconica Sketch …) selbst ein Keyswitch-Profil anlegen, in der Dropbox ablegen, als Preset
+  wählen. Gebaut: `js/kswlib.js` (`TC.kswLib`): Profile `{ id, name, c3, noteShift, poly, init, keys }` in localStorage `tactus.ksw`,
+  Dropbox `/Keyswitch-Profile/Keyswitches.tactus-keyswitches.json` (`DB.syncKsw` / `kswChanged`, wie die Kits), Export / Import
+  (`*.tactus-keyswitches.json`, auch ein einzelnes). Dialog „Keyswitch-Profile“: neu leer / aus Vorlage / aus der Spur, Tasten mit
+  ▶, Name, Text, Taste, Art, Gruppe / Dauer / „am Anfang“, hinzufügen / entfernen. Spur: Kopie mit `ksw.lib`; Auswahl „Vorlagen“ /
+  „Eigene Profile“ (fremdes Profil: „(in diesem Stück)“); „Als eigenes Profil speichern…“. Beim Schließen des Dialogs übernehmen die
+  Spuren des Stücks, die ein geändertes Profil benutzen, es (ein Undo-Schritt). Tests `test_kswlib.js` (18).
+- **Als Nächstes:** Spielweisen an der Note (Staccato-Punkt, Tremolo-Striche – Taste nur für diese Note, danach zurück) und Import von
+  Cubase-Expression-Maps (Iconica Sketch) – Expression Maps kommen vom Nutzer.

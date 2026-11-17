@@ -5,6 +5,7 @@
  * The Dropbox app ("App folder" access) sees only /Apps/<app name>/ of the signed-in account:
  *   /Songs/*.tactus.json                 scores (File menu: open from / save to Dropbox)
  *   /Kit-Profile/Kits.tactus-kits.json   all kit profiles (kept in step automatically)
+ *   /Keyswitch-Profile/Keyswitches.tactus-keyswitches.json   own keyswitch profiles (js/kswlib.js, the same way)
  *
  * Sign-in: OAuth 2 with PKCE - no app secret, no server. The page itself is the redirect URI
  * (registered in the Dropbox App Console: https://tizian91.github.io/Tactus/ and …/index.html).
@@ -367,6 +368,66 @@
     }
   };
 
+  // ---- Keyswitch profiles (js/kswlib.js): kept in step like the kit profiles ---------------
+
+  DB.KSW_FILE = '/Keyswitch-Profile/Keyswitches.tactus-keyswitches.json';
+  const KSW_PENDING = 'tactus.ksw.pending'; // localStorage: local keyswitch profiles not uploaded yet
+  let kswTimer = 0;
+  /** Both sides joined by id (replace: the later side wins for the same id). */
+  DB.mergeById = function (local, remote, preferLocal, clean) {
+    const out = [], at = new Map();
+    const put = (raw, replace) => {
+      const p = clean(raw);
+      if (!p) return;
+      if (at.has(p.id)) {
+        if (replace) out[at.get(p.id)] = p;
+      } else {
+        at.set(p.id, out.length);
+        out.push(p);
+      }
+    };
+    remote.forEach((p) => put(p, false));
+    local.forEach((p) => put(p, preferLocal));
+    return out;
+  };
+  /** Called by kswlib.js after every change of the profiles: upload them shortly after. */
+  DB.kswChanged = function () {
+    if (!DB.signedIn()) return;
+    try { localStorage.setItem(KSW_PENDING, '1'); } catch (e) { /* uploaded anyway */ }
+    clearTimeout(kswTimer);
+    kswTimer = setTimeout(() => DB.pushKsw().catch((err) => TC.ui.hint(err.message)), 1500);
+  };
+  DB.pushKsw = async function () {
+    if (!DB.signedIn() || !TC.kswLib) return;
+    await DB.write(DB.KSW_FILE, TC.kswLib.exportText(), 'overwrite');
+    try { localStorage.removeItem(KSW_PENDING); } catch (e) { /* no flag */ }
+  };
+  /** As syncKits: on start the Dropbox copy wins, unless changes here were not uploaded yet; the first time both join. */
+  DB.syncKsw = async function (first) {
+    const L = TC.kswLib;
+    if (!DB.signedIn() || !L) return;
+    let remote = null;
+    try {
+      const d = JSON.parse((await DB.read(DB.KSW_FILE)).text);
+      if (d && Array.isArray(d.profiles)) remote = d.profiles;
+    } catch (err) {
+      if (!err.notFound && !(err instanceof SyntaxError)) throw err;
+    }
+    L.load();
+    let pending = false;
+    try { pending = !!localStorage.getItem(KSW_PENDING); } catch (e) { /* none */ }
+    const before = JSON.stringify(L.list);
+    if (remote) L.list = DB.mergeById(first || pending ? L.list : [], remote, first || pending, L.clean);
+    if (JSON.stringify(L.list) !== before) {
+      L.save(true);
+      if (L.isOpen()) L.open();
+      TC.refresh();
+    }
+    if (!remote || first || pending) {
+      if (L.list.length || remote) await DB.pushKsw();
+    }
+  };
+
   // ---- Songs: dialog ----------------------------------------------------------------------
 
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -514,6 +575,11 @@
     if (DB.justLoggedIn) TC.ui.hint(tr('Connected to Dropbox') + (DB.account() ? ' (' + DB.account() + ')' : ''));
     try {
       await DB.syncKits(!!DB.justLoggedIn);
+    } catch (err) {
+      TC.ui.hint(err.message);
+    }
+    try {
+      await DB.syncKsw(!!DB.justLoggedIn);
     } catch (err) {
       TC.ui.hint(err.message);
     }

@@ -1403,18 +1403,50 @@
     if (S.input.chordMode) TC.ui.hint(tr('Tap: the chord of the chord symbols there - hold a chord and move down / up: its stroke ↓ / ↑'));
   };
   // ---- Keyswitches of a track's VST (js/keyswitch.js) ---------------------------------------------------------------
-  /** The keyswitch profile of the track being written: '' none, or a template (a copy goes into the track). */
+  /**
+   * The keyswitch profile of the track being written: '' none, a template, or 'lib:<id>' an own profile (js/kswlib.js) -
+   * a copy goes into the track. 'cur': the one the track has (from another computer) - nothing changes.
+   */
   A.setTrackKsw = function (tpl) {
     const t = TC.curTrack();
-    if (!t || t.kind !== 'pitched') return;
+    if (!t || t.kind !== 'pitched' || tpl === 'cur') return;
     if (!tpl) delete t.ksw;
     else {
-      const p = TC.ksw.fromTemplate(tpl);
-      if (!p) return;
+      const lib = /^lib:/.test(tpl) && TC.kswLib;
+      const p = lib ? TC.kswLib.toTrack(tpl.slice(4)) : TC.ksw.fromTemplate(tpl);
+      if (!p) {
+        if (lib) { TC.ui.hint(tr('The profile has no keys yet.')); TC.refresh(); }
+        return;
+      }
       t.ksw = p;
     }
     TC.commit();
     if (t.ksw) TC.ui.hint(tr('{name}: its ways of playing in the note panel; check the keys with ▶ (Tracks & sound).', { name: t.ksw.name }));
+  };
+  /** The own keyswitch profiles (make, change, Dropbox) - showing the one of the track being written. */
+  A.openKswLib = function () {
+    const t = TC.curTrack();
+    TC.kswLib.open(t && t.ksw && t.ksw.lib);
+  };
+  /**
+   * The keyswitches of the track being written (as corrected there) kept as an own profile: the one it came from is
+   * replaced when the name stays, else a new one; the track uses it from now on.
+   */
+  A.saveKswPreset = function () {
+    const t = TC.curTrack(), L = TC.kswLib;
+    if (!t || !t.ksw || !L) return;
+    L.load();
+    const from = t.ksw.lib && L.byId(t.ksw.lib);
+    const name = prompt(tr('Name of the keyswitch profile:'), from ? from.name : t.ksw.name);
+    if (!name || !name.trim()) return;
+    const same = L.list.find((p) => p.name === name.trim());
+    if (same && !confirm(tr('Replace the keyswitch profile "{name}"?', { name: same.name }))) return;
+    const p = L.fromTrack(t.ksw, name.trim());
+    if (same) { p.id = same.id; L.list[L.list.indexOf(same)] = p; } else L.list.push(p);
+    L.save();
+    t.ksw = L.toTrack(p.id) || t.ksw;
+    TC.commit();
+    TC.ui.hint(tr('Kept as keyswitch profile "{name}" - choose it at any track', { name: p.name }));
   };
   /** How many semitones the notes are sent higher than they sound (the VST's play range: Iron +12, a bass +24 …). */
   A.setKswShift = function (v) {

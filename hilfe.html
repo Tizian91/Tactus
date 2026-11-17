@@ -563,6 +563,41 @@ Abspielen und im MIDI-Export die richtige Taste kurz vor die Noten.</p>
 </ul>
 <figure><img src="help/img/keyswitch.png" alt="Eine Gitarre mit UJAM Iron 2: P.M. über anderthalb Takte, dann ein Slide und Dead Notes; links das Panel Spielweise"><figcaption>Eine Gitarren-Spur mit UJAM Iron 2: „P.M.“ gilt bis zum „let ring“ in Takt 2, dort ein Slide, in Takt 3 Dead Notes. Links das Noten-Panel mit den Spielweisen von Iron.</figcaption></figure>
 
+<h4 id="keyswitch-profile">Eigene Keyswitch-Profile (jedes Instrument-VST)</h4>
+<p>Für ein VST ohne Vorlage – ein anderer UJAM-Gitarrist oder -Bassist, Streicher, Bläser … – legst du das Profil selbst an, einmal.
+Danach steht es an jeder Spur unter <span class="ui">Keyswitches → Eigene Profile</span>, in jedem Stück.</p>
+<ol class="steps">
+  <li><span class="ui">Spuren &amp; Klang</span> → bei der Spur <span class="ui">Keyswitch-Profile…</span> (oder <span class="ui">⚙ Einstellungen → Keyswitches</span>, wie die Kit-Profile unter Drum-Kit). Dann
+    <span class="ui">Neu, leer…</span> (Name des VSTs) oder <span class="ui">Neu aus Vorlage…</span> – z. B. Rowdy kopieren und für einen
+    anderen Virtual Bassist nur die Tasten anpassen.</li>
+  <li>Mit <span class="ui">+ Taste</span> jede Taste aus der Tastenübersicht des VSTs eintragen: <b>Name</b>, <b>Text in den Noten</b>
+    (z. B. „stacc.“, „pizz.“, „trem.“ – leer: wird nicht geschrieben), <b>Taste</b> (so wie das VST sie nennt, z. B. <code>C0</code>,
+    <code>F#1</code>) und <b>Art</b>:
+    <ul>
+      <li><b>Spielweise</b> – gilt bis zur nächsten ihrer <b>Gruppe</b> (z. B. alle Artikulationen eines Streicher-VSTs in einer Gruppe
+        „art“; Dämpfen und Picking bei Iron in zwei Gruppen, weil sie zugleich gelten).</li>
+      <li><b>Vor einer Note</b> – ein Slide o. Ä.: gehalten über diese und die nächste Note oder nur über diese.</li>
+      <li><b>An der Stelle</b> – Stopp, Release, Dead Note: an der Stelle angeschlagen.</li>
+      <li><b>Abschlag / Aufschlag</b> – die eigenen Strum-Tasten des VSTs für ⊓ / V an einem Akkord.</li>
+      <li><b>Schalter</b> – kommt nicht in die Noten; mit <span class="ui">am Anfang</span> schickt Tactus ihn beim Start unsichtbar
+        (z. B. Irons Trigger Mode).</li>
+    </ul></li>
+  <li>Mit <span class="ui">▶</span> jede Taste prüfen (die Spur, die gerade geschrieben wird, braucht dafür den MIDI-Ausgang des VSTs).
+    Oben noch <span class="ui">C3 =</span>, <span class="ui">Noten verschieben</span> und <span class="ui">Töne gleichzeitig</span> passend
+    einstellen. Dann <span class="ui">Für diese Spur nehmen</span>.</li>
+</ol>
+<ul>
+  <li>Schon an einer Spur Tasten korrigiert? <span class="ui">Als eigenes Profil speichern…</span> (in <span class="ui">Spuren &amp; Klang</span>)
+    macht daraus ein Profil – für andere Spuren und Songs.</li>
+  <li>Änderst du ein eigenes Profil, übernehmen die Spuren des offenen Stücks, die es benutzen, die Änderung beim Schließen des Dialogs
+    (rückgängig machbar). Jede Spur hat eine Kopie im Stück: Auf einem Rechner ohne das Profil spielt das Stück trotzdem richtig.</li>
+  <li>Mit <b>Dropbox</b> verbunden, liegen die Profile im App-Ordner von Tactus unter <code>Keyswitch-Profile</code> und sind auf allen Geräten da –
+    wie die Kit-Profile. Ohne Dropbox: <span class="ui">Profile exportieren</span> / <span class="ui">importieren</span> (oder nur
+    <span class="ui">Dieses exportieren</span>, um eins weiterzugeben).</li>
+  <li>Klassische Spielweisen wie Staccato oder Tremolo stehen bisher als Text in den Noten (nicht als Punkt / Striche an der Note) und gelten
+    bis zur nächsten Spielweise.</li>
+</ul>
+
 <!-- ================================================================================= -->
 <h2 id="notenblatt">9. Notenblatt und PDF</h2>
 <p><span class="ui">Seite</span> in der Werkzeugleiste zeigt A4-Seiten wie gedruckt; schreiben geht dort genauso. Drucken oder PDF:

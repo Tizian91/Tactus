@@ -76,8 +76,12 @@
     const t = KS.template(id);
     return t ? JSON.parse(JSON.stringify(t)) : null;
   };
-  /** A profile cleaned (loading a score), or null. */
-  KS.clean = function (p) {
+  /**
+   * A profile cleaned (loading a score, the library of own profiles), or null. empty: a profile without keys is kept
+   * (the library: a profile being made); a track's profile needs keys.
+   *   lib   the id of the own profile (js/kswlib.js) it was taken from - the track finds it again
+   */
+  KS.clean = function (p, empty) {
     if (!p || typeof p !== 'object' || !Array.isArray(p.keys)) return null;
     // a profile of a template saved before it was corrected (no init keys yet - Iron: slides one key off, no trigger
     // mode, no groups): the corrected template, keeping which C3 was chosen
@@ -86,11 +90,12 @@
     const keys = p.keys.filter((k) => k && typeof k.id === 'string' && KS.KINDS.includes(k.kind) && KS.noteOf(k.note) !== null)
       .map((k) => Object.assign({ id: k.id.slice(0, 40), name: String(k.name || k.id).slice(0, 60), short: String(k.short || '').slice(0, 12), note: k.note, kind: k.kind },
         typeof k.group === 'string' && k.group ? { group: k.group.slice(0, 20) } : {}, k.span === 'note' ? { span: 'note' } : {}));
-    if (!keys.length) return null;
+    if (!keys.length && !empty) return null;
     const ids = new Set(keys.map((k) => k.id));
-    return { tpl: typeof p.tpl === 'string' ? p.tpl : '', v: Number.isInteger(p.v) ? p.v : 1, name: String(p.name || 'Keyswitches').slice(0, 60), c3: p.c3 === 48 ? 48 : 60,
-      noteShift: Number.isInteger(p.noteShift) && Math.abs(p.noteShift) <= 36 ? p.noteShift : 0, poly: Number.isInteger(p.poly) && p.poly > 0 ? p.poly : 0,
-      init: Array.isArray(p.init) ? p.init.filter((id) => ids.has(id)) : [], keys };
+    return Object.assign({ tpl: typeof p.tpl === 'string' ? p.tpl : '', v: Number.isInteger(p.v) ? p.v : 1 },
+      typeof p.lib === 'string' && p.lib ? { lib: p.lib.slice(0, 40) } : {}, { name: String(p.name || 'Keyswitches').slice(0, 60), c3: p.c3 === 48 ? 48 : 60,
+        noteShift: Number.isInteger(p.noteShift) && Math.abs(p.noteShift) <= 36 ? p.noteShift : 0, poly: Number.isInteger(p.poly) && p.poly > 0 ? Math.min(p.poly, 16) : 0,
+        init: Array.isArray(p.init) ? p.init.filter((id) => ids.has(id)) : [], keys });
   };
   /** The key of a keyswitch of a track (its MIDI note), or null. */
   KS.keyOf = (track, id) => {

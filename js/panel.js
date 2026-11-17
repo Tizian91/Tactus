@@ -601,7 +601,8 @@
     }
     const vol = Number.isInteger(t.volume) ? t.volume : 100;
     return `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="127" step="1" value="${vol}" data-trackvol title="${esc(tr('Fader of this track ({n}) - Tactus sounds softer / louder, through MIDI the channel volume (CC 7)', { n: vol }))}"></div>
-      ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>`}${midi}${kswRows(t)}`;
+      ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>
+        <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>`}${midi}${kswRows(t)}`;
   }
 
   /**
@@ -610,8 +611,14 @@
    */
   function kswRows(t) {
     if (t.kind !== 'pitched' || !TC.ksw) return '';
-    const p = t.ksw, opts = [['', tr('None')]].concat(TC.ksw.TEMPLATES.map((x) => [x.tpl, x.name]))
-      .map(([v, l]) => `<option value="${esc(v)}"${v === (p ? p.tpl : '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    // the built-in templates, then the own profiles (js/kswlib.js); a profile from another computer: as the track has it
+    const p = t.ksw, own = TC.kswLib ? TC.kswLib.list : [];
+    const sel = !p ? '' : p.lib && own.some((q) => q.id === p.lib) ? 'lib:' + p.lib : !p.lib && TC.ksw.template(p.tpl) ? p.tpl : 'cur';
+    const opt = ([v, l]) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(l)}</option>`;
+    const opts = opt(['', tr('None')]) + (sel === 'cur' ? opt(['cur', tr('{name} (in this score)', { name: p.name })]) : '') +
+      `<optgroup label="${esc(tr('Templates'))}">${TC.ksw.TEMPLATES.map((x) => opt([x.tpl, x.name])).join('')}</optgroup>` +
+      (own.length ? `<optgroup label="${esc(tr('Own profiles'))}">${own.map((q) => opt(['lib:' + q.id, q.name])).join('')}</optgroup>` : '');
+    const libRow = `<div class="btn-row">${btn('openKswLib', undefined, tr('Keyswitch profiles…'), false, tr('Make your own (any instrument VST: UJAM, orchestral …), kept in Dropbox'))}${p ? btn('saveKswPreset', undefined, tr('Keep as own profile…'), false, tr('The keyswitches of this track, as corrected here, as an own profile - for other tracks and songs')) : ''}</div>`;
     let more = '';
     if (p) {
       const KIND = { art: 'way of playing', once: 'before a note', event: 'at its place', down: 'down stroke', up: 'up stroke', mode: 'switch' };
@@ -624,7 +631,7 @@
         <details class="ksw-list"><summary>${tr('Check / change the keys ({n})', { n: p.keys.length })}</summary>${rows}
           <p class="hint tight">${tr('▶ sends the key: the VST should show that way of playing. Wrong everywhere: switch C3 above.')}</p></details>`;
     }
-    return `<div class="row"><label>${tr('Keyswitches')}</label><select data-action="setTrackKsw">${opts}</select></div>${more}`;
+    return `<div class="row"><label>${tr('Keyswitches')}</label><select data-action="setTrackKsw">${opts}</select></div>${more}${libRow}`;
   }
 
   /** All tempo changes of the score: click = go to the bar, ✕ = remove the change. */
@@ -652,6 +659,15 @@
         <select data-action="setSwingUnit"${(m.swing || 50) === 50 ? ' disabled' : ''}><option value="8"${m.swingUnit !== 16 ? ' selected' : ''}>${tr('8ths')}</option><option value="16"${m.swingUnit === 16 ? ' selected' : ''}>${tr('16ths')}</option></select></div>
       ${(m.swing || 50) !== 50 ? check('toggleSwingMidi', S.settings.swingMidi !== false, tr('Swing in the MIDI export too (off: straight, to swing it in the DAW)')) : ''}
     </section>`;
+  }
+
+  /** Own keyswitch profiles (js/kswlib.js) - next to the kit profiles; chosen at a melody track in "Tracks & sound". */
+  function kswSection() {
+    if (!TC.kswLib) return '';
+    const n = TC.kswLib.list.length;
+    return `<section><h3>${tr('Keyswitches')}</h3>
+      <p class="hint tight">${n ? tr('{n} own keyswitch profile(s) - chosen at a melody track in "Tracks & sound".', { n }) : tr('Ways of playing of an instrument VST (UJAM, orchestral …): make a profile once, choose it at a melody track in "Tracks & sound".')}</p>
+      <div class="btn-row">${btn('openKswLib', undefined, tr('Keyswitch profiles…'), false, tr('Make your own (any instrument VST: UJAM, orchestral …), kept in Dropbox'))}</div></section>`;
   }
 
   function kitSection() {
@@ -871,7 +887,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
@@ -896,13 +912,13 @@
       }
     } else if (dlg) {
       const body = dlg.querySelector('.settings-body');
-      const keyD = JSON.stringify([S.settings, S.doc.page, TC.curTrack().fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length, TC.remote && [TC.remote.inputs().join(), TC.remote.isLearning(), TC.remote.active()]]);
+      const keyD = JSON.stringify([S.settings, S.doc.page, TC.curTrack().fill, lang, TC.drums.notation, TC.kits && TC.kits.list.length, TC.kswLib && TC.kswLib.list.length, TC.remote && [TC.remote.inputs().join(), TC.remote.isLearning(), TC.remote.active()]]);
       if ((force || keyD !== lastDlg) && !(!force && typing(body))) {
         lastDlg = keyD;
         const scroll = body.scrollTop;
         const open = body.querySelector('details.kit-list[open]') !== null;
         const keys = body.querySelector('details.keys-list[open]') !== null;
-        body.innerHTML = kitSection() + pageSection() + turnSection() + viewSection() + keysSection();
+        body.innerHTML = kitSection() + kswSection() + pageSection() + turnSection() + viewSection() + keysSection();
         if (open) body.querySelector('details.kit-list').open = true;
         if (keys) body.querySelector('details.keys-list').open = true;
         body.scrollTop = scroll;

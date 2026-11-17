@@ -273,6 +273,16 @@ details > summary { list-style-position: outside; }
 .ksw-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
 .ksw-name { flex: 1; font-size: 12px; }
 input.ksw-note { width: 46px; }
+/* own keyswitch profiles (js/kswlib.js) */
+.ksw-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin: 2px 0 6px; }
+.ksw-head input[type=number] { width: 52px; }
+.ksw-table td { vertical-align: middle; }
+.ksw-table input[type=text] { max-width: none; }
+.ksw-table input.ksw-short { width: 80px; }
+.ksw-table input.ksw-note { width: 52px; }
+.ksw-table select { max-width: 230px; }
+.ksw-table label.check { white-space: nowrap; font-size: 12px; }
+.ksw-dialog footer .hint { color: var(--muted); font-size: 12px; }
 .score .ks-mark { font-size: 11px; font-style: italic; font-weight: 600; fill: var(--ink); }
 .score .ks-line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; }
 .score .ks-end { stroke: var(--ink); stroke-width: 1; }

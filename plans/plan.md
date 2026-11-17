@@ -859,3 +859,5 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - Cursor, Noten-Vorschau, Auswahlrahmen und Anfasser-Vorschau in eigenem SVG `#overlay` über `#score` (gleiche Größe und View,
   pointer-events none). Vorher lag der Cursor im Noten-SVG: jedes Bild malte das ganze Notenbild neu – langsam bei feinem Raster
   (breitere Takte) oder nah herangezoomt, während der Ton stabil blieb.
+- Loop / ausgewählte Takte: `drawCursor` baute Takt-Hinterlegung und Loop-Rahmen in jedem Bild neu (der Browser malte den ganzen
+  Loop-Bereich neu). Jetzt nur beim Taktwechsel (oder neuer Zeichnung / anderem Loop); pro Bild wird nur der Cursor-Strich verschoben.

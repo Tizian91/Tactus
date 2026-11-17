@@ -211,6 +211,14 @@ setTimeout(() => {
   TC.player.stop();
   S.settings.loop = true; TC.player.play();
   ok('loop: bars 2-4', JSON.stringify(TC.player.range()) === '[1,3]');
+  // the playback cursor: inside a bar only its line moves (the bar and the loop frame are not built again every frame)
+  TC.render.drawCursor(1, 0, [1, 3]);
+  const curEl = document.querySelector('#overlay .play-cursor'), x0c = curEl && curEl.getAttribute('x');
+  TC.render.drawCursor(1, 480, [1, 3]);
+  const sameEl = document.querySelector('#overlay .play-cursor') === curEl && curEl.getAttribute('x') !== x0c && document.querySelectorAll('#overlay .loop-range').length >= 1;
+  TC.render.drawCursor(2, 0, [1, 3]);
+  ok('cursor: moved inside the bar (same line, loop frame kept), built again in the next bar', !!curEl && sameEl && document.querySelector('#overlay .play-cursor') !== curEl);
+  TC.render.drawCursor(null);
   TC.player.stop(); S.settings.loop = false;
   // ran to the end without loop: the next start is from bar 1, the whole piece; with loop the selection again
   TC.player.play(); TC.player.finish(); TC.player.play();

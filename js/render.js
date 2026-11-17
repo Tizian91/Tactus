@@ -152,23 +152,31 @@
   RD.drawCursor = function (bar, tick, loop) {
     const L = RD.layout;
     if (!L || bar === null || !L.bars[bar]) {
-      play.innerHTML = '';
+      if (cursor.key !== null) play.innerHTML = '';
+      cursor.key = null;
       return null;
     }
     const b = L.bars[bar], s = L.systems[b.sys], x = RD.tickX(b, tick), hh = L.stackH + 7 * SP; // over all staves
-    let html = onLine(s, rect(b.x, -3.5 * SP, b.w, hh, 'play-bar') + rect(x - 1, -3.5 * SP, 2, hh, 'play-cursor'));
-    if (loop && L.bars[loop[0]] && L.bars[loop[1]]) {
-      const a = L.bars[loop[0]], z = L.bars[loop[1]];
-      for (let k = a.sys; k <= z.sys; k++) {
-        const sy = L.systems[k];
-        const x1 = k === a.sys ? a.x : L.bars[sy.first].x, x2 = k === z.sys ? z.x + z.w : sy.end;
-        html += onLine(sy, rect(x1 + 1, -4 * SP, x2 - x1 - 2, hh + SP, 'loop-range'));
+    // the bar and the loop frame are built only when the cursor comes into another bar (or the drawing / loop changed);
+    // each frame only the thin cursor line moves - rebuilding them every frame made the browser paint the whole loop
+    // range again and again (slow when zoomed in)
+    const key = bar + '|' + (loop ? loop.join('-') : '');
+    if (key !== cursor.key || L !== cursor.layout) {
+      let html = onLine(s, rect(b.x, -3.5 * SP, b.w, hh, 'play-bar') + rect(x - 1, -3.5 * SP, 2, hh, 'play-cursor'));
+      if (loop && L.bars[loop[0]] && L.bars[loop[1]]) {
+        const a = L.bars[loop[0]], z = L.bars[loop[1]];
+        for (let k = a.sys; k <= z.sys; k++) {
+          const sy = L.systems[k];
+          const x1 = k === a.sys ? a.x : L.bars[sy.first].x, x2 = k === z.sys ? z.x + z.w : sy.end;
+          html += onLine(sy, rect(x1 + 1, -4 * SP, x2 - x1 - 2, hh + SP, 'loop-range'));
+        }
       }
-    }
-    play.innerHTML = html;
+      play.innerHTML = html;
+      Object.assign(cursor, { key, layout: L, el: play.querySelector('.play-cursor') });
+    } else if (cursor.el) cursor.el.setAttribute('x', f(x - 1));
     return { x: x + s.tx, y: s.ty };
   };
-
+  const cursor = { key: null, layout: null, el: null }; // (what drawCursor built: bar, loop, the drawing it was for)
   // ---- Layout -------------------------------------------------------------------------
   //
   // The bars stand in lines ("systems"). The endless view is one long line; the page view breaks

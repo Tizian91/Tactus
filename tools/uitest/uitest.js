@@ -1181,11 +1181,23 @@ setTimeout(() => {
             [...document.querySelectorAll('.score .ks-mark')].some((x) => x.textContent === 'P.M.') && !!document.querySelector('.score .ks-line'));
           while (TC.history.undoStack.length > undoKs) TC.actions.undo();
           S.trackId = S.doc.tracks[0].id;
-          S.doc.view.x = 190; TC.refresh();
-          const pre = document.createElement('pre');
-          pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
-          pre.textContent = out.join('\n');
-          document.body.appendChild(pre);
+          // the view dragged with the middle button: held, a pause does not draw it anew (a jolt); let go: drawn anew
+          const svgEl = document.getElementById('score'), rr = vp.getBoundingClientRect();
+          const pe = (type, x) => new PointerEvent(type, { clientX: x, clientY: rr.top + 100, button: 1, buttons: type === 'pointerup' ? 0 : 4, bubbles: true, pointerId: 11, pointerType: 'mouse' });
+          vp.dispatchEvent(pe('pointerdown', rr.left + 300));
+          vp.dispatchEvent(pe('pointermove', rr.left + 260));
+          setTimeout(() => {
+            const heldT = svgEl.style.transform;
+            vp.dispatchEvent(pe('pointerup', rr.left + 260));
+            setTimeout(() => {
+              ok('view held with the middle button: not drawn anew in a pause (' + heldT + '), drawn when let go', !!heldT && svgEl.style.transform === '');
+              S.doc.view.x = 190; TC.refresh();
+              const pre = document.createElement('pre');
+              pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
+              pre.textContent = out.join('\n');
+              document.body.appendChild(pre);
+            }, 300);
+          }, 400);
         });
       }, 700);
     }, 700);

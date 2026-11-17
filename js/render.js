@@ -757,6 +757,13 @@
     const x0 = (c.mx - tx) / k, x1 = (w + c.mx - tx) / k, y0 = (c.my - ty) / k, y1 = (h + c.my - ty) / k;
     if (k < 0.6 || k > 1.6 || x0 < 0 || y0 < 0 || x1 > w + 2 * c.mx || y1 > h + 2 * c.my) return RD.applyView();
     svg.style.transform = ovl.style.transform = k === 1 ? `translate(${f(tx)}px,${f(ty)}px)` : `translate(${f(tx)}px,${f(ty)}px) scale(${k})`;
+    // held by the middle button / a finger: a pause does not draw it anew (each drawing is a jolt, the longer the
+    // nearer it is zoomed in) - only leaving the picture does, or letting go (RD.settleView)
+    if (TC.interaction && TC.interaction.holdingView && TC.interaction.holdingView()) return void clearTimeout(settle);
+    RD.settleView();
+  };
+  /** Draw the view anew once it has rested for a moment (after moving it). */
+  RD.settleView = function () {
     clearTimeout(settle);
     settle = setTimeout(RD.applyView, 200);
   };

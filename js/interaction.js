@@ -27,6 +27,8 @@
 (function (TC) {
   const S = TC.state;
   const I = (TC.interaction = {});
+  /** Is the view held by a pointer now (dragged with the middle button / a finger, or pinched)? Then a pause does not draw it anew. */
+  I.holdingView = () => !!pinch || !!(S.drag && S.drag.mode === 'pan');
   const A = () => TC.actions;
   const tr = (s, v) => TC.tr(s, v);
   let vp, spaceDown = false, spaceUsed = false, shiftDown = false, raf = 0, lastMove = null;
@@ -461,6 +463,7 @@
       lastTouch = Date.now();
       if (pinch) {
         pinch = null;
+        TC.render.settleView(); // (released: drawn anew once it rests)
         if (touches.size === 1) {
           const [[id, f]] = [...touches];
           startPan({ pointerId: id, clientX: f.x, clientY: f.y }); // one finger left: keep moving
@@ -474,6 +477,7 @@
     S.drag = null;
     try { vp.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
     vp.classList.remove('panning');
+    if (d.mode === 'pan') TC.render.settleView(); // (the view was held while moved: drawn anew now)
     if (A().isPerforming() && d.mode === 'pan' && !cancelled && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < moveMin(e)) {
       const r = vp.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
       if (x > 2 / 3) A().nextPage();

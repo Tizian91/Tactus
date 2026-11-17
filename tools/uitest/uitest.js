@@ -908,6 +908,15 @@ setTimeout(() => {
           TC.actions.setDyn('pp');
           TC.actions.setDyn('p');
           ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));
+          // a hairpin only a quarter long: "p < f" from 1 to 2 of bar 1 - f drawn there, f holds from 2 on
+          selIn('setWedgeTo', 'f');
+          selIn('setWedgeEnd', '0');
+          selIn('setWedgeEndT', '960');
+          const endOpts = [...document.querySelectorAll('#panel-notes select[data-action="setWedgeEndT"] option')].map((o) => o.textContent);
+          document.querySelector('#panel-notes [data-action="makeWedge"]').click();
+          ok('dynamics: a hairpin a quarter long (to bar 1, beat 2) - f drawn, f from beat 2 on ' + JSON.stringify(dt.bars[0].dyn) + ' ' + endOpts.join('|'),
+            JSON.stringify(dt.bars[0].dyn) === JSON.stringify([{ t: 0, v: 'p' }, { t: 0, w: 'cresc', len: 960, to: 'f' }]) && endOpts.includes('Zählzeit 2') && endOpts[endOpts.length - 1] === 'Ende' &&
+            TC.score.levelAt(S.doc, dt, 0, 960) === 5 && [...document.querySelectorAll('.score .mus.dyn')].length >= 2 && document.querySelectorAll('.score .hairpin').length === 2);
           TC.actions.setDyn('p');
           ok('dynamics: p once more - it goes, the hairpin stays', JSON.stringify(dt.bars[0].dyn.map((d) => d.w || d.v)) === '["cresc"]');
           TC.actions.toggleDynAll();

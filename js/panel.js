@@ -457,8 +457,10 @@
     const d = TC.actions.wedgeDraft(), L = SC.DYN_LEVELS, up = L.indexOf(d.to) > L.indexOf(d.from);
     const lvOpts = (cur) => L.map((v) => `<option value="${v}"${v === cur ? ' selected' : ''}>${v}</option>`).join('');
     const ends = Array.from({ length: Math.min(S.doc.bars.length - i, 16) }, (_, k) => `<option value="${i + k}"${i + k === d.end ? ' selected' : ''}>${i + k + 1}</option>`).join('');
+    const endTs = TC.actions.wedgeEnds(d.bar, d.t, d.end).map((x) => `<option value="${x}"${x === d.endT ? ' selected' : ''}>${x >= TC.barTicks(S.doc.bars[d.end].ts) ? esc(tr('end')) : esc(tr('beat {b}', { b: TC.rhythm.countLabel(x, S.doc.bars[d.end].ts) }))}</option>`).join('');
     const sign = (w) => (w === 'cresc' ? '&lt;' : '&gt;');
     const wedgeEnd = wedge && SC.atAbs(S.doc, SC.absTick(S.doc, i, wedge.t) + wedge.len - 1);
+    const wedgeTo = wedgeEnd && (wedgeEnd.tick + 1 >= TC.barTicks(S.doc.bars[wedgeEnd.bar].ts) ? TC.actions.wedgeEndText(wedgeEnd.bar, Infinity) : TC.actions.wedgeEndText(wedgeEnd.bar, wedgeEnd.tick + 1));
     return `<section><h3>${tr('Dynamics')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
       ${where}
       <div class="dyn-pal">${levels}</div>
@@ -466,10 +468,10 @@
       ${endHere ? `<p class="hint tight">${esc(tr('End of the hairpin from bar {n}: {v} (from here on)', { n: endHere.bar + 1, v: endHere.toV }))}</p>` : ''}
       <div class="row wedge-row"><label>${tr('Hairpin')}</label><select data-action="setWedgeFrom" class="dyn-sel">${lvOpts(d.from)}</select>
         <span class="wedge-sign">${up ? '&lt;' : '&gt;'}</span><select data-action="setWedgeTo" class="dyn-sel">${lvOpts(d.to)}</select></div>
-      <div class="row"><label>${tr('to bar')}</label><select data-action="setWedgeEnd" class="narrow">${ends}</select></div>
+      <div class="row"><label>${tr('to bar')}</label><select data-action="setWedgeEnd" class="narrow">${ends}</select><select data-action="setWedgeEndT" class="narrow">${endTs}</select></div>
       <div class="btn-row">${btn('makeWedge', undefined, `<span class="dyn-txt">${esc(d.from)}</span> ${up ? '&lt;' : '&gt;'} <span class="dyn-txt">${esc(d.to)}</span> ${tr('set')}`, false,
-        tr(up ? 'Louder and louder from {from} to {to} - to the end of bar {n}' : 'Softer and softer from {from} to {to} - to the end of bar {n}', { from: d.from, to: d.to, n: d.end + 1 }), 'wide')}</div>
-      ${wedge ? `<p class="hint tight">${tr('Here')}: ${sign(wedge.w)} ${wedge.to ? esc(wedge.to) + ' ' : ''}${esc(tr('to the end of bar {n}', { n: (wedgeEnd ? wedgeEnd.bar : i) + 1 }))}
+        tr(up ? 'Louder and louder from {from} to {to}' : 'Softer and softer from {from} to {to}', { from: d.from, to: d.to }) + ' – ' + TC.actions.wedgeEndText(d.end, d.endT), 'wide')}</div>
+      ${wedge ? `<p class="hint tight">${tr('Here')}: ${sign(wedge.w)} ${wedge.to ? esc(wedge.to) + ' ' : ''}${esc(wedgeTo || tr('to the end of bar {n}', { n: i + 1 }))}
         ${btn('clearDyn', 'w', '✕ ' + sign(wedge.w), false, tr('Remove'))}</p>` : ''}
       ${check('toggleDynAll', !!S.dynAll, tr('For all tracks'))}
       <p class="hint tight">${esc(S.dynAll ? tr('Plays all tracks softer / louder from here on.') : tr('Plays "{track}" softer / louder from here on.', { track: TC.score.instrumentOf(S.doc, t).name }))} ${tr('The notes stay as written (ghost, accent).')}</p>

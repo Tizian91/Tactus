@@ -1086,8 +1086,10 @@
           if (e === w.end && levelAt.has(w.end)) x1 -= 0.8 * SP; // (before the sign it goes to)
           else if (e === w.end && w.sign) {
             // its own level ("pp < ff"): right after the bar line where it ends (the next bar of this line), else at the end
+            // (ending inside a bar - "1 < 2": at the note there, like a level written there)
             const nb = L.bars.find((b) => b.hidden === undefined && b.sys === s.i && at(b.i, 0) === w.end);
-            const sx = nb ? RD.tickX(nb, 0) - 0.5 * SP : x1 - signW(w.toV) + 0.3 * SP;
+            const inBar = L.bars.find((b) => b.hidden === undefined && b.sys === s.i && at(b.i, 0) < w.end && w.end < at(b.i, 0) + b.L);
+            const sx = nb ? RD.tickX(nb, 0) - 0.5 * SP : inBar ? RD.tickX(inBar, w.end - at(inBar.i, 0)) - 0.5 * SP : x1 - signW(w.toV) + 0.3 * SP;
             o.push(glyph(w.toV.split('').map((c) => DYN_G[c]).join(''), sx, y, 'dyn'));
             x1 = Math.min(x1, sx - 0.5 * SP);
           }

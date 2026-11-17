@@ -1361,8 +1361,9 @@
     TC.ui.hint(off ? tr('Hairpin removed') : tr(w === 'cresc' ? 'Crescendo to the end of bar {n}' : 'Diminuendo to the end of bar {n}', { n: R[1] + 1 }));
   };
   /**
-   * The hairpin being set up in the panel ("pp < ff to bar 4"): { bar, t, from, to, end } - from: the level sounding at
-   * the place (unless chosen), to: two steps on (louder; from ff on: softer), end: the last selected bar (or this one).
+   * The hairpin being set up in the panel ("pp < ff to bar 4, beat 2"): { bar, t, from, to, end, endT } - from: the level
+   * sounding at the place (unless chosen), to: two steps on (louder; from ff on: softer), end: the last selected bar (or
+   * this one), endT: where in it it ends (its length in ticks = the end of the bar; else a place of the panel's grid).
    * What was chosen holds only for this place (S.wedgeDraft).
    */
   A.wedgeDraft = function () {
@@ -1371,7 +1372,18 @@
     const from = mine.from || L[SC.levelAt(S.doc, TC.curTrack(), i, t)], fi = L.indexOf(from);
     const to = mine.to || L[fi >= L.length - 2 ? fi - 2 : fi + 2];
     const R = TC.barRange(), end = Number.isInteger(mine.end) && mine.end >= i && mine.end < S.doc.bars.length ? mine.end : R && R[1] > i ? R[1] : i;
-    return { bar: i, t, from, to, end };
+    const BL = TC.barTicks(S.doc.bars[end].ts), endT = A.wedgeEnds(i, t, end).includes(mine.endT) ? mine.endT : BL;
+    return { bar: i, t, from, to, end, endT };
+  };
+  /** Where a hairpin from (bar i, tick t) can end in bar `end`: the places of the panel's grid after its start, and the bar's end. */
+  A.wedgeEnds = function (i, t, end) {
+    const BL = TC.barTicks(S.doc.bars[end].ts);
+    return TC.score.chordSlots(S.doc, end, chordGrid()).filter((x) => x > 0 && (end > i || x > t)).concat(BL);
+  };
+  /** "to the end of bar 4" / "to bar 4, beat 2" - the end of a hairpin (bar, tick in it). */
+  A.wedgeEndText = function (bar, tick) {
+    const h = S.doc.bars[bar];
+    return !h || tick >= TC.barTicks(h.ts) ? tr('to the end of bar {n}', { n: bar + 1 }) : tr('to bar {n}, beat {b}', { n: bar + 1, b: TC.rhythm.countLabel(tick, h.ts) });
   };
   const draftSet = (k, v) => {
     S.wedgeDraft = Object.assign(A.wedgeDraft(), { [k]: v });
@@ -1380,11 +1392,13 @@
   A.setWedgeFrom = (v) => { if (TC.score.DYN_LEVELS.includes(v)) draftSet('from', v); };
   A.setWedgeTo = (v) => { if (TC.score.DYN_LEVELS.includes(v)) draftSet('to', v); };
   A.setWedgeEnd = (v) => draftSet('end', Number(v));
-  /** Set the hairpin of the panel: its start level at the place, the hairpin to the end of its last bar, its end level. */
+  A.setWedgeEndT = (v) => draftSet('endT', Number(v));
+  /** Set the hairpin of the panel: its start level at the place, the hairpin to its end, its end level. */
   A.makeWedge = function () {
     const d = A.wedgeDraft(), L = TC.score.DYN_LEVELS, a = L.indexOf(d.from), b = L.indexOf(d.to);
     if (a === b) return TC.ui.hint(tr('From and to are the same level - choose a louder or softer one'));
-    const at = TC.score.tickOf(S.doc), len = at(d.end, TC.barTicks(S.doc.bars[d.end].ts)) - at(d.bar, d.t);
+    const at = TC.score.tickOf(S.doc), len = at(d.end, d.endT) - at(d.bar, d.t);
+    if (len <= 0) return;
     dynTracks().forEach((tk) => {
       // (its start level only when it is not the one sounding there anyway - a hairpin goes on from the level before it)
       if (TC.score.DYN_LEVELS[TC.score.levelAt(S.doc, tk, d.bar, d.t)] !== d.from) TC.score.setDyn(S.doc, tk, d.bar, d.t, { v: d.from });
@@ -1392,7 +1406,7 @@
     });
     S.wedgeDraft = null;
     TC.commit();
-    TC.ui.hint(tr('{from} {sign} {to} to the end of bar {n}', { from: d.from, sign: b > a ? '<' : '>', to: d.to, n: d.end + 1 }));
+    TC.ui.hint(d.from + ' ' + (b > a ? '<' : '>') + ' ' + d.to + ' ' + A.wedgeEndText(d.end, d.endT));
   };
   // ---- Chords written like notes (js/interaction.js writeChord): a tap writes the chord of the chord symbols there
   /** What a tap writes in a melody track: '' a tone, 'n' a chord, 'd' a chord struck down ↓, 'u' up ↑. */

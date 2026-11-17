@@ -838,3 +838,7 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   `SC.dynLevel` (Stufe 0 … 7, in einer Gabel gebrochen), `KS.dynCC` (Werte nur bei Änderung, Gabel alle 32stel, am Anfang der geltende
   Wert). Abspielen: Hits `{ cc, val }` 10 ms vor den Noten (`MO.cc`, nur MIDI); MIDI-Export: vor den Noten derselben Stelle.
   Ein Profil nur mit Dynamik (ohne Tasten) gilt. Anschlagstärke bleibt wie bisher. Tests `test_kswlib.js` (41).
+
+### Gabeln bis zu einer Stelle im Takt
+- Panel „bis Takt“ + Stelle (`A.wedgeEnds`: Raster des Noten-Panels nach dem Anfang, dazu „Ende“; Entwurf `endT`), `A.wedgeEndText`
+  („bis Takt 1, Zählzeit 2“). Zielstufe im Notenbild an der Note der Endstelle (wie eine Angabe dort), MusicXML ebenso. Klick-Test.

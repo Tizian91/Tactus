@@ -1098,6 +1098,11 @@
     // several bars
     Bars: 'Takte',
     'to bar': 'bis Takt',
+    'to bar {n}, beat {b}': 'bis Takt {n}, Zählzeit {b}',
+    'beat {b}': 'Zählzeit {b}',
+    end: 'Ende',
+    'Louder and louder from {from} to {to}': 'Immer lauter von {from} bis {to}',
+    'Softer and softer from {from} to {to}': 'Immer leiser von {from} bis {to}',
     'only this one': 'nur dieser',
     'Bars {a}–{b} selected': 'Takte {a}–{b} ausgewählt',
     'Select bars {a}–{b}': 'Takte {a}–{b} auswählen',

@@ -149,7 +149,7 @@
         const e = w.end - TC.score.absTick(doc, p.bar, 0), put = (bar, x) => { if (!stops.has(bar)) stops.set(bar, []); stops.get(bar).push(x); };
         put(p.bar, { x: e });
         // its own level ("pp < ff"): where it ends - at the start of the next bar (the end of the last one)
-        if (w.sign) put(doc.bars[p.bar + 1] ? p.bar + 1 : p.bar, { x: doc.bars[p.bar + 1] ? 0 : e, v: w.toV });
+        if (w.sign) { const mid = e < TC.barTicks(doc.bars[p.bar].ts) || !doc.bars[p.bar + 1]; put(mid ? p.bar : p.bar + 1, { x: mid ? e : 0, v: w.toV }); } // (ending inside a bar: there)
       });
       let ts = null, run = meta.tempo;
       bars.forEach((h, i) => {

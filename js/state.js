@@ -62,6 +62,7 @@ window.TC = window.TC || {};
       stemsLow: [43, 41],   // the toms that go down with 'low' (floor toms)
       importKit: '',        // MIDI import: kit profile the last file came from ('' = General MIDI)
       importGrid: '16t',    // MIDI import: grid (js/midiin.js)
+      importTracks: {},     // MIDI import: per track name what was chosen last { kind: 'drums' | 'melody', kit, ks }
       midiOut: '',          // (before 2026-11-16) one MIDI output for all tracks - now each track has its own (track.midiOut)
       midiOff: false,       // MIDI off for a moment: every track with Tactus' sounds (toolbar switch)
       midiOutSynth: false,  // with a MIDI output: Tactus' sounds as well

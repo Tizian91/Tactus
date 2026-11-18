@@ -747,6 +747,36 @@ setTimeout(() => {
     ok('… with the notes of bar 1 of the file (' + tickArt(barsNow) + ')', tickArt(barsNow) === tickArt(0));
     TC.actions.undo();
     ok('… one undo step', S.doc.bars.length === barsNow);
+    // a file with drums and a guitar (Guitar Pro): each row drums or a melody, a melody with its keyswitch profile
+    {
+      const SC = TC.score, d2 = TC.emptyScore(1);
+      SC.place(d2, d2.tracks[0], 0, 1, 0, 960, TC.newDrumNote(36, {}));
+      const gt = SC.addTrack(d2, 'Guitar', null, 'pitched');
+      gt.program = 29;
+      SC.place(d2, gt, 0, 0, 0, 960, TC.newPitchNote(76, null, {})); // (sent as is - read with Iron 2: an octave lower)
+      const nTracks = S.doc.tracks.length;
+      TC.midiIn.open(TC.midi.build(d2, null, { multi: true }).bytes, 'Song.mid');
+      const kinds = [...md().querySelectorAll('select[data-k="kind"]')].map((s) => s.value);
+      ok('MIDI import of a song: a row per track, drums / melody guessed (' + kinds + ')', kinds.join() === 'drums,melody');
+      const ksSel = md().querySelector('select[data-k="ks"]');
+      ok('… the melody row: a keyswitch profile to choose (templates)', !!ksSel && [...ksSel.options].some((o) => o.value === 'tpl:ujam-iron2'));
+      ksSel.value = 'tpl:ujam-iron2'; ksSel.dispatchEvent(new Event('change', { bubbles: true }));
+      const kd = md().querySelectorAll('select[data-k="kind"]')[0];
+      kd.value = 'melody'; kd.dispatchEvent(new Event('change', { bubbles: true }));
+      ok('… drums switched to melody: its row gets a keyswitch choice', md().querySelectorAll('select[data-k="ks"]').length === 2 && !md().querySelector('select[data-k="src"]'));
+      kd.value = 'drums'; md().querySelectorAll('select[data-k="kind"]')[0].dispatchEvent(new Event('change', { bubbles: true }));
+      const tg = md().querySelector('select[data-k="target"]');
+      tg.value = 'into'; tg.dispatchEvent(new Event('change', { bubbles: true }));
+      const atI = md().querySelector('input[data-k="at"]');
+      atI.value = '1'; atI.dispatchEvent(new Event('change', { bubbles: true }));
+      md().querySelector('[data-k="ok"]').click();
+      const gNew = S.doc.tracks.find((t) => t.kind === 'pitched' && /Guitar/.test(t.name));
+      ok('… into the open score: a new melody track with Iron 2 and the guitar\'s tone (' + (gNew && gNew.name) + ')',
+        !!gNew && gNew.ksw && gNew.ksw.tpl === 'ujam-iron2' && gNew.bars[0].voices[0].some((e) => e.notes.some((n) => n.pitch === 64)) && gNew.inst === 'guitar');
+      TC.actions.undo();
+      ok('… one undo step', S.doc.tracks.length === nTracks);
+      S.settings.importTarget = 'into';
+    }
     S.settings.importTarget = 'new';
     TC.actions.openKits();
     ok('kit profiles: dialog opens', !!document.querySelector('.kit-dialog') && TC.kits.isOpen());

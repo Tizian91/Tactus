@@ -477,7 +477,7 @@
     t.program = p;
     sync(t);
     TC.commit();
-    if (S.settings.sound) TC.audio.previewTone(t.clef === 'bass' ? 48 : t.clef === 'treble8' ? 60 : 67, t);
+    if (S.settings.sound) TC.audio.previewTone(t.clef === 'bass8' ? 36 : t.clef === 'bass' ? 48 : t.clef === 'treble8' ? 60 : 67, t);
   };
   /** Melody track: voice (range; sets the clef that fits it). */
   A.setTrackVoice = function (v) {

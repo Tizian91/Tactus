@@ -753,13 +753,16 @@ setTimeout(() => {
       SC.place(d2, d2.tracks[0], 0, 1, 0, 960, TC.newDrumNote(36, {}));
       const gt = SC.addTrack(d2, 'Guitar', null, 'pitched');
       gt.program = 29;
-      SC.place(d2, gt, 0, 0, 0, 960, TC.newPitchNote(76, null, {})); // (sent as is - read with Iron 2: an octave lower)
+      SC.place(d2, gt, 0, 0, 0, 960, TC.newPitchNote(76, null, {})); // (as Guitar Pro: no Iron keys in the file - the note stays as it sounds)
       const nTracks = S.doc.tracks.length;
       TC.midiIn.open(TC.midi.build(d2, null, { multi: true }).bytes, 'Song.mid');
       const kinds = [...md().querySelectorAll('select[data-k="kind"]')].map((s) => s.value);
       ok('MIDI import of a song: a row per track, drums / melody guessed (' + kinds + ')', kinds.join() === 'drums,melody');
       const ksSel = md().querySelector('select[data-k="ks"]');
       ok('… the melody row: a keyswitch profile to choose (templates)', !!ksSel && [...ksSel.options].some((o) => o.value === 'tpl:ujam-iron2'));
+      ksSel.value = 'tpl:ujam-iron2'; ksSel.dispatchEvent(new Event('change', { bubbles: true }));
+      const vb = md().querySelector('input[data-k="vst"]');
+      ok('… with a profile: "played for this VST" - off for a file without its keys (Guitar Pro)', !!vb && !vb.checked);
       ksSel.value = 'tpl:ujam-iron2'; ksSel.dispatchEvent(new Event('change', { bubbles: true }));
       const kd = md().querySelectorAll('select[data-k="kind"]')[0];
       kd.value = 'melody'; kd.dispatchEvent(new Event('change', { bubbles: true }));
@@ -772,7 +775,7 @@ setTimeout(() => {
       md().querySelector('[data-k="ok"]').click();
       const gNew = S.doc.tracks.find((t) => t.kind === 'pitched' && /Guitar/.test(t.name));
       ok('… into the open score: a new melody track with Iron 2 and the guitar\'s tone (' + (gNew && gNew.name) + ')',
-        !!gNew && gNew.ksw && gNew.ksw.tpl === 'ujam-iron2' && gNew.bars[0].voices[0].some((e) => e.notes.some((n) => n.pitch === 64)) && gNew.inst === 'guitar');
+        !!gNew && gNew.ksw && gNew.ksw.tpl === 'ujam-iron2' && gNew.bars[0].voices[0].some((e) => e.notes.some((n) => n.pitch === 76)) && gNew.inst === 'guitar');
       TC.actions.undo();
       ok('… one undo step', S.doc.tracks.length === nTracks);
       S.settings.importTarget = 'into';

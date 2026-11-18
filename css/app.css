@@ -540,6 +540,7 @@ button.wide { width: 100%; justify-content: center; min-height: 34px; }
 .export-row .midi-in-kind { display: flex; gap: 6px; flex: 1 1 260px; min-width: 0; } /* (MIDI import: drums or a melody, then its drum map / keyswitch profile) */
 .export-row .midi-in-kind select[data-k="kind"] { flex: 0 0 auto; }
 .export-row .midi-in-kind select { min-width: 0; }
+.export-row .midi-in-vst, .kit-body > .midi-in-vst { flex: 1 1 100%; font-size: 13px; margin: 0 0 0 26px; } /* (a melody with a keyswitch profile: the file played for that VST?) */
 /* stage view: only the pages (actions.js togglePerform) */
 body.perform #toolbar, body.perform .panel, body.perform .panel-resizer, body.perform .panel-expand, body.perform #statusbar { display: none !important; }
 body.perform #viewport { position: fixed; inset: 0; z-index: 40; } /* the whole screen (the grid of #app / #main stays as it is) */

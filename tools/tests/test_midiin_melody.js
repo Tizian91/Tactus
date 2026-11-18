@@ -85,6 +85,24 @@ module.exports = function (T) {
   T.eq('… the drums of channel 10 alone', MI.toScore(m0, { track: s0[1].i, ch: 9, grid: 240 }).notes, 4);
   T.eq('takes: track and channel', [MI.takes({ track: 0, ch: 9 }, { trk: 0, ch: 9 }), MI.takes({ track: 0, ch: 9 }, { trk: 0, ch: 2 }), MI.takes({ track: 0 }, { trk: 0, ch: 2 })], [true, false, true]);
 
+  // a bass from Guitar Pro (as it sounds, low E = 28), read with Rowdy (+12 for the VST): not shifted - no key of Rowdy in it
+  const gp = TC.emptyScore(1);
+  const bs = SC.addTrack(gp, 'Bass', null, 'pitched');
+  bs.program = 33;
+  bs.channel = 1;
+  [0, 960, 1920, 2880].forEach((t) => SC.place(gp, bs, 0, 0, t, 960, TC.newPitchNote(28, null, {})));
+  const gm = MI.parse(TC.midi.build(gp, null, { tracks: [bs] }).bytes);
+  const rowdy = MI.toMelody(gm, { track: MI.sources(gm)[0].i, grid: 240, ksw: KS.fromTemplate('ujam-rowdy') }).doc.tracks[0];
+  T.eq('Guitar Pro bass read with Rowdy: as it sounds (low E 28 is no Rowdy key here, not shifted), bass 8 below, the profile kept for playing', [MI.playedFor(gm, { track: MI.sources(gm)[0].i }, KS.fromTemplate('ujam-rowdy')), pitches(rowdy, 0), rowdy.clef, rowdy.inst, rowdy.ksw.tpl], [false, [28, 28, 28, 28], 'bass8', 'bass', 'ujam-rowdy']);
+  T.eq('… told it was played for Rowdy (forVst): 28 = E0 is the slide 3 of Rowdy - keys, no tones', MI.toMelody(gm, { track: MI.sources(gm)[0].i, ksw: KS.fromTemplate('ujam-rowdy'), forVst: true }).notes, 0);
+  // played for Rowdy (exported from Tactus: its start key "legato off" is in it): shifted back
+  bs.ksw = KS.fromTemplate('ujam-rowdy');
+  const gm2 = MI.parse(TC.midi.build(gp, null, { tracks: [bs] }).bytes);
+  T.eq('… a file played for Rowdy (its start key "legato off" in it): seen, shifted back to 28', [MI.playedFor(gm2, { track: MI.sources(gm2)[0].i }, KS.fromTemplate('ujam-rowdy')), pitches(MI.toMelody(gm2, { track: MI.sources(gm2)[0].i, ksw: KS.fromTemplate('ujam-rowdy') }).doc.tracks[0], 0)], [true, [28, 28, 28, 28]]);
+  T.eq('… told it was not (forVst false): the keys stay notes, nothing shifted', pitches(MI.toMelody(gm2, { track: MI.sources(gm2)[0].i, ksw: KS.fromTemplate('ujam-rowdy'), forVst: false }).doc.tracks[0], 0).includes(40), true);
+  const P = TC.pitch;
+  T.eq('bass 8 below: written an octave above its sound (low E1 on the place of E2 in the bass clef)', [P.lineOf(9, 'bass8'), P.lineOf(9, 'bass') - P.lineOf(9, 'bass8')], [P.lineOf(16, 'bass'), 7]);
+
   // a key signature in the file wins over the tones
   const ks = MI.guessScale({ keys: [{ t: 0, sf: -3, mi: 1 }], tpq: 960 }, []);
   T.eq('key signature 3 flats, minor: C minor', [ks.id, ks.l, ks.a], ['minor', 0, 0]);

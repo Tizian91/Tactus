@@ -314,12 +314,28 @@
   };
 
   /**
+   * Was this part of the file (opts.track / opts.ch) played for the VST of keyswitch profile ksw? Tactus (and a part
+   * played into Cubase with the VST) sends its start keys right at the beginning: trigger mode (Iron), the way of playing
+   * to start from (let ring, legato off, sustain …). A file of Guitar Pro has none of them there.
+   */
+  MI.playedFor = function (midi, opts, ksw) {
+    if (!ksw || !TC.ksw) return false;
+    const start = new Set(ksw.keys.filter((k) => (ksw.init || []).includes(k.id) || (k.def && k.kind === 'art'))
+      .map((k) => TC.ksw.noteOf(k.note, ksw.c3)).filter((n) => n !== null));
+    if (!start.size) return midi.notes.some((n) => MI.takes(opts, n) && ksw.keys.some((k) => TC.ksw.noteOf(k.note, ksw.c3) === n.note)); // (no start keys: any key)
+    const first = midi.notes.find((n) => MI.takes(opts, n));
+    return !!first && midi.notes.some((n) => MI.takes(opts, n) && n.t <= first.t + midi.tpq / 8 && start.has(n.note));
+  };
+
+  /**
    * A melody track of a file (a guitar, a bass, a voice …) as a score: opts.track the MIDI track, opts.ksw the keyswitch
    * profile of its VST (as a track keeps it, js/keyswitch.js) - its keys become ways of playing, slides, stops and
-   * strokes again (not notes), the notes are shifted back (noteShift); grid / triplets / tempo as MI.toScore.
+   * strokes again (not notes), the notes are shifted back (noteShift) - only when the file was played for the VST
+   * (opts.forVst; not given: MI.playedFor). A file of Guitar Pro has every note as it sounds - a low bass E (28) is no
+   * Rowdy key - and keeps the profile only for playing. grid / triplets / tempo as MI.toScore.
    * Tones struck together are a chord; a tone still sounding when the next one comes is cut there (one voice); a long
    * one goes on over the bar line as tied notes. The sound (program change), the scale (key signature or the tones)
-   * and the clef (guitar: treble 8 below, low tones: bass) come from the file.
+   * and the clef (guitar: treble 8 below, bass: bass 8 below - as Guitar Pro writes them, low tones: bass) come from the file.
    * Returns { doc, notes, merged, unknown: [], switches } like MI.toScore.
    */
   MI.toMelody = function (midi, opts = {}) {
@@ -327,18 +343,20 @@
     const grid = opts.grid || 240, tgrid = (grid * 2) / 3, useT = opts.triplets !== false;
     const bpm0 = opts.tempo || (midi.tempos.length ? midi.tempos[0].bpm : 120);
     const ksw = opts.ksw && KS ? opts.ksw : null;
-    // the keys of the profile (MIDI note -> key); everything else is a tone
+    const forVst = !!ksw && (opts.forVst !== undefined ? !!opts.forVst : MI.playedFor(midi, opts, ksw));
+    // played for the VST: the keys of the profile (MIDI note -> key), everything else is a tone (shifted back)
     const keys = new Map();
-    if (ksw) ksw.keys.forEach((k) => { const n = KS.noteOf(k.note, ksw.c3); if (n !== null && !keys.has(n)) keys.set(n, k); });
-    const shift = (ksw && ksw.noteShift) || 0;
+    if (forVst) ksw.keys.forEach((k) => { const n = KS.noteOf(k.note, ksw.c3); if (n !== null && !keys.has(n)) keys.set(n, k); });
+    const shift = (forVst && ksw.noteShift) || 0;
     const tones = [], switches = [];
     for (const n of midi.notes) {
       if (!MI.takes(opts, n)) continue;
       const t = n.t * scale, k = keys.get(n.note);
       if (k) { switches.push({ t, k }); continue; }
       const end = (n.end !== null && n.end !== undefined ? n.end : n.t + midi.tpq / 4) * scale;
-      tones.push({ t, end: Math.max(end, t + 1), pitch: TC.clamp(n.note - shift, 0, 127), vel: n.vel });
+      tones.push({ t, end: Math.max(end, t + 1), pitch: n.note, vel: n.vel });
     }
+    tones.forEach((h) => { h.pitch = TC.clamp(h.pitch - shift, 0, 127); });
     const last = Math.max(1, tones.reduce((m, h) => Math.max(m, h.end), 0), switches.reduce((m, s) => Math.max(m, s.t + 1), 0));
     const B = fileBars(midi, scale, last);
     snapStarts(tones, B, grid, useT);
@@ -397,7 +415,7 @@
     const sc = MI.guessScale(midi, tones);
     if (sc) track.scale = sc;
     const ps = tones.map((h) => h.pitch).sort((a, b) => a - b), mid = ps.length ? ps[ps.length >> 1] : 64;
-    track.clef = track.inst === 'guitar' ? 'treble8' : track.inst === 'bass' || mid < 55 ? 'bass' : 'treble';
+    track.clef = track.inst === 'guitar' ? 'treble8' : track.inst === 'bass' ? 'bass8' : mid < 55 ? 'bass' : 'treble';
 
     let count = 0;
     chords.forEach((c, i) => {
@@ -437,7 +455,7 @@
    * another one the track's own. Returns { doc, notes, merged, unknown } like MI.toScore.
    */
   MI.toScoreMulti = function (midi, parts, opts = {}) {
-    const res = parts.map((p) => MI.toScore(midi, Object.assign({}, opts, { track: p.track, ch: p.ch, kind: p.kind, profile: p.profile, ksw: p.ksw })));
+    const res = parts.map((p) => MI.toScore(midi, Object.assign({}, opts, { track: p.track, ch: p.ch, kind: p.kind, profile: p.profile, ksw: p.ksw, forVst: p.forVst })));
     const doc = res[0].doc;
     const drum0 = parts.find((p) => p.kind !== 'melody'), kit = drum0 ? drum0.profile || null : null;
     if (kit) {
@@ -572,6 +590,7 @@
       kind: {},                         // … drums or a melody ('drums' | 'melody')
       src: {},                          // … drums: where each one comes from (kit profile id, '' = General MIDI)
       ks: {},                           // … melody: its keyswitch profile ('' none, 'tpl:<template>', 'lib:<own profile>')
+      vst: {},                          // … … the file played for that VST? (true / false; not set: MI.playedFor)
       tempo: fileBpm,
       auto: S.settings.importAuto !== false, // new score: set repeats at once (|: :|, %-bars)
       // into the open score (from a bar on) or as a new score
@@ -604,10 +623,12 @@
     };
     /** A track's copy of a keyswitch profile ('tpl:…' a template, 'lib:…' an own one), or null. */
     const kswOf = (v) => (!v || !TC.ksw ? null : /^lib:/.test(v) ? (TC.kswLib ? TC.kswLib.toTrack(v.slice(4)) : null) : TC.ksw.fromTemplate(v.slice(4)));
+    /** Was the file (this row) played for the VST of its keyswitch profile - as ticked, else as Tactus sees it at the start keys. */
+    const forVstOf = (t) => (st.vst[t.key] !== undefined ? st.vst[t.key] : MI.playedFor(midi, { track: t.i, ch: t.ch }, kswOf(st.ks[t.key])));
     /** The ticked MIDI tracks: [{ track, kind, profile, ksw, name }] (a file with one track: that one). */
     const parts = () => (withNotes.length > 1 ? withNotes.filter((t) => st.sel.has(t.key)) : withNotes)
       .map((t) => st.kind[t.key] === 'melody'
-        ? { track: t.i, ch: t.ch, kind: 'melody', ksw: kswOf(st.ks[t.key]), name: withNotes.length > 1 ? trackName(t) : '' }
+        ? { track: t.i, ch: t.ch, kind: 'melody', ksw: kswOf(st.ks[t.key]), forVst: forVstOf(t), name: withNotes.length > 1 ? trackName(t) : '' }
         : { track: t.i, ch: t.ch, kind: 'drums', profile: srcOf(t.key) ? TC.kits.byId(srcOf(t.key)) : null, name: withNotes.length > 1 ? trackName(t) : '' });
     /** Keep what was chosen for each track (by its name) for the next import. */
     const remember = () => {
@@ -651,11 +672,16 @@
       const profSel = (t, off) => st.kind[t.key] === 'melody'
         ? `<select data-k="ks" data-i="${t.key}"${off ? ' disabled' : ''} title="${esc(tr('Its keys become ways of playing again (P.M., slides, staccato …), its notes are shifted back'))}">${kswOpts(st.ks[t.key] || '')}</select>`
         : `<select data-k="src" data-i="${t.key}"${off ? ' disabled' : ''} title="${esc(tr('The drum map its keys come from'))}">${srcOpts(srcOf(t.key))}</select>`;
+      // a melody with a keyswitch profile: was the file played for that VST (its keys in it, notes shifted) or not
+      // (Guitar Pro: every note as it sounds, the profile only for playing)? Tactus sees it at the start keys.
+      const vstBox = (t, off) => st.kind[t.key] === 'melody' && st.ks[t.key]
+        ? `<label class="check midi-in-vst" title="${esc(tr('On: the file was played for this VST (exported from Tactus / Cubase) - its keyswitches become ways of playing, the notes are shifted back. Off (Guitar Pro): every note as it sounds, the profile only for playing.'))}">
+            <input type="checkbox" data-k="vst" data-i="${t.key}"${forVstOf(t) ? ' checked' : ''}${off ? ' disabled' : ''}> ${tr('File played for this VST (keyswitches in it)')}</label>` : '';
       // several tracks: a tick for each (its name, its notes; channel 10 = drums), drums or a melody, and its profile
       const tracks = withNotes.map((t) => `<div class="export-row">
           <label class="check"><input type="checkbox" data-k="sel" data-i="${t.key}"${st.sel.has(t.key) ? ' checked' : ''}> <b>${esc(trackName(t))}</b>
             <span class="muted">${tr('{n} notes', { n: t.notes })}${t.ch === null ? ' · ' + tr('channel {n}', { n: [...t.channels].sort((a, b) => a - b).map((c) => c + 1).join(', ') }) : ''}</span></label>
-          <span class="midi-in-kind">${kindSel(t, !st.sel.has(t.key))}${profSel(t, !st.sel.has(t.key))}</span></div>`).join('');
+          <span class="midi-in-kind">${kindSel(t, !st.sel.has(t.key))}${profSel(t, !st.sel.has(t.key))}</span>${vstBox(t, !st.sel.has(t.key))}</div>`).join('');
       const one = withNotes.length === 1 ? withNotes[0] : null;
       const anyDrums = withNotes.some((t) => st.kind[t.key] !== 'melody' && (one || st.sel.has(t.key)));
       const unk = res.unknown.length
@@ -667,7 +693,7 @@
           <div class="export-list">${tracks}</div>
           ${anyDrums ? `<div class="row"><label>${tr('All drums from')}</label><select data-k="source">${sources}</select></div>` : ''}`
           : `<div class="row"><label>${tr('Track')}</label>${kindSel(one)}</div>
-          ${st.kind[one.key] === 'melody' ? `<div class="row"><label>${tr('Keyswitches')}</label>${profSel(one)}</div>`
+          ${st.kind[one.key] === 'melody' ? `<div class="row"><label>${tr('Keyswitches')}</label>${profSel(one)}</div>${vstBox(one)}`
           : `<div class="row"><label>${tr('Comes from')}</label><select data-k="source">${sources}</select></div>`}`}
           <div class="row"><label>${tr('Grid')}</label><select data-k="grid">${grids}</select></div>
           <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-k="tempo" value="${st.tempo}"> <span class="muted">BPM${st.tempo !== fileBpm ? ' · ' + tr('in the file: {t}', { t: fileBpm }) : ''}</span></div>
@@ -698,7 +724,8 @@
       if (k === 'sel') { if (e.target.checked) st.sel.add(i); else st.sel.delete(i); draw(); }
       if (k === 'src') { st.src[i] = e.target.value; draw(); }
       if (k === 'kind') { st.kind[i] = e.target.value === 'melody' ? 'melody' : 'drums'; draw(); }
-      if (k === 'ks') { st.ks[i] = e.target.value; draw(); }
+      if (k === 'ks') { st.ks[i] = e.target.value; delete st.vst[i]; draw(); }
+      if (k === 'vst') { st.vst[i] = e.target.checked; draw(); }
       if (k === 'source') { st.source = e.target.value; st.src = {}; draw(); } // (every track)
       if (k === 'grid') { st.grid = e.target.value; draw(); }
       if (k === 'tempo') { st.tempo = TC.clamp(Math.round(Number(e.target.value) || fileBpm), 20, 400); draw(); }
@@ -727,7 +754,7 @@
         const ps = parts();
         let n = 0;
         ps.forEach((p) => {
-          const r = MI.toScore(midi, Object.assign(readOpts(), { track: p.track, ch: p.ch, kind: p.kind, profile: p.profile, ksw: p.ksw }));
+          const r = MI.toScore(midi, Object.assign(readOpts(), { track: p.track, ch: p.ch, kind: p.kind, profile: p.profile, ksw: p.ksw, forVst: p.forVst }));
           const want = p.kind === 'melody' ? 'pitched' : 'drums', now = TC.curTrack(), got = r.doc.tracks[0];
           let into = (ps.length === 1 && now && now.kind === want ? now : null) || S.doc.tracks.find((t) => t.name === p.name && t.kind === want && !t.lh);
           if (!into) {

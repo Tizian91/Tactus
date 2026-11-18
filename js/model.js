@@ -41,7 +41,7 @@
  *                                        marked / only chord tones; not set = as before (harmony.guide) }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
  *                mute, solo, profile, profileName, midiOut, midiCh,
- *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass', scale: { l, a, id } (js/pitch.js),
+ *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass' | 'bass8', scale: { l, a, id } (js/pitch.js),
  *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
  *                                         inst: 'voice' | 'keys' | 'guitar' | 'bass' | 'ensemble' | 'pad'   the
  *                                                    instrument: how chords are written for it (js/accomp.js)

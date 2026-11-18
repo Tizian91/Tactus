@@ -526,6 +526,7 @@
     treble: { top: 38, oct: 0, glyph: 0xe050, line: 6, en: 'Treble', de: 'Violinschlüssel' },
     treble8: { top: 38, oct: 7, glyph: 0xe052, line: 6, en: 'Treble 8 below (tenor)', de: 'Violin 8 unten (Tenor)' },
     bass: { top: 26, oct: 0, glyph: 0xe062, line: 2, en: 'Bass', de: 'Bassschlüssel' },
+    bass8: { top: 26, oct: 7, glyph: 0xe064, line: 2, en: 'Bass 8 below (bass guitar)', de: 'Bass 8 unten (E-Bass)' }, // (a bass guitar: written an octave above its sound, as in Guitar Pro)
   };
   P.clef = (id) => P.CLEFS[id] || P.CLEFS.treble;
   /** Staff step (half spaces from the top line) of a written place. */

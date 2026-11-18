@@ -398,7 +398,7 @@
   const SIG_LINE = { 1: [0, 3, -1, 2, 5, 1, 4], '-1': [4, 1, 5, 2, 6, 3, 7] }; // treble, in the order of P.signature
   function keySigLine(l, sharps, clef) {
     const order = sharps ? [3, 0, 4, 1, 5, 2, 6] : [6, 2, 5, 1, 4, 0, 3];
-    return SIG_LINE[sharps ? 1 : -1][order.indexOf(l)] + (clef === 'bass' ? 2 : 0);
+    return SIG_LINE[sharps ? 1 : -1][order.indexOf(l)] + (clef === 'bass' || clef === 'bass8' ? 2 : 0);
   }
   /** Key signature { to, from } as SVG, starting at x (naturals stand where the old signs stood). */
   function drawKey(out, x, c, clef) {

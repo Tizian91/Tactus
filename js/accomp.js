@@ -61,7 +61,7 @@
    * clef. { bass, tones } (MIDI pitches, tones low → high).
    */
   function pianoVoicing(ch, clef) {
-    const hi = clef === 'bass' ? 0 : 12;
+    const hi = clef === 'bass' || clef === 'bass8' ? 0 : 12;
     const pcs = [...new Set(P().chordPcs(ch))];
     const bass = from(bassPc(ch), 36 + hi);
     const tones = pcs.map((pc) => from(pc, 48 + hi)).sort((a, b) => a - b);

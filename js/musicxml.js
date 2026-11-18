@@ -172,7 +172,7 @@
         // key: melody its scale (first bar, changes), drums none
         if (i === 0 || (mel && fifths !== P.fifths(TC.score.scaleAt(t, i - 1)))) attr.push(`<key><fifths>${fifths}</fifths>${mel ? keyMode(scale, fifths) : ''}</key>`);
         if (!ts || ts.join('/') !== h.ts.join('/')) attr.push(`<time><beats>${h.ts[0]}</beats><beat-type>${h.ts[1]}</beat-type></time>`);
-        const clefXml = (c, num) => (num ? `<clef number="${num}">` : '<clef>') + ({ treble: '<sign>G</sign><line>2</line>', treble8: '<sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change>', bass: '<sign>F</sign><line>4</line>' }[c] || '<sign>G</sign><line>2</line>') + '</clef>';
+        const clefXml = (c, num) => (num ? `<clef number="${num}">` : '<clef>') + ({ treble: '<sign>G</sign><line>2</line>', treble8: '<sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change>', bass: '<sign>F</sign><line>4</line>', bass8: '<sign>F</sign><line>4</line><clef-octave-change>-1</clef-octave-change>' }[c] || '<sign>G</sign><line>2</line>') + '</clef>';
         if (i === 0 && lh) attr.push('<staves>2</staves>' + clefXml(t.clef, 1) + clefXml(lh.clef, 2));
         else if (i === 0 && mel) attr.push(clefXml(t.clef));
         else if (i === 0) attr.push('<clef><sign>percussion</sign><line>2</line></clef>' + (one ? '<staff-details><staff-lines>1</staff-lines></staff-details>' : ''));

@@ -1482,26 +1482,30 @@
     return true;
   };
 
-  /** Copy of the notes of a bar (all tracks; a %-bar: what it plays), for the clipboard. */
-  SC.copyBar = function (doc, bi) {
+  /**
+   * Copy of the notes of a bar (a %-bar: what it plays), for the clipboard: all tracks with the chord symbols - or
+   * only `tracks` (e.g. the one being written, a piano: both hands), without the chord symbols.
+   */
+  SC.copyBar = function (doc, bi, tracks) {
     const src = SC.sourceBar(doc, bi);
-    return {
+    return Object.assign({
       ts: doc.bars[src].ts.slice(),
-      tracks: doc.tracks.map((t) => Object.assign(TC.clone(t.bars[SC.sourceBar(doc, bi, t)]), { simile: false })),
-      chords: doc.bars[bi].chords ? TC.clone(doc.bars[bi].chords) : null, // (the chord symbols go along)
-    };
+      tracks: (tracks || doc.tracks).map((t) => Object.assign(TC.clone(t.bars[SC.sourceBar(doc, bi, t)]), { simile: false })),
+    }, tracks ? {} : { chords: doc.bars[bi].chords ? TC.clone(doc.bars[bi].chords) : null }); // (the chord symbols go along)
   };
 
 
   /**
    * Put copied notes into bar `bi` (replaces its notes; new ids; cut to its length): track k gets
-   * the copied track k (a track the copy does not have stays as it is). only: put the first copied
-   * track into this track alone (e.g. a MIDI import into the track being written).
+   * the copied track k (a track the copy does not have stays as it is). only: put the copied tracks into these
+   * tracks alone, in their order (a track, or [tracks]: e.g. a MIDI import into the track being written, the bar of one
+   * track copied into another; a piano: both hands) - the other tracks and the chord symbols stay.
    */
   SC.pasteBar = function (doc, bi, clip, only) {
     if (!clip) return false;
+    const targets = only ? [].concat(only) : null;
     doc.tracks.forEach((t, k) => {
-      const from = only ? (t === only ? clip.tracks[0] : null) : clip.tracks[k];
+      const from = targets ? (targets.includes(t) ? clip.tracks[targets.indexOf(t)] : null) : clip.tracks[k];
       if (!from) return;
       const bar = TC.clone(from);
       bar.simile = false;
@@ -1521,10 +1525,10 @@
     return true;
   };
 
-  /** Copy of bars a … b: { bars: [ copyBar … ] } (%-bars: what they play). */
-  SC.copyBars = function (doc, a, b) {
+  /** Copy of bars a … b: { bars: [ copyBar … ] } (%-bars: what they play; tracks: only these, see SC.copyBar). */
+  SC.copyBars = function (doc, a, b, tracks) {
     const bars = [];
-    for (let i = a; i <= b; i++) bars.push(SC.copyBar(doc, i));
+    for (let i = a; i <= b; i++) bars.push(SC.copyBar(doc, i, tracks));
     return { bars };
   };
   /**

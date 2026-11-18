@@ -20,7 +20,7 @@
     ['Two fingers', 'Scroll and zoom'],
     ['Shift + click beside the lines', 'Select bars up to there'],
     ['Ctrl+click', 'Select several notes'],
-    ['Space', 'Play / stop'], ['Ctrl+C / V / D', 'Copy / paste / duplicate the bar'],
+    ['Space', 'Play / stop'], ['Ctrl+C / V / D', 'Copy / paste / duplicate the bar'], ['Ctrl+Alt+C', 'Copy the bar of this track only'],
     ['Del', 'Delete selected notes'], ['Ctrl+Z / Y', 'Undo / redo'],
     ['Ctrl+L', 'Type lyrics (melody: at the selected note)'],
     ['Ctrl+Shift+L', 'Show / hide the lyrics'],

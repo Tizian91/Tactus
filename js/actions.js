@@ -803,25 +803,40 @@
     TC.commit();
   };
 
-  /** Copy bar i - or all selected bars, if i is one of them. */
-  A.copyBar = function (i = curBar()) {
-    const [a, b] = rangeAt(i);
-    S.clipboard = TC.score.copyBars(S.doc, a, b);
+  /**
+   * Copy bar i - or all selected bars, if i is one of them: of all tracks (with the chord symbols), or (one) only of the
+   * track being written (a piano: both hands) - pasted then into the track being written at that time.
+   */
+  A.copyBar = function (i = curBar(), one) {
+    const [a, b] = rangeAt(i), tk = TC.curTrack();
+    const hands = one ? TC.score.handsOf(S.doc, tk) : null;
+    S.clipboard = Object.assign(TC.score.copyBars(S.doc, a, b, hands), one ? { only: { kind: tk.kind, name: tk.name } } : {});
     if (a === b) TC.selectBar(i);
-    TC.ui.hint(a === b ? tr('Bar {n} copied – click a bar and paste (Ctrl+V)', { n: a + 1 })
-      : tr('Bars {a}–{b} copied – click a bar and paste (Ctrl+V)', { a: a + 1, b: b + 1 }));
+    const what = a === b ? tr('Bar {n} copied', { n: a + 1 }) : tr('Bars {a}–{b} copied', { a: a + 1, b: b + 1 });
+    TC.ui.hint(what + (one ? ' – ' + tr('only "{track}"', { track: tk.name }) : '') + ' – ' + tr('click a bar and paste (Ctrl+V)'));
     TC.refresh();
   };
-  /** Paste the copied bar(s) from bar i on (the first of the selected bars); new bars at the end if needed. */
+  /** Copy bar i (or the selected bars) only of the track being written (Ctrl+Alt+C). */
+  A.copyTrackBar = (i = curBar()) => A.copyBar(i, true);
+  /**
+   * Paste the copied bar(s) from bar i on (the first of the selected bars); new bars at the end if needed. Copied from
+   * one track: into the track being written alone - tones into any melody track, drums only into a drum track.
+   */
   A.pasteBar = function (i = curBar()) {
-    if (!S.clipboard) return TC.ui.hint(tr('Copy a bar first (Ctrl+C)'));
+    const clip = S.clipboard;
+    if (!clip) return TC.ui.hint(tr('Copy a bar first (Ctrl+C)'));
+    const tk = TC.curTrack();
+    if (clip.only && (clip.only.kind === 'drums') !== (tk.kind === 'drums')) {
+      return TC.ui.hint(tr(clip.only.kind === 'drums' ? 'Drum notes go only into a drum track - choose one first' : 'Tones go only into a melody track - choose one first'));
+    }
     const at = rangeAt(i)[0];
-    const n = TC.score.pasteBars(S.doc, at, S.clipboard);
+    const n = TC.score.pasteBars(S.doc, at, clip, clip.only ? TC.score.handsOf(S.doc, tk) : undefined);
     TC.selectBar(at);
     if (n > 1) TC.selectBar(at + n - 1, true);
     TC.pruneSelection();
     TC.commit();
-    TC.ui.hint(n > 1 ? tr('Pasted into bars {a}–{b}', { a: at + 1, b: at + n }) : tr('Pasted into bar {n}', { n: at + 1 }));
+    TC.ui.hint((n > 1 ? tr('Pasted into bars {a}–{b}', { a: at + 1, b: at + n }) : tr('Pasted into bar {n}', { n: at + 1 })) +
+      (clip.only ? ' – ' + tr('only "{track}"', { track: tk.name }) : ''));
   };
   /** A copy of the bar (or of the selected bars) right after it. */
   A.duplicateBar = function (i = curBar()) {
@@ -2339,7 +2354,9 @@
       play,
       '-',
       { label: many ? tr('Copy bars {a}–{b}', ab) : 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
-      { label: clipN > 1 ? tr('Paste {n} bars from here', { n: clipN }) : 'Paste into this bar', action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
+      // (several tracks: also only the one being written)
+      S.doc.tracks.filter((t) => !t.lh).length > 1 ? { label: tr(many ? 'Copy bars {a}–{b} – only "{track}"' : 'Copy bar – only "{track}"', Object.assign({ track: TC.curTrack().name }, ab)), action: () => A.copyTrackBar(i), shortcut: 'Ctrl+Alt+C' } : null,
+      { label: (clipN > 1 ? tr('Paste {n} bars from here', { n: clipN }) : tr('Paste into this bar')) + (S.clipboard && S.clipboard.only ? ' – ' + tr('only "{track}"', { track: TC.curTrack().name }) : ''), action: () => A.pasteBar(i), shortcut: 'Ctrl+V', disabled: !S.clipboard },
       { label: many ? tr('Duplicate bars {a}–{b}', ab) : 'Duplicate bar', action: () => A.duplicateBar(i), shortcut: 'Ctrl+D' },
       TC.curTrack().bars[i].simile ? { label: 'Show the notes instead of %', action: () => A.simileToNotes(i) }
         : { label: 'Repeat the bar before (%)', action: () => A.toggleSimile(i), disabled: i === 0 },

@@ -1180,6 +1180,28 @@ setTimeout(() => {
           ok('keyswitches: P.M. from the note panel - in the bar, written above the staff with its line', !!pmBtn && JSON.stringify(it.bars[0].ks) === '[{"t":0,"k":"muted"}]' &&
             [...document.querySelectorAll('.score .ks-mark')].some((x) => x.textContent === 'P.M.') && !!document.querySelector('.score .ks-line'));
           while (TC.history.undoStack.length > undoKs) TC.actions.undo();
+          // the bar of one track only (Ctrl+Alt+C): pasted into the track being written alone (melody into melody); drums not into a melody track
+          const undoCp = TC.history.undoStack.length, m1 = TC.score.addTrack(S.doc, 'M1', null, 'pitched'), m2 = TC.score.addTrack(S.doc, 'M2', null, 'pitched');
+          TC.score.place(S.doc, m1, 0, 0, 0, 960, TC.newPitchNote(64, null, {}));
+          TC.commit();
+          const key = (k, o) => document.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key: k, bubbles: true }, o)));
+          const drumsBefore = JSON.stringify(S.doc.tracks[0].bars[2].voices);
+          TC.actions.selectTrack(m1.id); TC.selectBar(0);
+          key('c', { ctrlKey: true, altKey: true });
+          const onlyClip = !!(S.clipboard && S.clipboard.only) && S.clipboard.bars[0].tracks.length === 1;
+          TC.actions.selectTrack(m2.id); TC.selectBar(2);
+          key('v', { ctrlKey: true });
+          const p2 = S.doc.tracks.find((t) => t.id === m2.id).bars[2].voices.flat().flatMap((e) => e.notes.map((n) => n.pitch));
+          ok('copy one track (Ctrl+Alt+C), paste (Ctrl+V): into M2 alone, the drums of that bar stay ' + JSON.stringify(p2),
+            onlyClip && JSON.stringify(p2) === '[64]' && JSON.stringify(S.doc.tracks[0].bars[2].voices) === drumsBefore);
+          TC.actions.selectTrack(S.doc.tracks[0].id); TC.selectBar(0);
+          TC.actions.copyTrackBar();
+          TC.actions.selectTrack(m1.id); TC.selectBar(3);
+          const revCp = S.rev;
+          TC.actions.pasteBar();
+          ok('drums copied alone: not pasted into a melody track', S.rev === revCp && S.doc.tracks.find((t) => t.id === m1.id).bars[3].voices.flat().length === 0);
+          while (TC.history.undoStack.length > undoCp) TC.actions.undo();
+          S.clipboard = null;
           S.trackId = S.doc.tracks[0].id;
           // the view dragged with the middle button: held, a pause does not draw it anew (a jolt); let go: drawn anew
           const svgEl = document.getElementById('score'), rr = vp.getBoundingClientRect();

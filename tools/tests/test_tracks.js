@@ -111,4 +111,24 @@ module.exports = function (T) {
   T.eq('moving notes of two tracks: refused', SC.moveNotes(doc, mixed, 480), false);
   T.eq('staff spacing: kept when loaded, bad values: 80 % (standard)', [TC.normalizeDoc({ bars: [{}], page: { staffGap: 40 } }).page.staffGap, TC.normalizeDoc({ bars: [{}], page: { staffGap: 55 } }).page.staffGap, TC.emptyScore(1).page.staffGap], [40, 80, 80]);
   T.eq('line spacing: kept when loaded, bad values: 100 % (standard)', [TC.normalizeDoc({ bars: [{}], page: { lineGap: 60 } }).page.lineGap, TC.normalizeDoc({ bars: [{}], page: { lineGap: 33 } }).page.lineGap, TC.emptyScore(1).page.lineGap], [60, 100, 100]);
+
+  // copying the bar of one track only: into another track (melody into melody), the other tracks and the chords stay
+  const d2 = TC.emptyScore(3);
+  S.doc = d2;
+  const dr2 = d2.tracks[0], g1 = SC.addTrack(d2, 'Guitar 1', null, 'pitched'), g2 = SC.addTrack(d2, 'Guitar 2', null, 'pitched');
+  SC.place(d2, dr2, 0, 0, 0, 960, TC.newDrumNote(36, {}));
+  [60, 64, 67].forEach((p) => SC.place(d2, g1, 0, 0, 0, 960, TC.newPitchNote(p, null, {})));
+  SC.place(d2, g2, 1, 0, 0, 960, TC.newPitchNote(50, null, {}));
+  SC.place(d2, dr2, 1, 0, 960, 960, TC.newDrumNote(38, {}));
+  SC.setChord(d2, 1, 0, { name: 'G' });
+  const pitches = (t, bi) => t.bars[bi].voices.flat().flatMap((e) => e.notes.map((n) => e.tick + ':' + n.pitch)).sort();
+  const oneClip = SC.copyBars(d2, 0, 0, [g1]);
+  T.eq('copied from one track: only its bar, no chord symbols', [oneClip.bars[0].tracks.length, 'chords' in oneClip.bars[0]], [1, false]);
+  SC.pasteBars(d2, 1, oneClip, [g2]);
+  T.eq('… pasted into another melody track: there the chord of Guitar 1, the drums and Guitar 1 of bar 2 as they were, the chord symbol stays',
+    [pitches(g2, 1), arts(dr2, 1), pitches(g1, 1), (d2.bars[1].chords || []).length], [['0:60', '0:64', '0:67'], ['960:38'], [], 1]);
+  T.eq('… new ids (not the notes of bar 1)', g2.bars[1].voices.flat()[0].notes[0].id !== g1.bars[0].voices.flat()[0].notes[0].id, true);
+  const allClip = SC.copyBars(d2, 0, 0);
+  T.eq('copied from all tracks: every track and the chord symbols', [allClip.bars[0].tracks.length, 'chords' in allClip.bars[0]], [3, true]);
+  S.doc = doc;
 };

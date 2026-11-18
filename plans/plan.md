@@ -871,3 +871,9 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - Messwerkzeug `tools/perf/run.js` (+ `perf.js`): Edge headless über DevTools-Protokoll, Teststück(e), Szenarien hover / pan /
   cursor / draw, Hauptthread-Zeit pro Schritt gegen Budgets, größte Posten aus dem Tracing; Exit-Code 1 bei SLOW. Standard: zwei
   Stücke (4 Spuren · 16 Takte · 1/16 und 1 Spur · 64 Takte · 1/32, Zoom 150 %, Takt ausgewählt). Erkennt die opacity-Bremse.
+
+### Takt nur einer Spur kopieren
+- `SC.copyBar(s)(…, tracks)`: nur diese Spuren, ohne Akkordsymbole; `SC.pasteBar(…, only)` nimmt jetzt auch [Spuren] (der Reihe nach,
+  Klavier: beide Hände). `A.copyTrackBar` (Strg+Alt+C – Strg+Umschalt+C ist der Inspektor des Browsers; Panel „Nur diese Spur kopieren“,
+  Taktmenü): Zwischenspeicher mit `only: { kind, name }`; Strg+V fügt dann in die gewählte Spur ein – Töne in jede Melodie-Spur,
+  Schlagzeug nur in Schlagzeug (sonst Hinweis). Tests in test_tracks.js, Klick-Test.

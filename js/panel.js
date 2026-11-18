@@ -295,7 +295,8 @@
       ${S.doc.bars[i + 1] ? check('toggleBreakAfter', !!S.doc.bars[i + 1].lineBreak, tr('Line break after this bar (page view)')) : ''}
       <div class="btn-row">
         ${btn('copyBar', undefined, tr('Copy'), false, (many ? tr('Copy bars {a}–{b}', ab) : tr('Copy bar')) + ' (Ctrl+C)')}
-        ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
+        ${S.doc.tracks.filter((x) => !x.lh).length > 1 ? btn('copyTrackBar', undefined, tr('Copy this track'), false, tr(many ? 'Copy bars {a}–{b} – only "{track}"' : 'Copy bar – only "{track}"', Object.assign({ track: TC.curTrack().name }, ab)) + ' (Ctrl+Alt+C)') : ''}
+        ${btn('pasteBar', undefined, tr('Paste'), false, tr('Paste into this bar') + (S.clipboard && S.clipboard.only ? ' – ' + tr('only "{track}"', { track: TC.curTrack().name }) : '') + ' (Ctrl+V)', S.clipboard ? '' : 'off')}
         ${btn('duplicateBar', undefined, tr('Duplicate'), false, (many ? tr('Duplicate bars {a}–{b}', ab) : tr('Duplicate bar')) + ' (Ctrl+D)')}
         ${i > 0 ? btn('toggleSimile', undefined, '%', !!TC.curTrack().bars[i].simile, tr('Repeat the bar before (%)')) : ''}
       </div>
@@ -908,7 +909,7 @@
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
       cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
-      S.settings, S.tsMode, !!S.clipboard, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;

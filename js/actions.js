@@ -2047,7 +2047,8 @@
     // several tracks, or chord symbols (a MIDI track / file of their own): the dialog
     if (TC.score.instruments(S.doc).length > 1 || S.doc.bars.some((h) => h.chords)) return A.exportMidiDialog(profileId);
     const t = S.doc.tracks[0];
-    const p = profileId !== undefined ? (profileId ? TC.kits.byId(profileId) : null) : TC.kits.ofTrack(S.doc, t);
+    // (a melody track: no kit profile - its tones go out with their pitch; nor in the file name)
+    const p = t.kind !== 'drums' ? null : profileId !== undefined ? (profileId ? TC.kits.byId(profileId) : null) : TC.kits.ofTrack(S.doc, t);
     const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
     const name = baseName() + (p ? ' (' + cleanName(p.name) + ')' : '') + '.mid';
     download(res.bytes, name);
@@ -2135,7 +2136,8 @@
       if (hasChords) S.settings.midiChords = chords;
       TC.saveSettings();
       close();
-      exportTracks(chosen.map((r) => ({ track: r.t, profile: r.target === 'gm' ? null : TC.kits.byId(r.target) })), mode, chords)
+      // (a melody track: no kit profile - nor in its file name "Title – Guitar.mid")
+      exportTracks(chosen.map((r) => ({ track: r.t, profile: r.t.kind !== 'drums' || r.target === 'gm' ? null : TC.kits.byId(r.target) })), mode, chords)
         .catch(() => TC.ui.status(TC.tr('Export cancelled')));
     });
     draw();

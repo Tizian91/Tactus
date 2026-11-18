@@ -880,3 +880,6 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - MIDI-Export-Dialog: Melodie-Spuren ohne Drum-Map-Auswahl (die war für sie wirkungslos – Töne gehen mit ihrer Tonhöhe hinaus,
   `keyFor` nur für Schlagzeug-Noten); stattdessen `melodyExportInfo`: Keyswitch-Profil · Noten ±n · Dynamik über CC / Pitchbend
   (Bereich), oder „ohne Keyswitch-Profil“. Klick-Test.
+- MIDI-Export: Dateiname einer Melodie-Spur ohne Drum-VST („Titel – Gitarre Lead.mid“ statt „… (EZDrummer 3 (Tactus))“) – Überbleibsel
+  aus der Zeit mit einem Kit-Profil für das ganze Stück; Melodie-Spuren bekommen gar kein Kit-Profil mehr (Dialog, Export einer
+  einzelnen Melodie-Spur). Klick-Test fängt die Dateinamen ab (Ersatz für showDirectoryPicker).

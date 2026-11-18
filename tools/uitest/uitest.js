@@ -1187,6 +1187,21 @@ setTimeout(() => {
             !!ironRow && !ironRow.querySelector('select') && /UJAM Iron 2/.test(ironRow.querySelector('.export-info').textContent) && /Noten \+12/.test(ironRow.textContent) &&
             exRows.some((r) => r !== ironRow && r.querySelector('select[data-k="target"]')));
           if (exd2) exd2.querySelector('[data-k="close"]').click();
+          // … exported with a kit profile chosen for all (Datei → MIDI exportieren für …): the melody track's file has no drum VST in its name
+          window.__exNames = [];
+          const pickerBefore = window.showDirectoryPicker;
+          window.showDirectoryPicker = async () => ({ getFileHandle: async (n) => { window.__exNames.push(n); return { createWritable: async () => ({ write: async () => {}, close: async () => {} }) }; } });
+          TC.kits.list.push({ id: 'fakekit', name: 'FakeKit', keys: {} });
+          TC.actions.exportMidiDialog('fakekit');
+          const exd3 = document.querySelector('.midi-export-backdrop');
+          if (exd3) {
+            [...exd3.querySelectorAll('.export-row')].forEach((r) => { if (r.querySelector('select[data-k="target"]')) { const c = r.querySelector('input[data-k="on"]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); } });
+            const chk = exd3.querySelector('input[data-k="chords"]');
+            if (chk && chk.checked) { chk.checked = false; chk.dispatchEvent(new Event('change', { bubbles: true })); }
+            exd3.querySelector('[data-k="ok"]').click();
+          }
+          TC.kits.list = TC.kits.list.filter((p) => p.id !== 'fakekit');
+          window.__exRestore = () => { window.showDirectoryPicker = pickerBefore; };
           while (TC.history.undoStack.length > undoKs) TC.actions.undo();
           // the bar of one track only (Ctrl+Alt+C): pasted into the track being written alone (melody into melody); drums not into a melody track
           const undoCp = TC.history.undoStack.length, m1 = TC.score.addTrack(S.doc, 'M1', null, 'pitched'), m2 = TC.score.addTrack(S.doc, 'M2', null, 'pitched');
@@ -1220,6 +1235,9 @@ setTimeout(() => {
             const heldT = svgEl.style.transform;
             vp.dispatchEvent(pe('pointerup', rr.left + 260));
             setTimeout(() => {
+              ok('MIDI export of a melody track with a kit profile chosen: its file without the drum VST in the name ' + JSON.stringify(window.__exNames),
+                window.__exNames.length > 0 && window.__exNames.every((n) => !/FakeKit/.test(n)) && window.__exNames.some((n) => /Iron\.mid$/.test(n)));
+              if (window.__exRestore) window.__exRestore();
               ok('view held with the middle button: not drawn anew in a pause (' + heldT + '), drawn when let go', !!heldT && svgEl.style.transform === '');
               S.doc.view.x = 190; TC.refresh();
               const pre = document.createElement('pre');

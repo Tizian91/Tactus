@@ -1179,6 +1179,14 @@ setTimeout(() => {
           if (pmBtn) pmBtn.click();
           ok('keyswitches: P.M. from the note panel - in the bar, written above the staff with its line', !!pmBtn && JSON.stringify(it.bars[0].ks) === '[{"t":0,"k":"muted"}]' &&
             [...document.querySelectorAll('.score .ks-mark')].some((x) => x.textContent === 'P.M.') && !!document.querySelector('.score .ks-line'));
+          // the MIDI export dialog: a melody track shows what goes along (its keyswitch profile) instead of a drum map
+          TC.actions.exportMidiDialog();
+          const exd2 = document.querySelector('.midi-export-backdrop'), exRows = exd2 ? [...exd2.querySelectorAll('.export-row')] : [];
+          const ironRow = exRows.find((r) => /Iron/.test(r.querySelector('b') ? r.querySelector('b').textContent : ''));
+          ok('export dialog: the Iron track without a drum map, its keyswitch profile named ' + (ironRow ? ironRow.textContent.replace(/\s+/g, ' ').trim() : '-'),
+            !!ironRow && !ironRow.querySelector('select') && /UJAM Iron 2/.test(ironRow.querySelector('.export-info').textContent) && /Noten \+12/.test(ironRow.textContent) &&
+            exRows.some((r) => r !== ironRow && r.querySelector('select[data-k="target"]')));
+          if (exd2) exd2.querySelector('[data-k="close"]').click();
           while (TC.history.undoStack.length > undoKs) TC.actions.undo();
           // the bar of one track only (Ctrl+Alt+C): pasted into the track being written alone (melody into melody); drums not into a melody track
           const undoCp = TC.history.undoStack.length, m1 = TC.score.addTrack(S.doc, 'M1', null, 'pitched'), m2 = TC.score.addTrack(S.doc, 'M2', null, 'pitched');

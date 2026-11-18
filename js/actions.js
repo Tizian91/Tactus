@@ -2057,6 +2057,19 @@
   };
 
   /**
+   * What a melody track takes into the MIDI export (shown in the export dialog instead of a drum map): its keyswitch
+   * profile, the shift of its notes, its dynamics through a controller - or that it has none.
+   */
+  const melodyExportInfo = function (t) {
+    const k = t.ksw;
+    if (!k) return tr('no keyswitch profile - notes and dynamics (strength) only');
+    const parts = [tr('Keyswitches: {name}', { name: k.name })];
+    if (k.noteShift) parts.push(tr('notes {n}', { n: (k.noteShift > 0 ? '+' : '') + k.noteShift }));
+    const cc = k.dyn && TC.ksw && TC.ksw.DYN_CCS.find(([n]) => n === k.dyn.cc);
+    if (cc) parts.push(tr('dynamics through {cc} ({lo} … {hi})', { cc: tr(cc[1]), lo: k.dyn.lo, hi: k.dyn.hi }));
+    return parts.join(' · ');
+  };
+  /**
    * Export dialog for several tracks: a tick for each track to export, the drum map it is written for
    * (preset: its kit profile), and one MIDI file per track (each fits its own drum VST in Cubase) or
    * one file with a MIDI track per Tactus track. Every file has tempo, time signatures, markers and the
@@ -2084,13 +2097,14 @@
     const draw = () => {
       const list = rows.map((r, k) => `<div class="export-row">
           <label class="check"><input type="checkbox" data-k="on" data-i="${k}"${r.on ? ' checked' : ''}> <b>${esc(r.t.name)}</b>${r.t.mute ? ` <span class="muted">(${tr('muted')})</span>` : ''}</label>
-          <select data-k="target" data-i="${k}"${r.on ? '' : ' disabled'}>${targets.map(([v, l]) => `<option value="${esc(v)}"${v === r.target ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>
+          ${r.t.kind === 'pitched' ? `<span class="export-info muted">${esc(melodyExportInfo(r.t))}</span>` // (a melody track: no drum map - what goes along)
+            : `<select data-k="target" data-i="${k}"${r.on ? '' : ' disabled'}>${targets.map(([v, l]) => `<option value="${esc(v)}"${v === r.target ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`}
         </div>`).join('') + (hasChords ? `<div class="export-row">
           <label class="check"><input type="checkbox" data-k="chords"${chords ? ' checked' : ''}> <b>${tr('Chords')}</b> <span class="muted">(${tr('a pad on channel 15, the names as text')})</span></label></div>` : '');
       const n = rows.filter((r) => r.on).length + (chords ? 1 : 0);
       root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Export MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
-          <p class="hint tight">${tr('Which tracks, and for which drum map (kit profile) each one is written:')}</p>
+          <p class="hint tight">${tr('Which tracks, and for which drum map (kit profile) each one is written:')} ${tr('Melody tracks take their keyswitch profile (Tracks & sound) along.')}</p>
           <div class="export-list">${list}</div>
           <div class="row"><label>${tr('Files')}</label><select data-k="mode">
             <option value="files"${mode === 'files' ? ' selected' : ''}>${tr('One MIDI file per track')}</option>

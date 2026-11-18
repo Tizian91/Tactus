@@ -877,3 +877,6 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   Klavier: beide Hände). `A.copyTrackBar` (Strg+Alt+C – Strg+Umschalt+C ist der Inspektor des Browsers; Panel „Nur diese Spur kopieren“,
   Taktmenü): Zwischenspeicher mit `only: { kind, name }`; Strg+V fügt dann in die gewählte Spur ein – Töne in jede Melodie-Spur,
   Schlagzeug nur in Schlagzeug (sonst Hinweis). Tests in test_tracks.js, Klick-Test.
+- MIDI-Export-Dialog: Melodie-Spuren ohne Drum-Map-Auswahl (die war für sie wirkungslos – Töne gehen mit ihrer Tonhöhe hinaus,
+  `keyFor` nur für Schlagzeug-Noten); stattdessen `melodyExportInfo`: Keyswitch-Profil · Noten ±n · Dynamik über CC / Pitchbend
+  (Bereich), oder „ohne Keyswitch-Profil“. Klick-Test.

@@ -196,8 +196,13 @@
     const k = track && track.ksw && track.ksw.keys.find((x) => x.id === id);
     return k ? Object.assign({ midi: KS.noteOf(k.note, track.ksw.c3) }, k) : null;
   };
-  /** The text of a keyswitch in the score ('' none: a way of playing written as signs at the notes, e.g. staccato). */
-  KS.markText = (k) => (k ? (KS.cat(k.id) ? k.short : k.short || k.name) : '');
+  /**
+   * Is a way of playing "just the usual" - the start of a group whose others draw a line (let ring after P.M., legato
+   * off after legato)? Not written in the score: it only ends the line before it (P.M. - - -┘ … P.M. - - -┘).
+   */
+  KS.silent = (k) => !!k && k.kind === 'art' && !!k.def && !!k.group && KS.CATALOG.some((c) => c.group === k.group && c.line);
+  /** The text of a keyswitch in the score ('' none: a way of playing written as signs at the notes, e.g. staccato; let ring). */
+  KS.markText = (k) => (k ? (KS.silent(k) ? '' : KS.cat(k.id) ? k.short : k.short || k.name) : '');
   /** Does a way of playing draw a dashed line to the next one of its group (P.M. - - -┘)? (before the catalog: all but "open") */
   KS.hasLine = (k) => !!k && k.kind === 'art' && (KS.cat(k.id) ? !!KS.cat(k.id).line : !/^(open|let ring)$/i.test(k.short || k.name));
   /** The button text of a keyswitch (the note panel): its text, else its name. */

@@ -868,3 +868,6 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
   Rechteck mit CSS `opacity` (ausgewählter Takt `.bar-sel`) machte eine Effekt-Gruppe; bei jeder Änderung der Vorschau sortierte der
   Browser alles darüber neu in Ebenen. Im Notenbild jetzt nur `fill-opacity` / `stroke-opacity` (sieht gleich aus): ~10× schneller.
   Messung: Edge headless mit --remote-debugging-port, Tracing, Input.dispatchMouseEvent (Skript nicht im Repo).
+- Messwerkzeug `tools/perf/run.js` (+ `perf.js`): Edge headless über DevTools-Protokoll, Teststück(e), Szenarien hover / pan /
+  cursor / draw, Hauptthread-Zeit pro Schritt gegen Budgets, größte Posten aus dem Tracing; Exit-Code 1 bei SLOW. Standard: zwei
+  Stücke (4 Spuren · 16 Takte · 1/16 und 1 Spur · 64 Takte · 1/32, Zoom 150 %, Takt ausgewählt). Erkennt die opacity-Bremse.

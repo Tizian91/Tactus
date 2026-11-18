@@ -60,3 +60,33 @@ Browser gesichertes Stück bleibt unverändert.
 
 `tools/uitest/index.html` ist eine Kopie von `index.html` mit Pfaden `../../` und dem Skript
 `uitest.js`; nach Änderungen an `index.html` (neue Skripte) dort nachziehen.
+
+## Messung: Wie flüssig reagiert das Notenbild? (`tools/perf/`)
+
+Startet Edge ohne Fenster, baut in der echten App ein Teststück und misst über das DevTools-Protokoll
+des Browsers, wie lange dessen Hauptthread pro Schritt beschäftigt ist:
+
+```bash
+ELECTRON_RUN_AS_NODE=1 ".../Code.exe" tools/perf/run.js "<Pfad zum Repo>"
+```
+
+| Szenario | was passiert |
+|---|---|
+| `hover` | Maus über die Linien von Takt 2 – die Vorschau-Note (ms pro Mausbewegung) |
+| `pan` | Ansicht mit der mittleren Maustaste ziehen (ms pro Bewegung) |
+| `cursor` | Abspiel-Cursor läuft über einen Loop von drei Takten (ms pro Bild) |
+| `draw` | das ganze Notenbild neu bauen (ms pro Zeichnung) |
+
+Ohne Angaben misst es zwei Stücke: 4 Spuren · 16 Takte · Raster 1/16 und ein langes Stück mit
+1 Spur · 64 Takten · Raster 1/32 – beide mit Zoom 150 % und einem ausgewählten Takt. Eigenes Stück:
+`--bars=… --tracks=… --grid=… --zoom=… --sel=0|1`; anderer Browser: `--edge="…\chrome.exe"`;
+`--out=datei.txt` schreibt das Ergebnis zusätzlich in eine Datei.
+
+Jede Zeile: `OK` / `SLOW` gegen ein Budget (ein Bild bei 60 Hz = 16,7 ms; die Budgets lassen Luft für
+langsamere Geräte), dahinter die größten Posten (z. B. `Layerize` = Ebenen neu einsortieren, `Paint`,
+`HitTest`). Exit-Code 1, wenn etwas `SLOW` ist. Die Zahlen hängen vom Rechner ab – zum Vergleich vorher /
+nachher auf demselben Gerät, nicht zwischen Geräten.
+
+Ein großer `Layerize`-Anteil heißt meist: CSS `opacity` an einem Element im Notenbild (stattdessen
+`fill-opacity` / `stroke-opacity`, siehe `css/app.css`). Gegenprobe beim Bau: `opacity: 0.7` an
+`.bar-sel` → beim langen Stück `hover` ~900 ms statt ~6 ms.

@@ -19,3 +19,6 @@ xmltest/
 
 # Cubase expression maps of the user (not part of Tactus)
 expressionmap/
+
+# Measuring tool: the page it writes while it runs
+tools/perf/.page.html

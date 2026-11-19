@@ -718,6 +718,24 @@ setTimeout(() => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     ok('Esc: the stage view ends, the bar goes, the timer stops', !document.body.classList.contains('perform') && !document.getElementById('perform-bar') && !TC.pacer.running());
     TC.actions.setTurnMode(keepTurn);
+    // parts (texts above bars): "Parts ▾" lists them, a click jumps there - the bar at the top left
+    const secBtn = document.getElementById('section-btn'), secBefore = TC.actions.sections().length;
+    TC.actions.setMarker('UI-Intro', 1);
+    TC.actions.setMarker('UI-Chorus', 20);
+    const names = TC.actions.sections().map((s) => s.name);
+    ok('parts: "Parts ▾" in the toolbar, the parts in order (' + names.join(', ') + ')', !secBtn.hidden && names.length === secBefore + 2 && names.indexOf('UI-Intro') < names.indexOf('UI-Chorus'));
+    secBtn.click();
+    const chorusItem = [...document.querySelectorAll('#context-menu .menu-item')].find((m) => /UI-Chorus/.test(m.textContent));
+    ok('"Parts ▾": a menu with the parts and their bars', !!chorusItem && /21/.test(chorusItem.textContent));
+    chorusItem.click();
+    const Lc = TC.render.layout, bc = Lc.bars[20], yc = S.doc.view.y + (Lc.systems[bc.sys].ty - 9 * TC.render.SP) * S.doc.view.zoom;
+    ok('jump to "UI-Chorus": bar 21 selected, its line at the top (' + Math.round(yc) + ' px)', S.selBar === 20 && Math.abs(yc - 8) < 2);
+    TC.actions.barMenu(5, 200, 200);
+    ok('bar menu: "Jump to" with the parts', [...document.querySelectorAll('#context-menu .menu-item.has-sub')].some((m) => /UI-Chorus/.test(m.textContent)));
+    TC.menu.close();
+    TC.actions.undo();
+    TC.actions.undo();
+    ok('parts: undone, "Parts ▾" as before', TC.actions.sections().length === secBefore && secBtn.hidden === !secBefore);
     if (wasEndless) TC.actions.layout('endless');
     TC.actions.undo();
     const sk = document.getElementById('status-kit');

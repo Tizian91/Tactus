@@ -39,19 +39,21 @@
   let run = null; // { ctx, tl, clicks, ci, turns, starts, ti, t0, cbus, timer }
   Pc.running = () => !!run;
 
-  /** Starts on the page shown (with the count-in, if chosen). */
-  Pc.start = function () {
+  /** Starts on the page shown, or at bar `fromBar` (with the count-in, if chosen). */
+  Pc.start = function (fromBar) {
     Pc.stop(true);
     const ctx = TC.audio.context();
     if (!ctx) return TC.ui.hint(tr('This browser cannot play sound'));
     if (TC.player.playing) TC.player.stop(true);
     const st = S.settings;
     const pageOf = TC.render.pagesOfBars();
-    const from = Math.max(0, pageOf.indexOf(TC.actions.currentPage()));
+    const at = Number.isInteger(fromBar) && S.doc.bars[fromBar];
+    if (at) TC.actions.gotoPage(pageOf[fromBar] || 0);
+    const from = at ? fromBar : Math.max(0, pageOf.indexOf(TC.actions.currentPage()));
     const tl = TC.timeline.build(S.doc, { from, metronome: st.timerClick !== false, countIn: st.timerClick !== false && st.timerCountIn !== false });
     const p = Pc.plan(tl, pageOf, st.turnLead === undefined ? 1 : st.turnLead);
     const first = tl.bars.find((b) => b.bar >= 0);
-    run = { ctx, tl, clicks: tl.hits.filter((h) => h.click), ci: 0, turns: p.turns, starts: p.starts, ti: 1, t0: ctx.currentTime + 0.1, cbus: TC.audio.clickBus(), first: first ? first.bar : from };
+    run = { ctx, tl, clicks: tl.hits.filter((h) => h.click), ci: 0, plan: p, turns: p.turns, starts: p.starts, ti: 1, t0: ctx.currentTime + 0.1, cbus: TC.audio.clickBus(), first: first ? first.bar : from };
     run.timer = setInterval(step, 25);
     step();
     if (TC.actions.refreshPerformBar) TC.actions.refreshPerformBar();
@@ -75,15 +77,38 @@
     const now = run.ctx.currentTime, song = now - run.t0 - TC.audio.outputDelay();
     let best = null;
     for (const s of run.starts) if (s.page === k && (!best || Math.abs(s.t - song) < Math.abs(best.t - song))) best = s;
-    if (!best) return;
-    fade(run);
-    run.cbus = TC.audio.clickBus();
-    run.t0 = now + AHEAD - best.t;
-    run.ci = run.clicks.findIndex((h) => h.t >= best.t - 1e-6);
-    if (run.ci < 0) run.ci = run.clicks.length;
-    run.ti = run.turns.findIndex((x) => x.t > best.t);
-    if (run.ti < 0) run.ti = run.turns.length;
+    if (best) jumpAt(best.t, best.t);
   };
+
+  /** Jump to bar i while running (a part chosen): on from its start (the nearest time it is played; not in the run: started there). */
+  Pc.jumpToBar = function (i) {
+    if (!run) return;
+    const song = run.ctx.currentTime - run.t0 - TC.audio.outputDelay();
+    let best = null;
+    for (const b of run.tl.bars) if (b.bar === i && (!best || Math.abs(b.t0 - song) < Math.abs(best.t0 - song))) best = b;
+    if (!best) return Pc.start(i);
+    jumpAt(best.t0, best.t1);
+  };
+
+  /**
+   * On from second t of the timeline (a bar ending at `end`): the clicks from there, its page shown, the next turn
+   * after it - a turn due earlier (bars before) waits for the end of that bar, so the bar jumped to stays in view.
+   */
+  function jumpAt(t, end) {
+    const r = run, now = r.ctx.currentTime;
+    fade(r);
+    r.cbus = TC.audio.clickBus();
+    r.t0 = now + AHEAD - t;
+    r.ci = r.clicks.findIndex((h) => h.t >= t - 1e-6);
+    if (r.ci < 0) r.ci = r.clicks.length;
+    r.turns = r.plan.turns.map((x) => Object.assign({}, x));
+    let k = 0;
+    r.starts.forEach((s, j) => { if (s.t <= t + 1e-6) k = j; });
+    const next = r.turns[k + 1];
+    if (next && next.t <= t + 1e-6) next.t = Math.min(end, r.turns[k + 2] ? r.turns[k + 2].t - 0.05 : end);
+    r.ti = k + 1;
+    if (r.starts[k] && TC.actions.currentPage() !== r.starts[k].page) TC.actions.gotoPage(r.starts[k].page);
+  }
 
   /** What has already been handed to the audio clock: faded out. */
   function fade(r) {

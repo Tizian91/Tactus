@@ -500,8 +500,22 @@
     }
     // "Follow" off: the view stays where it is (to change notes while listening)
     if (!c || S.settings.followPlay === false) return;
-    P.keepInView(c, S.settings.followMode === 'smooth');
+    // at a part (a text above the bar: Verse, Chorus …): its bar to the top left, so a part is seldom broken up on
+    // the screen; up to the next part the view then only jumps when the cursor would leave it (a glide would move it away)
+    if (S.settings.followSections && !document.body.classList.contains('perform')) { // (the stage view shows whole pages)
+      const key = pos.n || pos.bar;
+      if (key !== secKey) {
+        secKey = key;
+        if (S.doc.bars[pos.bar] && S.doc.bars[pos.bar].marker) {
+          TC.actions.alignBar(pos.bar);
+          secHeld = true;
+          return;
+        }
+      }
+    }
+    P.keepInView(c, S.settings.followMode === 'smooth' && !(S.settings.followSections && secHeld));
   }
+  let secKey = null, secHeld = false; // (following the parts: the played bar seen last; a part aligned since the start)
 
   let glideAt = 0; // time of the last smooth step (the glide does not depend on the frame rate)
 
@@ -572,6 +586,8 @@
     build();
     idx = 0;
     until = -1;
+    secKey = null;
+    secHeld = false;
     t0 = ctx.currentTime + 0.05 + (TC.midiOut && TC.midiOut.anyActive(S.doc) ? TC.midiOut.lead() : 0); // room for the MIDI lead
     bus = ctx.createGain(); // this run's own output: stop() fades it without touching the next run
     bus.connect(master);

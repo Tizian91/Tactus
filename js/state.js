@@ -90,6 +90,7 @@ window.TC = window.TC || {};
       clickVol: 1,          // loudness of the click (metronome, count-in): 0 … 2, 1 = as it was
       followPlay: true,     // the view follows the playback cursor (off: it stays where it is)
       followMode: 'jump',   // … 'jump' (when the cursor reaches the edge) or 'smooth' (glides along)
+      followSections: false, // … at a part (text above a bar): that bar to the top left of the view
       swingMidi: true,      // swing / shuffle of the score also in the MIDI export (off: straight notes)
       countIn: false,       // one bar of clicks before playing
       loop: false,          // playback repeats (the selected bar, or everything)

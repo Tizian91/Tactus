@@ -20,7 +20,7 @@
     root.addEventListener('contextmenu', (e) => e.preventDefault());
     root.addEventListener('mouseover', onHover);
     document.addEventListener('pointerdown', (e) => {
-      if (!root.hidden && !root.contains(e.target) && !e.target.closest('#file-btn, #zoom-label')) M.close();
+      if (!root.hidden && !root.contains(e.target) && !e.target.closest('#file-btn, #zoom-label, #section-btn, #perform-bar [data-p="sectionMenu"]')) M.close();
     }, true);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !root.hidden) {
@@ -47,7 +47,7 @@
       if (it.submenu) cls.push('has-sub');
       h += `<div class="${cls.join(' ')}" data-path="${p}">` +
         `<span class="menu-check">${it.checked ? '✓' : ''}</span>` +
-        `<span class="menu-label">${esc(TC.tr(it.label))}</span>` +
+        `<span class="menu-label">${esc(it.raw ? it.label : TC.tr(it.label))}</span>` + // (raw: the user's own text, e.g. a part's name)
         `<span class="menu-shortcut">${it.submenu ? '▸' : esc(it.shortcut || '')}</span>`;
       if (it.submenu) h += `<div class="menu menu-sub">${build(it.submenu, path.concat(i))}</div>`;
       h += '</div>';

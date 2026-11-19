@@ -1220,7 +1220,7 @@
       bar.id = 'perform-bar';
       bar.addEventListener('click', (e) => {
         const b = e.target.closest('button[data-p]');
-        if (b) A[b.dataset.p]();
+        if (b) A[b.dataset.p](b);
       });
       document.body.appendChild(bar);
     }
@@ -1229,6 +1229,7 @@
     const timer = timerMode() ? `<button type="button" data-p="toggleTimer"${on ? ' class="on"' : ''} title="${esc(tr(on ? 'Stop the timer (Space)' : 'Start the timer on this page (Space)'))}">${on ? '■' : '▶'}</button>` : '';
     bar.innerHTML = timer + `<button type="button" data-p="prevPage" title="${esc(tr('Page before'))}">‹</button>` +
       `<span>${k + 1} / ${n}${midi}</span><button type="button" data-p="nextPage" title="${esc(tr('Next page'))}">›</button>` +
+      (A.sections().length ? `<button type="button" data-p="sectionMenu" title="${esc(tr('Jump to a part (Intro, Verse, Chorus …)'))}">≡</button>` : '') +
       `<button type="button" data-p="togglePerform" title="${esc(tr('Leave the stage view (Esc)'))}">✕</button>`;
   }
   /** The whole page in the viewport (stage view). */
@@ -1872,6 +1873,63 @@
     const v = prompt(tr('Text above bar {n} (e.g. Verse, Chorus) – empty: remove', { n: i + 1 }), S.doc.bars[i].marker || '');
     if (v !== null) A.setMarker(v, i);
   };
+
+  // ---- Parts: the texts above the bars (Intro, Verse, Chorus …) - jump to one ------------------------
+
+  /** The parts of the score: every bar with a text above it, in order ({ bar, name }). */
+  A.sections = () => S.doc.bars.map((h, i) => (h.marker ? { bar: i, name: h.marker } : null)).filter(Boolean);
+  /** The menu items "jump to": a part each (✓ the one we are in: the selected bar, else the page shown). */
+  const sectionItems = function () {
+    const list = A.sections();
+    const here = performing() ? (TC.render.pagesOfBars().indexOf(A.currentPage())) : S.selBar;
+    let cur = -1;
+    if (here !== null && here >= 0) list.forEach((s, k) => { if (s.bar <= here) cur = k; });
+    return list.map((s, k) => ({ label: s.name, raw: true, shortcut: tr('bar {n}', { n: s.bar + 1 }), checked: k === cur, action: () => A.jumpToBar(s.bar) }));
+  };
+  /** "Parts ▾" (toolbar, stage bar): the list of parts; a click jumps there. el: the button it opens under. */
+  A.sectionMenu = function (el) {
+    if (TC.menu.isOpen()) return TC.menu.close();
+    const items = sectionItems();
+    if (!items.length) return TC.ui.hint(tr('No parts yet: right-click a bar → "Text above the bar…" (e.g. Verse, Chorus)'));
+    const b = el && el.getBoundingClientRect ? el : document.getElementById(performing() ? 'perform-bar' : 'section-btn');
+    const r = b ? b.getBoundingClientRect() : { left: 20, bottom: 40 };
+    TC.menu.open(items, r.left, r.bottom + 2);
+  };
+  /**
+   * Jump to bar i (a part): it is selected and stands at the top left; while playing, the playback goes on from there.
+   * Stage view: its page (the timer, if it runs, goes on from that bar).
+   */
+  A.jumpToBar = function (i) {
+    i = Number(i);
+    if (!S.doc.bars[i]) return;
+    if (performing()) {
+      if (TC.pacer && TC.pacer.running()) TC.pacer.jumpToBar(i);
+      else A.gotoPage(TC.render.pagesOfBars()[i] || 0);
+      return;
+    }
+    TC.selectBar(i);
+    S.selection.clear();
+    TC.refresh();
+    A.alignBar(i);
+    if (TC.player.playing) TC.player.play(i);
+  };
+  /**
+   * Bar i at the top left of the view, with the text above it: page view - its line at the top (sideways only
+   * when the page is wider than the window); endless view - the bar at the left edge.
+   */
+  A.alignBar = function (i) {
+    const L = TC.render.layout, b = L && L.bars[i];
+    if (!b) return;
+    const s = L.systems[b.sys], v = S.doc.view, z = v.zoom, SP = TC.render.SP, w = document.getElementById('viewport').clientWidth;
+    if (TC.render.isPage()) {
+      v.y = 8 - (s.ty - 9 * SP) * z;
+      if (TC.render.PAGE_W * z > w) v.x = 8 - (s.tx + b.x - SP) * z;
+    } else {
+      v.x = 3 * SP * z - (s.tx + b.x) * z;
+    }
+    TC.render.applyView();
+  };
+  A.toggleFollowSections = () => toggleSetting('followSections');
   /** Page view: bar i starts a new line (the break is kept at the bar after it). */
   A.toggleLineBreak = function (i = curBar()) {
     if (i <= 0) return;
@@ -2403,6 +2461,7 @@
       '-',
       extend,
       play,
+      A.sections().length ? { label: 'Jump to', submenu: sectionItems() } : null,
       '-',
       { label: many ? tr('Copy bars {a}–{b}', ab) : 'Copy bar', action: () => A.copyBar(i), shortcut: 'Ctrl+C' },
       // (several tracks: also only the one being written)

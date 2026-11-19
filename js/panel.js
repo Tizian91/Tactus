@@ -738,7 +738,8 @@
       ${check('toggleFollowPlay', st.followPlay !== false, tr('The view follows the playback'))}
       ${st.followPlay !== false ? `<div class="row"><label>${tr('Following')}</label><select data-action="setFollowMode">
         <option value="jump"${st.followMode !== 'smooth' ? ' selected' : ''}>${tr('Jumping (at the edge)')}</option>
-        <option value="smooth"${st.followMode === 'smooth' ? ' selected' : ''}>${tr('Smooth (glides along)')}</option></select></div>` : ''}
+        <option value="smooth"${st.followMode === 'smooth' ? ' selected' : ''}>${tr('Smooth (glides along)')}</option></select></div>
+      ${check('toggleFollowSections', !!st.followSections, tr('At a part (text above the bar): its bar to the top left'))}` : ''}
       ${check('toggleCountIn', st.countIn, tr('Count-in (one bar)'))}
       ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}

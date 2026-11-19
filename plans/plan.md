@@ -657,6 +657,16 @@ Tests `test_findrepeats.js`):
 - **Später:** Abschnitte mit 1./2. Haus erkennen (gleich bis auf den letzten Takt / die letzten Takte), Ähnlichkeit statt
   Gleichheit (ein Fill am Ende), „in das offene Stück“-Import auch automatisch.
 
+## Teile: Springe zu, Folgen an Teilen ✅
+
+- Die Texte über den Takten (Intro, Strophe, Refrain …) sind die **Teile**: Liste `A.sections()`; **Teile ▾** in der Kopfzeile (nur
+  wenn es welche gibt), **Springe zu** im Taktmenü (Rechtsklick), **≡** in der Bühnenleiste. Ein Klick: Takt ausgewählt, oben links
+  (`A.alignBar`: Seitenansicht – seine Zeile oben; Endlos – der Takt am linken Rand); beim Abspielen geht es dort weiter; Bühne:
+  seine Seite, mit laufendem Timer ab diesem Takt (`TC.pacer.jumpToBar`; eine fällige Umblätterung wartet bis zum Taktende).
+- **Folgen an Teilen** (Wiedergabe → Folgen: „Bei einem Teil … oben links ausrichten“, `followSections`, aus): erreicht der Cursor
+  einen Teil, steht dessen Takt oben links – zusammengehörige Teile werden selten zerrissen. Bis zum nächsten Teil springt die
+  Ansicht dann nur am Rand (auch bei „Flüssig“). Nicht in der Bühnenansicht.
+
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 
 Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Takt um – Android-Tablet, Chrome, MIDI-USB-C-Interface.

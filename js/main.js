@@ -47,6 +47,9 @@
     document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
     document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
     document.getElementById('follow-btn').classList.toggle('active', S.settings.followPlay !== false);
+    // "Parts ▾": only when there are texts above bars to jump to
+    const sec = document.getElementById('section-btn');
+    if (sec) sec.hidden = !S.doc.bars.some((h) => h.marker);
     // sound switch: only when a track has a MIDI output - MIDI off for a moment (all with Tactus' sounds) and on again
     const snd = document.getElementById('sound-btn');
     if (snd) {

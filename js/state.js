@@ -77,6 +77,7 @@ window.TC = window.TC || {};
       turnMode: 'midi',     // turning pages automatically: 'midi' (js/remote.js) | 'timer' (to practise, js/pacer.js)
       timerClick: true,     // … timer: a click along
       timerCountIn: true,   // … timer: one bar of clicks before
+      timerCursor: true,    // … timer: the bar being played marked, the cursor at its start
       samples: false,       // recorded drum sounds (js/samples.js) instead of the synthesized ones
       audioDelay: 0,        // ms the sound is heard later than the browser reports (Bluetooth …): the cursor waits for it
       kitCustom: null,      // ids of the custom kit

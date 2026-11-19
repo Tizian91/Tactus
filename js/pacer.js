@@ -4,7 +4,8 @@
  * turns the pages in the tempo of the score - repeats, endings, jumps and tempo changes as played
  * (TC.timeline) - `turnLead` bars before a new page begins, with a click of its own if wanted
  * (settings.timerClick, settings.timerCountIn: one bar before; loudness: settings.clickVol). It plays
- * nothing else. Turning by hand while it runs: it goes on from the start of that page.
+ * nothing else. Turning by hand while it runs: it goes on from the start of that page. Where we are
+ * (settings.timerCursor): the bar being played is marked, the cursor stands at its start.
  *
  *   settings.turnMode  'midi' (default: a player of backing tracks turns, js/remote.js) | 'timer'
  *
@@ -49,7 +50,8 @@
     const from = Math.max(0, pageOf.indexOf(TC.actions.currentPage()));
     const tl = TC.timeline.build(S.doc, { from, metronome: st.timerClick !== false, countIn: st.timerClick !== false && st.timerCountIn !== false });
     const p = Pc.plan(tl, pageOf, st.turnLead === undefined ? 1 : st.turnLead);
-    run = { ctx, tl, clicks: tl.hits.filter((h) => h.click), ci: 0, turns: p.turns, starts: p.starts, ti: 1, t0: ctx.currentTime + 0.1, cbus: TC.audio.clickBus() };
+    const first = tl.bars.find((b) => b.bar >= 0);
+    run = { ctx, tl, clicks: tl.hits.filter((h) => h.click), ci: 0, turns: p.turns, starts: p.starts, ti: 1, t0: ctx.currentTime + 0.1, cbus: TC.audio.clickBus(), first: first ? first.bar : from };
     run.timer = setInterval(step, 25);
     step();
     if (TC.actions.refreshPerformBar) TC.actions.refreshPerformBar();
@@ -61,6 +63,7 @@
     clearInterval(run.timer);
     fade(run);
     run = null;
+    TC.render.drawCursor(null);
     if (!quiet) TC.ui.status(tr('Timer stopped'));
     if (TC.actions.refreshPerformBar) TC.actions.refreshPerformBar();
   };
@@ -106,6 +109,11 @@
     let page = null;
     while (r.ti < r.turns.length && r.turns[r.ti].t <= song) page = r.turns[r.ti++].page;
     if (page !== null) TC.actions.gotoPage(page);
+    // where we are: the bar being played marked, the cursor at its start (count-in: the first bar)
+    if (S.settings.timerCursor !== false) {
+      const pos = TC.timeline.position(r.tl, song);
+      if (pos || song < r.tl.start) TC.render.drawCursor(pos && pos.bar >= 0 ? pos.bar : r.first, 0);
+    }
     if (song > r.tl.end + 0.3) {
       Pc.stop(true);
       TC.ui.status(tr('Timer: the end of the piece'));

@@ -1311,6 +1311,12 @@
   };
   A.toggleTimerClick = () => toggleSetting('timerClick');
   A.toggleTimerCountIn = () => toggleSetting('timerCountIn');
+  A.toggleTimerCursor = function () {
+    S.settings.timerCursor = S.settings.timerCursor === false;
+    if (!S.settings.timerCursor) TC.render.drawCursor(null);
+    TC.saveSettings();
+    TC.refresh();
+  };
   A.learnNext = () => TC.remote.learn('next');
   A.learnPrev = () => TC.remote.learn('prev');
   A.setTurnLead = function (v) {

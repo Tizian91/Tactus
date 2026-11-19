@@ -863,6 +863,7 @@
       ${check('toggleTimerClick', st.timerClick !== false, tr('Click along'))}
       ${st.timerClick !== false ? `<div class="row"><label>${tr('Click')}</label><input type="range" min="0" max="2" step="0.05" value="${Number.isFinite(st.clickVol) ? st.clickVol : 1}" data-clickvol title="${tr('Loudness of the metronome and the count-in')}"></div>
       ${check('toggleTimerCountIn', st.timerCountIn !== false, tr('Count-in (one bar)'))}` : ''}
+      ${check('toggleTimerCursor', st.timerCursor !== false, tr('Show where we are (cursor at the start of each bar)'))}
       ${turnRow}`;
     return `<section><h3>${tr('Turning pages')}</h3>
       <div class="btn-row">${btn('togglePerform', undefined, tr('Stage view'), false, tr('Only the pages, full screen; tap the right / left third, Page Down / Up or MIDI turns (Esc: back)'))}</div>

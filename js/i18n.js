@@ -360,6 +360,7 @@
     'By timer (to practise, with click)': 'Per Timer (zum Üben, mit Klick)',
     'In the stage view ▶ or Space starts the timer on the page shown: it turns in the tempo of the score, repeats and tempo changes as played. Turning by hand: it goes on from there.': 'In der Bühnenansicht startet ▶ oder die Leertaste den Timer auf der gezeigten Seite: er blättert im Tempo des Stücks um, Wiederholungen und Tempowechsel wie gespielt. Von Hand umgeblättert: er macht dort weiter.',
     'Click along': 'Klick dazu',
+    'Show where we are (cursor at the start of each bar)': 'Zeigen, wo wir sind (Cursor am Anfang jedes Takts)',
     'Start the timer on this page (Space)': 'Timer auf dieser Seite starten (Leertaste)',
     'Stop the timer (Space)': 'Timer anhalten (Leertaste)',
     'Timer stopped': 'Timer angehalten',

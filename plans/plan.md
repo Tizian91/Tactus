@@ -674,7 +674,8 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - **Timer zum Üben** (⚙ → Umblättern → Automatisch: „Per MIDI“ | „Per Timer“, `js/pacer.js`): in der Bühnenansicht startet ▶ (oder
   die Leertaste) auf der gezeigten Seite; blättert im Tempo des Stücks um (Wiederholungen, Sprünge, Tempowechsel wie gespielt –
   `TC.timeline`), 0 / 1 / 2 Takte vorher. Klick dazu (an / aus, Lautstärke = Klick-Regler), Einzähler (ein Takt). Von Hand
-  umgeblättert: geht ab dem Anfang dieser Seite weiter. Spielt sonst nichts; im Timer-Modus hört Tactus nicht auf MIDI-Umblättern.
+  umgeblättert: geht ab dem Anfang dieser Seite weiter. „Zeigen, wo wir sind“: der gespielte Takt markiert, der Cursor an
+  seinem Anfang (springt Takt für Takt). Spielt sonst nichts; im Timer-Modus hört Tactus nicht auf MIDI-Umblättern.
 - Später evtl.: Folgen über MIDI-Clock / Song Position (Cursor läuft mit dem Player).
 
 ## Offen zum Ausprobieren

@@ -708,10 +708,11 @@ setTimeout(() => {
     ok('timer mode: ▶ in the stage bar', !!tbtn() && tbtn().textContent === '▶');
     tbtn().click();
     ok('▶: the timer runs, the button shows ■', TC.pacer.running() && tbtn().textContent === '■' && TC.actions.currentPage() === 0);
+    ok('timer: the cursor at the start of the first bar (where we are)', !!document.querySelector('#overlay .play-cursor'));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
     ok('turned by hand while it runs: page 2, the timer goes on', TC.actions.currentPage() === 1 && TC.pacer.running());
     TC.actions.togglePlay();
-    ok('Space (togglePlay) in the stage view: the timer stops, no playback', !TC.pacer.running() && !TC.player.playing && tbtn().textContent === '▶');
+    ok('Space (togglePlay) in the stage view: the timer stops, no playback, the cursor goes', !TC.pacer.running() && !TC.player.playing && tbtn().textContent === '▶' && !document.querySelector('#overlay .play-cursor'));
     TC.actions.toggleTimer();
     TC.actions.gotoPage(0); // (the view as before: the tests after this one start from there)
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

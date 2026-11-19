@@ -549,6 +549,8 @@ body.perform #viewport { position: fixed; inset: 0; z-index: 40; } /* the whole 
 #perform-bar button { min-width: 36px; min-height: 32px; font-size: 18px; }
 #perform-bar span { min-width: 56px; text-align: center; }
 #perform-bar button.on { background: var(--accent, #2a7); color: #fff; }
+body.perform .score .play-bar { fill-opacity: 0.14; }  /* (stage view: the page is small - where we are, clearly) */
+body.perform .score .play-cursor { stroke: var(--accent); stroke-width: 4; }
 .chord-slots button.off-beat:not(.active) { background: var(--panel-bg, transparent); opacity: 0.85; }
 .chord-slots button { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
 /* repeats found (panel "Find repeats"): sections (two colours taking turns), bars like the one before */

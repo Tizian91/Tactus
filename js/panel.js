@@ -855,13 +855,23 @@
     }
     const leads = [0, 1, 2].map((n) => [String(n), n ? tr(n === 1 ? '{n} bar before' : '{n} bars before', { n }) : tr('at the new page')]);
     const lead = String(st.turnLead === undefined ? 1 : st.turnLead);
+    const timer = st.turnMode === 'timer';
+    const modes = [['midi', tr('By MIDI (player of backing tracks)')], ['timer', tr('By timer (to practise, with click)')]]
+      .map(([v, l]) => `<option value="${v}"${v === (timer ? 'timer' : 'midi') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    const turnRow = `<div class="row"><label>${tr('Turn')}</label><select data-action="setTurnLead">${leads.map(([v, l]) => `<option value="${v}"${v === lead ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+    const timerRows = `<p class="hint tight">${tr('In the stage view ▶ or Space starts the timer on the page shown: it turns in the tempo of the score, repeats and tempo changes as played. Turning by hand: it goes on from there.')}</p>
+      ${check('toggleTimerClick', st.timerClick !== false, tr('Click along'))}
+      ${st.timerClick !== false ? `<div class="row"><label>${tr('Click')}</label><input type="range" min="0" max="2" step="0.05" value="${Number.isFinite(st.clickVol) ? st.clickVol : 1}" data-clickvol title="${tr('Loudness of the metronome and the count-in')}"></div>
+      ${check('toggleTimerCountIn', st.timerCountIn !== false, tr('Count-in (one bar)'))}` : ''}
+      ${turnRow}`;
     return `<section><h3>${tr('Turning pages')}</h3>
       <div class="btn-row">${btn('togglePerform', undefined, tr('Stage view'), false, tr('Only the pages, full screen; tap the right / left third, Page Down / Up or MIDI turns (Esc: back)'))}</div>
-      ${midi}
+      <div class="row"><label>${tr('Automatically')}</label><select data-action="setTurnMode">${modes}</select></div>
+      ${timer ? timerRows : `${midi}
       <h3 class="sub">${tr('Page turning MIDI file')}</h3>
       <p class="hint tight">${tr('A MIDI track for your player of backing tracks: a note when a new page comes (note n = page n, channel 16), with the tempo and the repeats of the score. Put it next to the backing tracks; Tactus turns when it hears it.')}</p>
-      <div class="row"><label>${tr('Turn')}</label><select data-action="setTurnLead">${leads.map(([v, l]) => `<option value="${v}"${v === lead ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
-      <div class="btn-row">${btn('exportPageTurns', undefined, tr('Export page turning MIDI…'), false)}</div>
+      ${turnRow}
+      <div class="btn-row">${btn('exportPageTurns', undefined, tr('Export page turning MIDI…'), false)}</div>`}
     </section>`;
   }
 

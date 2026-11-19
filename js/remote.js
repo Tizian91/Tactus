@@ -101,7 +101,7 @@
       if (TC.refresh) TC.refresh();
       return;
     }
-    const d = R.decode(data, S.settings);
+    const d = S.settings.turnMode === 'timer' ? null : R.decode(data, S.settings); // (timer mode: the timer turns, js/pacer.js)
     if (!d) return;
     if (d.page !== undefined) TC.actions.gotoPage(d.page);
     else TC.actions.turnPage(d.step);

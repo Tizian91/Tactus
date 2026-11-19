@@ -2,7 +2,7 @@
 // Turning pages: the page turning MIDI file (js/midi.js pageTurns: a note when a new page comes, bars
 // before, repeats written out) and what a received MIDI message means (js/remote.js decode).
 module.exports = function (T) {
-  const TC = T.load(['state.js', 'model.js', 'drummap.js', 'rhythm.js', 'playback.js', 'cubase.js', 'kits.js', 'midi.js', 'remote.js']);
+  const TC = T.load(['state.js', 'model.js', 'drummap.js', 'rhythm.js', 'playback.js', 'cubase.js', 'kits.js', 'midi.js', 'remote.js', 'pacer.js']);
   const M = TC.midi, R = TC.remote, BAR = 3840;
   const doc = TC.emptyScore(4);
   doc.meta.tempo = 120;
@@ -21,6 +21,23 @@ module.exports = function (T) {
   T.eq('repeat of all four bars: page 2, back to page 1, page 2 again', turns([0, 0, 1, 1], 1), [[0, 1, 15], [BAR, 2, 15], [3 * BAR, 1, 15], [5 * BAR, 2, 15]]);
   doc.bars[3].repeatEnd = 0;
   T.eq('no notes of the tracks in the page turning file', M.read(M.build(doc, null, { tracks: [], pageTurns: { pageOf: [0, 0, 0, 0] } }).bytes).notes.length, 1);
+
+  // the timer (js/pacer.js plan): seconds of the timeline, 120 BPM in 4/4 = 2 s a bar, the music from T.LEAD on
+  const P = TC.pacer, L0 = TC.timeline.LEAD, r3 = (x) => Math.round(x * 1000) / 1000;
+  const plan = (pageOf, lead, opts = {}) => {
+    const p = P.plan(TC.timeline.build(doc, opts), pageOf, lead);
+    return { turns: p.turns.map((x) => [r3(x.t), x.page]), starts: p.starts.map((x) => [r3(x.t), x.page]) };
+  };
+  T.eq('timer: page 1 at once, page 2 one bar before it begins', plan([0, 0, 1, 1], 1).turns, [[0, 0], [r3(L0 + 2), 1]]);
+  T.eq('timer: lead 0 - when the new page begins', plan([0, 0, 1, 1], 0).turns, [[0, 0], [r3(L0 + 4), 1]]);
+  T.eq('timer: where the music of each page begins (a jump by hand goes there)', plan([0, 0, 1, 1], 1).starts, [[r3(L0), 0], [r3(L0 + 4), 1]]);
+  T.eq('timer: the count-in comes first (one bar)', plan([0, 0, 1, 1], 1, { countIn: true }).turns, [[0, 0], [r3(L0 + 4), 1]]);
+  doc.bars[3].repeatEnd = 2;
+  T.eq('timer: repeats as played - page 2, back to page 1, page 2 again', plan([0, 0, 1, 1], 1).turns.map((x) => x[1]), [0, 1, 0, 1]);
+  doc.bars[3].repeatEnd = 0;
+  doc.bars[2].tempo = 60;
+  T.eq('timer: a tempo change - bar 3 at 60 BPM lasts 4 s', plan([0, 0, 0, 1], 0).turns, [[0, 0], [r3(L0 + 2 + 2 + 4), 1]]);
+  doc.bars[2].tempo = 0;
 
   // received messages
   const page = { remoteMode: 'page', remoteCh: 'all' };

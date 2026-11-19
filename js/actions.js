@@ -1112,7 +1112,8 @@
     toggleSetting('loop');
     if (TC.player.playing) TC.player.restartHere();
   };
-  A.togglePlay = () => TC.player.toggle();
+  // (stage view in timer mode: Space starts / stops the timer that turns the pages)
+  A.togglePlay = () => (A.isPerforming && A.isPerforming() && S.settings.turnMode === 'timer' ? A.toggleTimer() : TC.player.toggle());
   A.stop = () => TC.player.stop();
   /** Keep the screen on: 'play' | 'always' | 'off' (a setting of this browser). */
   A.setWake = function (m) {
@@ -1189,9 +1190,23 @@
     showPerformBar(k, L.pages.length);
   };
   /** The next page (d = 1) or the one before (d = -1). */
-  A.turnPage = (d) => A.gotoPage(A.currentPage() + (d < 0 ? -1 : 1));
+  A.turnPage = function (d) {
+    A.gotoPage(A.currentPage() + (d < 0 ? -1 : 1));
+    // turned by hand while the timer runs: it goes on from there (js/pacer.js)
+    if (TC.pacer && TC.pacer.running()) TC.pacer.jumpTo(A.currentPage());
+  };
   A.nextPage = () => A.turnPage(1);
   A.prevPage = () => A.turnPage(-1);
+  const timerMode = () => S.settings.turnMode === 'timer';
+  /** Timer mode (stage view): start / stop the timer that turns the pages (js/pacer.js). */
+  A.toggleTimer = function () {
+    if (!performing()) return;
+    TC.pacer.toggle();
+  };
+  A.refreshPerformBar = function () {
+    const L = TC.render.layout;
+    if (performing() && L && L.pages) showPerformBar(A.currentPage(), L.pages.length);
+  };
 
   /** The stage view's own bar: page n / m, turning, leaving. */
   function showPerformBar(k, n) {
@@ -1209,8 +1224,10 @@
       });
       document.body.appendChild(bar);
     }
-    const midi = TC.remote && S.settings.remoteIn ? (TC.remote.active() ? ' · MIDI' : ' · MIDI ⚠') : '';
-    bar.innerHTML = `<button type="button" data-p="prevPage" title="${esc(tr('Page before'))}">‹</button>` +
+    const midi = !timerMode() && TC.remote && S.settings.remoteIn ? (TC.remote.active() ? ' · MIDI' : ' · MIDI ⚠') : '';
+    const on = timerMode() && TC.pacer && TC.pacer.running();
+    const timer = timerMode() ? `<button type="button" data-p="toggleTimer"${on ? ' class="on"' : ''} title="${esc(tr(on ? 'Stop the timer (Space)' : 'Start the timer on this page (Space)'))}">${on ? '■' : '▶'}</button>` : '';
+    bar.innerHTML = timer + `<button type="button" data-p="prevPage" title="${esc(tr('Page before'))}">‹</button>` +
       `<span>${k + 1} / ${n}${midi}</span><button type="button" data-p="nextPage" title="${esc(tr('Next page'))}">›</button>` +
       `<button type="button" data-p="togglePerform" title="${esc(tr('Leave the stage view (Esc)'))}">✕</button>`;
   }
@@ -1237,8 +1254,9 @@
       A.gotoPage(k);
       const el = document.documentElement;
       if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {});
-      if (TC.remote && S.settings.remoteIn) TC.remote.init();
+      if (!timerMode() && TC.remote && S.settings.remoteIn) TC.remote.init();
     } else {
+      if (TC.pacer) TC.pacer.stop(true);
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
       showPerformBar();
       TC.refresh();
@@ -1282,6 +1300,17 @@
     TC.saveSettings();
     TC.refresh();
   };
+  /** Turning pages automatically: 'midi' (a player of backing tracks sends it) or 'timer' (to practise, js/pacer.js). */
+  A.setTurnMode = function (m) {
+    S.settings.turnMode = m === 'timer' ? 'timer' : 'midi';
+    TC.saveSettings();
+    if (TC.pacer && m !== 'timer') TC.pacer.stop(true);
+    if (performing() && m !== 'timer' && TC.remote && S.settings.remoteIn) TC.remote.init();
+    A.refreshPerformBar();
+    TC.refresh();
+  };
+  A.toggleTimerClick = () => toggleSetting('timerClick');
+  A.toggleTimerCountIn = () => toggleSetting('timerCountIn');
   A.learnNext = () => TC.remote.learn('next');
   A.learnPrev = () => TC.remote.learn('prev');
   A.setTurnLead = function (v) {

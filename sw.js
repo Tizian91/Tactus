@@ -6,7 +6,7 @@
  * Network first: online you always get the current files, the cache is only the offline copy.
  * New file in index.html? Add it to FILES, so it is there offline from the start.
  */
-const CACHE = 'tactus-v116';
+const CACHE = 'tactus-v117';
 const SAMPLES = 'tactus-samples-v1'; // samples/*.flac (new version only when the recordings change)
 const FILES = [
   './',
@@ -46,6 +46,7 @@ const FILES = [
   'js/midiout.js',
   'js/wakelock.js',
   'js/remote.js',
+  'js/pacer.js',
   'js/rhythm.js',
   'js/pitch.js',
   'js/render.js',

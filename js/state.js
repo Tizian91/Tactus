@@ -73,7 +73,10 @@ window.TC = window.TC || {};
       remoteCh: 'all',      // … only on this channel 0 … 15, or 'all'
       remoteNext: null,     // … learnt messages { type, ch, d1 } (step)
       remotePrev: null,
-      turnLead: 1,          // page turning MIDI file: bars before the new page
+      turnLead: 1,          // page turning (MIDI file, timer): bars before the new page
+      turnMode: 'midi',     // turning pages automatically: 'midi' (js/remote.js) | 'timer' (to practise, js/pacer.js)
+      timerClick: true,     // … timer: a click along
+      timerCountIn: true,   // … timer: one bar of clicks before
       samples: false,       // recorded drum sounds (js/samples.js) instead of the synthesized ones
       audioDelay: 0,        // ms the sound is heard later than the browser reports (Bluetooth …): the cursor waits for it
       kitCustom: null,      // ids of the custom kit

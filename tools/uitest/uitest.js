@@ -701,8 +701,22 @@ setTimeout(() => {
     ok('a tap in the left third: page 2 again', TC.actions.currentPage() === 1);
     TC.actions.gotoPage(0);
     ok('MIDI "page 1" (gotoPage): the first page', TC.actions.currentPage() === 0);
+    // timer mode (js/pacer.js): ▶ in the bar starts it on the page shown, turning by hand jumps it, Esc stops it
+    const keepTurn = S.settings.turnMode;
+    TC.actions.setTurnMode('timer');
+    const tbtn = () => document.querySelector('#perform-bar button[data-p="toggleTimer"]');
+    ok('timer mode: ▶ in the stage bar', !!tbtn() && tbtn().textContent === '▶');
+    tbtn().click();
+    ok('▶: the timer runs, the button shows ■', TC.pacer.running() && tbtn().textContent === '■' && TC.actions.currentPage() === 0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+    ok('turned by hand while it runs: page 2, the timer goes on', TC.actions.currentPage() === 1 && TC.pacer.running());
+    TC.actions.togglePlay();
+    ok('Space (togglePlay) in the stage view: the timer stops, no playback', !TC.pacer.running() && !TC.player.playing && tbtn().textContent === '▶');
+    TC.actions.toggleTimer();
+    TC.actions.gotoPage(0); // (the view as before: the tests after this one start from there)
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    ok('Esc: the stage view ends, the bar goes', !document.body.classList.contains('perform') && !document.getElementById('perform-bar'));
+    ok('Esc: the stage view ends, the bar goes, the timer stops', !document.body.classList.contains('perform') && !document.getElementById('perform-bar') && !TC.pacer.running());
+    TC.actions.setTurnMode(keepTurn);
     if (wasEndless) TC.actions.layout('endless');
     TC.actions.undo();
     const sk = document.getElementById('status-kit');

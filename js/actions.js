@@ -183,7 +183,7 @@
     // chords locked ("Only chord tones"): to the next chord tone that way
     changeChains((h, sc) => {
       const P = TC.pitch, dia = P.noteSpell(h.note, sc).dia;
-      const at = TC.score.guideAt(S.doc, h.bar) === 'lock' ? TC.score.chordAt(S.doc, h.bar, h.ev.tick) : null;
+      const at = TC.score.guideAt(S.doc, h.bar, h.track) === 'lock' ? TC.score.chordAt(S.doc, h.bar, h.ev.tick) : null;
       let t = P.lineTone(dia - dir, sc);
       if (at) {
         for (let k = 1; k <= 7; k++) {
@@ -256,10 +256,11 @@
     TC.refresh();
   }
 
-  /** Rest cleanup of the drum tracks (rhythm.js R.ends): part of the score, so undoable. */
+  /** Rest cleanup of the drum track being written (rhythm.js R.ends; each track its own): part of the score, so undoable. */
   A.setFill = function (fill) {
-    if (!TC.rhythm.FILLS.includes(fill) || TC.curTrack().fill === fill) return;
-    S.doc.tracks.forEach((t) => { if (t.kind === 'drums') t.fill = fill; });
+    const t = TC.curTrack();
+    if (!TC.rhythm.FILLS.includes(fill) || t.kind !== 'drums' || t.fill === fill) return;
+    t.fill = fill;
     TC.commit();
   };
 
@@ -598,6 +599,13 @@
   };
   A.setTrackScaleRoot = (pc) => A.setTrackScale('root', pc);
   A.setTrackScaleId = (id) => A.setTrackScale('id', id);
+  /** Melody track: the change of the chord help at the selected bar goes (the setting before it goes on). */
+  A.clearGuideChange = function () {
+    const t = TC.score.instrumentOf(S.doc, TC.curTrack());
+    if (t.kind !== 'pitched' || !S.selBar || !t.bars[S.selBar].guide) return;
+    delete t.bars[S.selBar].guide;
+    TC.commit();
+  };
   /** Melody track: the scale change at the selected bar goes (the scale before it goes on). */
   A.clearScaleChange = function () {
     const t = TC.curTrack();
@@ -1830,22 +1838,13 @@
   A.setHarmonyKeyRoot = (pc) => A.setHarmonyKey('root', pc);
   A.setHarmonyKeyId = (id) => A.setHarmonyKey('id', id);
   /**
-   * How the chords help writing a melody, from bar i on (bar 1: the whole score): 'off', 'mark' (the chord tones
-   * marked), 'lock' (only chord tones). A change that ends up like the setting before it is removed.
+   * How the chords help writing into the melody track being written, from bar i on (bar 1: the whole track): 'off',
+   * 'mark' (the chord tones marked), 'lock' (only chord tones). A change that ends up like the setting before it goes.
    */
-  A.setGuide = function (v, i = curBar()) {
-    if (!TC.GUIDES.includes(v)) return;
-    if (i <= 0) {
-      S.doc.harmony.guide = v;
-      delete S.doc.bars[0].guide;
-    } else S.doc.bars[i].guide = v;
-    for (let k = 1; k < S.doc.bars.length; k++) {
-      const g = S.doc.bars[k].guide;
-      if (g) {
-        delete S.doc.bars[k].guide;
-        if (TC.score.guideAt(S.doc, k) !== g) S.doc.bars[k].guide = g;
-      }
-    }
+  A.setGuide = function (v, i = S.selBar !== null ? S.selBar : 0) {
+    const t = TC.curTrack();
+    if (!TC.GUIDES.includes(v) || t.kind !== 'pitched') return;
+    TC.score.setGuide(S.doc, t, Number(i) || 0, v);
     TC.commit();
     TC.ui.hint((i > 0 ? tr('From bar {n}', { n: i + 1 }) + ': ' : '') + tr(GUIDE_NAMES[v]));
   };

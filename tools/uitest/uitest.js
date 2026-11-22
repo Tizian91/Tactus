@@ -123,8 +123,15 @@ setTimeout(() => {
   TC.actions.setValue(8); TC.actions.setArt(42);
   const at = (bar, tick, line) => screenOf(bar, tick, line);
   // the window "Tracks & sound" (tracks, playback): opened when needed, closed after each block
-  const W = (sel) => { if (!TC.panel.isSettingsOpen()) TC.actions.openTracks(); return document.querySelector('.settings-dialog ' + sel); };
-  const WA = (sel) => { if (!TC.panel.isSettingsOpen()) TC.actions.openTracks(); return document.querySelectorAll('.settings-dialog ' + sel); };
+  // the tracks: the track being written in the panel (section "Track"), the list of all in the window "Tracks & sound"
+  const W = (sel) => document.querySelector('#panel-settings section[data-sec="track"] ' + sel) ||
+    (TC.panel.isSettingsOpen() || TC.actions.openTracks(), document.querySelector('.settings-dialog ' + sel));
+  const WA = (sel) => {
+    const own = document.querySelectorAll('#panel-settings section[data-sec="track"] ' + sel);
+    if (own.length) return own;
+    if (!TC.panel.isSettingsOpen()) TC.actions.openTracks();
+    return document.querySelectorAll('.settings-dialog ' + sel);
+  };
   const mouse = (type, [x, y], o = {}) => vp.dispatchEvent(new PointerEvent(type, Object.assign({ clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 1, pointerType: 'mouse' }, o)));
   // a row: write the first note, then Ctrl + drag from it (hold + drag works too, see the finger test)
   const drawRow = (bar, ticks, line) => { click(bar, 0, line); const c = { ctrlKey: true }; mouse('pointerdown', at(bar, 0, line), c); ticks.forEach((t) => mouse('pointermove', at(bar, t, line), c)); mouse('pointerup', at(bar, ticks[ticks.length - 1], line), c); };
@@ -1145,6 +1152,14 @@ setTimeout(() => {
           const undoChord = TC.history.undoStack.length;
           TC.actions.typeChord('C', 3, 0);
           TC.actions.setGuide('lock', 3);
+          TC.panel.update(true);
+          const tsec = (k, sel) => document.querySelector(`#panel-settings section[data-sec="${k}"] ${sel}`);
+          ok('panel "Track" of the melody: instrument, writing (scale, chord help), sound - the chord help no longer under the bar\'s chords',
+            !!tsec('track-inst', 'select[data-action="setTrackInstrument"]') && !!tsec('track-write', 'select[data-action="setGuide"]') && !!tsec('track-write', 'select[data-action="setTrackScaleId"]') &&
+            !!tsec('track-sound', 'input[data-trackvol]') && !document.querySelector('#panel-settings section[data-sec="chords"] select[data-action="setGuide"]'));
+          const mtNow = S.doc.tracks.find((t) => t.id === mt.id);
+          ok('chord help of the melody track: only chord tones from bar 4 (before: marked; a drum track: none)', TC.score.guideAt(S.doc, 3, mtNow) === 'lock' &&
+            TC.score.guideAt(S.doc, 2, mtNow) === 'mark' && TC.score.guideAt(S.doc, 3, S.doc.tracks[0]) === 'off');
           TC.actions.setTool('select');
           const mat = (bar, tick, line) => { const [x, y] = at(bar, tick, line), z = TC.render.layout.staves.find((q) => q.track.id === mt.id); return [x, y + z.dy * S.doc.view.zoom]; };
           const pitch0 = () => S.doc.tracks.find((t) => t.id === mt.id).bars[3].voices[0][0].notes[0].pitch;

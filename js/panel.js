@@ -247,19 +247,56 @@
   }
 
   /**
-   * Top of the panel: the track being written (a list - a tap into a staff chooses too), a melody's scale from this
-   * bar on, and "Tracks & sound…" (the window with the tracks and the playback: set up once, rarely touched).
+   * Top of the panel: the track being written (a list - a tap into a staff chooses too) and all that belongs to it,
+   * in three parts that fold away of their own: instrument (a melody's sound, clef … / the drums of a drum track),
+   * writing (a melody's scale and how the chords help, from the selected bar on / the note values of drums) and
+   * sound (volume, output, channel, kit profile / keyswitches). "Tracks & sound…": the list of all tracks.
    */
-  function trackBarSection() {
+  function trackSection() {
     const cur = TC.curTrack(), curI = TC.score.instrumentOf(S.doc, cur), insts = TC.score.instruments(S.doc);
     const opts = insts.map((t) => `<option value="${esc(t.id)}"${t === curI ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
-    const out = TC.midiOut && TC.midiOut.supported() ? TC.midiOut.outputOf(cur) : '';
-    return `<section class="track-bar">
-      <div class="row"><label>${tr('Track')}</label><select data-action="selectTrack">${opts}</select></div>
-      ${cur.kind === 'pitched' ? scaleRows(cur) : ''}
-      <div class="btn-row">${btn('openTracks', undefined, tr('Tracks & sound…'), false, tr('Tracks (add, order, mute / solo), the sound of each track (Tactus or a MIDI output), playback'), 'wide')}</div>
-      ${out ? `<p class="hint tight">${esc(tr('Plays on {name}', { name: out }))}</p>` : ''}
+    const pitched = cur.kind === 'pitched';
+    const part = (key, title, body) => `<section data-sec="${key}" class="part"><h3 class="sub">${esc(title)}</h3>${body}</section>`;
+    return `<section data-sec="track" class="track-bar"><h3>${tr('Track')}</h3>
+      <div class="row"><label>${tr('Track')}</label><select data-action="selectTrack">${opts}</select>${btn('renameTrack', curI.id, '✎', false, tr('Rename'), 'icon')}</div>
+      <div class="btn-row">${btn('openTracks', undefined, tr('Tracks & sound…'), false, tr('All tracks: add, order, mute / solo; playback'), 'wide')}</div>
+      ${part('track-inst', tr('Instrument'), pitched ? melodyTrackRows(cur) : drumKitRows(cur))}
+      ${part('track-write', tr('Writing'), pitched ? scaleRows(cur) + guideRows(cur) : fillRows(cur))}
+      ${part('track-sound', tr('Sound'), trackSoundRows(cur))}
     </section>`;
+  }
+
+  /** A drum track: the instruments it offers - the drum kit (⚙) or its own selection (then on one line, if wanted). */
+  function drumKitRows(cur) {
+    const own = TC.drums.ownKit(cur), ids = TC.drums.kit(cur);
+    const list = own ? Object.keys(TC.DRUM_ELEMENTS).map((el) => {
+      const arts = TC.DRUM_ARTS.filter((a) => a.el === el);
+      const name = de() ? TC.DRUM_ELEMENTS[el].de : TC.DRUM_ELEMENTS[el].en;
+      return `<div class="kit-group"><div class="el-name">${esc(name)}</div>` +
+        arts.map((a) => check('toggleTrackArt', ids.has(a.id), `${esc(de() ? a.de : a.en)} <span class="muted">${esc(a.ab)}</span>`, a.id)).join('') + '</div>';
+    }).join('') : '';
+    return `<div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
+        <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
+      ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}
+        <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}`;
+  }
+
+  /** A drum track: how its rests are cleaned up on the screen (note values up to the end of the beat …). */
+  function fillRows(t) {
+    const fills = [['beat', 'Up to the end of the beat'], ['next', 'Up to the next note'], ['off', 'As written']];
+    return `<div class="row"><label>${tr('Note values')}</label><select data-action="setFill">${fills.map(([k, label]) =>
+      `<option value="${k}"${k === t.fill ? ' selected' : ''}>${esc(tr(label))}</option>`).join('')}</select></div>
+      <p class="hint tight">${tr('Rest cleanup: a note lasts until the next one instead of leaving rests (saved with the score).')}</p>`;
+  }
+
+  /** A melody track: how the chord symbols help writing into it, from the selected bar on (bar 1: the whole track). */
+  function guideRows(t) {
+    const ti = TC.score.instrumentOf(S.doc, t), bi = S.selBar !== null ? S.selBar : 0, g = TC.score.guideAt(S.doc, bi, t), A = TC.actions;
+    const change = bi > 0 && ti.bars[bi] && ti.bars[bi].guide;
+    return `<div class="row"><label>${tr('Chords')}</label><select data-action="setGuide">${TC.GUIDES.map((v) =>
+        `<option value="${v}"${v === g ? ' selected' : ''}>${esc(tr(A.GUIDE_NAMES[v]))}</option>`).join('')}</select></div>
+      <p class="hint tight">${tr(g === 'lock' ? 'Tapping or moving a note: the nearest chord tone; hold + up / down still leaves it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
+      ${change ? `<div class="btn-row">${btn('clearGuideChange', undefined, tr('Remove the change'), false, tr('The setting before it goes on'))}</div>` : ''}`;
   }
 
   // ---- Settings panel ----------------------------------------------------------------------------
@@ -347,12 +384,9 @@
     const mt = TC.score.harmonyTrack(S.doc);
     let key;
     if (mt) {
-      // writing a melody: chord tones marked / only chord tones (from this bar on)
-      const g = TC.score.guideAt(S.doc, i), A = TC.actions;
-      key = `<p class="hint tight">${esc(tr('Chords of {scale} (scale of "{track}" in bar {n})', { scale: Pi.scaleName(sc, de()), track: mt.name, n: i + 1 }))}</p>
-        <div class="row"><label>${tr('Melody')}</label><select data-action="setGuide">${TC.GUIDES.map((v) =>
-          `<option value="${v}"${v === g ? ' selected' : ''}>${esc(tr(A.GUIDE_NAMES[v]))}</option>`).join('')}</select></div>
-        <p class="hint tight">${tr(g === 'lock' ? 'Tapping or moving a note: the nearest chord tone; hold + up / down still leaves it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')}${i > 0 ? ' ' + esc(tr('Applies from bar {n} on.', { n: i + 1 })) : ''}</p>`;
+      // (how the chords help writing a melody - marked / only chord tones: of each track, in the section "Track")
+      key = `<p class="hint tight">${esc(tr('Chords of {scale} (scale of "{track}" in bar {n})', { scale: Pi.scaleName(sc, de()), track: mt.name, n: i + 1 }))}
+        ${esc(tr('How they help writing a melody: Track → Writing.'))}</p>`;
     }
     else {
       const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`, pc = Pi.pc(sc.l, sc.a);
@@ -574,24 +608,14 @@
       btn('duplicateTrack', t.id, '⧉', false, tr('Duplicate track'), 'icon') +
       (many ? btn('deleteTrack', t.id, '✕', false, tr('Delete track'), 'icon') : '') + '</div>').join('');
     const art = TC.drums.byId(S.input.art);
-    const own = TC.drums.ownKit(cur), ids = TC.drums.kit(cur);
-    const list = own ? Object.keys(TC.DRUM_ELEMENTS).map((el) => {
-      const arts = TC.DRUM_ARTS.filter((a) => a.el === el);
-      const name = de() ? TC.DRUM_ELEMENTS[el].de : TC.DRUM_ELEMENTS[el].en;
-      return `<div class="kit-group"><div class="el-name">${esc(name)}</div>` +
-        arts.map((a) => check('toggleTrackArt', ids.has(a.id), `${esc(de() ? a.de : a.en)} <span class="muted">${esc(a.ab)}</span>`, a.id)).join('') + '</div>';
-    }).join('') : '';
+    // (the settings of the track being written - instrument, writing, sound: in the panel, section "Track")
     return `<section><h3>${tr('Tracks')}</h3>
       <div class="track-list">${rows}</div>
       <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track with the whole drum kit'))}
         ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}
         ${btn('addMelody', undefined, '+ ' + tr('Melody'), false, tr('A melody track (singing voice): notes with pitches, a scale'))}
         ${btn('addPiano', undefined, '+ ' + tr('Piano'), false, tr('Two staves: right hand (treble clef), left hand (bass clef)'))}</div>
-      ${cur.kind === 'pitched' ? melodyTrackRows(cur) : `<div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
-        <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
-      ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}
-        <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}`}
-      ${trackSoundRows(cur)}
+      <p class="hint tight">${esc(tr('Instrument, writing and sound of the track being written: panel "Bar · score" → Track.'))}</p>
       ${many ? `<p class="hint tight">${tr('Click into a staff or on a name: you write into that track. Playback plays all tracks (hidden ones too) except the muted ones.')}</p>` : ''}
     </section>`;
   }
@@ -869,12 +893,7 @@
   }
 
   function viewSection() {
-    const fill = TC.curTrack().fill;
-    const fills = [['beat', 'Up to the end of the beat'], ['next', 'Up to the next note'], ['off', 'As written']];
-    const opts = fills.map(([k, label]) => `<option value="${k}"${k === fill ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
     return `<section><h3>${tr('View')}</h3>
-      <div class="row"><label>${tr('Note values')}</label><select data-action="setFill">${opts}</select></div>
-      <p class="hint tight">${tr('Rest cleanup: a note lasts until the next one instead of leaving rests (saved with the score).')}</p>
       ${check('toggleCounts', S.settings.showCounts, tr('Counting under the staff (1 e + a)'))}
       ${check('toggleLeftHanded', S.settings.leftHanded, tr('Left-handed mode (swap the panels)'))}
       ${check('toggleFingerWrites', S.settings.fingerWrites !== false, tr('Fingers write notes (off: only pen and mouse; a finger selects and scrolls)'))}
@@ -912,7 +931,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.guide, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
@@ -920,7 +939,7 @@
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing: the track (and a melody's scale), the bar and what belongs to it, the score -
       // tracks and playback in their own window ("Tracks & sound…"), the rest in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       foldable(setRoot);
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;

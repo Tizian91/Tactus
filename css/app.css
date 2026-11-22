@@ -590,3 +590,10 @@ body.perform .score .play-cursor { stroke: var(--accent); stroke-width: 4; trans
 .panel section.folded > h3.fold-head { margin-bottom: -4px; }
 .panel section.folded > h3.fold-head::before { content: '▸'; }
 .panel section.folded > :not(h3) { display: none !important; }
+
+/* "Track" in the panel: its parts (instrument · writing · sound) fold of their own */
+.panel section section.part { padding: 0; border: none; }
+.panel section.part > h3.sub { margin: 12px 0 6px; }
+.panel section.part > h3.fold-head { margin: 10px 0 2px; padding: 4px 0; }
+.panel section.part.folded { padding-bottom: 0; }
+.panel section.part.folded > h3.fold-head { margin-bottom: 0; }

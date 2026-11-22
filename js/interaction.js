@@ -113,7 +113,7 @@
     if (raw < RD.LINE_MIN || raw > RD.LINE_MAX) return null;
     const scale = TC.score.scaleAt(track, bi);
     // chord symbols: locked - only chord tones (the nearest one; dragging: from the side it comes from); marked - just said
-    const guide = TC.score.guideAt(S.doc, bi), at = tick !== undefined && guide !== 'off' ? TC.score.chordAt(S.doc, bi, tick) : null;
+    const guide = TC.score.guideAt(S.doc, bi, track), at = tick !== undefined && guide !== 'off' ? TC.score.chordAt(S.doc, bi, tick) : null;
     const tone = (l) => P.guideTone(P.diaAt(l, track.clef), scale, at && at.ch, guide);
     const l = at && guide === 'lock' ? P.lockedLine(raw, (k) => tone(k).chord, from) : raw;
     const t = tone(l);
@@ -1153,7 +1153,7 @@
       const P = TC.pitch, sc = SC.scaleAt(d.hit.track, d.barOf.get(n.id) || 0), dia0 = P.noteSpell(n, sc).dia;
       let t = P.lineTone(dia0 - k, sc);
       const pos = SC.atAbs(S.doc, d.absOf.get(d.rootOf.get(n.id)) + dt);
-      const at = pos && SC.guideAt(S.doc, pos.bar) === 'lock' ? SC.chordAt(S.doc, pos.bar, pos.tick) : null;
+      const at = pos && SC.guideAt(S.doc, pos.bar, d.hit.track) === 'lock' ? SC.chordAt(S.doc, pos.bar, pos.tick) : null;
       if (at) {
         const sct = SC.scaleAt(d.hit.track, pos.bar), tone = (x) => P.guideTone(-x, sct, at.ch, 'lock'); // (x = -dia: like lines, larger is lower)
         t = tone(P.lockedLine(-(dia0 - k), (x) => tone(x).chord, -dia0));

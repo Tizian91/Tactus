@@ -949,6 +949,12 @@
     'Playing & practising: click, count-in, loop, following, parts': 'Abspielen & Üben: Klick, Einzähler, Schleife, Folgen, Teile',
     'Playing & practising': 'Abspielen & Üben',
     'Tap: fold / unfold this section': 'Tippen: Abschnitt ein- / ausklappen',
+    // the track in the panel (instrument · writing · sound)
+    Writing: 'Schreiben',
+    'All tracks: add, order, mute / solo; playback': 'Alle Spuren: hinzufügen, ordnen, stumm / solo; Wiedergabe',
+    'The setting before it goes on': 'Die Einstellung davor gilt weiter',
+    'How they help writing a melody: Track → Writing.': 'Wie sie beim Schreiben einer Melodie helfen: Spur → Schreiben.',
+    'Instrument, writing and sound of the track being written: panel "Bar · score" → Track.': 'Instrument, Schreiben und Klang der Spur, in die du schreibst: Panel „Takt · Stück“ → Spur.',
     'Click (metronome)': 'Klick (Metronom)',
     Loudness: 'Lautstärke',
     'Count-in (one bar) - again after each jump': 'Einzähler (ein Takt) – nach jedem Sprung erneut',

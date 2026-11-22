@@ -16,7 +16,6 @@
  *     harmony: { key: { l, a, id }       scale of the chords when there is no melody track (js/pitch.js)
  *                pad: true               the chords sound along softly when playing
  *                vol: 60                 … this loud (0 … 100)
- *                guide: 'mark'           writing a melody: 'off' | 'mark' (the chord tones marked) | 'lock' (only chord tones)
  *                midiOut: ''             the pad plays on Tactus' synth ('') or on this MIDI output (e.g. a synth VST) …
  *                midiCh: 14 }            … on this channel (0 … 15; 14 = channel 15)
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
@@ -36,9 +35,7 @@
  *                chords: [ { t, deg, sev } | { t, name } ]   (only when set) chord symbols, for all tracks: from tick t
  *                                        on up to the next one; deg: scale-degree chord 1 … 7 of the scale that applies
  *                                        here (SC.harmonyScale: it follows a change of scale), sev: seventh chord;
- *                                        name: typed, as plain text (js/pitch.js P.chordText: "F#m7", "Bb/D")
- *                guide: 'off' | 'mark' | 'lock'   (only when set) writing a melody from this bar on: chord tones
- *                                        marked / only chord tones; not set = as before (harmony.guide) }
+ *                                        name: typed, as plain text (js/pitch.js P.chordText: "F#m7", "Bb/D") }
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
  *                mute, solo, profile, profileName, midiOut, midiCh,
  *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass' | 'bass8', scale: { l, a, id } (js/pitch.js),
@@ -47,12 +44,15 @@
  *                                                    instrument: how chords are written for it (js/accomp.js)
  *                                         ksw: { tpl, name, c3, noteShift, poly, keys }   (only when set) the
  *                                                    keyswitches of its VST (js/keyswitch.js)
+ *                                         guide: 'mark'   how the chords guide writing into it: 'off' | 'mark' (the
+ *                                                    chord tones marked) | 'lock' (only chord tones) - SC.guideAt
  *                                         lh: true   piano: the lower staff (left hand) of the melody track right
  *                                                    before it - one instrument; sound, scale, mute / solo, hidden
  *                                                    and name follow the upper one (SC.syncHands)
  *                bars: [ { voices: [ [Event], [Event] ],   // bars[i] belongs to header bars[i]
  *                          simile: false,         // true = "repeat the bar before" in this track (% sign; plays its bar before)
  *                          scale: null,           // melody: another scale from this bar on
+ *                          guide: 'off' | 'mark' | 'lock'   (only when set) melody: the chords guide writing otherwise from here
  *                          ks: [ { t, k } ]     (only when set) keyswitches of the track's VST at tick t (k: the id of a
  *                                                 key of track.ksw, js/keyswitch.js): a way of playing, a slide, a stop
  *                          dyn: [ { t, v } | { t, w, len, to } ] } ] }   (only when set) dynamics of this track: from
@@ -158,7 +158,7 @@
     to: /^dss/.test(j) ? 'segnoSegno' : /^ds/.test(j) ? 'segno' : 'start',
     al: /DoubleCoda$/.test(j) ? 'doubleCoda' : /Coda$/.test(j) ? 'coda' : /Fine$/.test(j) ? 'fine' : null,
   });
-  TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, guide: 'mark', midiOut: '', midiCh: 14 });
+  TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, midiOut: '', midiCh: 14 });
   TC.GUIDES = ['off', 'mark', 'lock'];
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
   // space between the staves of several tracks / between the lines of the page view, % of the basic space
@@ -294,6 +294,7 @@
       t.scale = { l: 0, a: 0, id: 'major' }; // C major
       t.voice = '';
       t.inst = 'voice';  // the instrument (how chords are written; the sound is free)
+      t.guide = 'mark';  // how the chords guide writing into it: 'off' | 'mark' (chord tones marked) | 'lock' (only chord tones)
     }
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
     return t;
@@ -386,7 +387,6 @@
         if (TC.JUMPS.includes(b.jump)) { h.jump = b.jump; h.jumpRep = !!b.jumpRep; }
         const ch = cleanChords(b.chords, TC.barTicks(h.ts));
         if (ch) h.chords = ch;
-        if (TC.GUIDES.includes(b.guide)) h.guide = b.guide;
       }
       return h;
     });
@@ -395,7 +395,7 @@
     if (TC.pitch) doc.harmony.key = TC.pitch.cleanScale(hm.key);
     if (hm.pad === false) doc.harmony.pad = false;
     doc.harmony.vol = TC.clamp(Math.round(num(hm.vol, 60)), 0, 100);
-    if (TC.GUIDES.includes(hm.guide)) doc.harmony.guide = hm.guide;
+    // (how the chords guide writing a melody: since 2026-11-23 per melody track - older files: of the score, see the tracks)
     doc.harmony.midiOut = str(hm.midiOut);
     if (Number.isInteger(hm.midiCh) && hm.midiCh >= 0 && hm.midiCh <= 15) doc.harmony.midiCh = hm.midiCh;
     const pg = raw.page && typeof raw.page === 'object' ? raw.page : {};
@@ -434,6 +434,9 @@
         if (TC.pitch && TC.pitch.CLEFS[t.clef]) out.clef = t.clef;
         out.scale = TC.pitch ? TC.pitch.cleanScale(t.scale) : out.scale;
         if (TC.pitch && TC.pitch.VOICES[t.voice]) out.voice = t.voice;
+        // how the chords guide writing into it (older files: the score's - harmony.guide, a bar's own from it on)
+        const oldG = (raw.bars[0] && raw.bars[0].guide) || hm.guide;
+        out.guide = TC.GUIDES.includes(t.guide) ? t.guide : TC.GUIDES.includes(oldG) ? oldG : 'mark';
         if (t.lh) out.lh = true;
         out.inst = TC.INSTRUMENTS.includes(t.inst) ? t.inst : TC.instFromProgram(out.program, !!t.lh);
         // keyswitches of its VST (js/keyswitch.js) - kept with the score
@@ -445,6 +448,10 @@
         // "%" of this track (older files: in the bar header, for all tracks)
         bar.simile = i > 0 && (!!(src && src.simile) || !!(raw.bars[i] && raw.bars[i].simile));
         if (kind === 'pitched' && i > 0 && src && src.scale && TC.pitch) bar.scale = TC.pitch.cleanScale(src.scale); // a new scale from here
+        if (kind === 'pitched' && i > 0) { // the chords guide writing otherwise from here (older files: in the bar header, for all)
+          const g = src && TC.GUIDES.includes(src.guide) ? src.guide : t.guide === undefined && raw.bars[i] && TC.GUIDES.includes(raw.bars[i].guide) ? raw.bars[i].guide : '';
+          if (g) bar.guide = g;
+        }
         const dyn = src && TC.score.cleanDyn(src.dyn, TC.barTicks(h.ts));
         if (dyn) bar.dyn = dyn;
         // keyswitches written here (a way of playing, a slide …): { t, k } inside the bar, one per place and key
@@ -682,10 +689,31 @@
     (h.chords || []).forEach((c) => out.add(c.t));
     return [...out].sort((a, b) => a - b);
   };
-  /** How chords guide writing a melody in bar bi: 'off' | 'mark' | 'lock' (a bar's own setting holds from it on). */
-  SC.guideAt = function (doc, bi) {
-    for (let i = Math.min(bi, doc.bars.length - 1); i >= 0; i--) if (doc.bars[i].guide) return doc.bars[i].guide;
-    return (doc.harmony && doc.harmony.guide) || 'mark';
+  /**
+   * How chords guide writing a melody in bar bi of `track` (its instrument: a piano's two staves share it):
+   * 'off' | 'mark' | 'lock' - a bar's own setting holds from it on, else the track's own (track.guide). No track: the
+   * melody track the chords follow (SC.harmonyTrack).
+   */
+  SC.guideAt = function (doc, bi, track) {
+    const t = track ? SC.instrumentOf(doc, track) : SC.harmonyTrack(doc);
+    if (!t || t.kind !== 'pitched') return 'off';
+    for (let i = Math.min(bi, t.bars.length - 1); i > 0; i--) if (t.bars[i] && t.bars[i].guide) return t.bars[i].guide;
+    return t.guide || 'mark';
+  };
+  /** Set how the chords guide writing into `track` from bar bi on (bar 0: the whole track); a change like the one before it goes. */
+  SC.setGuide = function (doc, track, bi, v) {
+    const t = SC.instrumentOf(doc, track);
+    if (!t || t.kind !== 'pitched' || !TC.GUIDES.includes(v)) return;
+    if (bi <= 0) t.guide = v;
+    else t.bars[bi].guide = v;
+    for (let i = 1; i < t.bars.length; i++) {
+      const b = t.bars[i];
+      if (b.guide) {
+        const g = b.guide;
+        delete b.guide;
+        if (SC.guideAt(doc, i, t) !== g) b.guide = g;
+      }
+    }
   };
 
   // ---- Finding repeats (e.g. after a MIDI import from a DAW: everything written out) ---------------------

@@ -197,7 +197,7 @@ Das geht in <b>Chrome und Edge am PC</b>.</p>
     (Mac: der eingebaute IAC-Treiber).</li>
   <li>In Cubase: die Schlagzeugspur auf diesen MIDI-Eingang stellen und <b>Monitor</b> einschalten (oder die Aufnahme aktivieren).
     Ein Standalone-VST stellst du in seinen MIDI-Einstellungen auf den Port.</li>
-  <li>In Tactus: Panel <span class="ui">Takt · Stück → Spuren &amp; Klang…</span>, bei der Spur <span class="ui">Spielt über → MIDI-Ausgang (Cubase, ein VST)…</span>;
+  <li>In Tactus: Panel <span class="ui">Takt · Stück → Spur → Klang</span>, <span class="ui">Spielt über → MIDI-Ausgang (Cubase, ein VST)…</span>;
     beim ersten Mal fragt der Browser um Erlaubnis. Dann den Port wählen. <b>Jede Spur hat ihren eigenen Ausgang</b> – ein VST spielt ein
     Instrument: z. B. Schlagzeug auf „Drums“ (EZDrummer), Melodie auf „Melodie“ (Falcon). Eine Spur ohne Ausgang klingt mit den Tactus-Klängen.
     <span class="ui">▶</span> neben „Spielt über“ schickt sofort einen Testton (Snare bzw. ein C) – so siehst du, ob der Port ankommt.</li>
@@ -459,7 +459,7 @@ zählt bei <code>M</code> (Dur-Septime) und <code>m</code> (Moll). Beispiele auf
   </tbody>
 </table>
 </details>
-<p><b>Beim Schreiben der Melodie</b> helfen die Akkorde (Panel, Zeile <span class="ui">Melodie</span>, gilt ab dem gewählten Takt):</p>
+<p><b>Beim Schreiben der Melodie</b> helfen die Akkorde (Panel <span class="ui">Takt · Stück → Spur → Schreiben</span>, Zeile <span class="ui">Akkorde</span>; jede Melodie-Spur hat ihre eigene Einstellung – z. B. der Bass nur Akkordtöne, der Gesang markiert –, gültig ab dem gewählten Takt, Takt 1: die ganze Spur; ein Wechsel mitten im Stück lässt sich mit <span class="ui">Wechsel entfernen</span> wieder wegnehmen):</p>
 <ul>
   <li><span class="ui">Akkordtöne zeigen</span> (Standard): die Töne des gerade klingenden Akkords sind blau hinterlegt, der <b>Grundton</b> (bei Am jedes A) kräftiger; gesetzt wird jeder Ton.</li>
   <li><span class="ui">Nur Akkordtöne</span>: die anderen Linien sind blass, Tippen dort setzt den nächsten Akkordton (gleich weit: beim Ziehen
@@ -516,7 +516,7 @@ Tipp in die Notenzeile <b>den Akkord, der dort laut Akkordzeile gilt</b> – mit
 Welcher Akkord es ist, bestimmst du im Akkord-Panel rechts (Stufenknopf oder eingetippt, siehe <a href="#akkorde">Akkorde</a>).
 <span class="ui">Ton</span> schaltet zurück auf einzelne Töne.</p>
 <ul>
-  <li><b>Wie der Akkord aussieht, bestimmt das Instrument der Spur</b> (<span class="ui">Spuren &amp; Klang</span> → <span class="ui">Instrument</span>) –
+  <li><b>Wie der Akkord aussieht, bestimmt das Instrument der Spur</b> (Panel <span class="ui">Spur → Instrument</span>) –
     nicht ihr Klang, der ist frei (eine Gitarren-Stimme darf auch mit einem Synth klingen):
     <ul>
       <li><b>Gitarre:</b> ein echter Griff – <span class="ui">voll</span> (alle Saiten ab dem Bass: offene Akkorde, Barré; zum Schlagen) oder
@@ -552,7 +552,7 @@ Aufschlag … Tactus schreibt sie nicht als Noten, sondern als <b>Anweisung unte
 Abspielen und im MIDI-Export die richtige Taste kurz vor die Noten.</p>
 <ol class="steps">
   <li>Spur mit dem VST (z. B. Instrument <span class="ui">Gitarre</span>, <span class="ui">Spielt über</span> der MIDI-Ausgang von Iron):
-    in <span class="ui">Spuren &amp; Klang</span> bei der Spur <span class="ui">Keyswitches → UJAM Iron 2 (Instrument Mode)</span>.</li>
+    im Panel <span class="ui">Spur → Klang</span> <span class="ui">Keyswitches → UJAM Iron 2 (Instrument Mode)</span>.</li>
   <li>Einmal prüfen: <span class="ui">Tasten prüfen / ändern</span> aufklappen, bei <span class="ui">Muted</span> auf <span class="ui">▶</span> – in
     Iron muss „Muted“ aufleuchten. Liegt alles eine Oktave daneben: oben <span class="ui">C3 = MIDI 60 / 48</span> umschalten. Eine einzelne
     falsche Taste lässt sich im Feld daneben ändern (z. B. <code>F#2</code>).</li>
@@ -584,7 +584,7 @@ Tremolo, Pizzicato, Col legno, Con sordino … (Streicher · Bläser · Orcheste
 Ab- / Aufschlag (Gitarre · Bass). Tactus weiß, wie jede geschrieben wird und wie lange sie gilt; im Profil trägst du nur ein, auf
 welcher Taste deines VSTs sie liegt.</p>
 <ol class="steps">
-  <li><span class="ui">Spuren &amp; Klang</span> → bei der Spur <span class="ui">Keyswitch-Profile…</span> (oder <span class="ui">⚙ Einstellungen → Keyswitches</span>,
+  <li>Panel <span class="ui">Spur → Klang</span>: <span class="ui">Keyswitch-Profile…</span> (oder <span class="ui">⚙ Einstellungen → Keyswitches</span>,
     wie die Kit-Profile unter Drum-Kit). Dann eins von:
     <ul>
       <li><span class="ui">Expression Map laden…</span> – die Cubase-Expression-Map des VSTs (<code>.expressionmap</code>): Tactus erkennt
@@ -617,7 +617,7 @@ welcher Taste deines VSTs sie liegt.</p>
     Anschlagstärke folgt der Dynamik weiter wie bisher. Ein Profil darf auch nur die Dynamik haben, ohne Tasten.</li>
   <li><b>Schalter dieses VSTs</b> (z. B. Irons Trigger Mode) kommen nicht in die Noten: Name und Taste frei, mit
     <span class="ui">am Anfang</span> schickt Tactus ihn beim Start unsichtbar.</li>
-  <li>Schon an einer Spur Tasten korrigiert? <span class="ui">Als eigenes Profil speichern…</span> (in <span class="ui">Spuren &amp; Klang</span>)
+  <li>Schon an einer Spur Tasten korrigiert? <span class="ui">Als eigenes Profil speichern…</span> (Panel <span class="ui">Spur → Klang</span>)
     macht daraus ein Profil – für andere Spuren und Songs.</li>
   <li>Änderst du ein eigenes Profil, übernehmen die Spuren des offenen Stücks, die es benutzen, die Änderung beim Schließen des Dialogs
     (rückgängig machbar). Jede Spur hat eine Kopie im Stück: Auf einem Rechner ohne das Profil spielt das Stück trotzdem richtig.</li>
@@ -679,7 +679,7 @@ Ohne Angabe spielt alles <i>mf</i> – wie bisher.</p>
   <li>Sie klingt mit den Tactus-Klängen und über MIDI (Anschlagstärke); MusicXML schreibt <i>p</i>, <i>f</i> … und die Gabeln.
     Dieselbe Stufe noch einmal antippen nimmt sie wieder weg.</li>
 </ul>
-<p><b>Lautstärke einer Spur:</b> in <span class="ui">Spuren &amp; Klang</span> der Regler <span class="ui">Lautstärke</span> bei der Spur –
+<p><b>Lautstärke einer Spur:</b> im Panel <span class="ui">Spur → Klang</span> der Regler <span class="ui">Lautstärke</span> –
 wie ein Fader am Mischpult. Mit Tactus-Klängen wird die Spur leiser / lauter. Über MIDI: eine <b>Melodie-Spur</b> bekommt die
 Kanal-Lautstärke (CC 7, ihr Klang bleibt), eine <b>Schlagzeug-Spur</b> schwächere Anschläge – Drum-VSTs wie EZDrummer überhören CC 7.</p>
 <figure><img src="help/img/dynamik.png" alt="Gesang mp mit Crescendo zu f, Schlagzeug p mit Crescendo zu f; links das Noten-Panel mit der Dynamik"><figcaption>Gesang <i>mp</i>, über zwei Takte lauter bis <i>f</i>; das Schlagzeug von <i>p</i> nach <i>f</i>. Links das Noten-Panel mit den Stufen und den Gabeln.</figcaption></figure>

@@ -892,7 +892,7 @@
           }
         }
         // chord symbols, writing a melody (the track being written): the chord tones marked; locked: the other lines pale
-        const guide = pi && z.track === cur && hasChords ? TC.score.guideAt(doc, b.i) : 'off';
+        const guide = pi && z.track === cur && hasChords ? TC.score.guideAt(doc, b.i, z.track) : 'off';
         if (guide !== 'off') {
           const segs = b.chords.slice();
           if (!segs.length || segs[0].t > 0) {

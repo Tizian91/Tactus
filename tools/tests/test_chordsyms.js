@@ -33,10 +33,24 @@ module.exports = function (T) {
   T.eq('vi in bar 2 is Bm (D major), not Am', names(1), '0:Bm');
   T.eq('a chord held over from bar 1 into a changed scale stays what was written', P.chordName(SC.chordAt(doc, 1, 0).ch), 'Bm');
 
-  // guide (how chords help writing a melody): of the score, a bar's own from it on
-  doc.bars[2].guide = 'lock';
-  T.eq('guide: score default, bar 3 on locked', [SC.guideAt(doc, 0), SC.guideAt(doc, 2), SC.guideAt(doc, 3)], ['mark', 'lock', 'lock']);
-  delete doc.bars[2].guide;
+  // guide (how chords help writing a melody): of each melody track, a bar's own from it on
+  SC.setGuide(doc, mel, 2, 'lock');
+  T.eq('guide: the track\'s own, bar 3 on locked', [SC.guideAt(doc, 0, mel), SC.guideAt(doc, 2, mel), SC.guideAt(doc, 3, mel)], ['mark', 'lock', 'lock']);
+  const mel2 = SC.addTrack(doc, 'Bass', mel, 'pitched');
+  SC.setGuide(doc, mel2, 0, 'off');
+  T.eq('guide: another melody track has its own', [SC.guideAt(doc, 0, mel2), SC.guideAt(doc, 3, mel2), SC.guideAt(doc, 3, mel)], ['off', 'off', 'lock']);
+  T.eq('guide: the same again as before it - the change goes', (SC.setGuide(doc, mel, 2, 'mark'), mel.bars[2].guide), undefined);
+  T.eq('guide: a drum track - no help', SC.guideAt(doc, 0, doc.tracks[0]), 'off');
+  SC.deleteTrack ? SC.deleteTrack(doc, mel2) : doc.tracks.splice(doc.tracks.indexOf(mel2), 1);
+  // older files: of the score (harmony.guide, a bar header's own from it on) - each melody track takes it over
+  const old = JSON.parse(JSON.stringify(doc));
+  old.harmony.guide = 'off';
+  old.bars[2].guide = 'lock';
+  old.tracks.forEach((t) => { delete t.guide; t.bars.forEach((b) => delete b.guide); });
+  const ld = TC.normalizeDoc(old), lm = ld.tracks.find((t) => t.kind === 'pitched');
+  T.eq('older file: the score\'s guide goes to the melody track', [SC.guideAt(ld, 0, lm), SC.guideAt(ld, 2, lm), ld.bars[2].guide], ['off', 'lock', undefined]);
+  T.eq('saved and loaded: the track\'s guide stays', (() => { SC.setGuide(doc, mel, 1, 'lock'); const r = TC.normalizeDoc(JSON.parse(JSON.stringify(doc))); const m = r.tracks.find((t) => t.kind === 'pitched'); return [SC.guideAt(r, 0, m), SC.guideAt(r, 1, m)]; })(), ['mark', 'lock']);
+  SC.setGuide(doc, mel, 1, 'mark');
 
   // time signature: chords past the new end go
   SC.setTimeSig(doc, 0, [2, 4], true);

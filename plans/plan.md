@@ -708,7 +708,11 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
     `K.embed`); fehlt eines auf dem Gerät: `K.inDoc` (`K.current` / `K.ofTrack`), „(aus dem Stück)“, *Zu meinen Profilen nehmen*
     (`K.adopt`). Nicht im Teilen-Link. Keyswitch-Profile stehen schon vollständig in der Spur (`track.ksw`).
   - Ältere Stücke übernehmen dabei die bisherigen Geräte-Werte.
-- Offen (besprochen, noch nicht entschieden): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück
+- ✅ **Neu gegliedert** (2026-11-23): 🔊 *Ton beim Schreiben* neben den Werkzeugen im Noten-Panel; ⚙ in vier Teilen mit
+  „dieses Stück“ / „dieses Gerät“: *Notenbild & Seite (dieses Stück)*, *Bühne* (+ Bildschirm an), *Bedienung* (Linkshänder, Finger
+  schreiben, Drum-Map), *Meine Profile* (Kit- und Keyswitch-Profile); Mischpult: *Master*-Streifen oben, darunter *Ausgabe (dieses
+  Gerät)* – MIDI, Aufnahme-Klänge, Ausgabe-Verzögerung (immer sichtbar). Swing im MIDI-Export bleibt beim Swing (Stück).
+- Offen (besprochen, noch nicht entschieden, ältere Liste – großteils erledigt): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück
   gespeichert) aus ⚙ Ansicht zum Notenbild; *Swing im MIDI-Export* in den Export-Dialog; Akkord-Pad-Ausgang zu „Spuren & Klang“;
   Ausgabe-Verzögerung immer sichtbar; *Bildschirm an* zu Bühne / Gerät; Profile dort anlegen, wo sie gewählt werden; in ⚙
   kennzeichnen, was fürs Stück und was fürs Gerät gilt.

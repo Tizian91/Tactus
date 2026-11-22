@@ -185,6 +185,14 @@ setTimeout(() => {
   ok('counting under the staff ' + document.querySelectorAll('#score .count').length, document.querySelectorAll('#score .count').length > 20);
   // own syllables (⚙ → look of this score): "ke ti na" from the list, triplets typed ("ka ba")
   TC.actions.openSettings();
+  const setHeads = [...document.querySelectorAll('.settings-dialog section > h3:not(.sub)')].map((h) => h.textContent);
+  ok('⚙: score / device in the headings (' + setHeads.join(' | ') + ')', setHeads.length === 4 && /Stück/.test(setHeads[0]) && setHeads.slice(1).every((h) => /Gerät/.test(h)) &&
+    !!document.querySelector('.settings-dialog select[data-action="setWake"]') && !!document.querySelector('.settings-dialog [data-action="toggleDrumMap"]'));
+  const sndBtn = () => document.querySelector('#panel-notes .tool-seg [data-action="toggleSound"]');
+  const snd0 = S.settings.sound;
+  sndBtn().click();
+  ok('note panel: 🔊 beside the tools switches the sound when writing', !!sndBtn() && S.settings.sound === !snd0 && sndBtn().textContent === (S.settings.sound ? '🔊' : '🔇'));
+  sndBtn().click();
   const c16 = document.querySelector('.settings-dialog select[data-action="setCountPreset"][data-kind="16"]');
   ok('⚙ look of this score: notation, stems, counting with its syllables', !!c16 && !!document.querySelector('.settings-dialog select[data-action="setNotation"]') &&
     !!document.querySelector('.settings-dialog select[data-action="setStems"]') && !!document.querySelector('.settings-dialog [data-action="toggleCounts"]'));
@@ -1129,7 +1137,9 @@ setTimeout(() => {
           TC.panel.closeSettings();
           // the mixer: a strip per track - volume, pan (a double-click: middle), output; the panel "Track" has the pan too
           TC.actions.openTracks();
-          const strips = document.querySelectorAll('.settings-dialog .mix-strip:not(.chord-strip)');
+          const strips = document.querySelectorAll('.settings-dialog .mix-strip:not(.chord-strip):not(.master-strip)');
+          ok('mixer: the master volume on top, the output of this device below (delay always there)', !!document.querySelector('.settings-dialog .mixer > .master-strip:first-child input[data-volume]') &&
+            !!document.querySelector('.settings-dialog input[data-audiodelay]'));
           const t0id = TC.score.instruments(S.doc)[0].id;
           const panIn = document.querySelector(`.settings-dialog input[data-trackpan][data-id="${t0id}"]`);
           ok('mixer: a strip per track with volume and pan (' + strips.length + ')', strips.length === TC.score.instruments(S.doc).length && !!panIn &&

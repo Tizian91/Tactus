@@ -56,6 +56,7 @@
         ${btn('setTool', 'write', '✏ ' + tr('Write'), t === 'write', tr('Write notes (W)'))}
         ${btn('setTool', 'select', '⬚ ' + tr('Select'), t === 'select', tr('Select and move several notes (V)'))}
         ${btn('setTool', 'erase', '⌫ ' + tr('Erase'), t === 'erase', tr('Eraser: tap or wipe over notes (E)'))}
+        ${btn('toggleSound', undefined, S.settings.sound ? '🔊' : '🔇', !!S.settings.sound, tr(S.settings.sound ? 'Sound when writing a note: on (click: off)' : 'Sound when writing a note: off (click: on)'), 'sound-tgl')}
       </div>${hint ? `<p class="hint tight">${tr(hint)}</p>` : ''}</section>`;
   }
 
@@ -609,7 +610,7 @@
       '</div>';
     const art = TC.drums.byId(S.input.art);
     return `<section><h3>${tr('Tracks')}</h3>
-      <div class="mixer">${ts.map(strip).join('')}${padStrip()}</div>
+      <div class="mixer">${masterStrip()}${ts.map(strip).join('')}${padStrip()}</div>
       <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track with the whole drum kit'))}
         ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}
         ${btn('addMelody', undefined, '+ ' + tr('Melody'), false, tr('A melody track (singing voice): notes with pitches, a scale'))}
@@ -740,9 +741,9 @@
   function kswSection() {
     if (!TC.kswLib) return '';
     const n = TC.kswLib.list.length;
-    return `<section><h3>${tr('Keyswitches')}</h3>
+    return `<h3 class="sub">${tr('Keyswitches')}</h3>
       <p class="hint tight">${n ? tr('{n} own keyswitch profile(s) - chosen at a melody track (panel → Track → Sound).', { n }) : tr('Ways of playing of an instrument VST (UJAM, orchestral …): make a profile once, choose it at a melody track (panel → Track → Sound).')}</p>
-      <div class="btn-row">${btn('openKswLib', undefined, tr('Keyswitch profiles…'), false, tr('Make your own (any instrument VST: UJAM, orchestral …), kept in Dropbox'))}</div></section>`;
+      <div class="btn-row">${btn('openKswLib', undefined, tr('Keyswitch profiles…'), false, tr('Make your own (any instrument VST: UJAM, orchestral …), kept in Dropbox'))}</div>`;
   }
 
   /**
@@ -764,7 +765,7 @@
           `<option value="${esc(v)}"${!own && v === cur ? ' selected' : ''}>1 ${esc(v)}</option>`).join('')}<option value="own"${own ? ' selected' : ''}>${tr('Own…')}</option></select></div>
         ${own ? `<div class="row"><label></label><input type="text" data-countsyl="${kind}" value="${esc(cur)}" title="${esc(tr(tip))}"></div>` : ''}`;
     };
-    return `<section><h3>${tr('Look of this score')}</h3>
+    return `<section><h3>${tr('Look and page (this score)')}</h3>
       <p class="hint tight">${tr('Saved with the score - the same on every device and in print.')}</p>
       <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
       <p class="hint tight">${tr('Where the drums sit on the staff. Only the display changes.')}</p>
@@ -774,6 +775,7 @@
       ${sylRow('16', '16ths', s16, Rh.COUNT16, 'Three syllables after the beat, e.g. e + a or ke ti na')}
       ${sylRow('3', 'Triplets', s3, Rh.COUNT3, 'Two syllables after the beat, e.g. tri let or ka ba')}
       <p class="hint tight">${esc(`1 ${s16} 2 ${s16} · 1 ${s3} 2 ${s3}`)}</p>
+      ${pageRows()}
     </section>`;
   }
 
@@ -782,13 +784,11 @@
    * the track (panel → Track → Instrument); notation and stems: "Look of this score".
    */
   function kitSection() {
-    return `<section><h3>${tr('Drums')}</h3>
-      <p class="hint tight">${tr('The instruments of a drum track (standard, large, all, own selection): panel "Bar · score" → Track → Instrument.')}</p>
+    return `<section><h3>${tr('My profiles (this device, with Dropbox)')}</h3>
+      <p class="hint tight">${tr('Chosen at each track (panel "Bar · score" → Track → Sound). A score carries copies of its kit profiles.')}</p>
+      <h3 class="sub">${tr('Drum kits')}</h3>
       <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>
-      <h3 class="sub">${tr('Drum map')}</h3>
-      ${check('toggleDrumMap', S.settings.showDrumMap, tr('Show next to the staff'))}
-      ${check('toggleMapUsed', S.settings.mapUsedOnly, tr('Only instruments used in the score'))}
-      <p class="hint">${tr('Pointer on a short name: its line lights up. Click: choose the instrument.')}</p>
+      ${kswSection()}
     </section>`;
   }
 
@@ -805,18 +805,21 @@
       <p class="hint tight">${tr('Lower voice: stems down, rests of its own. Only the notation changes, not the sound or the MIDI.')}</p>`;
   }
 
+  /**
+   * The mixer, below the strips: how this device sounds - MIDI (lead, off for now, Tactus' sounds as well), the recorded
+   * drums, the delay of the output (always there: Bluetooth headphones delay MIDI-free playback just as well).
+   * (Click, count-in, loop, following: ▾ at ▶; the screen on: ⚙ Stage; the sound when writing: the note panel.)
+   */
   function playSection() {
-    const st = S.settings;
-    // (click, count-in, loop, following: ▾ at ▶ in the toolbar - what is touched while practising, see practiceBody)
-    return `<section><h3>${tr('Playback')}</h3>
-      <p class="hint tight">${tr('Click, count-in, loop and following: ▾ next to ▶ in the toolbar.')}</p>
-      ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
-      <div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="1" step="0.05" value="${st.volume}" data-volume></div>
-      ${TC.wake.supported() ? `<div class="row"><label>${tr('Screen on')}</label><select data-action="setWake" title="${tr('Keeps the screen of a tablet or phone from turning off')}">${[['play', 'while playing and on stage'], ['always', 'while Tactus is open'], ['off', 'as the device does it']].map(([v, l]) =>
-        `<option value="${v}"${(st.wake || 'play') === v ? ' selected' : ''}>${tr(l)}</option>`).join('')}</select></div>` : ''}
-      ${soundRow()}${samplesRow()}
-      <p class="hint">${tr('Space: play / stop · plays from the selected bar.')}</p>
+    return `<section><h3>${tr('Output (this device)')}</h3>
+      ${soundRow()}${samplesRow()}${delayRow()}
+      <p class="hint">${tr('Click, count-in, loop and following: ▾ next to ▶ in the toolbar.')}</p>
     </section>`;
+  }
+  /** The master volume: a strip of its own at the top of the mixer (Tactus' sounds; MIDI: the VST's own). */
+  function masterStrip() {
+    const v = S.settings.volume;
+    return `<div class="mix-strip master-strip"><div class="mix-row"><span class="mix-lab"><b>${tr('Master')}</b></span><input type="range" min="0" max="1" step="0.05" value="${v}" data-volume title="${esc(tr('Volume of all Tactus sounds (this device)'))}"><span class="mix-val">${Math.round(v * 100)}</span></div></div>`;
   }
 
   /**
@@ -859,23 +862,27 @@
     const note = !st.samples ? '' : state === 'loading' ? `<p class="hint tight">${tr('Loading the recordings… (about 3.5 MB, once)')}</p>`
       : state === 'failed' ? `<p class="hint warn tight">${tr('The recordings could not be loaded (offline, or opened as a file) – the synthesizer plays.')}</p>` : '';
     const credit = st.samples ? `<p class="hint tight">${tr('Recordings: MuldjordKit by Lars Muldjord (CC BY 4.0) and Virtuosity Drums by Versilian Studios (CC0).')}</p>` : '';
-    const rep = Math.round(TC.audio.reportedDelay() * 1000);
-    const delay = `<div class="row"><label>${tr('Output delay')}</label><input type="number" min="0" max="500" step="10" data-audiodelay value="${Number(st.audioDelay) || 0}"> <span class="muted">ms</span></div>
+    return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit;
+  }
+  /** The delay of the output (Bluetooth …): the cursor waits for the sound - always offered. */
+  function delayRow() {
+    const st = S.settings, rep = Math.round(TC.audio.reportedDelay() * 1000);
+    return `<div class="row"><label>${tr('Output delay')}</label><input type="number" min="0" max="500" step="10" data-audiodelay value="${Number(st.audioDelay) || 0}"> <span class="muted">ms</span></div>
       <p class="hint tight">${tr('The cursor runs ahead of the sound (e.g. Bluetooth headphones)? Enter the difference; the browser reports {n} ms itself, already allowed for.', { n: rep })} <a class="help-link" href="hilfe.html#verzoegerung" target="tactus-help" title="${tr('Help: how this works')}">ⓘ</a></p>`;
-    return check('toggleSamples', !!st.samples, tr('Recorded drum sounds (samples) instead of the synthesizer')) + note + credit + delay;
   }
 
   /** Options of a spacing in % (std: marked as the standard). */
   const gapOpts = (list, cur, std) => list.map((p) =>
     `<option value="${p}"${p === cur ? ' selected' : ''}>${p} %${p === std ? ' (' + esc(tr('standard')) + ')' : ''}</option>`).join('');
 
-  function pageSection() {
+  /** The page of the score (part of "Look and page"): bars per line, numbers, margins, spacings, what is written. */
+  function pageRows() {
     const pg = S.doc.page;
     const per = [0, 2, 3, 4, 5, 6, 8].map((n) => `<option value="${n}"${n === pg.barsPerLine ? ' selected' : ''}>${n ? n : esc(tr('Automatic'))}</option>`).join('');
     const nums = [['system', 'At the start of each line'], ['every', 'Every bar'], ['off', 'None']]
       .map(([k, label]) => `<option value="${k}"${k === pg.barNumbers ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
     const margins = TC.MARGINS.map((mm) => `<option value="${mm}"${mm === pg.margin ? ' selected' : ''}>${mm} mm${mm === 15 ? ' (' + esc(tr('standard')) + ')' : ''}</option>`).join('');
-    return `<section><h3>${tr('Page')}</h3>
+    return `<h3 class="sub">${tr('Page')}</h3>
       <div class="row"><label>${tr('Bars per line')}</label><select data-action="setBarsPerLine">${per}</select></div>
       <div class="row"><label>${tr('Bar numbers')}</label><select data-action="setBarNumbers">${nums}</select></div>
       <div class="row"><label>${tr('Margins')}</label><select data-action="setMargin">${margins}</select></div>
@@ -893,8 +900,7 @@
         ${btn('toggleLayout', undefined, tr(S.settings.layout === 'page' ? 'Endless view' : 'Page view'), false)}
         ${btn('print', undefined, tr('PDF / print…'), false, 'Ctrl+P')}
       </div>
-      <p class="hint">${tr('PDF: choose "Save as PDF" as the printer. Bar menu: text above a bar, new line.')}</p>
-    </section>`;
+      <p class="hint">${tr('PDF: choose "Save as PDF" as the printer. Bar menu: text above a bar, new line.')}</p>`;
   }
 
   /**
@@ -932,7 +938,10 @@
       <p class="hint tight">${tr('Click and count-in: ♩ in the stage bar (the same as for ▶).')}</p>
       ${check('toggleTimerCursor', st.timerCursor !== false, tr('Show where we are (cursor at the start of each bar)'))}
       ${turnRow}`;
-    return `<section><h3>${tr('Turning pages')}</h3>
+    const wake = TC.wake.supported() ? `<div class="row"><label>${tr('Screen on')}</label><select data-action="setWake" title="${tr('Keeps the screen of a tablet or phone from turning off')}">${[['play', 'while playing and on stage'], ['always', 'while Tactus is open'], ['off', 'as the device does it']].map(([v, l]) =>
+        `<option value="${v}"${(st.wake || 'play') === v ? ' selected' : ''}>${tr(l)}</option>`).join('')}</select></div>` : '';
+    return `<section><h3>${tr('Stage (this device)')}</h3>
+      ${wake}
       <div class="btn-row">${btn('togglePerform', undefined, tr('Stage view'), false, tr('Only the pages, full screen; tap the right / left third, Page Down / Up or MIDI turns (Esc: back)'))}</div>
       <div class="row"><label>${tr('Automatically')}</label><select data-action="setTurnMode">${modes}</select></div>
       ${timer ? timerRows : `${midi}
@@ -943,10 +952,15 @@
     </section>`;
   }
 
+  /** ⚙ "Operation (this device)": how Tactus is used here - hands, fingers, the drum map beside the staff. */
   function viewSection() {
-    return `<section><h3>${tr('View')}</h3>
+    return `<section><h3>${tr('Operation (this device)')}</h3>
       ${check('toggleLeftHanded', S.settings.leftHanded, tr('Left-handed mode (swap the panels)'))}
       ${check('toggleFingerWrites', S.settings.fingerWrites !== false, tr('Fingers write notes (off: only pen and mouse; a finger selects and scrolls)'))}
+      <h3 class="sub">${tr('Drum map')}</h3>
+      ${check('toggleDrumMap', S.settings.showDrumMap, tr('Show next to the staff'))}
+      ${check('toggleMapUsed', S.settings.mapUsedOnly, tr('Only instruments used in the score'))}
+      <p class="hint">${tr('Pointer on a short name: its line lights up. Click: choose the instrument.')}</p>
     </section>`;
   }
 
@@ -966,7 +980,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, TC.curTrack().kitPreset, [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst, TC.curTrack().ksw && TC.curTrack().ksw.keys.length, S.selBar !== null && JSON.stringify((TC.curTrack().bars[S.selBar] || {}).ks || 0),
+    const keyN = JSON.stringify([S.tool, S.input, S.settings.sound, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, TC.curTrack().kitPreset, [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst, TC.curTrack().ksw && TC.curTrack().ksw.keys.length, S.selBar !== null && JSON.stringify((TC.curTrack().bars[S.selBar] || {}).ks || 0),
       // (dynamics: the selected bar, its places and what the track has there)
       S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, S.dynSel, [...S.selection].join(), hit && hit.ev.notes.map((n) => n.stroke || '').join(), TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
@@ -1013,7 +1027,7 @@
         const scroll = body.scrollTop;
         const open = body.querySelector('details.kit-list[open]') !== null;
         const keys = body.querySelector('details.keys-list[open]') !== null;
-        body.innerHTML = lookSection() + kitSection() + kswSection() + pageSection() + turnSection() + viewSection() + keysSection();
+        body.innerHTML = lookSection() + turnSection() + viewSection() + kitSection() + keysSection();
         if (open) body.querySelector('details.kit-list').open = true;
         if (keys) body.querySelector('details.keys-list').open = true;
         body.scrollTop = scroll;

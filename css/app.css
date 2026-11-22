@@ -174,7 +174,7 @@ input[type="number"] { width: 70px; }
 .panel h3.inline, .settings-body h3.inline { display: inline; margin: 0; }
 .panel h3.sub, .settings-body h3.sub { margin-top: 14px; }
 .hint.tight { margin: 4px 0 8px; }
-.tool-seg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
+.tool-seg { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 3px; }
 .tool-seg button { min-height: 38px; justify-content: center; font-weight: 600; }
 .btn-row.two button { flex: 1; justify-content: center; min-height: 34px; }
 .lock-btn { width: 100%; min-height: 38px; font-weight: 600; }
@@ -609,3 +609,8 @@ body.perform .score .play-cursor { stroke: var(--accent); stroke-width: 4; trans
 .mix-row select { flex: 1; min-width: 0; }
 .mix-row select.narrow { flex: none; width: 56px; }
 .mix-row .mix-val { width: 44px; flex: none; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+
+/* the note panel: 🔊 (sound when writing) beside the tools; the mixer: the master strip */
+.tool-seg .sound-tgl { flex: none; padding-left: 8px; padding-right: 8px; }
+.tool-seg .sound-tgl:not(.active) { opacity: 0.6; }
+.mix-strip.master-strip { background: var(--panel-2, transparent); border-style: dashed; }

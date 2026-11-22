@@ -648,10 +648,14 @@
    * playing through MIDI its own output and channel (e.g. one loopMIDI port per drum VST in Cubase).
    */
   function trackSoundRows(t) {
-    const scoreP = TC.kits.current(S.doc);
-    const missing = TC.kits.trackMissing(S.doc, t);
-    const profiles = [['', tr('Like the score ({name})', { name: scoreP ? scoreP.name : 'General MIDI' })], ['gm', 'General MIDI (Guitar Pro …)']]
-      .concat(TC.kits.list.map((p) => [p.id, p.name]))
+    const K = TC.kits, scoreP = K.current(S.doc);
+    const missing = K.trackMissing(S.doc, t);
+    // a profile this device does not have: the copy the score carries (K.embed) - it can become one of this device's
+    const mine = t.profile && t.profile !== 'gm' ? K.ofTrack(S.doc, t) : !t.profile ? scoreP : null, carried = K.fromDoc(mine) ? mine : null;
+    const fromScore = (p) => (K.fromDoc(p) ? ' ' + tr('(from the score)') : '');
+    const profiles = [['', tr('Like the score ({name})', { name: scoreP ? scoreP.name + fromScore(scoreP) : 'General MIDI' })], ['gm', 'General MIDI (Guitar Pro …)']]
+      .concat(K.list.map((p) => [p.id, p.name]))
+      .concat(t.profile && t.profile !== 'gm' && carried ? [[t.profile, carried.name + fromScore(carried)]] : [])
       .concat(missing ? [[t.profile, t.profileName + ' ' + tr('(missing)')]] : [])
       .map(([v, l]) => `<option value="${esc(v)}"${v === (t.profile || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
     let midi = '';
@@ -671,6 +675,8 @@
     return `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="127" step="1" value="${vol}" data-trackvol title="${esc(tr('Fader of this track ({n}) - Tactus sounds softer / louder, through MIDI the channel volume (CC 7)', { n: vol }))}"></div>
       <div class="row"><label>${tr('Pan')}</label><input type="range" min="-100" max="100" step="5" value="${Number(t.pan) || 0}" data-trackpan title="${esc(tr('Left / right - double-click: middle'))}"></div>
       ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>
+        ${carried ? `<p class="hint tight">${esc(tr('"{name}" is not among the profiles of this device - the score brought a copy along.', { name: carried.name }))}</p>
+        <div class="btn-row">${btn('adoptKit', carried.id, tr('Keep it with my profiles'), false, tr('Then it is there for other scores too'))}</div>` : ''}
         <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>`}${midi}${kswRows(t)}`;
   }
 

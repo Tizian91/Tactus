@@ -65,6 +65,7 @@
   };
   ST.autosave = function () {
     clearTimeout(timer);
+    if (TC.kits) TC.kits.embed(S.doc);
     safeSet(AUTOSAVE_KEY, JSON.stringify({ doc: S.doc, file: { name: S.file.name, saved: S.file.saved, dropbox: S.file.dropbox || null }, dirty: S.dirty }));
     TC.saveSettings();
   };
@@ -123,7 +124,10 @@
     TC.actions.home();
   };
 
-  const toText = () => JSON.stringify(S.doc, null, 1);
+  const toText = () => {
+    if (TC.kits) TC.kits.embed(S.doc); // (copies of its kit profiles go along)
+    return JSON.stringify(S.doc, null, 1);
+  };
 
   const suggestName = () => {
     if (S.file.saved) return S.file.name;

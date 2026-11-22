@@ -519,6 +519,7 @@
   DB.saveSong = async function (saveAs) {
     const S = TC.state;
     if (!DB.signedIn()) return DB.login('save');
+    if (TC.kits) TC.kits.embed(S.doc); // (copies of its kit profiles go along)
     const text = JSON.stringify(S.doc, null, 1);
     let target = S.file.dropbox && !saveAs ? S.file.dropbox : null;
     let meta;

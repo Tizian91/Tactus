@@ -369,11 +369,21 @@
   };
   K.byId = (id) => K.list.find((p) => p.id === id) || null;
 
-  /** Kit profile of a score (doc.meta.kit; by name when the id is unknown here), null = General MIDI. */
+  /**
+   * A copy of a kit profile the score carries (doc.kitProfiles, K.embed) - for a device that does not have it: by id,
+   * else by name.
+   */
+  K.inDoc = (doc, id, name) => {
+    const list = (doc && Array.isArray(doc.kitProfiles)) ? doc.kitProfiles : [];
+    return list.find((p) => p.id === id) || (name ? list.find((p) => p.name === name) : null) || null;
+  };
+  /** Is this profile only the score's copy (not among the profiles of this device)? */
+  K.fromDoc = (p) => !!p && !K.list.includes(p);
+  /** Kit profile of a score (doc.meta.kit; by name when the id is unknown here; else the copy it carries), null = General MIDI. */
   K.current = function (doc) {
     const m = doc && doc.meta;
     if (!m || (!m.kit && !m.kitName)) return null;
-    return K.byId(m.kit) || K.list.find((p) => p.name === m.kitName) || null;
+    return K.byId(m.kit) || K.list.find((p) => p.name === m.kitName) || K.inDoc(doc, m.kit, m.kitName);
   };
 
   /**
@@ -383,7 +393,27 @@
   K.ofTrack = function (doc, track) {
     if (!track || !track.profile) return K.current(doc);
     if (track.profile === 'gm') return null;
-    return K.byId(track.profile) || K.list.find((p) => p.name === track.profileName) || null;
+    return K.byId(track.profile) || K.list.find((p) => p.name === track.profileName) || K.inDoc(doc, track.profile, track.profileName);
+  };
+  /**
+   * The score carries a copy of every kit profile it uses (doc.kitProfiles) - opened on another device, its drum VSTs
+   * still get the right keys. Done when it is saved; a copy no profile of this device replaces stays.
+   */
+  K.embed = function (doc) {
+    if (!doc || !Array.isArray(doc.tracks)) return;
+    const used = new Map();
+    const add = (p) => { if (p && p.id && !used.has(p.id)) used.set(p.id, p); };
+    add(K.current(doc));
+    doc.tracks.forEach((t) => { if (t.kind === 'drums' && t.profile && t.profile !== 'gm') add(K.ofTrack(doc, t)); });
+    if (used.size) doc.kitProfiles = [...used.values()].map((p) => JSON.parse(JSON.stringify(p)));
+    else delete doc.kitProfiles;
+  };
+  /** The score's copy of a kit profile becomes one of this device's profiles (and Dropbox's, when connected). */
+  K.adopt = function (p) {
+    if (!p || K.byId(p.id)) return false;
+    K.list.push(JSON.parse(JSON.stringify(p)));
+    K.save();
+    return true;
   };
   /** A track names a kit profile that is not on this computer. */
   K.trackMissing = (doc, track) => !!track && !!track.profile && track.profile !== 'gm' && !K.ofTrack(doc, track);

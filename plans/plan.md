@@ -704,7 +704,9 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
     **Eigene Zählsilben** (`page.count16` drei Silben, `page.count3` zwei; `R.countSyl`, `R.countText`): Liste (e + a, e + e,
     ke ti na …; tri let, ka ba, la li …) oder „Eigene…“ zum Eintippen. Die Seite gehört jetzt zur Rückgängig-Historie (vorher machten
     Seiten-Änderungen das Stück nicht einmal „geändert“).
-  - **Profile reisen mit**: eine Kopie des benutzten Kit- / Keyswitch-Profils im Stück.
+  - ✅ **Profile reisen mit**: `doc.kitProfiles` - Kopien der benutzten Kit-Profile, beim Speichern (Datei, Dropbox, Autosave:
+    `K.embed`); fehlt eines auf dem Gerät: `K.inDoc` (`K.current` / `K.ofTrack`), „(aus dem Stück)“, *Zu meinen Profilen nehmen*
+    (`K.adopt`). Nicht im Teilen-Link. Keyswitch-Profile stehen schon vollständig in der Spur (`track.ksw`).
   - Ältere Stücke übernehmen dabei die bisherigen Geräte-Werte.
 - Offen (besprochen, noch nicht entschieden): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück
   gespeichert) aus ⚙ Ansicht zum Notenbild; *Swing im MIDI-Export* in den Export-Dialog; Akkord-Pad-Ausgang zu „Spuren & Klang“;

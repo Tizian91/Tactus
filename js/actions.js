@@ -214,6 +214,12 @@
 
   /** The drum kit of the drum track being written: 'standard' | 'large' | 'all' | 'profile' | 'own' (see A.setTrackKit). */
   A.setKit = (kit) => A.setTrackKit(kit);
+  /** The copy of a kit profile the score carries becomes one of this device's profiles. */
+  A.adoptKit = function (id) {
+    const p = TC.kits.inDoc(S.doc, id);
+    if (p && TC.kits.adopt(p)) TC.ui.hint(tr('"{name}" is now one of your kit profiles', { name: p.name }));
+    TC.refresh();
+  };
   /** Kit profiles: which key of a drum VST is which instrument (dialog, js/kits.js). */
   A.openKits = () => TC.kits.open();
   /** Notation layout of the score (where the instruments sit; doc.page.notation): only the display changes. */

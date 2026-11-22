@@ -1,7 +1,7 @@
 'use strict';
 // Kit profiles (js/kits.js): automatic assignment, one instrument per key, Cubase drum map with the Tactus notation.
 module.exports = function (T) {
-  const TC = T.load(['state.js', 'model.js', 'drummap.js', 'cubase.js', 'kits.js']);
+  const TC = T.load(['state.js', 'model.js', 'drummap.js', 'cubase.js', 'kits.js', 'share.js']);
   const K = TC.kits, C = TC.cubase;
   TC.drums.setNotation('tactus');
   const item = (i, o, name) => `      <item>
@@ -97,6 +97,23 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   T.eq('drum kit like the kit profile, score without profile: standard kit', TC.drums.kit(kt).size, TC.drums.kitIds('standard').size);
   kt.kitPreset = 'standard';
 
+  // the score carries copies of its kit profiles: on a device without them it still has the keys
+  K.list = [p, bm];
+  const carry = TC.emptyScore(1);
+  carry.meta.kit = bm.id;
+  carry.meta.kitName = bm.name;
+  carry.tracks[0].profile = p.id;
+  carry.tracks[0].profileName = p.name;
+  K.embed(carry);
+  T.eq('embed: a copy of each kit profile used (score, track)', carry.kitProfiles.map((x) => x.name).sort(), [bm.name, p.name].sort());
+  const elsewhere = TC.normalizeDoc(JSON.parse(JSON.stringify(carry)));
+  K.list = [];
+  T.eq('another device without the profiles: the copies of the score are used', [K.current(elsewhere) && K.current(elsewhere).name, K.ofTrack(elsewhere, elsewhere.tracks[0]) && K.ofTrack(elsewhere, elsewhere.tracks[0]).name,
+    K.trackMissing(elsewhere, elsewhere.tracks[0]), K.fromDoc(K.current(elsewhere))], [bm.name, p.name, false, true]);
+  K.embed(elsewhere);
+  T.eq('saved there again: the copies stay', elsewhere.kitProfiles.length, 2);
+  T.eq('a share link: without the copies (too long)', JSON.parse(TC.share.pack(carry)).kitProfiles, undefined);
+  T.eq('a copy taken over: one of this device\'s profiles', [K.adopt(K.current(elsewhere)), K.list.length, K.fromDoc(K.current(elsewhere))], [true, 1, false]);
   K.list = [p, bm];
   const sd = TC.emptyScore(1);
   T.eq('score without kit profile: General MIDI', K.current(sd), null);

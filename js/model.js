@@ -431,6 +431,11 @@
     doc.page.count16 = TC.rhythm ? TC.rhythm.cleanSyl(pg.count16, 3) : '';
     doc.page.count3 = TC.rhythm ? TC.rhythm.cleanSyl(pg.count3, 2) : '';
     if (!raw.meta || raw.meta.swingMidi === undefined) doc.meta.swingMidi = st.swingMidi !== false;
+    // copies of the kit profiles it uses (js/kits.js K.embed): for a device that does not have them
+    if (Array.isArray(raw.kitProfiles)) {
+      const kp = raw.kitProfiles.filter((p) => p && typeof p === 'object' && typeof p.id === 'string' && p.assign && typeof p.assign === 'object' && typeof p.drm === 'string');
+      if (kp.length) doc.kitProfiles = JSON.parse(JSON.stringify(kp));
+    }
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];
     doc.tracks = tracks.map((t) => {
       const kind = ['drums', 'pitched', 'tab'].includes(t.kind) ? t.kind : 'drums';

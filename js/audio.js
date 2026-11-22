@@ -423,7 +423,7 @@
   const selKey = () => [S.selBar, S.selBarEnd].join();
 
   function build() {
-    tl = TC.timeline.build(S.doc, { from: range[0], to: range[1], metronome: S.settings.metronome, countIn: S.settings.countIn && lap === 0 });
+    tl = TC.timeline.build(S.doc, { from: range[0], to: range[1], metronome: true, countIn: S.settings.countIn && lap === 0 });
     rev = S.rev;
     tempo = S.doc.meta.tempo;
     loopLen = tl.end - tl.start;
@@ -472,7 +472,7 @@
       if (at > horizon) break;
       const when = t0 + at;
       if (when >= ctx.currentTime - 0.01) {
-        if (h.click) AU.click(when, h.click, h.vel, cbus);
+        if (h.click) { if (h.t < tl.start || S.settings.metronome) AU.click(when, h.click, h.vel, cbus); } // (the click switched on / off while playing: heard at once; the count-in always)
         else if (h.ks !== undefined) { if (TC.midiOut && TC.midiOut.trackActive(h.trk)) TC.midiOut.note(h.ks, when, h.dur, 0.8, ctx, h.trk, true); } // (a keyswitch: MIDI only)
         else if (h.cc !== undefined) { if (TC.midiOut && TC.midiOut.trackActive(h.trk)) TC.midiOut.cc(h.cc, h.val, when, ctx, h.trk); } // (dynamics as a controller: MIDI only)
         else if (h.pitch !== undefined) AU.tone(h.pitch, when, h.dur, h.vel, bus, h.trk);

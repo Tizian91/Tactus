@@ -672,6 +672,24 @@ Tests `test_findrepeats.js`):
   an: der ganze Teil ausgewählt (`A.sectionRange`) und wiederholt. Bühne mit Timer, angehalten: `Pc.cue(i)` – der Strich zeigt den
   Takt, das nächste ▶ startet dort, solange seine Seite gezeigt wird.
 
+## Einstellungen ordnen ⏳
+
+Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt des Stücks · Notenbild · Klang & Spuren ·
+**Abspielen & Üben** · Bühne · Gerät · Export – und danach, ob sie im Stück oder im Browser gespeichert werden.
+
+- ✅ **Abspielen & Üben** an einer Stelle: **▾ neben ▶** in der Kopfzeile (Aufklappfeld, bleibt offen beim Umschalten; `P.togglePop`
+  in panel.js): Klick an / aus + Lautstärke, Einzähler, Schleife, Folgen (Art, an Teilen ausrichten), Teile zum Hinspringen (ein
+  Teil angetippt: Sprung, das Feld schließt). In „Spuren & Klang → Wiedergabe“ steht davon nichts mehr.
+- ✅ **Ein Klick und ein Einzähler für Spieler und Timer** (`metronome`, `countIn`; `timerClick` / `timerCountIn` entfallen). Der
+  Klick wird immer in die Zeitleiste gebaut und erst beim Abspielen nach `metronome` gespielt oder nicht – an / aus wirkt sofort,
+  auch während des Abspielens; der Einzähler klingt immer.
+- ✅ **♩ in der Bühnenleiste**: Klick an / aus, Lautstärke, Einzähler (dasselbe Feld, ♩ leuchtet, solange es klickt); Esc schließt
+  nur das Feld.
+- Offen (besprochen, noch nicht entschieden): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück
+  gespeichert) aus ⚙ Ansicht zum Notenbild; *Swing im MIDI-Export* in den Export-Dialog; Akkord-Pad-Ausgang zu „Spuren & Klang“;
+  Ausgabe-Verzögerung immer sichtbar; *Bildschirm an* zu Bühne / Gerät; Profile dort anlegen, wo sie gewählt werden; in ⚙
+  kennzeichnen, was fürs Stück und was fürs Gerät gilt.
+
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 
 Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Takt um – Android-Tablet, Chrome, MIDI-USB-C-Interface.

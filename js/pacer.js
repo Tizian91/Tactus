@@ -2,8 +2,8 @@
 /*
  * Turning pages by a timer (to practise): in the stage view ▶ (or Space) starts it on the page shown; it
  * turns the pages in the tempo of the score - repeats, endings, jumps and tempo changes as played
- * (TC.timeline) - `turnLead` bars before a new page begins, with a click of its own if wanted
- * (settings.timerClick, settings.timerCountIn: one bar before; loudness: settings.clickVol). It plays
+ * (TC.timeline) - `turnLead` bars before a new page begins, with the click and the count-in of the playback if
+ * switched on (settings.metronome, settings.countIn - ♩ in the stage bar; loudness: settings.clickVol). It plays
  * nothing else. Turning by hand while it runs: it goes on from the start of that page. Where we are
  * (settings.timerCursor): the bar being played is marked, the cursor stands at its start.
  *
@@ -60,7 +60,7 @@
     const at = Number.isInteger(fromBar) && S.doc.bars[fromBar];
     if (at) TC.actions.gotoPage(pageOf[fromBar] || 0);
     const from = at ? fromBar : Math.max(0, pageOf.indexOf(TC.actions.currentPage()));
-    const tl = TC.timeline.build(S.doc, { from, metronome: st.timerClick !== false, countIn: st.timerClick !== false && st.timerCountIn !== false });
+    const tl = TC.timeline.build(S.doc, { from, metronome: true, countIn: !!st.countIn }); // (the click: heard only while switched on, see step)
     const p = Pc.plan(tl, pageOf, st.turnLead === undefined ? 1 : st.turnLead);
     const first = tl.bars.find((b) => b.bar >= 0);
     run = { ctx, tl, clicks: tl.hits.filter((h) => h.click), ci: 0, plan: p, turns: p.turns, starts: p.starts, ti: 1, t0: ctx.currentTime + 0.1, cbus: TC.audio.clickBus(), first: first ? first.bar : from };
@@ -96,7 +96,7 @@
    */
   Pc.jumpToBar = function (i) {
     if (!run) return;
-    if (S.settings.timerClick !== false && S.settings.timerCountIn !== false) return Pc.start(i);
+    if (S.settings.countIn) return Pc.start(i);
     const song = run.ctx.currentTime - run.t0 - TC.audio.outputDelay();
     let best = null;
     for (const b of run.tl.bars) if (b.bar === i && (!best || Math.abs(b.t0 - song) < Math.abs(best.t0 - song))) best = b;
@@ -141,7 +141,7 @@
     const horizon = now - r.t0 + AHEAD;
     while (r.ci < r.clicks.length && r.clicks[r.ci].t <= horizon) {
       const h = r.clicks[r.ci++], when = r.t0 + h.t;
-      if (when >= now - 0.01) TC.audio.click(when, h.click, h.vel, r.cbus);
+      if (when >= now - 0.01 && (h.t < r.tl.start || S.settings.metronome)) TC.audio.click(when, h.click, h.vel, r.cbus);
     }
     // the page turns that are due (as heard: the sound comes out a little later)
     const song = now - r.t0 - TC.audio.outputDelay();

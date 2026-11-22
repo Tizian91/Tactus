@@ -724,6 +724,20 @@ setTimeout(() => {
     ok('timer: the cursor at the start of the first bar (where we are)', !!document.querySelector('#overlay .play-cursor'));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
     ok('turned by hand while it runs: page 2, the timer goes on', TC.actions.currentPage() === 1 && TC.pacer.running());
+    // ♩ in the stage bar: the click at one tap - on / off (lit), loudness, count-in; Esc closes it, not the stage view
+    const keepMetro = S.settings.metronome, keepCount = S.settings.countIn;
+    const cbtn = () => document.querySelector('#perform-bar button[data-p="clickMenu"]');
+    cbtn().click();
+    const popEl = () => document.querySelector('.practice-pop');
+    ok('♩ in the stage bar: the click pop-up (on / off, loudness, count-in)', !!popEl() && !!popEl().querySelector('[data-action="toggleMetronome"]') &&
+      !!popEl().querySelector('input[data-clickvol]') && !!popEl().querySelector('[data-action="toggleCountIn"]'));
+    if (!!S.settings.metronome === keepMetro) popEl().querySelector('[data-action="toggleMetronome"]').click();
+    ok('♩: the click switched (the button lit while it clicks), the pop-up stays', !!S.settings.metronome !== !!keepMetro && cbtn().classList.contains('on') === !!S.settings.metronome && !!popEl());
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    ok('Esc: the pop-up closes, the stage view stays', !popEl() && document.body.classList.contains('perform'));
+    S.settings.metronome = keepMetro;
+    S.settings.countIn = keepCount;
+    TC.refresh();
     TC.actions.togglePlay();
     ok('Space (togglePlay) in the stage view: the timer stops, no playback, the cursor goes', !TC.pacer.running() && !TC.player.playing && tbtn().textContent === '▶' && !document.querySelector('#overlay .play-cursor'));
     TC.actions.toggleTimer();
@@ -743,6 +757,16 @@ setTimeout(() => {
     chorusItem.click();
     const Lc = TC.render.layout, bc = Lc.bars[20], yc = S.doc.view.y + (Lc.systems[bc.sys].ty - 9 * TC.render.SP) * S.doc.view.zoom;
     ok('jump to "UI-Chorus": bar 21 selected, its line at the top (' + Math.round(yc) + ' px)', S.selBar === 20 && Math.abs(yc - 8) < 2);
+    // ▾ at ▶: playing & practising - click, count-in, loop, following, the parts (a part tapped: jumps, the pop-up closes)
+    document.getElementById('practice-btn').click();
+    const pp = document.querySelector('.practice-pop');
+    const ppParts = pp ? [...pp.querySelectorAll('[data-action="jumpToBar"]')] : [];
+    ok('▾ at ▶: click, count-in, loop, following and the parts (' + ppParts.map((b) => b.textContent).join(', ') + ')', !!pp &&
+      ['toggleMetronome', 'toggleCountIn', 'toggleLoop', 'toggleFollowPlay'].every((a) => pp.querySelector(`[data-action="${a}"]`)) &&
+      ppParts.some((b) => b.textContent === 'UI-Intro' && b.dataset.value === '1') && ppParts.some((b) => b.textContent === 'UI-Chorus' && b.classList.contains('active')));
+    ppParts.find((b) => b.textContent === 'UI-Intro').click();
+    ok('▾ at ▶: "UI-Intro" tapped - bar 2 selected, the pop-up closed', S.selBar === 1 && !document.querySelector('.practice-pop'));
+    TC.selectBar(20);
     TC.player.play();
     const jr = TC.player.range().slice();
     TC.player.stop();

@@ -46,6 +46,8 @@
     TC.wake.update(); // (keep the screen on while playing / on stage)
     document.getElementById('loop-btn').classList.toggle('active', !!S.settings.loop);
     document.getElementById('metro-btn').classList.toggle('active', !!S.settings.metronome);
+    const pm = document.querySelector('#perform-bar [data-p="clickMenu"]'); // (stage bar: ♩ lit while it clicks)
+    if (pm) pm.classList.toggle('on', !!S.settings.metronome);
     document.getElementById('follow-btn').classList.toggle('active', S.settings.followPlay !== false);
     // "Parts ▾": only when there are texts above bars to jump to
     const sec = document.getElementById('section-btn');

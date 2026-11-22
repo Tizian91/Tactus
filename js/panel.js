@@ -732,16 +732,9 @@
 
   function playSection() {
     const st = S.settings;
+    // (click, count-in, loop, following: ▾ at ▶ in the toolbar - what is touched while practising, see practiceBody)
     return `<section><h3>${tr('Playback')}</h3>
-      ${check('toggleMetronome', st.metronome, tr('Metronome'))}
-      <div class="row"><label>${tr('Click')}</label><input type="range" min="0" max="2" step="0.05" value="${Number.isFinite(st.clickVol) ? st.clickVol : 1}" data-clickvol title="${tr('Loudness of the metronome and the count-in')}"></div>
-      ${check('toggleFollowPlay', st.followPlay !== false, tr('The view follows the playback'))}
-      ${st.followPlay !== false ? `<div class="row"><label>${tr('Following')}</label><select data-action="setFollowMode">
-        <option value="jump"${st.followMode !== 'smooth' ? ' selected' : ''}>${tr('Jumping (at the edge)')}</option>
-        <option value="smooth"${st.followMode === 'smooth' ? ' selected' : ''}>${tr('Smooth (glides along)')}</option></select></div>
-      ${check('toggleFollowSections', !!st.followSections, tr('At a part (text above the bar): its bar to the top left'))}` : ''}
-      ${check('toggleCountIn', st.countIn, tr('Count-in (one bar)'))}
-      ${check('toggleLoop', st.loop, tr('Loop (the selected bar, otherwise everything)'))}
+      <p class="hint tight">${tr('Click, count-in, loop and following: ▾ next to ▶ in the toolbar.')}</p>
       ${check('toggleSound', st.sound, tr('Sound when writing a note'))}
       <div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="1" step="0.05" value="${st.volume}" data-volume></div>
       ${TC.wake.supported() ? `<div class="row"><label>${tr('Screen on')}</label><select data-action="setWake" title="${tr('Keeps the screen of a tablet or phone from turning off')}">${[['play', 'while playing and on stage'], ['always', 'while Tactus is open'], ['off', 'as the device does it']].map(([v, l]) =>
@@ -861,9 +854,7 @@
       .map(([v, l]) => `<option value="${v}"${v === (timer ? 'timer' : 'midi') ? ' selected' : ''}>${esc(l)}</option>`).join('');
     const turnRow = `<div class="row"><label>${tr('Turn')}</label><select data-action="setTurnLead">${leads.map(([v, l]) => `<option value="${v}"${v === lead ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
     const timerRows = `<p class="hint tight">${tr('In the stage view ▶ or Space starts the timer on the page shown: it turns in the tempo of the score, repeats and tempo changes as played. Turning by hand: it goes on from there.')}</p>
-      ${check('toggleTimerClick', st.timerClick !== false, tr('Click along'))}
-      ${st.timerClick !== false ? `<div class="row"><label>${tr('Click')}</label><input type="range" min="0" max="2" step="0.05" value="${Number.isFinite(st.clickVol) ? st.clickVol : 1}" data-clickvol title="${tr('Loudness of the metronome and the count-in')}"></div>
-      ${check('toggleTimerCountIn', st.timerCountIn !== false, tr('Count-in (one bar)'))}` : ''}
+      <p class="hint tight">${tr('Click and count-in: ♩ in the stage bar (the same as for ▶).')}</p>
       ${check('toggleTimerCursor', st.timerCursor !== false, tr('Show where we are (cursor at the start of each bar)'))}
       ${turnRow}`;
     return `<section><h3>${tr('Turning pages')}</h3>
@@ -957,6 +948,7 @@
         body.scrollTop = scroll;
       }
     }
+    if (pop) renderPop();
   };
 
   // ---- Settings window (⚙ in the toolbar): drum kit, notation, page, view, keys ----------------
@@ -991,6 +983,84 @@
     dlg = null;
     document.getElementById('settings-btn').classList.remove('active');
   };
+
+  // ---- Playing & practising: ▾ at ▶ (toolbar) and ♩ in the stage bar -----------------------------------
+  // what is touched while practising, one tap away: the click (on / off, loudness), the count-in, the loop, how the
+  // view follows, the parts to jump to. Player and timer (stage view) share the click and the count-in.
+
+  let pop = null, popKind = '', lastPop = '';
+  P.isPopOpen = () => !!pop;
+  /** Open / close the pop-up `kind` ('play': toolbar ▾ at ▶; 'stage': ♩ in the stage bar) under element el. */
+  P.togglePop = function (kind, el) {
+    if (pop && popKind === kind) return P.closePop();
+    P.closePop();
+    popKind = kind;
+    pop = document.createElement('div');
+    pop.className = 'practice-pop';
+    pop.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-action="jumpToBar"]');
+      onClick(e);
+      if (b) P.closePop(); // (a part chosen: the view goes there, the pop-up is in the way)
+    });
+    pop.addEventListener('change', onChange);
+    document.body.appendChild(pop);
+    lastPop = '';
+    renderPop();
+    const r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 20, right: 20, bottom: 40 };
+    const w = pop.offsetWidth;
+    pop.style.left = Math.max(4, Math.min(kind === 'stage' ? r.right - w : r.left, window.innerWidth - w - 4)) + 'px';
+    pop.style.top = r.bottom + 4 + 'px';
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', escKey, true);
+  };
+  P.closePop = function () {
+    if (!pop) return;
+    pop.remove();
+    pop = null;
+    document.removeEventListener('pointerdown', outside, true);
+    document.removeEventListener('keydown', escKey, true);
+  };
+  function outside(e) {
+    if (pop && !pop.contains(e.target) && !e.target.closest('#practice-btn, #perform-bar [data-p="clickMenu"]')) P.closePop();
+  }
+  function escKey(e) {
+    if (e.key !== 'Escape') return;
+    e.stopPropagation(); // (Esc closes the pop-up, not the stage view)
+    P.closePop();
+  }
+  function renderPop() {
+    const st = S.settings, perform = document.body.classList.contains('perform');
+    const key = JSON.stringify([popKind, st.metronome, st.clickVol, st.countIn, st.loop, st.followPlay, st.followMode, st.followSections, st.timerCursor, st.turnMode, st.lang, perform,
+      S.selBar, S.doc.bars.map((h) => h.marker || '').join('|')]);
+    if (key === lastPop) return;
+    lastPop = key;
+    pop.innerHTML = practiceBody(popKind);
+  }
+  /** The pop-up's content. */
+  function practiceBody(kind) {
+    const st = S.settings, timer = st.turnMode === 'timer';
+    const click = `${check('toggleMetronome', !!st.metronome, tr('Click (metronome)'))}
+      <div class="row"><label>${tr('Loudness')}</label><input type="range" min="0" max="2" step="0.05" value="${Number.isFinite(st.clickVol) ? st.clickVol : 1}" data-clickvol title="${tr('Loudness of the metronome and the count-in')}"></div>
+      ${check('toggleCountIn', !!st.countIn, tr('Count-in (one bar) - again after each jump'))}`;
+    if (kind === 'stage') {
+      return `<h3>${tr('Click')}</h3>${click}
+        ${timer ? check('toggleTimerCursor', st.timerCursor !== false, tr('Show where we are (cursor at the start of each bar)')) : ''}
+        <p class="hint tight">${tr('The same as for ▶ outside the stage view.')}</p>`;
+    }
+    const follow = st.followPlay !== false;
+    const parts = TC.actions.sections();
+    let cur = -1;
+    if (S.selBar !== null) parts.forEach((s, k) => { if (s.bar <= S.selBar) cur = k; });
+    return `<h3>${tr('Playing & practising')}</h3>${click}
+      ${check('toggleLoop', !!st.loop, tr('Loop (the selected bar, otherwise everything)'))}
+      ${check('toggleFollowPlay', follow, tr('The view follows the playback'))}
+      ${follow ? `<div class="row"><label>${tr('Following')}</label><select data-action="setFollowMode">
+        <option value="jump"${st.followMode !== 'smooth' ? ' selected' : ''}>${tr('Jumping (at the edge)')}</option>
+        <option value="smooth"${st.followMode === 'smooth' ? ' selected' : ''}>${tr('Smooth (glides along)')}</option></select></div>
+      ${check('toggleFollowSections', !!st.followSections, tr('At a part (text above the bar): its bar to the top left'))}` : ''}
+      ${parts.length ? `<h3 class="sub">${tr('Jump to')}</h3><div class="pop-parts">${parts.map((s, k) =>
+        btn('jumpToBar', s.bar, esc(s.name), k === cur, tr('bar {n}', { n: s.bar + 1 }))).join('')}</div>` : ''}`;
+  }
 
   P.rebuild = () => P.update(true);
 

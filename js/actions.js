@@ -1231,6 +1231,8 @@
     bar.innerHTML = timer + `<button type="button" data-p="prevPage" title="${esc(tr('Page before'))}">‹</button>` +
       `<span>${k + 1} / ${n}${midi}</span><button type="button" data-p="nextPage" title="${esc(tr('Next page'))}">›</button>` +
       (A.sections().length ? `<button type="button" data-p="sectionMenu" title="${esc(tr('Jump to a part (Intro, Verse, Chorus …)'))}">≡</button>` : '') +
+      // the click: essential on stage - on / off, loudness, count-in at one tap (lit while it clicks)
+      `<button type="button" data-p="clickMenu"${S.settings.metronome ? ' class="on"' : ''} title="${esc(tr('Click: on / off, loudness, count-in'))}">♩</button>` +
       `<button type="button" data-p="togglePerform" title="${esc(tr('Leave the stage view (Esc)'))}">✕</button>`;
   }
   /** The whole page in the viewport (stage view). */
@@ -1262,6 +1264,7 @@
         TC.pacer.stop(true);
         TC.pacer.cue(null);
       }
+      TC.panel.closePop();
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
       showPerformBar();
       TC.refresh();
@@ -1314,8 +1317,10 @@
     A.refreshPerformBar();
     TC.refresh();
   };
-  A.toggleTimerClick = () => toggleSetting('timerClick');
-  A.toggleTimerCountIn = () => toggleSetting('timerCountIn');
+  /** ♩ in the stage bar: click on / off, loudness, count-in (the same as for ▶; js/panel.js). */
+  A.clickMenu = (el) => TC.panel.togglePop('stage', el && el.getBoundingClientRect ? el : document.querySelector('#perform-bar [data-p="clickMenu"]'));
+  /** ▾ at ▶ in the toolbar: playing & practising - click, count-in, loop, following, parts. */
+  A.practiceMenu = () => TC.panel.togglePop('play', document.getElementById('practice-btn'));
   A.toggleTimerCursor = function () {
     S.settings.timerCursor = S.settings.timerCursor === false;
     if (!S.settings.timerCursor) TC.render.drawCursor(null);

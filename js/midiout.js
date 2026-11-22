@@ -103,12 +103,19 @@
    * A melody track's fader (track.volume, 100 = as before): the channel volume CC 7, sent once per output and channel
    * (a synth keeps its sound). Drum tracks: the strength instead (MO.hit) - drum VSTs mostly ignore CC 7.
    */
-  const volSent = new Map();
+  const volSent = new Map(), panSent = new Map();
   function volume(o, ch, track, at) {
     const vol = track && Number.isInteger(track.volume) ? TC.clamp(track.volume, 0, 127) : 100, k = o.name + ':' + ch;
-    if (volSent.get(k) === vol) return;
-    if (send(o, [0xb0 | ch, 7, vol], at)) volSent.set(k, vol);
+    if (volSent.get(k) !== vol && send(o, [0xb0 | ch, 7, vol], at)) volSent.set(k, vol);
+    // its place left / right (track.pan -100 … 100): the pan CC 10 (64 = middle), like the volume once per run and channel
+    const pan = MO.panValue(track);
+    if (panSent.get(k) !== pan && send(o, [0xb0 | ch, 10, pan], at)) panSent.set(k, pan);
   }
+  /** A track's place left / right as the MIDI pan (CC 10): 0 left … 64 middle … 127 right. */
+  MO.panValue = (track) => {
+    const p = track ? Number(track.pan) || 0 : 0;
+    return TC.clamp(Math.round(64 + (p < 0 ? p * 0.64 : p * 0.63)), 0, 127);
+  };
 
   /** Key and channel of an instrument for the kit profile of a track (General MIDI without one). */
   function key(art, track) {
@@ -231,6 +238,7 @@
   MO.stop = function () {
     programSent.clear();
     volSent.clear();
+    panSent.clear();
     const now = performance.now(), open = held.filter((h) => h.offAt > now);
     held = [];
     for (const [o, chs] of used) {

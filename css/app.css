@@ -597,3 +597,15 @@ body.perform .score .play-cursor { stroke: var(--accent); stroke-width: 4; trans
 .panel section.part > h3.fold-head { margin: 10px 0 2px; padding: 4px 0; }
 .panel section.part.folded { padding-bottom: 0; }
 .panel section.part.folded > h3.fold-head { margin-bottom: 0; }
+
+/* The mixer: a strip per track (name, M S, …; volume, pan, output) */
+.mixer { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 10px; font-size: 13px; }
+.mix-strip { border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px 6px; }
+.mix-strip.current { border-color: var(--accent, #2b6cde); }
+.mix-strip.chord-strip label.check { padding: 2px 4px; }
+.mix-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+.mix-row .mix-lab { width: 72px; flex: none; color: var(--label); font-size: 12px; }
+.mix-row input[type="range"] { flex: 1; min-width: 0; }
+.mix-row select { flex: 1; min-width: 0; }
+.mix-row select.narrow { flex: none; width: 56px; }
+.mix-row .mix-val { width: 44px; flex: none; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }

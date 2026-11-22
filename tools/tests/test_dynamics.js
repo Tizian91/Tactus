@@ -57,6 +57,13 @@ module.exports = function (T) {
   mt.volume = 70;
   const mm = TC.midi.build(md, null, {}).bytes;
   T.eq('MIDI: the fader of a melody track (70): channel volume CC 7, its strength stays', [cc7(mm), TC.midi.read(mm).notes.find((n) => n.note === 60).vel], [70, 91]);
+  // pan (left -100 … 100 right): a melody track's CC 10 at the start (64 = middle: none written)
+  const cc10 = (bytes) => { for (let i = 0; i < bytes.length - 2; i++) if ((bytes[i] & 0xf0) === 0xb0 && bytes[i + 1] === 10) return bytes[i + 2]; return null; };
+  T.eq('MIDI: pan of a melody track - middle: no CC 10; left 100: 0, right 100: 127, right 50: 96', [cc10(mm), (mt.pan = -100, cc10(TC.midi.build(md, null, {}).bytes)),
+    (mt.pan = 100, cc10(TC.midi.build(md, null, {}).bytes)), (mt.pan = 50, cc10(TC.midi.build(md, null, {}).bytes))], [null, 0, 127, 96]);
+  T.eq('pan: saved and loaded, wrong values kept in range; share link', [TC.normalizeDoc(JSON.parse(JSON.stringify(md))).tracks[1].pan, (mt.pan = 500, TC.normalizeDoc(JSON.parse(JSON.stringify(md))).tracks[1].pan),
+    (mt.pan = -30, TC.normalizeDoc(JSON.parse(TC.share.pack(md))).tracks[1].pan)], [50, 100, -30]);
+  mt.pan = 0;
 
   // ---- saved, loaded, copied; a bar with other dynamics is no %-bar
   const back = TC.normalizeDoc(JSON.parse(JSON.stringify(doc)));

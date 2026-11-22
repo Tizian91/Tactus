@@ -29,9 +29,10 @@
    */
   T.chordTrack = function (doc) {
     const h = (doc && doc.harmony) || {};
-    if (!h.midiOut) return T.CHORD_TRACK;
+    const pan = TC.clamp(Math.round(Number(h.pan) || 0), -100, 100); // (left -100 … 100 right)
+    if (!h.midiOut) return pan ? Object.assign({}, T.CHORD_TRACK, { pan }) : T.CHORD_TRACK;
     const ch = Number.isInteger(h.midiCh) ? h.midiCh : 14;
-    return Object.assign({}, T.CHORD_TRACK, { synthOnly: false, ownPort: true, midiOut: h.midiOut, midiCh: ch, channel: ch });
+    return Object.assign({}, T.CHORD_TRACK, { synthOnly: false, ownPort: true, midiOut: h.midiOut, midiCh: ch, channel: ch, pan });
   };
 
   /** Tempo (quarters per minute) that applies in bar bi. */

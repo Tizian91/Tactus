@@ -363,7 +363,7 @@ Abspielen, Cursor und MIDI-Export folgen den Sprüngen.</p>
 <!-- ================================================================================= -->
 <h2 id="melodie">8. Melodie schreiben</h2>
 <p>Beim Songschreiben eine Gesangsmelodie aus dem Kopf festhalten: Tactus kennt die Tonleiter, du tippst nur auf die Linie.
-Neue Spur: Panel <span class="ui">Takt · Stück → Spuren &amp; Klang… → + Melodie</span>. Sie startet mit Violinschlüssel, C-Dur und einem
+Neue Spur: Panel <span class="ui">Takt · Stück → Spur → Mischpult… → + Melodie</span>. Sie startet mit Violinschlüssel, C-Dur und einem
 Stimmen-Klang – einstellen musst du nichts. Wer will, wählt darunter <span class="ui">Klang</span> (Gesang, Klavier, Gitarre, Bass,
 Streicher, Synth …), <span class="ui">Stimmlage</span> (setzt den passenden Schlüssel), <span class="ui">Schlüssel</span> und
 <span class="ui">Tonleiter</span>.</p>
@@ -426,8 +426,8 @@ Melodie, nur mit Schlagzeug. Takt antippen (über oder unter den Linien), dann i
   <li>Aus den Knöpfen gesetzt merkt sich Tactus die <b>Stufe</b>: wechselt die Tonleiter (C-Dur → D-Dur), wird aus Dm automatisch Em.
     Eingetippte Akkorde bleiben, wie sie sind. Ohne Melodie-Spur wählst du die <span class="ui">Tonart</span> direkt im Panel.</li>
   <li>Auch im Taktmenü (rechte Maustaste / Finger halten neben den Linien): <span class="ui">Akkord</span>.</li>
-  <li><b>Mitspielen:</b> beim Abspielen klingt ein weicher Akkord-Teppich (abschaltbar, eigene Lautstärke) – Songschreiben auch ganz ohne Melodie.
-    Standard ist der Tactus-Klang, auch wenn das Schlagzeug über MIDI läuft. Wer ein Synth-VST hat, wählt darunter unter <span class="ui">Klang</span> dessen MIDI-Ausgang und einen Kanal (Standard 15) – nicht den Ausgang des Drum-VSTs, das würde die Akkorde als Schläge spielen.</li>
+  <li><b>Mitspielen:</b> beim Abspielen klingt ein weicher Akkord-Teppich (abschaltbar; Lautstärke, Pan und Ausgang im <span class="ui">Mischpult</span>) – Songschreiben auch ganz ohne Melodie.
+    Standard ist der Tactus-Klang, auch wenn das Schlagzeug über MIDI läuft. Wer ein Synth-VST hat, wählt im <span class="ui">Mischpult</span> in der Zeile <span class="ui">Akkorde (weiches Pad)</span> unter <span class="ui">Spielt über</span> dessen MIDI-Ausgang und einen Kanal (Standard 15) – nicht den Ausgang des Drum-VSTs, das würde die Akkorde als Schläge spielen.</li>
 </ul>
 <details class="chord-list"><summary><b>Welche Akkorde kann ich eintippen?</b> (alle Schreibweisen)</summary>
 <p>Ein Akkord ist <b>Grundton + Art</b>, wahlweise mit <b>/Bass</b>. Grundton: <code>C D E F G A H</code> (deutsch, <code>B</code> = B♭)
@@ -497,7 +497,7 @@ als Lyric-Ereignis (Karaoke); bei einer Wiederholung kommt im zweiten Durchgang 
 <p>Ein Instrument, zwei Notenzeilen: oben die rechte Hand (Violinschlüssel), unten die linke (Bassschlüssel), links eine geschweifte
 Klammer. Jede Zeile hat ihren eigenen Rhythmus – oben die Melodie, unten Bass und Akkorde, ohne zweite Stimme.</p>
 <ul>
-  <li><b>Neu:</b> Panel <span class="ui">Takt · Stück → Spuren &amp; Klang…</span> → <span class="ui">+ Klavier</span>. Oder eine Melodie-Spur bekommt
+  <li><b>Neu:</b> Panel <span class="ui">Takt · Stück → Spur → Mischpult…</span> → <span class="ui">+ Klavier</span>. Oder eine Melodie-Spur bekommt
     <span class="ui">Zwei Notenzeilen (Klavier: rechte und linke Hand)</span> – ihre Noten bleiben in der oberen Zeile.</li>
   <li><b>Schreiben:</b> In die obere Zeile tippen schreibt die rechte Hand, in die untere die linke. Die Statuszeile zeigt
     „Spur: Klavier (linke Hand)“. Jede Zeile kann wieder zwei Stimmen haben.</li>
@@ -648,8 +648,8 @@ welcher Taste deines VSTs sie liegt.</p>
   <li><b>Während des Abspielens bearbeiten:</b> jede Änderung ist sofort zu hören – so findest du den Groove am schnellsten.</li>
   <li><b>Abspielen &amp; Üben</b> – das kleine <span class="ui">▾</span> neben ▶ in der Kopfzeile: <b>Klick</b> (Metronom) an / aus und seine Lautstärke (unabhängig vom Lautstärkeregler, ganz links = stumm), <b>Einzähler</b> (ein Takt, nach jedem Sprung erneut), <span class="ui">Schleife</span>, <span class="ui">Folgen</span> mit seiner Art und die <b>Teile</b> zum Hinspringen. Der Klick lässt sich auch während des Abspielens an- und ausschalten. <span class="ui">Klick</span>, <span class="ui">⟳</span> und <span class="ui">Folgen</span> stehen zusätzlich direkt in der Kopfzeile. <span class="ui">Folgen</span> aus: die Ansicht bleibt stehen, damit du beim Hören an einer anderen Stelle ändern kannst. <span class="ui">Bei einem Teil (Text über dem Takt): diesen Takt oben links ausrichten</span> (▾ neben ▶, unter Folgen): Erreicht der Cursor einen Teil (Strophe, Refrain …), springt die Ansicht so, dass dessen erster Takt oben links steht – ein Teil wird so selten auf zwei Bildschirm-Ausschnitte verteilt. Bis zum nächsten Teil bewegt sich die Ansicht dann nur, wenn der Cursor sie verlassen würde – bei <span class="ui">Flüssig</span> gleitet sie dorthin, sonst springt sie.</li>
   <li><b>Üben mit Umblättern per Timer</b> (<span class="ui">⚙ → Umblättern → Automatisch: „Per Timer“</span>): In der <span class="ui">Bühnenansicht</span> startet ▶ oben rechts (oder die <kbd>Leertaste</kbd>) einen Timer auf der gezeigten Seite. Er blättert im Tempo des Stücks um, mit Wiederholungen, Sprüngen und Tempowechseln, wie gespielt, und so viele Takte vorher wie bei <span class="ui">Umblättern</span> eingestellt. Dazu kommt auf Wunsch der <b>Klick</b>: <span class="ui">♩</span> in der Bühnenleiste schaltet ihn an / aus, stellt seine Lautstärke und den Einzähler ein – es sind dieselben wie für ▶ (♩ leuchtet, solange es klickt); sonst spielt Tactus nichts. Der gerade gespielte Takt ist leicht hervorgehoben, ein Strich steht an seinem Anfang – so siehst du immer, wo ihr seid (abschaltbar: <span class="ui">Zeigen, wo wir sind</span>). Blätterst du von Hand um, macht der Timer am Anfang dieser Seite weiter. ■ hält ihn an, Esc beendet die Bühnenansicht. Für Backing-Tracks auf der Bühne bleibt <span class="ui">„Per MIDI“</span>.</li>
-  <li><b>Bildschirm an</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, auf Tablet und Handy): Der Bildschirm geht beim Abspielen und in der Bühnenansicht nicht aus, auf Wunsch auch die ganze Zeit, solange Tactus offen ist. Das geht nur in der Online-Version (bzw. der installierten App), nicht aus einer Datei. Der Browser gibt die Sperre frei, wenn du zu einer anderen App wechselst, und Tactus holt sie zurück, wenn du wiederkommst.</li>
-  <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (<span class="ui">Spuren &amp; Klang</span> → Wiedergabe, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
+  <li><b>Bildschirm an</b> (<span class="ui">Mischpult</span> → Wiedergabe, auf Tablet und Handy): Der Bildschirm geht beim Abspielen und in der Bühnenansicht nicht aus, auf Wunsch auch die ganze Zeit, solange Tactus offen ist. Das geht nur in der Online-Version (bzw. der installierten App), nicht aus einer Datei. Der Browser gibt die Sperre frei, wenn du zu einer anderen App wechselst, und Tactus holt sie zurück, wenn du wiederkommst.</li>
+  <li><b>Klang</b>: Tactus-Synthesizer, <b>aufgenommene Schlagzeug-Klänge</b> (<span class="ui">Mischpult</span> → Wiedergabe, einmalig ca. 3,5 MB) oder dein Drum-VST über MIDI (<a href="#vst-wiedergabe">Kapitel 4</a>).</li>
 </ul>
 <h3 id="dynamik">Dynamik (ppp … fff) und Lautstärke der Spuren</h3>
 <p><b>Dynamik</b> sagt, wie stark ab einer Stelle gespielt wird. Die Noten sind die Hilfe für die Stelle: eine <b>Note antippen</b>, dann im
@@ -679,9 +679,9 @@ Ohne Angabe spielt alles <i>mf</i> – wie bisher.</p>
   <li>Sie klingt mit den Tactus-Klängen und über MIDI (Anschlagstärke); MusicXML schreibt <i>p</i>, <i>f</i> … und die Gabeln.
     Dieselbe Stufe noch einmal antippen nimmt sie wieder weg.</li>
 </ul>
-<p><b>Lautstärke einer Spur:</b> im Panel <span class="ui">Spur → Klang</span> der Regler <span class="ui">Lautstärke</span> –
+<p><b>Lautstärke und Pan:</b> Das <span class="ui">Mischpult</span> (Panel <span class="ui">Spur → Mischpult…</span>) zeigt alle Spuren untereinander, jede mit <span class="ui">Lautstärke</span>, <span class="ui">Pan</span> (links / rechts, Doppelklick: Mitte), M / S und wohin sie spielt; das Akkord-Pad hat dort eine eigene Zeile. Für die Spur, in die du schreibst, stehen Lautstärke und Pan auch im Panel <span class="ui">Spur → Klang</span>. Die Lautstärke wirkt
 wie ein Fader am Mischpult. Mit Tactus-Klängen wird die Spur leiser / lauter. Über MIDI: eine <b>Melodie-Spur</b> bekommt die
-Kanal-Lautstärke (CC 7, ihr Klang bleibt), eine <b>Schlagzeug-Spur</b> schwächere Anschläge – Drum-VSTs wie EZDrummer überhören CC 7.</p>
+Kanal-Lautstärke (CC 7, ihr Klang bleibt), eine <b>Schlagzeug-Spur</b> schwächere Anschläge – Drum-VSTs wie EZDrummer überhören CC 7. <b>Pan</b>: Tactus-Klänge kommen links / rechts aus dem Lautsprecher; über MIDI bekommt eine Melodie-Spur (und das Pad) den Pan-Regler CC 10, auch im MIDI-Export. Ein Drum-VST verteilt seine Instrumente selbst im Stereobild.</p>
 <figure><img src="help/img/dynamik.png" alt="Gesang mp mit Crescendo zu f, Schlagzeug p mit Crescendo zu f; links das Noten-Panel mit der Dynamik"><figcaption>Gesang <i>mp</i>, über zwei Takte lauter bis <i>f</i>; das Schlagzeug von <i>p</i> nach <i>f</i>. Links das Noten-Panel mit den Stufen und den Gabeln.</figcaption></figure>
 
 <h3 id="verzoegerung">Verzögerung ausgleichen</h3>

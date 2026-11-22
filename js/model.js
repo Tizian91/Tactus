@@ -16,6 +16,7 @@
  *     harmony: { key: { l, a, id }       scale of the chords when there is no melody track (js/pitch.js)
  *                pad: true               the chords sound along softly when playing
  *                vol: 60                 … this loud (0 … 100)
+ *                pan: 0                  … from here: left -100 … 100 right
  *                midiOut: ''             the pad plays on Tactus' synth ('') or on this MIDI output (e.g. a synth VST) …
  *                midiCh: 14 }            … on this channel (0 … 15; 14 = channel 15)
  *     view:   { x, y, zoom }            // scroll / zoom, not part of the undo history
@@ -36,7 +37,7 @@
  *                                        on up to the next one; deg: scale-degree chord 1 … 7 of the scale that applies
  *                                        here (SC.harmonyScale: it follows a change of scale), sev: seventh chord;
  *                                        name: typed, as plain text (js/pitch.js P.chordText: "F#m7", "Bb/D") }
- *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume, fill, kit, oneLine, hidden,
+ *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume (0 … 127), pan (-100 … 100), fill, kit, oneLine, hidden,
  *                mute, solo, profile, profileName, midiOut, midiCh,
  *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass' | 'bass8', scale: { l, a, id } (js/pitch.js),
  *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
@@ -158,7 +159,7 @@
     to: /^dss/.test(j) ? 'segnoSegno' : /^ds/.test(j) ? 'segno' : 'start',
     al: /DoubleCoda$/.test(j) ? 'doubleCoda' : /Coda$/.test(j) ? 'coda' : /Fine$/.test(j) ? 'fine' : null,
   });
-  TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, midiOut: '', midiCh: 14 });
+  TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, pan: 0, midiOut: '', midiCh: 14 });
   TC.GUIDES = ['off', 'mark', 'lock'];
   TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
   // space between the staves of several tracks / between the lines of the page view, % of the basic space
@@ -276,7 +277,8 @@
       kind,
       channel: kind === 'drums' ? 9 : 0, // MIDI channel 10 = drums
       program: kind === 'pitched' ? TC.MELODY_PROGRAM : 0,
-      volume: 100,
+      volume: 100,       // fader 0 … 127 (100 = as it was)
+      pan: 0,            // left -100 … 0 (middle) … 100 right
       fill: kind === 'drums' ? 'beat' : 'off', // rest cleanup on screen (rhythm.js R.ends): beat | next | off
       kit: null,         // instruments of its own (ids; e.g. only the snare), null = the kit of the settings
       oneLine: false,    // with instruments of its own: one staff line, every note on it
@@ -395,6 +397,7 @@
     if (TC.pitch) doc.harmony.key = TC.pitch.cleanScale(hm.key);
     if (hm.pad === false) doc.harmony.pad = false;
     doc.harmony.vol = TC.clamp(Math.round(num(hm.vol, 60)), 0, 100);
+    doc.harmony.pan = TC.clamp(Math.round(num(hm.pan, 0)), -100, 100);
     // (how the chords guide writing a melody: since 2026-11-23 per melody track - older files: of the score, see the tracks)
     doc.harmony.midiOut = str(hm.midiOut);
     if (Number.isInteger(hm.midiCh) && hm.midiCh >= 0 && hm.midiCh <= 15) doc.harmony.midiCh = hm.midiCh;
@@ -419,6 +422,7 @@
       out.channel = TC.clamp(Math.round(num(t.channel, out.channel)), 0, 15);
       out.program = TC.clamp(Math.round(num(t.program, 0)), 0, 127);
       out.volume = TC.clamp(Math.round(num(t.volume, 100)), 0, 127);
+      out.pan = TC.clamp(Math.round(num(t.pan, 0)), -100, 100);
       if (['beat', 'next', 'off'].includes(t.fill)) out.fill = t.fill;
       if (Array.isArray(t.kit)) out.kit = [...new Set(t.kit.map(Number).filter((id) => TC.drums && TC.drums.byId(id)))];
       if (out.kit && !out.kit.length) out.kit = null;
@@ -552,7 +556,7 @@
   // with lh: true (left hand, lower staff). Each staff has its own notes, voices and clef; the rest is the instrument's.
 
   /** What both hands of a piano share (the upper one decides; SC.syncHands copies it). */
-  SC.HAND_SHARED = ['name', 'program', 'volume', 'mute', 'solo', 'hidden', 'midiOut', 'midiCh', 'channel', 'inst'];
+  SC.HAND_SHARED = ['name', 'program', 'volume', 'pan', 'mute', 'solo', 'hidden', 'midiOut', 'midiCh', 'channel', 'inst'];
   /** The left hand (lower staff) of a piano's upper track, or null. */
   SC.leftHand = function (doc, t) {
     const n = t && !t.lh ? doc.tracks[doc.tracks.indexOf(t) + 1] : null;

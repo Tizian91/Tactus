@@ -108,6 +108,8 @@
       // (a drum track's fader: its strengths, below - drum VSTs mostly ignore CC 7)
       const vol = Number.isInteger(track.volume) ? track.volume : 100;
       if (vol !== 100 && track.kind === 'pitched' && !track.lh) addTo(noteEv[ti])(0, 0, [0xb0 | melodyCh(track), 7, TC.clamp(vol, 0, 127)]);
+      // its place left / right (pan, CC 10) - a melody track; a drum VST pans its instruments itself
+      if (Number(track.pan) && track.kind === 'pitched' && !track.lh) addTo(noteEv[ti])(0, 0, [0xb0 | melodyCh(track), 10, TC.clamp(Math.round(64 + track.pan * (track.pan < 0 ? 0.64 : 0.63)), 0, 127)]);
     });
     // dynamics (ppp … fff, hairpins) of each track: the strengths of its notes (as heard)
     const dynOf = tracks.map((t) => TC.score.dynFactor(doc, t));
@@ -118,6 +120,7 @@
     const chordEv = [], CHORD_CH = Number.isInteger(doc.harmony && doc.harmony.midiCh) ? doc.harmony.midiCh : TC.timeline.CHORD_TRACK.channel;
     let chordNow = null;
     if (opts.chords) chordEv.push({ t: 0, order: 0, bytes: [0xc0 | CHORD_CH, TC.timeline.CHORD_TRACK.program] });
+    if (opts.chords && doc.harmony && Number(doc.harmony.pan)) chordEv.push({ t: 0, order: 0, bytes: [0xb0 | CHORD_CH, 10, TC.clamp(Math.round(64 + doc.harmony.pan * (doc.harmony.pan < 0 ? 0.64 : 0.63)), 0, 127)] });
     let t0 = 0, tempo = null, ts = null, prev = -1;
     // swing / shuffle as heard (opts.straight: the notes on the grid, e.g. to swing them in the DAW)
     const sw = (k) => (opts.straight ? k : Math.round(TC.swingTick(k, doc.meta.swing || 50, doc.meta.swingUnit || 8)));

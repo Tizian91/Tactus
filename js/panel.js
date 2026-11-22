@@ -100,7 +100,7 @@
       ${btn('toggleLock', undefined, `🔒 ${tr('Lock instrument')}`, lock, tr('A click anywhere in the column writes the selected instrument (L, or hold Shift)'), 'lock-btn')}
       <p class="hint tight">${lock ? tr('On: the height no longer matters.') : tr('Hold Shift: lock while held · L: switch')}</p>
       ${groups}
-      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: "Tracks & sound…" (panel "Bar · score").') : tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
+      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: panel "Bar · score" → Track.') : tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
   }
 
   function noteSection(hit) {
@@ -156,7 +156,7 @@
         <section data-sec="melody"><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
-        <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${accompSection(null)}${ksSection()}${dynSection()}${lyricsSection(false)}`;
+        <p class="hint tight">${tr('Scale, clef, voice, sound: panel "Bar · score" → Track.')}</p></section>${accompSection(null)}${ksSection()}${dynSection()}${lyricsSection(false)}`;
     }
     const sp = P.noteSpell(hit.note, TC.score.scaleAt(hit.track, hit.bar));
     const alt = P.enharmonics(hit.note.pitch, sp.dia)[0];
@@ -250,7 +250,7 @@
    * Top of the panel: the track being written (a list - a tap into a staff chooses too) and all that belongs to it,
    * in three parts that fold away of their own: instrument (a melody's sound, clef … / the drums of a drum track),
    * writing (a melody's scale and how the chords help, from the selected bar on / the note values of drums) and
-   * sound (volume, output, channel, kit profile / keyswitches). "Tracks & sound…": the list of all tracks.
+   * sound (volume, output, channel, kit profile / keyswitches). "Mixer…": all tracks.
    */
   function trackSection() {
     const cur = TC.curTrack(), curI = TC.score.instrumentOf(S.doc, cur), insts = TC.score.instruments(S.doc);
@@ -259,7 +259,7 @@
     const part = (key, title, body) => `<section data-sec="${key}" class="part"><h3 class="sub">${esc(title)}</h3>${body}</section>`;
     return `<section data-sec="track" class="track-bar"><h3>${tr('Track')}</h3>
       <div class="row"><label>${tr('Track')}</label><select data-action="selectTrack">${opts}</select>${btn('renameTrack', curI.id, '✎', false, tr('Rename'), 'icon')}</div>
-      <div class="btn-row">${btn('openTracks', undefined, tr('Tracks & sound…'), false, tr('All tracks: add, order, mute / solo; playback'), 'wide')}</div>
+      <div class="btn-row">${btn('openTracks', undefined, tr('Mixer…'), false, tr('All tracks: volume, pan, mute / solo, output; add, order; playback'), 'wide')}</div>
       ${part('track-inst', tr('Instrument'), pitched ? melodyTrackRows(cur) : drumKitRows(cur))}
       ${part('track-write', tr('Writing'), pitched ? scaleRows(cur) + guideRows(cur) : fillRows(cur))}
       ${part('track-sound', tr('Sound'), trackSoundRows(cur))}
@@ -351,19 +351,10 @@
    */
   function chordSection() {
     const i = S.selBar, Pi = TC.pitch;
-    // where the pad sounds: Tactus' synth (default), or a MIDI output of its own (a synth VST) with a channel
-    const hm = S.doc.harmony, MO = TC.midiOut;
-    const outs = MO && MO.supported() ? MO.outputs().slice() : [];
-    if (hm.midiOut && !outs.includes(hm.midiOut)) outs.push(hm.midiOut);
-    const outRow = hm.pad && outs.length ? `<div class="row"><label>${tr('Sound')}</label><select data-action="setChordOut">
-        <option value=""${hm.midiOut ? '' : ' selected'}>${tr('Tactus sounds')}</option>${outs.map((o) =>
-          `<option value="${esc(o)}"${o === hm.midiOut ? ' selected' : ''}>MIDI: ${esc(o)}${MO.connected(o) ? '' : ' ' + tr('(missing)')}</option>`).join('')}</select></div>
-      ${hm.midiOut ? `<div class="row"><label>${tr('Channel')}</label><select data-action="setChordCh" class="narrow">${Array.from({ length: 16 }, (_, k) =>
-          `<option value="${k + 1}"${k === hm.midiCh ? ' selected' : ''}>${k + 1}</option>`).join('')}</select></div>
-        <p class="hint tight">${tr('Choose the output of a synth VST - not the one of the drum VST: it would play the chords as drum hits.')}</p>` : ''}` : '';
+    // the pad: on / off here; its volume, pan and where it sounds (Tactus' synth or a synth VST): a strip of the mixer
+    const hm = S.doc.harmony;
     const pad = `${check('toggleChordPad', !!hm.pad, tr('Play the chords along (soft pad)'))}
-      ${hm.pad ? `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="100" step="5" data-chordvol value="${hm.vol}"></div>` : ''}
-      ${outRow}`;
+      ${hm.pad ? `<p class="hint tight">${tr('Volume, pan and where the pad plays: mixer.')} ${btn('openTracks', undefined, tr('Mixer…'), false, '', 'link')}</p>` : ''}`;
     if (i === null || !S.doc.bars[i]) {
       return `<section data-sec="chords"><h3>${tr('Chords')}</h3><p class="hint">${tr('Tap a bar (above or below the lines): set its chords here.')}</p>${pad}</section>`;
     }
@@ -590,14 +581,17 @@
   }
 
   /**
-   * The tracks: click = write into it, 👁 show / hide, ✎ rename, ↑ ↓ order, ⧉ duplicate, ✕ delete.
-   * They share the bars (time signature, tempo, repeats, jumps); notes and %-bars are their own.
-   * Below: the instruments of the track being written (those of the drum kit, or its own; one line).
+  /**
+   * The mixer (window "Mixer"): every track a strip - 👁 show / hide, its name (click: write into it), M S, ✎ rename,
+   * ↑ ↓ order, ⧉ duplicate, ✕ delete; below its volume, its place left / right (pan) and where it plays (Tactus'
+   * sounds or a MIDI output). The chord pad a strip of its own. The settings of the track being written (instrument,
+   * writing, sound): in the panel, section "Track".
    */
   function tracksSection() {
     // (a piano is one entry: its two staves are one instrument)
     const cur = TC.curTrack(), ts = TC.score.instruments(S.doc), many = ts.length > 1, curI = TC.score.instrumentOf(S.doc, cur);
-    const rows = ts.map((t, k) => `<div class="track-item${t.hidden ? ' hidden-track' : ''}">` +
+    const MO = TC.midiOut, midi = MO && MO.supported();
+    const strip = (t, k) => `<div class="mix-strip${t.hidden ? ' hidden-track' : ''}${t === curI ? ' current' : ''}"><div class="track-item">` +
       (many ? btn('toggleTrackHidden', t.id, t.hidden ? '◌' : '◉', false, tr(t.hidden ? 'Hidden – click: show' : 'Shown – click: hide'), 'icon eye') : '') +
       btn('selectTrack', t.id, esc(t.name), t === curI, tr(TC.score.isPiano(S.doc, t) ? 'Write into this track (two staves: tap the lower one for the left hand)' : 'Write into this track'), 'link') +
       (many ? btn('toggleMute', t.id, 'M', !!t.mute, tr(t.mute ? 'Muted – click: play' : 'Mute (not played)'), 'icon ms mute') +
@@ -606,11 +600,13 @@
       (many ? btn('moveTrackUp', t.id, '↑', false, tr('Up'), 'icon' + (k ? '' : ' off')) +
         btn('moveTrackDown', t.id, '↓', false, tr('Down'), 'icon' + (k < ts.length - 1 ? '' : ' off')) : '') +
       btn('duplicateTrack', t.id, '⧉', false, tr('Duplicate track'), 'icon') +
-      (many ? btn('deleteTrack', t.id, '✕', false, tr('Delete track'), 'icon') : '') + '</div>').join('');
+      (many ? btn('deleteTrack', t.id, '✕', false, tr('Delete track'), 'icon') : '') + '</div>' +
+      mixRows(t.id, Number.isInteger(t.volume) ? t.volume : 100, 127, t.pan, 'track') +
+      (midi ? `<div class="mix-row"><span class="mix-lab">${tr('Plays on')}</span><select data-action="setOutputOf">${outputOptions(t, (v) => t.id + '|' + v)}</select></div>` : '') +
+      '</div>';
     const art = TC.drums.byId(S.input.art);
-    // (the settings of the track being written - instrument, writing, sound: in the panel, section "Track")
     return `<section><h3>${tr('Tracks')}</h3>
-      <div class="track-list">${rows}</div>
+      <div class="mixer">${ts.map(strip).join('')}${padStrip()}</div>
       <div class="btn-row">${btn('addTrack', undefined, '+ ' + tr('Track'), false, tr('Add a track with the whole drum kit'))}
         ${art ? btn('addTrackFor', undefined, '+ ' + esc(tr('Track for {name}', { name: TC.drums.elName(art) })), false, tr('A track only for the selected instrument, on one line')) : ''}
         ${btn('addMelody', undefined, '+ ' + tr('Melody'), false, tr('A melody track (singing voice): notes with pitches, a scale'))}
@@ -618,6 +614,30 @@
       <p class="hint tight">${esc(tr('Instrument, writing and sound of the track being written: panel "Bar · score" → Track.'))}</p>
       ${many ? `<p class="hint tight">${tr('Click into a staff or on a name: you write into that track. Playback plays all tracks (hidden ones too) except the muted ones.')}</p>` : ''}
     </section>`;
+  }
+
+  /** A strip's volume (0 … max) and place left / right (pan -100 … 100), with their values. kind: 'track' | 'chord'. */
+  function mixRows(id, vol, max, pan, kind) {
+    pan = Number(pan) || 0;
+    const panTxt = pan ? tr(pan < 0 ? 'L {n}' : 'R {n}', { n: Math.abs(pan) }) : tr('Center');
+    return `<div class="mix-row"><span class="mix-lab">${tr('Volume')}</span><input type="range" min="0" max="${max}" step="1" value="${vol}" data-${kind}vol${id ? ` data-id="${esc(id)}"` : ''} title="${esc(tr('Volume ({n})', { n: vol }))}"><span class="mix-val">${vol}</span></div>
+      <div class="mix-row"><span class="mix-lab">${tr('Pan')}</span><input type="range" min="-100" max="100" step="5" value="${pan}" data-${kind}pan${id ? ` data-id="${esc(id)}"` : ''} title="${esc(tr('Left / right - double-click: middle'))}"><span class="mix-val">${panTxt}</span></div>`;
+  }
+
+  /** The chord pad as a strip of the mixer: on / off, volume, pan, where it sounds (Tactus' synth or a synth VST + channel). */
+  function padStrip() {
+    const hm = S.doc.harmony, MO = TC.midiOut;
+    if (!S.doc.bars.some((b) => b.chords)) return '';
+    const outs = MO && MO.supported() ? MO.outputs().slice() : [];
+    if (hm.midiOut && !outs.includes(hm.midiOut)) outs.push(hm.midiOut);
+    const out = hm.pad && outs.length ? `<div class="mix-row"><span class="mix-lab">${tr('Plays on')}</span><select data-action="setChordOut">
+        <option value=""${hm.midiOut ? '' : ' selected'}>${tr('Tactus sounds')}</option>${outs.map((o) =>
+          `<option value="${esc(o)}"${o === hm.midiOut ? ' selected' : ''}>MIDI: ${esc(o)}${MO.connected(o) ? '' : ' ' + tr('(missing)')}</option>`).join('')}</select>
+      ${hm.midiOut ? `<select data-action="setChordCh" class="narrow" title="${esc(tr('Channel'))}">${Array.from({ length: 16 }, (_, k) =>
+          `<option value="${k + 1}"${k === hm.midiCh ? ' selected' : ''}>${k + 1}</option>`).join('')}</select>` : ''}</div>
+      ${hm.midiOut ? `<p class="hint tight">${tr('Choose the output of a synth VST - not the one of the drum VST: it would play the chords as drum hits.')}</p>` : ''}` : '';
+    return `<div class="mix-strip chord-strip"><div class="track-item">${check('toggleChordPad', !!hm.pad, tr('Chords (soft pad)'))}</div>
+      ${hm.pad ? mixRows('', hm.vol, 100, hm.pan, 'chord') + out : ''}</div>`;
   }
 
   /**
@@ -646,6 +666,7 @@
     }
     const vol = Number.isInteger(t.volume) ? t.volume : 100;
     return `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="127" step="1" value="${vol}" data-trackvol title="${esc(tr('Fader of this track ({n}) - Tactus sounds softer / louder, through MIDI the channel volume (CC 7)', { n: vol }))}"></div>
+      <div class="row"><label>${tr('Pan')}</label><input type="range" min="-100" max="100" step="5" value="${Number(t.pan) || 0}" data-trackpan title="${esc(tr('Left / right - double-click: middle'))}"></div>
       ${t.kind === 'pitched' ? '' : `<div class="row"><label>${tr('Kit profile')}</label><select data-action="setTrackProfile">${profiles}</select></div>
         <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>`}${midi}${kswRows(t)}`;
   }
@@ -706,12 +727,12 @@
     </section>`;
   }
 
-  /** Own keyswitch profiles (js/kswlib.js) - next to the kit profiles; chosen at a melody track in "Tracks & sound". */
+  /** Own keyswitch profiles (js/kswlib.js) - next to the kit profiles; chosen at a melody track (panel → Track → Sound). */
   function kswSection() {
     if (!TC.kswLib) return '';
     const n = TC.kswLib.list.length;
     return `<section><h3>${tr('Keyswitches')}</h3>
-      <p class="hint tight">${n ? tr('{n} own keyswitch profile(s) - chosen at a melody track in "Tracks & sound".', { n }) : tr('Ways of playing of an instrument VST (UJAM, orchestral …): make a profile once, choose it at a melody track in "Tracks & sound".')}</p>
+      <p class="hint tight">${n ? tr('{n} own keyswitch profile(s) - chosen at a melody track (panel → Track → Sound).', { n }) : tr('Ways of playing of an instrument VST (UJAM, orchestral …): make a profile once, choose it at a melody track (panel → Track → Sound).')}</p>
       <div class="btn-row">${btn('openKswLib', undefined, tr('Keyswitch profiles…'), false, tr('Make your own (any instrument VST: UJAM, orchestral …), kept in Dropbox'))}</div></section>`;
   }
 
@@ -931,14 +952,14 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.guide, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.pan, t.guide, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing: the track (and a melody's scale), the bar and what belongs to it, the score -
-      // tracks and playback in their own window ("Tracks & sound…"), the rest in the settings window (⚙)
+      // the mixer (all tracks) and the playback in their own window ("Mixer…"), the rest in the settings window (⚙)
       setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       foldable(setRoot);
@@ -946,7 +967,7 @@
       setRoot.scrollTop = scroll;
     }
     if (dlg && dlgMode === 'tracks') {
-      // the window "Tracks & sound": the tracks and the playback (as the panel had them)
+      // the window "Mixer": all tracks (volume, pan, mute / solo, output) and the playback
       const body = dlg.querySelector('.settings-body'), keyT = 'T' + keyS + JSON.stringify(TC.midiOut && TC.midiOut.failed());
       if ((force || keyT !== lastDlg) && !(!force && typing(body))) {
         lastDlg = keyT;
@@ -1001,7 +1022,7 @@
   // ---- Settings window (⚙ in the toolbar): drum kit, notation, page, view, keys ----------------
   // set once and then rarely touched - kept out of the panel, so the panel stays short
 
-  // the same window shows "Tracks & sound" (mode 'tracks'): the tracks and the playback - set up, then rarely touched
+  // the same window shows the mixer (mode 'tracks'): all tracks and the playback
   let dlg = null, lastDlg = '', dlgMode = 'settings';
   P.isSettingsOpen = () => !!dlg;
   P.openSettings = function (mode) {
@@ -1012,7 +1033,7 @@
     dlg = document.createElement('div');
     dlg.className = 'dialog-backdrop';
     dlg.innerHTML = `<div class="dialog settings-dialog" role="dialog" aria-modal="true">
-      <header><h2>${mode === 'tracks' ? esc(tr('Tracks & sound')) : '⚙ ' + esc(tr('Settings'))}</h2><button type="button" class="icon" data-close title="${esc(tr('Close'))}">✕</button></header>
+      <header><h2>${mode === 'tracks' ? esc(tr('Mixer')) : '⚙ ' + esc(tr('Settings'))}</h2><button type="button" class="icon" data-close title="${esc(tr('Close'))}">✕</button></header>
       <div class="settings-body"></div></div>`;
     dlg.addEventListener('pointerdown', (e) => { if (e.target === dlg) P.closeSettings(); });
     dlg.addEventListener('click', (e) => {
@@ -1134,7 +1155,11 @@
     } else if (el.matches('input[data-kswnote]')) {
       TC.actions.setKswNote(el.dataset.id + '|' + el.value);
     } else if (el.matches('input[data-trackvol]')) {
-      TC.actions.setTrackVolume(el.value);
+      TC.actions.setTrackVolume(el.value, el.dataset.id);
+    } else if (el.matches('input[data-trackpan]')) {
+      TC.actions.setTrackPan(el.value, el.dataset.id);
+    } else if (el.matches('input[data-chordpan]')) {
+      TC.actions.setChordPan(el.value);
     } else if (el.matches('input[data-volume]')) {
       TC.actions.setVolume(el.value);
     } else if (el.matches('input[data-bartempo]')) {
@@ -1221,6 +1246,13 @@
   P.init = function () {
     notesRoot = document.getElementById('panel-notes');
     setRoot = document.getElementById('panel-settings');
+    // a pan slider double-clicked: back to the middle
+    document.addEventListener('dblclick', (e) => {
+      const el = e.target.closest && e.target.closest('input[data-trackpan], input[data-chordpan]');
+      if (!el) return;
+      el.value = '0';
+      onChange({ target: el });
+    });
     for (const root of [notesRoot, setRoot]) {
       root.addEventListener('click', onClick);
       root.addEventListener('change', onChange);

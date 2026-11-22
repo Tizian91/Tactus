@@ -1105,6 +1105,21 @@ setTimeout(() => {
           W('input[data-trackvol]').dispatchEvent(new Event('change', { bubbles: true }));
           ok('fader: the track volume set in "Tracks & sound"', TC.curTrack().volume === 64);
           TC.panel.closeSettings();
+          // the mixer: a strip per track - volume, pan (a double-click: middle), output; the panel "Track" has the pan too
+          TC.actions.openTracks();
+          const strips = document.querySelectorAll('.settings-dialog .mix-strip:not(.chord-strip)');
+          const t0id = TC.score.instruments(S.doc)[0].id;
+          const panIn = document.querySelector(`.settings-dialog input[data-trackpan][data-id="${t0id}"]`);
+          ok('mixer: a strip per track with volume and pan (' + strips.length + ')', strips.length === TC.score.instruments(S.doc).length && !!panIn &&
+            !!document.querySelector(`.settings-dialog input[data-trackvol][data-id="${t0id}"]`) && /Mischpult|Mixer/.test(document.querySelector('.settings-dialog h2').textContent));
+          panIn.value = '-40';
+          panIn.dispatchEvent(new Event('change', { bubbles: true }));
+          const t0 = () => S.doc.tracks.find((t) => t.id === t0id);
+          ok('mixer: pan set - the track left 40, the strip says so', t0().pan === -40 && /40/.test(document.querySelector(`.settings-dialog input[data-trackpan][data-id="${t0id}"]`).parentElement.textContent));
+          document.querySelector(`.settings-dialog input[data-trackpan][data-id="${t0id}"]`).dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+          ok('mixer: pan double-clicked - back to the middle', t0().pan === 0);
+          ok('panel "Track": pan of the track being written', !!document.querySelector('#panel-settings section[data-sec="track-sound"] input[data-trackpan]'));
+          TC.panel.closeSettings();
           while (TC.history.undoStack.length > undoDyn) TC.actions.undo();
           ok('dynamics and fader: undone', S.doc.tracks.every((t) => t.bars.every((b) => !b.dyn) && t.volume === 100));
           // melody in two voices: voice 2 chosen in the panel, a tap writes there (stems down), the voice 1 note stays

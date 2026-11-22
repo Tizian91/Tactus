@@ -692,9 +692,11 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
   „Spuren & Klang“ zeigt nur noch die Liste aller Spuren und die Wiedergabe.
 - ✅ **Akkord-Hilfe je Melodie-Spur** (`track.guide`, ab einem Takt anders: `track.bars[i].guide`; `SC.guideAt(doc, bi, track)`,
   `SC.setGuide`); ältere Dateien: die des Stücks (`harmony.guide`, Takt-Kopf) geht an jede Melodie-Spur.
+- ✅ **Mischpult** (Fenster, früher „Spuren & Klang“; Knopf *Mischpult…* im Panel „Spur“): jede Spur ein Streifen mit Lautstärke,
+  **Pan** (`track.pan` -100 … 100; Tactus: `AU.panOut`, ein Stereo-Panner je Klang; MIDI: CC 10 mit der Lautstärke, im Export für
+  Melodie-Spuren als Startwert; Doppelklick: Mitte), M / S, Ausgang; das Akkord-Pad ein eigener Streifen (`harmony.pan`, Lautstärke,
+  Ausgang, Kanal - aus dem Akkord-Abschnitt hierher). Darunter weiter die Wiedergabe.
 - Als Nächstes (entschieden 2026-11-23):
-  - **Mischpult** als eigenes Fenster statt „Spuren & Klang“: alle Spuren mit Lautstärke, **Pan** (Tactus: Stereo-Panner je Spur;
-    MIDI: CC 10, im Export als Startwert), Stumm / Solo, Ausgang; das Akkord-Pad als eigene Zeile.
   - **Schlagzeug-Kit an die Spur** (statt Gerät).
   - **Ins Stück**: Hälse (+ welche Toms), Notation, Swing im MIDI-Export, **Zählzeiten** unter den Noten – mit **eigenen Silben**
     (z. B. Sechzehntel „1 ke ti na“, Triolen „1 ka ba“).

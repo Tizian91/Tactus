@@ -369,9 +369,18 @@
     if (p && TC.kits.check(S.doc, p).length) TC.kits.openCheck(p);
   };
   /** The track's fader (0 … 127, 100 = as before): Tactus' sounds louder / softer, through MIDI the channel volume (CC 7). */
-  A.setTrackVolume = function (v) {
-    const t = TC.curTrack();
+  A.setTrackVolume = function (v, id) {
+    const t = trackOf(id); // (the mixer: a track of its own; else the one being written)
     t.volume = TC.clamp(Math.round(Number(v)), 0, 127);
+    sync(t);
+    TC.commit();
+  };
+  /** A track's place left / right (-100 … 0 middle … 100): Tactus' sounds panned, through MIDI the pan CC 10. */
+  A.setTrackPan = function (v, id) {
+    const t = trackOf(id);
+    const p = TC.clamp(Math.round(Number(v) || 0), -100, 100);
+    if (p === (Number(t.pan) || 0)) return;
+    t.pan = p;
     sync(t);
     TC.commit();
   };
@@ -1012,7 +1021,7 @@
   A.togglePanelRight = () => A.togglePanel('right');
   /** Settings window (drum kit, notation, page, view, keys): open / close. */
   A.openSettings = () => TC.panel.openSettings();
-  /** The window "Tracks & sound": the tracks (add, order, mute / solo, instruments, "Plays on") and the playback. */
+  /** The mixer: every track's volume, pan, mute / solo and output (add, order) and the playback. */
   A.openTracks = () => TC.panel.openSettings('tracks');
   /** Left-handed: the note panel goes to the right, the settings to the left. */
   /** Fingers write notes on the lines (off: pen / mouse only, a finger selects and scrolls). */
@@ -1636,7 +1645,7 @@
       t.ksw = p;
     }
     TC.commit();
-    if (t.ksw) TC.ui.hint(tr('{name}: its ways of playing in the note panel; check the keys with ▶ (Tracks & sound).', { name: t.ksw.name }));
+    if (t.ksw) TC.ui.hint(tr('{name}: its ways of playing in the note panel; check the keys with ▶ (panel → Track → Sound).', { name: t.ksw.name }));
   };
   /** The own keyswitch profiles (make, change, Dropbox) - showing the one of the track being written. */
   A.openKswLib = function () {
@@ -1818,6 +1827,13 @@
   A.setChordCh = function (v) {
     const n = Number(v);
     if (n >= 1 && n <= 16) S.doc.harmony.midiCh = n - 1;
+    TC.commit();
+  };
+  /** The chord pad's place left / right (-100 … 100). */
+  A.setChordPan = function (v) {
+    const p = TC.clamp(Math.round(Number(v) || 0), -100, 100);
+    if (p === (Number(S.doc.harmony.pan) || 0)) return;
+    S.doc.harmony.pan = p;
     TC.commit();
   };
   A.setChordVol = function (v) {
@@ -2228,7 +2244,7 @@
       const n = rows.filter((r) => r.on).length + (chords ? 1 : 0);
       root.querySelector('.dialog').innerHTML = `<header><h2>${tr('Export MIDI')}</h2><button type="button" class="icon" data-k="close" title="${tr('Close')}">✕</button></header>
         <div class="kit-body">
-          <p class="hint tight">${tr('Which tracks, and for which drum map (kit profile) each one is written:')} ${tr('Melody tracks take their keyswitch profile (Tracks & sound) along.')}</p>
+          <p class="hint tight">${tr('Which tracks, and for which drum map (kit profile) each one is written:')} ${tr('Melody tracks take their keyswitch profile (Track → Sound) along.')}</p>
           <div class="export-list">${list}</div>
           <div class="row"><label>${tr('Files')}</label><select data-k="mode">
             <option value="files"${mode === 'files' ? ' selected' : ''}>${tr('One MIDI file per track')}</option>

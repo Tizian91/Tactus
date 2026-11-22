@@ -128,7 +128,7 @@
       TC.midiOut.hit(art, t, vel, ctx, track);
       if (!S.settings.midiOutSynth) return;
     }
-    const out = dest || master, v = Math.max(0.05, Math.min(1.2, vel)) * AU.trackGain(track);
+    const out = AU.panOut(dest || master, track), v = Math.max(0.05, Math.min(1.2, vel)) * AU.trackGain(track);
     // recorded sounds (js/samples.js) when switched on and loaded; else the synth below
     if (S.settings.samples && TC.samples) {
       if (TC.samples.play(ctx, a.id, t, v, choke, out)) return;
@@ -332,6 +332,18 @@
 
   /** A track's fader (track.volume 0 … 127, 100 = as before) as a gain for Tactus' sounds. */
   AU.trackGain = (track) => (track && Number.isInteger(track.volume) ? Math.max(0, track.volume) / 100 : 1);
+  /**
+   * Where a sound of `track` goes: through a panner of its own when the track is placed left / right (track.pan
+   * -100 … 100), else straight to `out`. (A panner per stroke: it goes with the sound.)
+   */
+  AU.panOut = function (out, track) {
+    const p = track && Number(track.pan);
+    if (!p || !ctx.createStereoPanner) return out;
+    const n = ctx.createStereoPanner();
+    n.pan.value = Math.max(-1, Math.min(1, p / 100));
+    n.connect(out);
+    return n;
+  };
 
   AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
     if (!ensure()) return;
@@ -343,7 +355,7 @@
     }
     const prog = track ? track.program : TC.MELODY_PROGRAM;
     const F = Object.assign({}, FAMILY[TC.soundFamily(prog)] || FAMILY.voice, SOUND[prog] || {});
-    const out = dest || master, hz = 440 * Math.pow(2, (pitch - 69) / 12);
+    const out = AU.panOut(dest || master, track), hz = 440 * Math.pow(2, (pitch - 69) / 12);
     const v = Math.max(0.05, Math.min(1.2, vel)) * F.gain * AU.trackGain(track);
     dur = Math.max(0.08, dur);
     const end = t + dur, rel = F.rel;

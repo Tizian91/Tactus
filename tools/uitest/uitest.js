@@ -676,6 +676,19 @@ setTimeout(() => {
     ok('follow smooth: a part of the way; jumping: all of it (' + [vx0, vx1, vw.x].map(Math.round) + ')', vx1 < vx0 && vw.x < vx1);
     vw.x = vx0;
     TC.render.applyView();
+    // smooth while following the parts: no glide along, but at the edge it glides (not a jump)
+    const inView = { x: (document.getElementById('viewport').clientWidth * 0.5 - vw.x) / vw.zoom, y: -vw.y / vw.zoom + 200 / vw.zoom };
+    const vy0 = vw.y;
+    TC.player.keepInView(inView, true, true);
+    const still = vw.x === vx0 && vw.y === vy0;
+    TC.player.dropGlide(); // (a new glide: its first step one frame long)
+    TC.player.keepInView({ x: 20000, y: 0 }, true, true);
+    const ex1 = vw.x, full = document.getElementById('viewport').clientWidth * 0.15 - 20000 * vw.zoom;
+    ok('follow smooth with parts: still in the middle, at the edge a glide (' + [vx0, ex1, full].map(Math.round) + ')', still && ex1 < vx0 && ex1 > full);
+    TC.player.dropGlide();
+    vw.x = vx0;
+    vw.y = vy0;
+    TC.render.applyView();
     // stage view: only the pages; Page Down, a tap at the side and MIDI (gotoPage) turn; nothing is written
     TC.score.insertBars(S.doc, S.doc.bars.length, 40);
     TC.commit();
@@ -730,6 +743,17 @@ setTimeout(() => {
     chorusItem.click();
     const Lc = TC.render.layout, bc = Lc.bars[20], yc = S.doc.view.y + (Lc.systems[bc.sys].ty - 9 * TC.render.SP) * S.doc.view.zoom;
     ok('jump to "UI-Chorus": bar 21 selected, its line at the top (' + Math.round(yc) + ' px)', S.selBar === 20 && Math.abs(yc - 8) < 2);
+    TC.player.play();
+    const jr = TC.player.range().slice();
+    TC.player.stop();
+    ok('jumped while stopped: ▶ starts at "UI-Chorus" (bars ' + jr.map((x) => x + 1).join('–') + ')', jr[0] === 20);
+    const keepLoop = S.settings.loop;
+    S.settings.loop = true;
+    TC.actions.jumpToBar(1);
+    const pr = TC.barRange(), want = TC.actions.sectionRange(1);
+    ok('loop on: jump to "UI-Intro" selects the whole part (bars ' + pr.map((x) => x + 1).join('–') + ')', pr[0] === 1 && pr[1] === want[1] && want[1] >= 1 && want[1] < 20);
+    S.settings.loop = keepLoop;
+    TC.selectBar(20);
     TC.actions.barMenu(5, 200, 200);
     ok('bar menu: "Jump to" with the parts', [...document.querySelectorAll('#context-menu .menu-item.has-sub')].some((m) => /UI-Chorus/.test(m.textContent)));
     TC.menu.close();

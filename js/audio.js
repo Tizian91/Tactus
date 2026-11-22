@@ -501,21 +501,26 @@
     // "Follow" off: the view stays where it is (to change notes while listening)
     if (!c || S.settings.followPlay === false) return;
     // at a part (a text above the bar: Verse, Chorus …): its bar to the top left, so a part is seldom broken up on
-    // the screen; up to the next part the view then only jumps when the cursor would leave it (a glide would move it away)
-    if (S.settings.followSections && !document.body.classList.contains('perform')) { // (the stage view shows whole pages)
+    // the screen; up to the next part the view then only moves when the cursor would leave it (keeping the cursor at
+    // a third would move the part away) - "smooth": it glides there, "jumping": it jumps
+    const smooth = S.settings.followMode === 'smooth';
+    const parts = S.settings.followSections && !document.body.classList.contains('perform'); // (the stage view shows whole pages)
+    if (parts) {
       const key = pos.n || pos.bar;
       if (key !== secKey) {
         secKey = key;
-        if (S.doc.bars[pos.bar] && S.doc.bars[pos.bar].marker) {
-          TC.actions.alignBar(pos.bar);
+        const t = S.doc.bars[pos.bar] && S.doc.bars[pos.bar].marker ? TC.actions.alignTarget(pos.bar) : null;
+        if (t) {
           secHeld = true;
-          return;
+          if (!smooth) return void P.moveTo(t.x, t.y, false);
+          aim = t;
         }
       }
     }
-    P.keepInView(c, S.settings.followMode === 'smooth' && !(S.settings.followSections && secHeld));
+    P.keepInView(c, smooth, parts && secHeld);
   }
   let secKey = null, secHeld = false; // (following the parts: the played bar seen last; a part aligned since the start)
+  let aim = null; // (gliding only at the edge: where the view glides to, until it is there)
 
   let glideAt = 0; // time of the last smooth step (the glide does not depend on the frame rate)
 
@@ -526,40 +531,63 @@
    *   smooth             the view glides along: the cursor stays at a third of the width (endless
    *                      view), the line being played in the upper quarter (page view), so the next
    *                      one is already in view; a jump back (repeat) glides as well
+   *   smooth + edge      (following the parts) moves only when "jumping" would, but glides there
    */
-  P.keepInView = function (c, smooth) {
+  P.keepInView = function (c, smooth, edge) {
+    // gliding only at the edge: once started, it glides on to where it was aimed
+    if (smooth && edge && aim) {
+      if (P.moveTo(aim.x, aim.y, true)) aim = null;
+      return;
+    }
     const vp = document.getElementById('viewport');
     const v = S.doc.view, z = v.zoom, SP = TC.render.SP, h = vp.clientHeight, w = vp.clientWidth;
     const L = TC.render.layout, stack = (L && L.stackH) || 4 * SP; // all staves of a line (several tracks)
+    const along = smooth && !edge; // (the cursor kept at a third, the line in the upper quarter)
     const sx = v.x + c.x * z;
     let tx = v.x, ty = v.y;
     if (TC.render.isPage()) {
       // page view: the whole line in view (down / up), and the cursor too when zoomed in (sideways)
       const top = v.y + (c.y - 6 * SP) * z, bottom = v.y + (c.y + stack + 6 * SP) * z;
       const want = Math.max(Math.min(h * 0.25, h - (stack + 12 * SP) * z), 0) - (c.y - 6 * SP) * z;
-      if (smooth || top < 0 || bottom > h) ty = want;
+      if (along || top < 0 || bottom > h) ty = want;
       const wide = TC.render.PAGE_W * z > w;
-      if (smooth && wide) {
+      if (along && wide) {
         if (sx > w * 0.4 || sx < w * 0.05) tx = w * 0.4 - c.x * z;
       } else if (sx < 0 || sx > w || (wide && (sx > w * 0.85 || sx < w * 0.05))) tx = w * 0.15 - c.x * z;
-    } else if (smooth) {
+    } else if (along) {
       if (sx > w / 3 || sx < w * 0.05) tx = w / 3 - c.x * z;
     } else if (sx > w * 0.85 || sx < 0) tx = w * 0.15 - c.x * z;
+    if (smooth && edge) {
+      if (tx === v.x && ty === v.y) return;
+      aim = { x: tx, y: ty };
+      if (P.moveTo(tx, ty, true)) aim = null;
+      return;
+    }
+    P.moveTo(tx, ty, smooth);
+  };
+
+  /**
+   * The view to (tx, ty): at once, or gliding - a part of the way each frame (about 90 % in a quarter of a second).
+   * True when it is there.
+   */
+  P.moveTo = function (tx, ty, smooth) {
+    const v = S.doc.view;
     if (smooth) {
-      // glide: a part of the way each frame (about 90 % in a quarter of a second)
       const now = performance.now(), dt = glideAt ? Math.min(0.1, (now - glideAt) / 1000) : 1 / 60;
       glideAt = now;
       const k = 1 - Math.exp(-dt / 0.1);
       tx = Math.abs(tx - v.x) < 0.5 ? tx : v.x + (tx - v.x) * k;
       ty = Math.abs(ty - v.y) < 0.5 ? ty : v.y + (ty - v.y) * k;
     }
-    if (tx !== v.x || ty !== v.y) {
-      v.x = tx;
-      v.y = ty;
-      if (smooth) TC.render.moveView(); // (gliding: the picture moves, drawn anew now and then)
-      else TC.render.applyView();
-    }
+    if (tx === v.x && ty === v.y) return true;
+    v.x = tx;
+    v.y = ty;
+    if (smooth) TC.render.moveView(); // (gliding: the picture moves, drawn anew now and then)
+    else TC.render.applyView();
+    return false;
   };
+  /** A glide under way is dropped (the view was put somewhere else). */
+  P.dropGlide = () => { aim = null; glideAt = 0; };
 
   /**
    * Play from bar `from` (default: the selected bar, else the start). Several bars selected:
@@ -588,6 +616,7 @@
     until = -1;
     secKey = null;
     secHeld = false;
+    aim = null;
     t0 = ctx.currentTime + 0.05 + (TC.midiOut && TC.midiOut.anyActive(S.doc) ? TC.midiOut.lead() : 0); // room for the MIDI lead
     bus = ctx.createGain(); // this run's own output: stop() fades it without touching the next run
     bus.connect(master);
@@ -655,6 +684,8 @@
   };
 
   P.toggle = () => (P.playing ? P.stop() : P.play());
+  /** A bar was chosen to start from (a part jumped to): the next start is there, even after running to the end. */
+  P.cue = () => { endedSel = null; };
   /** The bars being played [first, last] (for the tests). */
   P.range = () => range;
 

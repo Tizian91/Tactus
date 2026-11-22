@@ -39,8 +39,18 @@
   let run = null; // { ctx, tl, clicks, ci, turns, starts, ti, t0, cbus, timer }
   Pc.running = () => !!run;
 
-  /** Starts on the page shown, or at bar `fromBar` (with the count-in, if chosen). */
+  let cued = null; // (a part chosen while stopped: the next start is at that bar, if its page is still shown)
+  /** Stopped: the next start is at bar i (a part chosen; null: forgotten) - marked by the cursor. */
+  Pc.cue = function (i) {
+    if (run) return;
+    cued = Number.isInteger(i) && S.doc.bars[i] ? i : null;
+    TC.render.drawCursor(cued !== null && S.settings.timerCursor !== false ? cued : null, 0);
+  };
+
+  /** Starts on the page shown, or at bar `fromBar` / the part chosen before (with the count-in, if chosen). */
   Pc.start = function (fromBar) {
+    if (!Number.isInteger(fromBar) && cued !== null && (TC.render.pagesOfBars()[cued] || 0) === TC.actions.currentPage()) fromBar = cued;
+    cued = null;
     Pc.stop(true);
     const ctx = TC.audio.context();
     if (!ctx) return TC.ui.hint(tr('This browser cannot play sound'));
@@ -80,9 +90,13 @@
     if (best) jumpAt(best.t, best.t);
   };
 
-  /** Jump to bar i while running (a part chosen): on from its start (the nearest time it is played; not in the run: started there). */
+  /**
+   * Jump to bar i while running (a part chosen): on from its start (the nearest time it is played; not in the run:
+   * started there). With the count-in: started anew there, counted in again.
+   */
   Pc.jumpToBar = function (i) {
     if (!run) return;
+    if (S.settings.timerClick !== false && S.settings.timerCountIn !== false) return Pc.start(i);
     const song = run.ctx.currentTime - run.t0 - TC.audio.outputDelay();
     let best = null;
     for (const b of run.tl.bars) if (b.bar === i && (!best || Math.abs(b.t0 - song) < Math.abs(best.t0 - song))) best = b;

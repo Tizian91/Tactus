@@ -1192,8 +1192,9 @@
   /** The next page (d = 1) or the one before (d = -1). */
   A.turnPage = function (d) {
     A.gotoPage(A.currentPage() + (d < 0 ? -1 : 1));
-    // turned by hand while the timer runs: it goes on from there (js/pacer.js)
+    // turned by hand while the timer runs: it goes on from there (js/pacer.js); stopped: a part chosen before is forgotten
     if (TC.pacer && TC.pacer.running()) TC.pacer.jumpTo(A.currentPage());
+    else if (TC.pacer) TC.pacer.cue(null);
   };
   A.nextPage = () => A.turnPage(1);
   A.prevPage = () => A.turnPage(-1);
@@ -1257,7 +1258,10 @@
       if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {});
       if (!timerMode() && TC.remote && S.settings.remoteIn) TC.remote.init();
     } else {
-      if (TC.pacer) TC.pacer.stop(true);
+      if (TC.pacer) {
+        TC.pacer.stop(true);
+        TC.pacer.cue(null);
+      }
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
       showPerformBar();
       TC.refresh();
@@ -1895,38 +1899,58 @@
     const r = b ? b.getBoundingClientRect() : { left: 20, bottom: 40 };
     TC.menu.open(items, r.left, r.bottom + 2);
   };
+  /** The bars of the part starting at bar i: [i, the bar before the next part (or the last bar)]. */
+  A.sectionRange = function (i) {
+    const next = A.sections().find((s) => s.bar > i);
+    return [i, next ? next.bar - 1 : S.doc.bars.length - 1];
+  };
   /**
-   * Jump to bar i (a part): it is selected and stands at the top left; while playing, the playback goes on from there.
-   * Stage view: its page (the timer, if it runs, goes on from that bar).
+   * Jump to bar i (a part): it is selected and stands at the top left; while playing, the playback goes on from there
+   * (with the count-in, if chosen), stopped: the next ▶ starts there. Loop on: the whole part is selected - it is
+   * played over and over. Stage view: its page; the timer goes on from that bar, or (stopped) its next start is there.
    */
   A.jumpToBar = function (i) {
     i = Number(i);
     if (!S.doc.bars[i]) return;
-    if (performing()) {
-      if (TC.pacer && TC.pacer.running()) TC.pacer.jumpToBar(i);
-      else A.gotoPage(TC.render.pagesOfBars()[i] || 0);
-      return;
+    if (performing() && timerMode() && TC.pacer) {
+      if (TC.pacer.running()) return TC.pacer.jumpToBar(i);
+      A.gotoPage(TC.render.pagesOfBars()[i] || 0);
+      return TC.pacer.cue(i);
     }
-    TC.selectBar(i);
+    TC.player.cue(); // (the next ▶ starts here, also after the piece ran to its end)
+    const R = S.settings.loop ? A.sectionRange(i) : [i, i];
+    TC.selectBar(R[0]);
+    if (R[1] > R[0]) TC.selectBar(R[1], true);
     S.selection.clear();
     TC.refresh();
-    A.alignBar(i);
+    if (performing()) A.gotoPage(TC.render.pagesOfBars()[i] || 0);
+    else A.alignBar(i);
     if (TC.player.playing) TC.player.play(i);
   };
   /**
-   * Bar i at the top left of the view, with the text above it: page view - its line at the top (sideways only
-   * when the page is wider than the window); endless view - the bar at the left edge.
+   * Where the view stands with bar i at its top left, with the text above it ({ x, y }): page view - its line at the
+   * top (sideways only when the page is wider than the window); endless view - the bar at the left edge.
    */
-  A.alignBar = function (i) {
+  A.alignTarget = function (i) {
     const L = TC.render.layout, b = L && L.bars[i];
-    if (!b) return;
+    if (!b) return null;
     const s = L.systems[b.sys], v = S.doc.view, z = v.zoom, SP = TC.render.SP, w = document.getElementById('viewport').clientWidth;
+    const t = { x: v.x, y: v.y };
     if (TC.render.isPage()) {
-      v.y = 8 - (s.ty - 9 * SP) * z;
-      if (TC.render.PAGE_W * z > w) v.x = 8 - (s.tx + b.x - SP) * z;
+      t.y = 8 - (s.ty - 9 * SP) * z;
+      if (TC.render.PAGE_W * z > w) t.x = 8 - (s.tx + b.x - SP) * z;
     } else {
-      v.x = 3 * SP * z - (s.tx + b.x) * z;
+      t.x = 3 * SP * z - (s.tx + b.x) * z;
     }
+    return t;
+  };
+  /** Bar i to the top left of the view (at once). */
+  A.alignBar = function (i) {
+    const t = A.alignTarget(i);
+    if (!t) return;
+    if (TC.player.dropGlide) TC.player.dropGlide();
+    S.doc.view.x = t.x;
+    S.doc.view.y = t.y;
     TC.render.applyView();
   };
   A.toggleFollowSections = () => toggleSetting('followSections');

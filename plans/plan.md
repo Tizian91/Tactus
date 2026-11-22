@@ -665,7 +665,12 @@ Tests `test_findrepeats.js`):
   seine Seite, mit laufendem Timer ab diesem Takt (`TC.pacer.jumpToBar`; eine fällige Umblätterung wartet bis zum Taktende).
 - **Folgen an Teilen** (Wiedergabe → Folgen: „Bei einem Teil … oben links ausrichten“, `followSections`, aus): erreicht der Cursor
   einen Teil, steht dessen Takt oben links – zusammengehörige Teile werden selten zerrissen. Bis zum nächsten Teil springt die
-  Ansicht dann nur am Rand (auch bei „Flüssig“). Nicht in der Bühnenansicht.
+  Ansicht dann nur am Rand – bei „Flüssig“ gleitet sie dorthin (`keepInView(c, smooth, edge)`, Ziel `aim`), sonst springt sie.
+  Nicht in der Bühnenansicht.
+- **Springen ohne Abspielen**: angehalten Teil wählen → das nächste ▶ beginnt dort (`TC.player.cue`: auch nach dem Ende des
+  Stücks). Einzähler an: nach jedem Sprung neu eingezählt (Player: `play(i)`; Timer: `Pc.start(i)` statt weiterzulaufen). Schleife
+  an: der ganze Teil ausgewählt (`A.sectionRange`) und wiederholt. Bühne mit Timer, angehalten: `Pc.cue(i)` – der Strich zeigt den
+  Takt, das nächste ▶ startet dort, solange seine Seite gezeigt wird.
 
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 

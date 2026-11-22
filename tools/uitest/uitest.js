@@ -183,6 +183,26 @@ setTimeout(() => {
   TC.actions.selectNone();
   TC.actions.toggleCounts();
   ok('counting under the staff ' + document.querySelectorAll('#score .count').length, document.querySelectorAll('#score .count').length > 20);
+  // own syllables (⚙ → look of this score): "ke ti na" from the list, triplets typed ("ka ba")
+  TC.actions.openSettings();
+  const c16 = document.querySelector('.settings-dialog select[data-action="setCountPreset"][data-kind="16"]');
+  ok('⚙ look of this score: notation, stems, counting with its syllables', !!c16 && !!document.querySelector('.settings-dialog select[data-action="setNotation"]') &&
+    !!document.querySelector('.settings-dialog select[data-action="setStems"]') && !!document.querySelector('.settings-dialog [data-action="toggleCounts"]'));
+  c16.value = 'ke ti na';
+  c16.dispatchEvent(new Event('change', { bubbles: true }));
+  const c3 = document.querySelector('.settings-dialog select[data-action="setCountPreset"][data-kind="3"]');
+  c3.value = 'own';
+  c3.dispatchEvent(new Event('change', { bubbles: true }));
+  const own3 = document.querySelector('.settings-dialog input[data-countsyl="3"]');
+  ok('counting: "Own…" shows a field', !!own3);
+  own3.value = 'ka ba';
+  own3.dispatchEvent(new Event('change', { bubbles: true }));
+  const cnt = [...document.querySelectorAll('#score .count')].map((t) => t.textContent);
+  ok('counting: the own syllables of the score drawn (' + [...new Set(cnt)].slice(0, 8).join(' ') + ')', S.doc.page.count16 === 'ke ti na' && S.doc.page.count3 === 'ka ba' && cnt.includes('ti'));
+  TC.actions.undo();
+  TC.actions.undo();
+  TC.panel.closeSettings();
+  ok('counting: the syllables undone', !S.doc.page.count16 && !S.doc.page.count3);
   TC.actions.toggleCounts();
   // 7/8 with beam groups
   S.selBar = 7; TC.actions.setTimeSig('7/8', 7, true);
@@ -617,7 +637,7 @@ setTimeout(() => {
     ok('tracks: undo back to one track', S.doc.tracks.length === 1 && TC.curTrack() === S.doc.tracks[0]);
     TC.panel.closeSettings();
     // several staves: a track only for the snare (one line), click into the other staff, hide / show
-    const drums = S.doc.tracks[0], drumsBefore = JSON.stringify(drums.bars);
+    const drums = S.doc.tracks[0], drumsBefore = JSON.stringify(drums.bars), undoStaves = TC.history.undoStack.length;
     TC.actions.setArt(38);
     TC.actions.addTrackFor();
     const sn2 = TC.curTrack();
@@ -650,7 +670,7 @@ setTimeout(() => {
     ok('staff spacing 60 % / 160 %: the lower staff moves up / down (' + [dy60, dy100, TC.render.layout.staves[1].dy].map(Math.round) + ')', dy60 < dy100 && TC.render.layout.staves[1].dy > dy100);
     TC.actions.setStaffGap(100);
     TC.actions.toggleLayout();
-    for (let k = 0; k < 6; k++) TC.actions.undo();
+    while (TC.history.undoStack.length > undoStaves) TC.actions.undo(); // (the spacings of the page too: part of the score)
     ok('staves: undo back to one track (' + S.doc.tracks.length + ')', S.doc.tracks.length === 1 && JSON.stringify(S.doc.tracks[0].bars) === drumsBefore);
     // tracks and MIDI: mute / solo in the panel, the export dialog, the sound rows of a track
     TC.actions.setArt(38);
@@ -699,6 +719,7 @@ setTimeout(() => {
     TC.render.applyView();
     // stage view: only the pages; Page Down, a tap at the side and MIDI (gotoPage) turn; nothing is written
     TC.score.insertBars(S.doc, S.doc.bars.length, 40);
+    Object.assign(S.doc.page, { multiRest: false, barsPerLine: 2 }); // (every empty bar a bar of its own, two a line: several pages)
     TC.commit();
     const wasEndless = !TC.render.isPage();
     const keepLayout = TC.render.layout;
@@ -1162,6 +1183,7 @@ setTimeout(() => {
           ok('lyrics: hidden again after typing', !lf() && !document.querySelector('.score .lyric'));
           TC.actions.toggleLyrics();
           ok('lyrics: shown again', S.doc.page.lyrics !== false && !!document.querySelector('.score .lyric'));
+          while (TC.history.undoStack.length > undoBefore + 1) TC.actions.undo(); // (hidden / shown: steps of their own)
           TC.actions.undo();
           ok('lyrics: undone at once', TC.score.lyricVerses(S.doc.tracks.find((t) => t.id === mt.id)) === 0);
           // only chord tones (chords locked): a note dragged up / down lands on a chord tone, as a tap writes it

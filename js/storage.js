@@ -95,7 +95,8 @@
   /** Show a score. handle: local file (File System Access API); dropbox: { path, rev } of a Dropbox file. */
   function setDoc(doc, name, handle, dropbox) {
     S.doc = doc;
-    TC.score.revoice(doc); // into the voices of the stem setting (TC.drums.setStems)
+    TC.drums.applyDoc(doc); // its notation and stems
+    TC.score.revoice(doc); // into the voices of its stems
     S.selection.clear();
     S.selBar = null;
     S.hover = null;

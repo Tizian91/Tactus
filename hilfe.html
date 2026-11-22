@@ -217,7 +217,7 @@ Das geht in <b>Chrome und Edge am PC</b>.</p>
   <li>die Tasten deines VSTs, Anschlag (Velocity), Flams / Drags / Wirbel ausgespielt,</li>
   <li>Tempo und Tempowechsel, Taktarten, Takt-Texte als Marker,</li>
   <li><b>Wiederholungen, %-Takte und Sprünge ausgeschrieben</b> – so wie gespielt (Cubase kennt keine Wiederholungen), mit Markern wie „Takt 5 – 2. Mal“ oder „D.S. – Takt 3“,</li>
-  <li>Swing wie gehört – oder gerade (Panel <span class="ui">Stück → Swing</span>), wenn du in Cubase swingen willst.</li>
+  <li>Swing wie gehört – oder gerade (Panel <span class="ui">Stück → Swing</span>), wenn du in Cubase swingen willst (wird mit dem Stück gespeichert).</li>
 </ul>
 <p>In Cubase: die Datei auf die Schlagzeugspur ziehen. Für <b>Guitar Pro</b> nimm <span class="ui">General MIDI</span> (Guitar Pro liest dabei Triolen leider nicht als Triolen).</p>
 <p><b>Mehrere Spuren:</b> Der Export-Dialog zeigt jede Spur. Bei Schlagzeug-Spuren wählst du das Kit-Profil; <b>Melodie-Spuren</b> brauchen keins – ihre Töne gehen mit ihrer Tonhöhe hinaus, dazu ihr Keyswitch-Profil (Spielweisen, „Noten verschieben“, Dynamik über CC / Pitchbend). Der Dialog zeigt bei ihnen, was mitgeht, z. B. „Keyswitches: UJAM Iron 2 · Noten +12“.</p>
@@ -306,9 +306,14 @@ unter der Note. Alles wird beim Abspielen und im MIDI-Export ausgespielt.</p>
 <h3>Drum-Kit, Darstellung, Notenhälse</h3>
 <ul>
   <li><span class="ui">Drum-Kit</span> (Panel <span class="ui">Takt · Stück → Spur → Instrument</span>): welche Instrumente im Noten-Panel und in der Drum-Map angeboten werden – Standard, Groß, Alle, <i>Wie das Kit-Profil</i> (genau die Instrumente deines VSTs) oder eine eigene Auswahl. Jede Schlagzeug-Spur hat ihr eigenes Kit, und es wird mit dem Stück gespeichert – auf jedem Gerät gleich. Eine neue Schlagzeug-Spur übernimmt das Kit der Spur, in die du gerade schreibst.</li>
-  <li><span class="ui">Darstellung</span>: „Tactus“ (Standard; wie die Tactus-Drummap in Cubase) oder „Guitar Pro“. Nur das Bild ändert sich.</li>
-  <li><span class="ui">Notenhälse</span>: alle nach oben, Füße nach unten, oder Füße und tiefe Toms nach unten.</li>
-  <li><span class="ui">⚙ → Ansicht</span>: Zählhilfe unter den Noten (1 e + e), Pausenbereinigung.</li>
+  <li><span class="ui">⚙ → Notenbild (dieses Stück)</span> – wird mit dem Stück gespeichert, auf jedem Gerät und im Ausdruck gleich (und lässt sich rückgängig machen):
+    <ul>
+      <li><span class="ui">Notation</span>: „Tactus“ (Standard; wie die Tactus-Drummap in Cubase) oder „Guitar Pro“. Nur das Bild ändert sich.</li>
+      <li><span class="ui">Notenhälse</span>: alle nach oben, Füße nach unten, oder Füße und tiefe Toms nach unten (welche Toms, wählst du darunter).</li>
+      <li><span class="ui">Zählzeiten unter den Noten</span> – mit <b>eigenen Silben</b>: für Sechzehntel z. B. „1 e + e“, „1 e + a“ oder „1 ke ti na“, für Triolen „1 tri let“, „1 ka ba“, „1 la li“ … aus der Liste, oder unter <span class="ui">Eigene…</span> selbst eintippen (drei Silben für Sechzehntel, zwei für Triolen). Eine Vorschau zeigt, wie gezählt wird.</li>
+    </ul></li>
+  <li><span class="ui">Pausenbereinigung</span> (Notenwerte bis zum Schlagende / bis zur nächsten Note): je Schlagzeug-Spur, Panel <span class="ui">Spur → Schreiben</span>.</li>
+  <li>Ältere Stücke übernehmen beim ersten Öffnen, was auf diesem Gerät eingestellt war.</li>
 </ul>
 
 <!-- ================================================================================= -->

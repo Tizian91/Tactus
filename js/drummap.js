@@ -182,6 +182,12 @@
     for (const a of TC.DRUM_ARTS) a.voice = mode === 'up' ? 0 : FEET.has(a.id) || (mode === 'low' && lows.has(a.tom || a.id)) ? 1 : 0;
     D.stems = mode;
   };
+  /** The look of a score's drums: its notation and stems (doc.page) - when a score is shown, or after an undo. */
+  D.applyDoc = function (doc) {
+    const pg = (doc && doc.page) || {};
+    D.setNotation(pg.notation);
+    D.setStems(pg.stems, pg.stemsLow);
+  };
   /** Voice of an instrument id in the current stem mode. */
   D.voiceOf = (id) => (byId.get(id) || { voice: 0 }).voice;
 

@@ -726,7 +726,7 @@
       ${tempoList()}
       <div class="row"><label>${tr('Swing')}</label><select data-action="setSwing">${TC.SWINGS.map(([v, l]) => `<option value="${v}"${v === (m.swing || 50) ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select>
         <select data-action="setSwingUnit"${(m.swing || 50) === 50 ? ' disabled' : ''}><option value="8"${m.swingUnit !== 16 ? ' selected' : ''}>${tr('8ths')}</option><option value="16"${m.swingUnit === 16 ? ' selected' : ''}>${tr('16ths')}</option></select></div>
-      ${(m.swing || 50) !== 50 ? check('toggleSwingMidi', S.settings.swingMidi !== false, tr('Swing in the MIDI export too (off: straight, to swing it in the DAW)')) : ''}
+      ${(m.swing || 50) !== 50 ? check('toggleSwingMidi', S.doc.meta.swingMidi !== false, tr('Swing in the MIDI export too (off: straight, to swing it in the DAW)')) : ''}
     </section>`;
   }
 
@@ -740,16 +740,44 @@
   }
 
   /**
-   * ⚙ "Drums": how drums are written (notation, stems) and the drum map; the kit profiles (keys of the drum VSTs).
-   * The instruments a drum track offers: at the track (panel → Track → Instrument).
+   * ⚙ "Look of this score" - saved with it, the same on every device and in print: how its drums are written
+   * (notation, stems) and the counting under the staff, with its own syllables (16ths "e + a", "ke ti na" …;
+   * triplets "tri let", "ka ba" …: a field with suggestions, any words typed).
+   */
+  const countOwn = {}; // ("Own…" chosen: the field to type the syllables stays, kind -> true)
+  P.countOwn = (kind, on) => { countOwn[kind] = !!on; };
+  function lookSection() {
+    const pg = S.doc.page, Rh = TC.rhythm;
+    const notationOpts = Object.keys(TC.NOTATIONS).map((k) => `<option value="${k}"${k === TC.drums.notation ? ' selected' : ''}>${esc(de() ? TC.NOTATIONS[k].de : TC.NOTATIONS[k].en)}</option>`).join('');
+    const syl = Rh.countSyl(pg, de());
+    const s16 = syl.s16.join(' '), s3 = syl.s3.join(' ');
+    // a list of the usual syllables, "Own…": a field to type them (shown while they are not one of the list)
+    const sylRow = (kind, label, cur, items, tip) => {
+      const own = !items.includes(cur) || countOwn[kind];
+      return `<div class="row"><label>${tr(label)}</label><select data-action="setCountPreset" data-kind="${kind}">${items.map((v) =>
+          `<option value="${esc(v)}"${!own && v === cur ? ' selected' : ''}>1 ${esc(v)}</option>`).join('')}<option value="own"${own ? ' selected' : ''}>${tr('Own…')}</option></select></div>
+        ${own ? `<div class="row"><label></label><input type="text" data-countsyl="${kind}" value="${esc(cur)}" title="${esc(tr(tip))}"></div>` : ''}`;
+    };
+    return `<section><h3>${tr('Look of this score')}</h3>
+      <p class="hint tight">${tr('Saved with the score - the same on every device and in print.')}</p>
+      <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
+      <p class="hint tight">${tr('Where the drums sit on the staff. Only the display changes.')}</p>
+      ${stemsRows()}
+      <h3 class="sub">${tr('Counting')}</h3>
+      ${check('toggleCounts', !!pg.counts, tr('Counting under the staff'))}
+      ${sylRow('16', '16ths', s16, Rh.COUNT16, 'Three syllables after the beat, e.g. e + a or ke ti na')}
+      ${sylRow('3', 'Triplets', s3, Rh.COUNT3, 'Two syllables after the beat, e.g. tri let or ka ba')}
+      <p class="hint tight">${esc(`1 ${s16} 2 ${s16} · 1 ${s3} 2 ${s3}`)}</p>
+    </section>`;
+  }
+
+  /**
+   * ⚙ "Drums": the kit profiles (keys of the drum VSTs) and the drum map. The instruments a drum track offers: at
+   * the track (panel → Track → Instrument); notation and stems: "Look of this score".
    */
   function kitSection() {
-    const notationOpts = Object.keys(TC.NOTATIONS).map((k) => `<option value="${k}"${k === TC.drums.notation ? ' selected' : ''}>${esc(de() ? TC.NOTATIONS[k].de : TC.NOTATIONS[k].en)}</option>`).join('');
     return `<section><h3>${tr('Drums')}</h3>
       <p class="hint tight">${tr('The instruments of a drum track (standard, large, all, own selection): panel "Bar · score" → Track → Instrument.')}</p>
-      <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
-      <p class="hint tight">${tr('Where the instruments sit on the staff. Only the display changes.')}</p>
-      ${stemsRows()}
       <div class="btn-row">${btn('openKits', undefined, tr('Kit profiles (Cubase)…'), false, tr('Which key of your drum VST is which instrument; drum maps for Cubase'))}</div>
       <h3 class="sub">${tr('Drum map')}</h3>
       ${check('toggleDrumMap', S.settings.showDrumMap, tr('Show next to the staff'))}
@@ -763,7 +791,7 @@
     const mode = TC.drums.stems;
     const modes = [['up', 'All up (one voice)'], ['feet', 'Feet down (kick, pedal)'], ['low', 'Feet and low toms down']]
       .map(([k, label]) => `<option value="${k}"${k === mode ? ' selected' : ''}>${esc(tr(label))}</option>`).join('');
-    const low = new Set(Array.isArray(S.settings.stemsLow) ? S.settings.stemsLow : TC.drums.DEFAULT_LOW);
+    const low = new Set(Array.isArray(S.doc.page.stemsLow) ? S.doc.page.stemsLow : TC.drums.DEFAULT_LOW);
     const toms = mode === 'low' ? `<div class="stem-toms">${TC.DRUM_ARTS.filter((a) => a.el === 'tom')
       .map((a) => check('toggleStemLow', low.has(a.id), esc(de() ? a.de : a.en), a.id)).join('')}</div>` : '';
     return `<div class="row"><label>${tr('Stems')}</label><select data-action="setStems">${modes}</select></div>
@@ -911,7 +939,6 @@
 
   function viewSection() {
     return `<section><h3>${tr('View')}</h3>
-      ${check('toggleCounts', S.settings.showCounts, tr('Counting under the staff (1 e + a)'))}
       ${check('toggleLeftHanded', S.settings.leftHanded, tr('Left-handed mode (swap the panels)'))}
       ${check('toggleFingerWrites', S.settings.fingerWrites !== false, tr('Fingers write notes (off: only pen and mouse; a finger selects and scrolls)'))}
     </section>`;
@@ -980,7 +1007,7 @@
         const scroll = body.scrollTop;
         const open = body.querySelector('details.kit-list[open]') !== null;
         const keys = body.querySelector('details.keys-list[open]') !== null;
-        body.innerHTML = kitSection() + kswSection() + pageSection() + turnSection() + viewSection() + keysSection();
+        body.innerHTML = lookSection() + kitSection() + kswSection() + pageSection() + turnSection() + viewSection() + keysSection();
         if (open) body.querySelector('details.kit-list').open = true;
         if (keys) body.querySelector('details.keys-list').open = true;
         body.scrollTop = scroll;
@@ -1138,7 +1165,8 @@
   function onChange(e) {
     const el = e.target;
     if (el.matches('select[data-action]')) {
-      TC.actions[el.dataset.action](el.value);
+      if (el.dataset.kind !== undefined) TC.actions[el.dataset.action](el.value, el.dataset.kind); // (e.g. which counting syllables)
+      else TC.actions[el.dataset.action](el.value);
     } else if (el.matches('select[data-ts]')) {
       if (el.value === 'other') TC.actions.customTimeSig();
       else TC.actions.setTimeSig(el.value);
@@ -1146,6 +1174,9 @@
       TC.actions.setMidiLead(el.value);
     } else if (el.matches('input[data-audiodelay]')) {
       TC.actions.setAudioDelay(el.value);
+    } else if (el.matches('input[data-countsyl]')) {
+      el.blur();
+      TC.actions.setCountSyl(el.dataset.countsyl, el.value);
     } else if (el.matches('input[data-clickvol]')) {
       TC.actions.setClickVol(el.value);
     } else if (el.matches('input[data-kswnote]')) {

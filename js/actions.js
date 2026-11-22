@@ -216,39 +216,31 @@
   A.setKit = (kit) => A.setTrackKit(kit);
   /** Kit profiles: which key of a drum VST is which instrument (dialog, js/kits.js). */
   A.openKits = () => TC.kits.open();
-  /** Notation layout (where the instruments sit): a view setting, the score does not change. */
+  /** Notation layout of the score (where the instruments sit; doc.page.notation): only the display changes. */
   A.setNotation = function (key) {
-    if (!TC.NOTATIONS[key]) return;
-    S.settings.notation = key;
-    TC.drums.setNotation(key);
-    TC.saveSettings();
-    TC.refresh();
+    if (!TC.NOTATIONS[key] || S.doc.page.notation === key) return;
+    S.doc.page.notation = key;
+    applyLook();
   };
-  /** Stems: 'up' (all up, one voice), 'feet' (feet down), 'low' (feet + chosen low toms down). */
+  /** Stems of the score's drums: 'up' (all up, one voice), 'feet' (feet down), 'low' (feet + chosen low toms down). */
   A.setStems = function (mode) {
     if (!TC.drums.STEM_MODES.includes(mode)) return;
-    S.settings.stems = mode;
-    applyStems();
+    S.doc.page.stems = mode;
+    applyLook();
   };
   /** A tom goes down with the feet ('low' mode) - or not. */
   A.toggleStemLow = function (id) {
     id = Number(id);
-    const low = new Set(Array.isArray(S.settings.stemsLow) ? S.settings.stemsLow : TC.drums.DEFAULT_LOW);
+    const low = new Set(Array.isArray(S.doc.page.stemsLow) ? S.doc.page.stemsLow : TC.drums.DEFAULT_LOW);
     if (low.has(id)) low.delete(id);
     else low.add(id);
-    S.settings.stemsLow = [...low];
-    applyStems();
+    S.doc.page.stemsLow = [...low];
+    applyLook();
   };
-  function applyStems() {
-    TC.drums.setStems(S.settings.stems, S.settings.stemsLow);
-    // the notes move into the voices of the new setting; no undo step (only the notation changes)
-    if (TC.score.revoice(S.doc)) {
-      TC.history.rebase();
-      S.rev++;
-      TC.storage.scheduleAutosave();
-    }
-    TC.saveSettings();
-    TC.refresh();
+  /** The score's drums written anew (notation, stems; the notes move into the voices of the stems) - an undo step. */
+  function applyLook() {
+    TC.drums.applyDoc(S.doc);
+    TC.commit();
   }
 
   /** Rest cleanup of the drum track being written (rhythm.js R.ends; each track its own): part of the score, so undoable. */
@@ -754,9 +746,8 @@
   };
   /** Swing also in the MIDI export (off: straight notes, to swing them in the DAW). */
   A.toggleSwingMidi = function () {
-    S.settings.swingMidi = S.settings.swingMidi === false;
-    TC.saveSettings();
-    TC.refresh();
+    S.doc.meta.swingMidi = S.doc.meta.swingMidi === false; // (part of the score)
+    TC.commit();
   };
 
   /** Tempo from bar i on ('' / 0: as the bars before; bar 1: the tempo of the score). */
@@ -1035,7 +1026,29 @@
   }
   /** Fold / unfold a panel section (its heading tapped; js/panel.js). */
   A.toggleFold = (key) => TC.panel.toggleFold(key);
-  A.toggleCounts = () => toggleSetting('showCounts');
+  /** Counting under the staff (1 e + a): part of the score (also printed). */
+  A.toggleCounts = function () {
+    S.doc.page.counts = !S.doc.page.counts;
+    TC.commit();
+  };
+  /** Counting syllables chosen from the list (kind '16' | '3'); 'own': a field to type them. */
+  A.setCountPreset = function (v, kind) {
+    if (v === 'own') {
+      TC.panel.countOwn(kind, true);
+      return TC.panel.update(true);
+    }
+    TC.panel.countOwn(kind, false);
+    A.setCountSyl(kind, v);
+  };
+  /** The syllables the score counts with after the beat: 16ths ("e + a", "ke ti na" …) and triplets ("tri let", "ka ba" …). */
+  A.setCountSyl = function (kind, text) {
+    const n = kind === '3' ? 2 : 3, k = kind === '3' ? 'count3' : 'count16';
+    const v = TC.rhythm.cleanSyl(text, n);
+    if ((S.doc.page[k] || '') === v) return TC.refresh();
+    S.doc.page[k] = v;
+    if (v && !S.doc.page.counts) S.doc.page.counts = true; // (syllables chosen: shown)
+    TC.commit();
+  };
   A.toggleSound = () => toggleSetting('sound');
   A.toggleMetronome = () => toggleSetting('metronome');
   A.toggleMidiSynth = () => toggleSetting('midiOutSynth');
@@ -2180,7 +2193,7 @@
     const t = S.doc.tracks[0];
     // (a melody track: no kit profile - its tones go out with their pitch; nor in the file name)
     const p = t.kind !== 'drums' ? null : profileId !== undefined ? (profileId ? TC.kits.byId(profileId) : null) : TC.kits.ofTrack(S.doc, t);
-    const res = TC.midi.build(S.doc, p, { straight: S.settings.swingMidi === false });
+    const res = TC.midi.build(S.doc, p, { straight: S.doc.meta.swingMidi === false });
     const name = baseName() + (p ? ' (' + cleanName(p.name) + ')' : '') + '.mid';
     download(res.bytes, name);
     const lines = lackLines(res);
@@ -2276,7 +2289,7 @@
 
   /** Writes the chosen tracks: [{ track, profile }] - one file each, or all in one (mode 'one'). */
   async function exportTracks(list, mode, chords) {
-    const opts = { straight: S.settings.swingMidi === false };
+    const opts = { straight: S.doc.meta.swingMidi === false };
     const base = baseName(), lacks = [];
     const files = [];
     if (mode === 'one') {

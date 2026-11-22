@@ -97,11 +97,23 @@ module.exports = function (T) {
     tracks: [{ kind: 'drums' }], page: { barsPerLine: 4, barNumbers: 'every' } });
   T.eq('page: markers and line breaks loaded (bar 1 never breaks)',
     pd.bars.map((h) => [h.marker, h.lineBreak]), [['Intro', false], ['Chorus', true], ['', false]]);
-  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
+  T.eq('page: settings loaded', pd.page, { barsPerLine: 4, barNumbers: 'every', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true, notation: 'tactus', stems: 'low', stemsLow: [43, 41], counts: false, count16: '', count3: '' });
   T.eq('page: defaults and bad values', [TC.emptyScore(1).page, TC.normalizeDoc({ bars: [{}], page: { barsPerLine: 99, barNumbers: 'x', margin: 13, header: 'no' } }).page],
-    [{ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true }, { barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true }]);
+    [{ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true, notation: 'tactus', stems: 'low', stemsLow: [43, 41], counts: false, count16: '', count3: '' }, { barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true, notation: 'tactus', stems: 'low', stemsLow: [43, 41], counts: false, count16: '', count3: '' }]);
   T.eq('page: margin and running header loaded', TC.normalizeDoc({ bars: [{}], page: { margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true } }).page,
-    { barsPerLine: 0, barNumbers: 'system', margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
+    { barsPerLine: 0, barNumbers: 'system', margin: 25, header: false, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true, notation: 'tactus', stems: 'low', stemsLow: [43, 41], counts: false, count16: '', count3: '' });
+  // the look of the drums and the counting: the score's own (older files: as on this device then)
+  T.eq('page: notation, stems, counting and its syllables loaded', (({ notation, stems, stemsLow, counts, count16, count3 }) => [notation, stems, stemsLow, counts, count16, count3])(
+    TC.normalizeDoc({ bars: [{}], page: { notation: 'gp', stems: 'up', stemsLow: [43], counts: true, count16: '  ke   ti na zu ', count3: 'ka' } }).page), ['gp', 'up', [43], true, 'ke ti na', 'ka ·']);
+  TC.state.settings.showCounts = true;
+  TC.state.settings.stems = 'feet';
+  T.eq('older file: counting and stems as on this device', (({ counts, stems }) => [counts, stems])(TC.normalizeDoc({ bars: [{}], page: {} }).page), [true, 'feet']);
+  TC.state.settings.showCounts = false;
+  TC.state.settings.stems = 'low';
+  T.eq('swing in the MIDI export: of the score (older files: as on this device)', [TC.normalizeDoc({ bars: [{}], meta: { swingMidi: false } }).meta.swingMidi, TC.normalizeDoc({ bars: [{}], meta: {} }).meta.swingMidi], [false, true]);
+  const syl = TC.rhythm.countSyl({ count16: 'ke ti na', count3: 'ka ba' }, true), B = TC.TPQ;
+  T.eq('counting: own syllables under 16ths and triplets', [0, B / 4, B / 2, (3 * B) / 4, B, B + B / 3, B + (2 * B) / 3].map((t) => TC.rhythm.countText(t, [4, 4], syl)), ['1', 'ke', 'ti', 'na', '2', 'ka', 'ba']);
+  T.eq('counting: defaults of the language', [TC.rhythm.countSyl({}, true).s16.join(' '), TC.rhythm.countSyl({}, false).s16.join(' '), TC.rhythm.countSyl({}, true).s3.join(' ')], ['e + e', 'e + a', 'tri let']);
   T.eq('page: scale names off is kept', TC.normalizeDoc({ bars: [{}], page: { scaleNames: false } }).page.scaleNames, false);
   T.eq('page: lyrics hidden is kept', TC.normalizeDoc({ bars: [{}], page: { lyrics: false } }).page.lyrics, false);
 };

@@ -126,8 +126,6 @@
       r.onload = () => TC.midiIn.open(new Uint8Array(r.result), f.name);
       r.readAsArrayBuffer(f);
     });
-    TC.drums.setNotation(S.settings.notation);
-    TC.drums.setStems(S.settings.stems, S.settings.stemsLow);
     const back = TC.storage.restore();
     if (back) {
       S.doc = back.doc;
@@ -162,6 +160,7 @@
       toStart = true;
       TC.saveSettings();
     }
+    TC.drums.applyDoc(S.doc); // the score's notation and stems
     TC.score.revoice(S.doc);
     TC.history.reset();
     TC.applyTheme();

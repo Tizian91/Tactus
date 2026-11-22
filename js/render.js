@@ -228,7 +228,7 @@
     const gap = ((S.doc.page && S.doc.page.staffGap) || 80) / 100;
     let dy = 0;
     return tracks.map((track, k) => {
-      const under = !!S.settings.showCounts || bars.some((b) => hasSticking(b.parts[k]));
+      const under = !!S.doc.page.counts || bars.some((b) => hasSticking(b.parts[k]));
       const z = { k, track, dy, one: TC.drums.oneLine(track) };
       // melody: the rows of the lyrics (a verse each; the one being typed counts), under the lowest note of the track
       if (track.kind === 'pitched') {
@@ -601,7 +601,7 @@
       s.end = ux;
       if (page) {
         const text = k === 0 || ln.some((b) => b.marker || b.tempo || b.mark || b.end || b.jump || b.scaleText); // the first line carries the tempo
-        const under = S.settings.showCounts || ln.some((b) => hasSticking(b.parts[lastSv.k])); // (of the lowest staff)
+        const under = S.doc.page.counts || ln.some((b) => hasSticking(b.parts[lastSv.k])); // (of the lowest staff)
         // the space between two lines (above the first staff, below the last one): ⚙ → Page, % of the basic space
         const lg = (doc.page.lineGap || 100) / 100;
         s.above = ((text ? 9.8 : 7.2) + (ln.some((b) => b.chords.length) ? 2.2 : 0)) * SP * lg; // (chord symbols: a row more)
@@ -1595,18 +1595,16 @@
       });
     }));
     for (const [t, s] of sticks) out.push(`<text class="sticking" x="${f(RD.tickX(b, t))}" y="${f(STICK_Y)}">${esc(s)}</text>`);
-    if (!S.settings.showCounts) return;
+    if (!S.doc.page.counts) return;
     const ticks = new Set();
     const beat = (4 * TC.TPQ) / b.ts[1];
     const countY = staffNow && staffNow.lyrRows ? lyrEnd(staffNow) + 2.0 * SP : COUNT_Y; // (under the lyrics)
     for (let t = 0; t < b.L; t += beat) ticks.add(t);
     b.voices.forEach((items) => items.forEach((it) => { if (it.kind === 'note' && !it.cont) ticks.add(it.tick); }));
-    const de = TC.getLang() === 'de';
-    const SHORT = { e: 'e', und: '+', '+': '+', a: de ? 'e' : 'a', trip: 'tri', let: 'let' };
+    const syl = TC.rhythm.countSyl(S.doc.page, TC.getLang() === 'de'); // (the score's own syllables: "1 ke ti na", "1 ka ba" …)
     for (const t of ticks) {
-      const p = TC.rhythm.countLabel(t, b.ts).split(' ');
-      const main = p.length === 1;
-      const text = main ? p[0] : SHORT[p[1]] || '·';
+      const text = TC.rhythm.countText(t, b.ts, syl);
+      const main = /^\d+$/.test(text);
       out.push(`<text class="count${main ? ' beat' : ''}" x="${f(RD.tickX(b, t))}" y="${f(countY)}">${esc(text)}</text>`);
     }
   }

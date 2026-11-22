@@ -109,7 +109,7 @@ window.TC = window.TC || {};
 
   const snapshot = () => {
     const d = TC.state.doc;
-    return JSON.stringify({ meta: d.meta, bars: d.bars, tracks: d.tracks });
+    return JSON.stringify({ meta: d.meta, bars: d.bars, tracks: d.tracks, page: d.page }); // (the page: its look is part of the score - undoable)
   };
 
   TC.history = {
@@ -138,6 +138,7 @@ window.TC = window.TC || {};
       const data = JSON.parse(s);
       Object.assign(TC.state.doc, data);
       this.last = s;
+      if (TC.drums && TC.drums.applyDoc) TC.drums.applyDoc(TC.state.doc); // (notation, stems: as the score had them)
       if (TC.score && TC.score.revoice(TC.state.doc)) this.last = snapshot(); // stems may have been switched since
       TC.pruneSelection();
       TC.state.rev++;

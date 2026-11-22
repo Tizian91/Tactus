@@ -128,6 +128,7 @@
     kit: '', kitName: '', // kit profile for MIDI export / import (js/kits.js): id, and the name to find it on another computer
     swing: 50,            // swing / shuffle in %: 50 straight, 67 shuffle (triplet feel), up to 75 (see TC.swingTick)
     swingUnit: 8,         // which notes swing: 8 eighths, 16 sixteenths
+    swingMidi: true,      // the swing also in the MIDI export (false: straight notes, to swing them in the DAW)
   });
 
   /** Swing amounts offered (%): straight, light, swing, shuffle (triplet feel), hard. */
@@ -161,7 +162,8 @@
   });
   TC.newHarmony = () => ({ key: { l: 0, a: 0, id: 'major' }, pad: true, vol: 60, pan: 0, midiOut: '', midiCh: 14 });
   TC.GUIDES = ['off', 'mark', 'lock'];
-  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true });
+  TC.newPage = () => ({ barsPerLine: 0, barNumbers: 'system', margin: 15, header: true, multiRest: true, simile: 'combine', staffGap: 80, lineGap: 100, scaleNames: true, lyrics: true,
+    notation: 'tactus', stems: 'low', stemsLow: [43, 41], counts: false, count16: '', count3: '' });
   // space between the staves of several tracks / between the lines of the page view, % of the basic space
   TC.STAFF_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
   TC.LINE_GAPS = [40, 50, 60, 70, 80, 90, 100, 120, 140, 160];
@@ -372,6 +374,7 @@
       if (k === 'tempo') doc.meta.tempo = TC.clamp(num(raw.meta.tempo, 120), 20, 400);
       else if (k === 'swing') doc.meta.swing = TC.clamp(Math.round(num(Number(raw.meta.swing), 50)), 50, 80);
       else if (k === 'swingUnit') doc.meta.swingUnit = Number(raw.meta.swingUnit) === 16 ? 16 : 8;
+      else if (k === 'swingMidi') doc.meta.swingMidi = raw.meta.swingMidi !== false;
       else doc.meta[k] = str(raw.meta[k]);
     });
     doc.bars = raw.bars.map((b, i) => {
@@ -414,6 +417,20 @@
     if (pg.lyrics === false) doc.page.lyrics = false;
     if (TC.SIMILE_MODES.includes(pg.simile)) doc.page.simile = pg.simile;
     else if (pg.multiSimile === false) doc.page.simile = 'single'; // older files: a switch
+    // how drums are written (notation, stems) and the counting under the staff: the score's own (older files: as they were on
+    // this device - the settings of then)
+    const st = (TC.state && TC.state.settings) || {};
+    const has = (k) => pg[k] !== undefined;
+    const notation = has('notation') ? pg.notation : st.notation;
+    if (TC.NOTATIONS && TC.NOTATIONS[notation]) doc.page.notation = notation;
+    const stems = has('stems') ? pg.stems : st.stems;
+    if (['up', 'feet', 'low'].includes(stems)) doc.page.stems = stems;
+    const low = has('stemsLow') ? pg.stemsLow : st.stemsLow;
+    if (Array.isArray(low)) doc.page.stemsLow = [...new Set(low.map(Number).filter((id) => Number.isInteger(id)))];
+    doc.page.counts = has('counts') ? pg.counts === true : !!st.showCounts;
+    doc.page.count16 = TC.rhythm ? TC.rhythm.cleanSyl(pg.count16, 3) : '';
+    doc.page.count3 = TC.rhythm ? TC.rhythm.cleanSyl(pg.count3, 2) : '';
+    if (!raw.meta || raw.meta.swingMidi === undefined) doc.meta.swingMidi = st.swingMidi !== false;
     const tracks = Array.isArray(raw.tracks) ? raw.tracks : [];
     doc.tracks = tracks.map((t) => {
       const kind = ['drums', 'pitched', 'tab'].includes(t.kind) ? t.kind : 'drums';

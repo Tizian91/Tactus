@@ -281,4 +281,37 @@
     if (rel === (2 * B) / 3) return `${beat} let`;
     return `${beat} + ${rel}/${B}`;
   };
+
+  // ---- Counting under the staff: the syllables of the score (doc.page.count16 / count3) -------------------------
+
+  /** Syllables offered (the field takes any): after the beat number, for 16ths (e + a) and for triplets (tri let). */
+  R.COUNT16 = ['e + a', 'e + e', 'e und e', 'ke ti na', 'ta te ta', 'y & a'];
+  R.COUNT3 = ['tri let', 'trip let', 'ka ba', 'la li', 'ta te', 'und e'];
+  /** Typed syllables, cleaned: n words (missing ones: '·'), at most 6 letters each; '' = the default. */
+  R.cleanSyl = function (text, n) {
+    const w = String(text || '').trim().split(/\s+/).filter(Boolean).slice(0, n).map((x) => x.slice(0, 6));
+    if (!w.length) return '';
+    while (w.length < n) w.push('·');
+    return w.join(' ');
+  };
+  /** The syllables a score counts with: { s16: [e, +, a], s3: [tri, let] } (not set: the defaults of the language). */
+  R.countSyl = function (page, de) {
+    const d16 = de ? 'e + e' : 'e + a';
+    return { s16: ((page && page.count16) || d16).split(' '), s3: ((page && page.count3) || 'tri let').split(' ') };
+  };
+  /**
+   * What is written under a tick when counting (ts: the bar's time signature; syl: R.countSyl): the beat number, a 16th
+   * (e + a), a triplet (tri let) - else a dot.
+   */
+  R.countText = function (tick, ts, syl) {
+    const B = (4 * TC.TPQ) / ts[1];
+    const rel = tick % B;
+    if (!rel) return String(Math.floor(tick / B) + 1);
+    if (rel === B / 4) return syl.s16[0];
+    if (rel === B / 2) return syl.s16[1];
+    if (rel === (3 * B) / 4) return syl.s16[2];
+    if (rel === B / 3) return syl.s3[0];
+    if (rel === (2 * B) / 3) return syl.s3[1];
+    return '·';
+  };
 })(window.TC);

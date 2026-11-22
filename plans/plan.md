@@ -699,8 +699,11 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
 - Als Nächstes (entschieden 2026-11-23):
   - ✅ **Schlagzeug-Kit an die Spur** (`track.kitPreset`: standard, large, all, profile - oder `track.kit` eigene Auswahl; `D.presetIds`;
     eine neue Schlagzeug-Spur übernimmt das Kit der aktuellen; ältere Stücke: das Kit des Geräts, „Eigene“ wird die Auswahl der Spur).
-  - **Ins Stück**: Hälse (+ welche Toms), Notation, Swing im MIDI-Export, **Zählzeiten** unter den Noten – mit **eigenen Silben**
-    (z. B. Sechzehntel „1 ke ti na“, Triolen „1 ka ba“).
+  - ✅ **Ins Stück**: Notation, Hälse (+ welche Toms), Zählzeiten (`doc.page.notation / stems / stemsLow / counts`), Swing im
+    MIDI-Export (`doc.meta.swingMidi`); ⚙ **Notenbild (dieses Stück)**; `TC.drums.applyDoc` beim Öffnen und nach Rückgängig.
+    **Eigene Zählsilben** (`page.count16` drei Silben, `page.count3` zwei; `R.countSyl`, `R.countText`): Liste (e + a, e + e,
+    ke ti na …; tri let, ka ba, la li …) oder „Eigene…“ zum Eintippen. Die Seite gehört jetzt zur Rückgängig-Historie (vorher machten
+    Seiten-Änderungen das Stück nicht einmal „geändert“).
   - **Profile reisen mit**: eine Kopie des benutzten Kit- / Keyswitch-Profils im Stück.
   - Ältere Stücke übernehmen dabei die bisherigen Geräte-Werte.
 - Offen (besprochen, noch nicht entschieden): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück

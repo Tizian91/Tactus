@@ -563,7 +563,8 @@ setTimeout(() => {
     TC.actions.openSettings();
     ok('notation: the settings window offers it', !!document.querySelector('.settings-dialog select[data-action="setNotation"] option[value="tactus"][selected]') && document.getElementById('settings-btn').classList.contains('active'));
     TC.actions.setKit('all');
-    ok('settings window: changes apply and it stays open', TC.panel.isSettingsOpen() && document.querySelector('.settings-dialog select[data-action="setKit"]').value === 'all');
+    ok('drum kit at the track (not in ⚙): "all" for the track being written, the settings window stays open', TC.panel.isSettingsOpen() && TC.curTrack().kitPreset === 'all' &&
+      !document.querySelector('.settings-dialog select[data-action="setKit"]') && document.querySelector('#panel-settings section[data-sec="track-inst"] select[data-action="setTrackKit"]').value === 'all');
     TC.actions.setKit('standard');
     TC.actions.setStems('up');
     ok('stems all up: the kick of bar 1 joins the upper voice', voice(0, 1).length === 0 && voice(0, 0)[0].includes('36'));

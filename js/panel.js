@@ -100,7 +100,7 @@
       ${btn('toggleLock', undefined, `🔒 ${tr('Lock instrument')}`, lock, tr('A click anywhere in the column writes the selected instrument (L, or hold Shift)'), 'lock-btn')}
       <p class="hint tight">${lock ? tr('On: the height no longer matters.') : tr('Hold Shift: lock while held · L: switch')}</p>
       ${groups}
-      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: panel "Bar · score" → Track.') : tr('Other instruments: drum kit in the settings (⚙).')}</p></section>`;
+      <p class="hint">${TC.drums.ownKit(TC.curTrack()) ? tr('Instruments of this track: panel "Bar · score" → Track.') : tr('Other instruments: panel "Bar · score" → Track → Instrument (drum kit).')}</p></section>`;
   }
 
   function noteSection(hit) {
@@ -266,7 +266,7 @@
     </section>`;
   }
 
-  /** A drum track: the instruments it offers - the drum kit (⚙) or its own selection (then on one line, if wanted). */
+  /** A drum track: the instruments it offers - a drum kit (standard, large, all, like its kit profile) or its own selection (then on one line, if wanted). */
   function drumKitRows(cur) {
     const own = TC.drums.ownKit(cur), ids = TC.drums.kit(cur);
     const list = own ? Object.keys(TC.DRUM_ELEMENTS).map((el) => {
@@ -275,8 +275,11 @@
       return `<div class="kit-group"><div class="el-name">${esc(name)}</div>` +
         arts.map((a) => check('toggleTrackArt', ids.has(a.id), `${esc(de() ? a.de : a.en)} <span class="muted">${esc(a.ab)}</span>`, a.id)).join('') + '</div>';
     }).join('') : '';
-    return `<div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">
-        <option value="kit"${own ? '' : ' selected'}>${tr('Drum kit (⚙)')}</option><option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
+    const preset = TC.drums.PRESETS.includes(cur.kitPreset) ? cur.kitPreset : 'standard';
+    const presets = TC.drums.PRESETS.map((k) => `<option value="${k}"${!own && k === preset ? ' selected' : ''}>${esc(de() ? TC.KITS[k].de : TC.KITS[k].en)}</option>`).join('');
+    return `<div class="row"><label>${tr('Instruments')}</label><select data-action="setTrackKit">${presets}
+        <option value="own"${own ? ' selected' : ''}>${tr('Own selection ({n})', { n: own ? ids.size : '…' })}</option></select></div>
+      <p class="hint tight">${tr('{n} instruments – only these appear in the note panel and the drum map.', { n: ids.size })}</p>
       ${own ? `${check('toggleTrackOneLine', !!cur.oneLine, tr('One staff line (every note on it)'))}
         <details class="kit-list"><summary>${tr('Choose instruments of "{name}"', { name: esc(cur.name) })}</summary>${list}</details>` : ''}`;
   }
@@ -736,21 +739,14 @@
       <div class="btn-row">${btn('openKswLib', undefined, tr('Keyswitch profiles…'), false, tr('Make your own (any instrument VST: UJAM, orchestral …), kept in Dropbox'))}</div></section>`;
   }
 
+  /**
+   * ⚙ "Drums": how drums are written (notation, stems) and the drum map; the kit profiles (keys of the drum VSTs).
+   * The instruments a drum track offers: at the track (panel → Track → Instrument).
+   */
   function kitSection() {
-    const kit = S.settings.kit;
-    const opts = Object.keys(TC.KITS).map((k) => `<option value="${k}"${k === kit ? ' selected' : ''}>${esc(de() ? TC.KITS[k].de : TC.KITS[k].en)}</option>`).join('');
     const notationOpts = Object.keys(TC.NOTATIONS).map((k) => `<option value="${k}"${k === TC.drums.notation ? ' selected' : ''}>${esc(de() ? TC.NOTATIONS[k].de : TC.NOTATIONS[k].en)}</option>`).join('');
-    const ids = TC.drums.globalKit();
-    const list = Object.keys(TC.DRUM_ELEMENTS).map((el) => {
-      const arts = TC.DRUM_ARTS.filter((a) => a.el === el);
-      const name = de() ? TC.DRUM_ELEMENTS[el].de : TC.DRUM_ELEMENTS[el].en;
-      return `<div class="kit-group"><div class="el-name">${esc(name)}</div>` +
-        arts.map((a) => check('toggleKitArt', ids.has(a.id), `${esc(de() ? a.de : a.en)} <span class="muted">${esc(a.ab)}</span>`, a.id)).join('') + '</div>';
-    }).join('');
-    return `<section><h3>${tr('Drum kit')}</h3>
-      <div class="row"><label>${tr('Kit')}</label><select data-action="setKit">${opts}</select></div>
-      <p class="hint tight">${tr('{n} instruments – only these appear in the note panel and the drum map.', { n: ids.size })}</p>
-      <details class="kit-list"><summary>${tr('Choose instruments')}</summary>${list}</details>
+    return `<section><h3>${tr('Drums')}</h3>
+      <p class="hint tight">${tr('The instruments of a drum track (standard, large, all, own selection): panel "Bar · score" → Track → Instrument.')}</p>
       <div class="row"><label>${tr('Notation')}</label><select data-action="setNotation">${notationOpts}</select></div>
       <p class="hint tight">${tr('Where the instruments sit on the staff. Only the display changes.')}</p>
       ${stemsRows()}
@@ -937,7 +933,7 @@
   P.update = function (force) {
     const hit = selectedNote();
     const lang = S.settings.lang;
-    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, S.settings.kit, S.settings.kitCustom, S.settings.kit === 'profile' && [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst, TC.curTrack().ksw && TC.curTrack().ksw.keys.length, S.selBar !== null && JSON.stringify((TC.curTrack().bars[S.selBar] || {}).ks || 0),
+    const keyN = JSON.stringify([S.tool, S.input, hit && hit.note, hit && hit.ev.dur, hit && hit.note.pitch !== undefined && JSON.stringify(TC.score.chordTies(S.doc, hit.track, hit.bar, hit.voice, hit.ev) || {}, ['gap', 'all', 'targets']), S.selection.size && TC.actions.selectedValue(), lang, TC.curTrack().kitPreset, [...TC.drums.kit()].join(), TC.curTrack().id, TC.curTrack().kit, TC.curTrack().kind, TC.curTrack().inst, TC.curTrack().ksw && TC.curTrack().ksw.keys.length, S.selBar !== null && JSON.stringify((TC.curTrack().bars[S.selBar] || {}).ks || 0),
       // (dynamics: the selected bar, its places and what the track has there)
       S.selBar, S.selBarEnd, S.chordSlot, S.dynAll, S.wedgeDraft, S.dynSel, [...S.selection].join(), hit && hit.ev.notes.map((n) => n.stroke || '').join(), TC.gridTicks(S.input), S.selBar !== null && S.doc.bars[S.selBar] && S.doc.bars[S.selBar].ts, JSON.stringify(TC.curTrack().bars.map((b) => b.dyn || 0))]); // (a hairpin ends in a later bar)
     if ((force || keyN !== lastNotes) && !(!force && typing(notesRoot))) {
@@ -952,7 +948,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.pan, t.guide, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.pan, t.guide, t.kitPreset, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

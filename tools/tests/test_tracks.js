@@ -79,11 +79,24 @@ module.exports = function (T) {
   const one = TC.emptyScore(1);
   T.eq('the last track is not deleted', SC.deleteTrack(one, one.tracks[0]), false);
 
-  // instruments of a track: the kit of the settings, or its own (one line)
+  // instruments of a track: its drum kit (standard, large, all, like its kit profile), or its own (one line)
   const D = TC.drums;
-  S.settings.kit = 'standard';
   S.input.art = 42;
-  T.eq('a new track: the kit of the settings', [drums.kit, D.ownKit(drums), D.kit(drums).has(42), D.kit(drums).size === D.globalKit().size], [null, false, true, true]);
+  T.eq('a new track: the standard kit', [drums.kit, drums.kitPreset, D.ownKit(drums), D.kit(drums).has(42), D.kit(drums).size === D.kitIds('standard').size], [null, 'standard', false, true, true]);
+  drums.kitPreset = 'all';
+  T.eq('a track\'s own drum kit: all instruments', D.kit(drums).size, TC.DRUM_ARTS.length);
+  T.eq('saved and loaded: the kit of each track', TC.normalizeDoc(JSON.parse(JSON.stringify(doc))).tracks.map((t) => t.kitPreset).includes('all'), true);
+  drums.kitPreset = 'standard';
+  // older files: the kit chosen on this device goes to the drum tracks (a custom kit: their own selection)
+  const oldF = JSON.parse(JSON.stringify(doc));
+  oldF.tracks.forEach((t) => delete t.kitPreset);
+  S.settings.kit = 'large';
+  T.eq('older file: the kit of this device goes to the tracks', TC.normalizeDoc(JSON.parse(JSON.stringify(oldF))).tracks[0].kitPreset, 'large');
+  S.settings.kit = 'custom';
+  S.settings.kitCustom = [38, 36];
+  T.eq('older file, a custom kit on this device: the drum tracks\' own selection', TC.normalizeDoc(JSON.parse(JSON.stringify(oldF))).tracks[0].kit, [38, 36]);
+  S.settings.kit = 'standard';
+  S.settings.kitCustom = null;
   snare.kit = [38, 37];
   T.eq('own instruments', [D.ownKit(snare), [...D.kit(snare)].sort()], [true, [37, 38]]);
   T.eq('a click in a track with its own instruments: not the hi-hat selected elsewhere', [D.clickable(snare).has(42), D.clickable(drums).has(42)], [false, true]);

@@ -144,7 +144,7 @@
 
   /**
    * Drum kits: which instruments the panel and the drum map offer (notes of other
-   * instruments in a score are still shown). 'custom' = the list in settings.kitCustom.
+   * instruments in a score are still shown). Each drum track has one (track.kitPreset) or its own selection (track.kit).
    */
   const STANDARD = [42, 92, 46, 44, 38, 37, 91, 36, 50, 48, 45, 51, 93, 53, 94, 49, 97];
   TC.KITS = {
@@ -193,7 +193,7 @@
   /** All articulations on a staff line. */
   D.atLine = (line) => TC.DRUM_ARTS.filter((a) => a.line === line);
 
-  /** Ids of the instruments of a kit (kit = settings.kit, custom = settings.kitCustom). */
+  /** Ids of the instruments of a kit (TC.KITS key; custom: the list given). */
   D.kitIds = function (kit, custom) {
     const k = TC.KITS[kit] || TC.KITS.standard;
     const ids = k.ids || (Array.isArray(custom) ? custom : STANDARD);
@@ -245,15 +245,18 @@
 
   // ---- With the app state (settings, open score) ---------------------------------------
 
-  /** Instruments of the kit chosen in the settings (⚙ → drum kit), for all tracks without a kit of their own. */
-  D.globalKit = function () {
-    const st = TC.state.settings;
-    if (st.kit === 'profile') {
-      // the instruments the drum VST has (kit profile of the score); without a profile: the standard kit
-      const p = TC.kits && TC.kits.current(TC.state.doc);
+  /** The kits a drum track can take (its own selection besides: track.kit). */
+  D.PRESETS = ['standard', 'large', 'all', 'profile'];
+  /**
+   * Instruments of a drum kit for a track without its own selection: standard, large, all - or 'profile': the
+   * instruments its drum VST has (the track's kit profile; without one: the standard kit).
+   */
+  D.presetIds = function (preset, track) {
+    if (preset === 'profile') {
+      const p = TC.kits && (track ? TC.kits.ofTrack(TC.state.doc, track) : TC.kits.current(TC.state.doc));
       return new Set(p ? Object.keys(p.assign).map(Number).filter((id) => byId.has(id)) : STANDARD);
     }
-    return D.kitIds(st.kit, st.kitCustom);
+    return D.kitIds(D.PRESETS.includes(preset) ? preset : 'standard');
   };
 
   /** The track (default: the one being written) - null without a score. */
@@ -263,11 +266,11 @@
   /** One line (e.g. a track only for the snare): every note sits on the middle line. */
   D.oneLine = (track) => !!(track && track.oneLine && D.ownKit(track));
 
-  /** Instruments of a track: its own, or the kit of the settings. */
+  /** Instruments of a track: its own selection, or its drum kit (track.kitPreset: standard, large, all, like the kit profile). */
   D.kit = function (track) {
     track = trackOr(track);
     if (D.ownKit(track)) return new Set(track.kit.filter((id) => byId.has(id)));
-    return D.globalKit();
+    return D.presetIds(track && track.kitPreset, track);
   };
 
   /** Instruments a click may write: the kit, plus the selected one (a track with its own instruments: only those). */

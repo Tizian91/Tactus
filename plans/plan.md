@@ -697,7 +697,8 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
   Melodie-Spuren als Startwert; Doppelklick: Mitte), M / S, Ausgang; das Akkord-Pad ein eigener Streifen (`harmony.pan`, Lautstärke,
   Ausgang, Kanal - aus dem Akkord-Abschnitt hierher). Darunter weiter die Wiedergabe.
 - Als Nächstes (entschieden 2026-11-23):
-  - **Schlagzeug-Kit an die Spur** (statt Gerät).
+  - ✅ **Schlagzeug-Kit an die Spur** (`track.kitPreset`: standard, large, all, profile - oder `track.kit` eigene Auswahl; `D.presetIds`;
+    eine neue Schlagzeug-Spur übernimmt das Kit der aktuellen; ältere Stücke: das Kit des Geräts, „Eigene“ wird die Auswahl der Spur).
   - **Ins Stück**: Hälse (+ welche Toms), Notation, Swing im MIDI-Export, **Zählzeiten** unter den Noten – mit **eigenen Silben**
     (z. B. Sechzehntel „1 ke ti na“, Triolen „1 ka ba“).
   - **Profile reisen mit**: eine Kopie des benutzten Kit- / Keyswitch-Profils im Stück.

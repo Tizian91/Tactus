@@ -57,7 +57,7 @@ window.TC = window.TC || {};
       fingerWrites: true,   // a finger on the lines writes notes (off: only pen / mouse; fingers select and scroll)
       showDrumMap: true,    // instrument names next to the lines
       mapUsedOnly: false,   // drum map: only instruments used in the score (+ the selected one)
-      kit: 'standard',      // drum kit (drummap.js TC.KITS)
+      kit: 'standard',      // (before 2026-11-23: the drum kit of this device - now each drum track's kitPreset; read once for older scores)
       notation: 'tactus',   // where instruments sit on the staff (drummap.js TC.NOTATIONS)
       stems: 'low',         // stems: 'up' all up (one voice), 'feet' feet down, 'low' feet + low toms down
       stemsLow: [43, 41],   // the toms that go down with 'low' (floor toms)
@@ -79,7 +79,7 @@ window.TC = window.TC || {};
       timerCursor: true,    // … timer: the bar being played marked, the cursor at its start
       samples: false,       // recorded drum sounds (js/samples.js) instead of the synthesized ones
       audioDelay: 0,        // ms the sound is heard later than the browser reports (Bluetooth …): the cursor waits for it
-      kitCustom: null,      // ids of the custom kit
+      kitCustom: null,      // (before 2026-11-23: the custom kit of this device - each drum track has its own kit now; read once for older scores)
       layout: 'endless',    // 'endless' | 'page' (A4 pages as printed)
       zoomV2: false,        // the default size became 160 % (older scores are enlarged once)
       showCounts: false,    // counting (1 e + a) under the staff

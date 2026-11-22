@@ -90,11 +90,12 @@ ${order.map((n) => `      <item value="${n}"/>`).join('\n')}
   K.list = [p];
   TC.state.doc = TC.emptyScore(1);
   TC.state.doc.meta.kit = p.id;
-  TC.state.settings.kit = 'profile';
-  T.eq('drum kit like the kit profile: exactly its instruments', [...TC.drums.kit()].sort((a, b) => a - b), Object.keys(p.assign).map(Number).sort((a, b) => a - b));
+  const kt = TC.state.doc.tracks[0];
+  kt.kitPreset = 'profile';
+  T.eq('drum kit like the kit profile: exactly its instruments', [...TC.drums.kit(kt)].sort((a, b) => a - b), Object.keys(p.assign).map(Number).sort((a, b) => a - b));
   TC.state.doc.meta.kit = '';
-  T.eq('drum kit like the kit profile, score without profile: standard kit', TC.drums.kit().size, TC.drums.kitIds('standard').size);
-  TC.state.settings.kit = 'standard';
+  T.eq('drum kit like the kit profile, score without profile: standard kit', TC.drums.kit(kt).size, TC.drums.kitIds('standard').size);
+  kt.kitPreset = 'standard';
 
   K.list = [p, bm];
   const sd = TC.emptyScore(1);

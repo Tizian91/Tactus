@@ -280,7 +280,8 @@
       volume: 100,       // fader 0 … 127 (100 = as it was)
       pan: 0,            // left -100 … 0 (middle) … 100 right
       fill: kind === 'drums' ? 'beat' : 'off', // rest cleanup on screen (rhythm.js R.ends): beat | next | off
-      kit: null,         // instruments of its own (ids; e.g. only the snare), null = the kit of the settings
+      kit: null,         // instruments of its own (ids; e.g. only the snare), null = its drum kit (kitPreset)
+      kitPreset: 'standard', // drums: its drum kit - 'standard' | 'large' | 'all' | 'profile' (the instruments of its kit profile)
       oneLine: false,    // with instruments of its own: one staff line, every note on it
       hidden: false,     // not shown (still played)
       mute: false,       // not played (playback; the MIDI export asks for itself)
@@ -426,6 +427,11 @@
       if (['beat', 'next', 'off'].includes(t.fill)) out.fill = t.fill;
       if (Array.isArray(t.kit)) out.kit = [...new Set(t.kit.map(Number).filter((id) => TC.drums && TC.drums.byId(id)))];
       if (out.kit && !out.kit.length) out.kit = null;
+      // its drum kit (older files: the one chosen on this device - its own selection became the track's)
+      const st = (TC.state && TC.state.settings) || {};
+      if (TC.drums && TC.drums.PRESETS.includes(t.kitPreset)) out.kitPreset = t.kitPreset;
+      else if (TC.drums && TC.drums.PRESETS.includes(st.kit)) out.kitPreset = st.kit;
+      else if (kind === 'drums' && st.kit === 'custom' && !out.kit && Array.isArray(st.kitCustom) && st.kitCustom.length && TC.drums) out.kit = st.kitCustom.map(Number).filter((id) => TC.drums.byId(id));
       out.oneLine = !!t.oneLine && !!out.kit;
       out.hidden = !!t.hidden;
       out.mute = !!t.mute;

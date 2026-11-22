@@ -212,13 +212,8 @@
 
   // ---- Drum kit and drum map ------------------------------------------------------------
 
-  A.setKit = function (kit) {
-    if (!TC.KITS[kit]) return;
-    if (kit === 'custom' && !S.settings.kitCustom) S.settings.kitCustom = [...TC.drums.globalKit()];
-    S.settings.kit = kit;
-    TC.saveSettings();
-    TC.refresh();
-  };
+  /** The drum kit of the drum track being written: 'standard' | 'large' | 'all' | 'profile' | 'own' (see A.setTrackKit). */
+  A.setKit = (kit) => A.setTrackKit(kit);
   /** Kit profiles: which key of a drum VST is which instrument (dialog, js/kits.js). */
   A.openKits = () => TC.kits.open();
   /** Notation layout (where the instruments sit): a view setting, the score does not change. */
@@ -313,10 +308,18 @@
     TC.commit();
   };
   /** Instruments of the track being written: 'kit' (those of the settings) or 'own' (a list of its own). */
+  /**
+   * The instruments of the drum track being written: a drum kit ('standard', 'large', 'all', 'profile': those of its
+   * kit profile) or 'own' - its own selection, starting from what it has now.
+   */
   A.setTrackKit = function (v) {
     const t = TC.curTrack();
-    if (v === 'own' && !TC.drums.ownKit(t)) t.kit = [...TC.drums.kit(t)];
-    else if (v === 'kit') {
+    if (t.kind !== 'drums') return;
+    if (v === 'own') {
+      if (TC.drums.ownKit(t)) return;
+      t.kit = [...TC.drums.kit(t)];
+    } else if (TC.drums.PRESETS.includes(v) || v === 'kit') {
+      if (v !== 'kit') t.kitPreset = v;
       t.kit = null;
       t.oneLine = false;
     } else return;
@@ -411,7 +414,7 @@
     const name = prompt(tr('Name of the new track (e.g. Snare, Cymbals):'), TC.score.freeTrackName(S.doc, tr('Drums')));
     if (name === null) return;
     const t = TC.score.addTrack(S.doc, name.trim() || TC.score.freeTrackName(S.doc, tr('Drums')), TC.curTrack());
-    if (TC.curTrack().kind === 'drums') t.midiOut = TC.curTrack().midiOut; // (the same drum VST)
+    if (TC.curTrack().kind === 'drums') Object.assign(t, { midiOut: TC.curTrack().midiOut, kitPreset: TC.curTrack().kitPreset }); // (the same drum VST, the same kit)
     S.trackId = t.id;
     S.selection.clear();
     TC.commit();
@@ -651,17 +654,6 @@
   };
   A.moveTrackUp = (id) => { if (TC.score.moveTrack(S.doc, trackOf(id), -1)) TC.commit(); };
   A.moveTrackDown = (id) => { if (TC.score.moveTrack(S.doc, trackOf(id), 1)) TC.commit(); };
-  /** Instrument in / out of the kit (the kit becomes a custom one). */
-  A.toggleKitArt = function (id) {
-    id = Number(id);
-    const ids = TC.drums.globalKit();
-    if (ids.has(id)) ids.delete(id);
-    else ids.add(id);
-    S.settings.kitCustom = [...ids];
-    S.settings.kit = 'custom';
-    TC.saveSettings();
-    TC.refresh();
-  };
   A.toggleMapUsed = function () {
     S.settings.mapUsedOnly = !S.settings.mapUsedOnly;
     TC.saveSettings();

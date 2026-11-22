@@ -784,6 +784,23 @@ setTimeout(() => {
     TC.actions.undo();
     TC.actions.undo();
     ok('parts: undone, "Parts ▾" as before', TC.actions.sections().length === secBefore && secBtn.hidden === !secBefore);
+    // panel sections fold to their heading (a tap on it) and stay folded when the panel is drawn anew
+    const keepFold = S.settings.fold;
+    const repHead = () => document.querySelector('#panel-settings section[data-sec="repeats"] > h3.fold-head');
+    const valHead = () => document.querySelector('#panel-notes section[data-sec="value"] > h3.fold-head');
+    ok('panels: the sections have a heading to fold', !!repHead() && !!valHead());
+    repHead().click();
+    valHead().click();
+    const repSec = () => repHead().parentElement;
+    const shownRows = (s) => [...s.children].filter((c) => c.tagName !== 'H3' && getComputedStyle(c).display !== 'none').length;
+    ok('a heading tapped: only the heading stays (bar · score and notes)', repSec().classList.contains('folded') && shownRows(repSec()) === 0 &&
+      valHead().parentElement.classList.contains('folded') && shownRows(valHead().parentElement) === 0);
+    TC.panel.update(true);
+    ok('drawn anew: still folded', repSec().classList.contains('folded') && valHead().parentElement.classList.contains('folded'));
+    repHead().click();
+    valHead().click();
+    ok('tapped again: unfolded', !repSec().classList.contains('folded') && shownRows(repSec()) > 0 && !valHead().parentElement.classList.contains('folded'));
+    S.settings.fold = keepFold;
     if (wasEndless) TC.actions.layout('endless');
     TC.actions.undo();
     const sk = document.getElementById('status-kit');

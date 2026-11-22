@@ -69,7 +69,7 @@
     const gridName = own ? `1/${parseInt(own, 10)}${/t$/.test(own) ? ' ' + tr('triplet') : ''}` : inpNext.triplet ? `1/${inpNext.value} ${tr('triplet')}` : inpNext.dotted ? `1/${inpNext.value * 2}` : `1/${inpNext.value}`;
     // the grid: that of the note value, or one of its own (a quarter chord on every sixteenth)
     const grids = TC.GRIDS.map((g) => `<option value="${g}"${g === (own || '') ? ' selected' : ''}>${g ? `1/${parseInt(g, 10)}${/t$/.test(g) ? ' ' + esc(tr('triplet')) : ''}` : esc(tr('Auto (note value)'))}</option>`).join('');
-    return `<section><h3>${tr('Note value')}</h3>
+    return `<section data-sec="value"><h3>${tr('Note value')}</h3>
       <div class="values">${vals}</div>
       <div class="btn-row two">
         ${btn('toggleDotted', undefined, `<span class="mus-btn sm"></span> ${tr('Dotted')}`, inp.dotted, tr('Dotted (.)'))}
@@ -96,7 +96,7 @@
       return `<div class="el-group"><div class="el-name">${esc(name)}</div><div class="arts">${items}</div></div>`;
     }).join('');
     const lock = S.input.lock;
-    return `<section><h3>${tr('Instrument')}</h3>
+    return `<section data-sec="instrument"><h3>${tr('Instrument')}</h3>
       ${btn('toggleLock', undefined, `🔒 ${tr('Lock instrument')}`, lock, tr('A click anywhere in the column writes the selected instrument (L, or hold Shift)'), 'lock-btn')}
       <p class="hint tight">${lock ? tr('On: the height no longer matters.') : tr('Hold Shift: lock while held · L: switch')}</p>
       ${groups}
@@ -109,7 +109,7 @@
     const heads = ['auto'].concat(Object.keys(TC.HEADS)).map((h) =>
       `<option value="${h}"${h === headSel ? ' selected' : ''}>${esc(h === 'auto' ? tr('As the drum map') : tr(TC.HEADS[h].label))}</option>`).join('');
     const title = hit ? tr('Selected notes ({n})', { n: S.selection.size }) : tr('Next note');
-    return `<section${hit ? ' class="has-sel"' : ''}><h3>${esc(title)}</h3>
+    return `<section data-sec="note"${hit ? ' class="has-sel"' : ''}><h3>${esc(title)}</h3>
       <div class="row"><label>${tr('Accent')}</label><div class="seg">
         ${btn('setAccent', 0, '–', src.accent === 0, tr('No accent'))}
         ${btn('setAccent', 1, '<span class="mus-btn sm"></span>', src.accent === 1, tr('Accent (A)'))}
@@ -152,8 +152,8 @@
         ${btn('setMelodyVoice', 1, '2', vi === 1, tr(hit ? 'Move into voice 2 (stems down)' : 'Write in voice 2: its own rhythm, stems down - e.g. a held tone under the melody'))}
       </div></div>`;
     if (!hit) {
-      return `<section><h3>${tr('Next note')}</h3>${voiceRow}${S.input.voice === 1 ? `<p class="hint tight">${tr('Voice 2: its own rhythm under voice 1 (stems down) - for a held tone or a second part.')}</p>` : ''}${accentRow(S.input.accent || 0)}</section>
-        <section><h3>${tr('Melody')}</h3>
+      return `<section data-sec="next"><h3>${tr('Next note')}</h3>${voiceRow}${S.input.voice === 1 ? `<p class="hint tight">${tr('Voice 2: its own rhythm under voice 1 (stems down) - for a held tone or a second part.')}</p>` : ''}${accentRow(S.input.accent || 0)}</section>
+        <section data-sec="melody"><h3>${tr('Melody')}</h3>
         <p class="hint">${tr('Tap a line or space: the tone of the scale there. Drag sideways while pressing: a longer note.')}</p>
         <p class="hint">${tr('Hold a note, then up / down: ♯ / ♭ · then sideways: its length · drag a note: move it.')}</p>
         <p class="hint tight">${tr('Scale: panel "Bar · score". Clef, voice, sound: "Tracks & sound…".')}</p></section>${accompSection(null)}${ksSection()}${dynSection()}${lyricsSection(false)}`;
@@ -169,7 +169,7 @@
     const one = next && next.targets.length > 1 && TC.score.tieTarget(S.doc, hit.track, hit.bar, hit.voice, hit.ev, hit.note);
     const tieOne = one ? btn('toggleTieOne', undefined, '⁀ ' + tr('Only this tone ({name})', { name: P.fullName(sp.dia, sp.a, de()) }), !one.gap && !!one.note.tie && !next.all,
       tr('Ties only this tone of the chord; the other tones are struck again')) : '';
-    return `<section class="has-sel"><h3>${esc(tr('Selected notes ({n})', { n: S.selection.size }))}</h3>
+    return `<section data-sec="selnotes" class="has-sel"><h3>${esc(tr('Selected notes ({n})', { n: S.selection.size }))}</h3>
       <p class="hint tight"><b>${esc(P.fullName(sp.dia, sp.a, de()))}</b></p>
       <div class="btn-row two">${btn('alterSelection', 1, '♯ ' + tr('Raise'), false, tr('A semitone up (hold the note, then up)'))}
         ${btn('alterSelection', -1, '♭ ' + tr('Lower'), false, tr('A semitone down (hold the note, then down)'))}</div>
@@ -192,7 +192,7 @@
     const verses = Array.from({ length: Math.min(TC.score.LYRIC_VERSES, n + 1) }, (_, v) =>
       btn('setLyricVerse', v, n === v ? '+' : String(v + 1), v === cur, n === v ? tr('A new verse') : tr('Verse {n}', { n: v + 1 }))).join('');
     const shown = S.doc.page.lyrics !== false;
-    return `<section><h3>${tr('Lyrics')}</h3>
+    return `<section data-sec="lyrics"><h3>${tr('Lyrics')}</h3>
       ${n ? check('toggleLyrics', shown, tr('Show lyrics (Ctrl+Shift+L)')) : ''}
       ${n && !shown ? `<p class="hint tight">${tr('Hidden: the bars are narrow again. While typing, the lyrics show.')}</p>` : ''}
       ${n ? `<div class="row"><label>${tr('Verse')}</label><div class="seg">${verses}</div></div>` : ''}
@@ -267,7 +267,7 @@
   function barSection() {
     const i = S.selBar;
     if (i === null || !S.doc.bars[i]) {
-      return `<section><h3>${tr('Bar')}</h3><p class="hint">${tr('Click a bar or right-click it: time signature, insert, delete.')}</p></section>`;
+      return `<section data-sec="bar"><h3>${tr('Bar')}</h3><p class="hint">${tr('Click a bar or right-click it: time signature, insert, delete.')}</p></section>`;
     }
     const h = S.doc.bars[i];
     const cur = h.ts.join('/');
@@ -282,7 +282,7 @@
     const R = TC.barRange(), end = S.selBarEnd !== null && S.doc.bars[S.selBarEnd] ? S.selBarEnd : i;
     const toOpts = S.doc.bars.map((_, k) => `<option value="${k}"${k === end ? ' selected' : ''}>${k === i ? '– ' + tr('only this one') : k + 1}</option>`).join('');
     const title = R && R[1] > R[0] ? `${tr('Bars')} ${R[0] + 1}–${R[1] + 1}` : `${tr('Bar')} ${i + 1}`;
-    return `<section><h3>${title}</h3>
+    return `<section data-sec="bar"><h3>${title}</h3>
       <div class="row"><label>${tr('to bar')}</label><select data-action="selectBarsTo">${toOpts}</select></div>
       ${R && R[1] > R[0] ? `<p class="hint tight">${tr('Play / loop plays these bars. The settings below apply to bar {n}.', { n: i + 1 })}</p>` : ''}
       <div class="row"><label>${tr('Time sig.')}</label><select data-ts>${opts}<option value="other">${tr('Other…')}</option></select></div>
@@ -328,7 +328,7 @@
       ${hm.pad ? `<div class="row"><label>${tr('Volume')}</label><input type="range" min="0" max="100" step="5" data-chordvol value="${hm.vol}"></div>` : ''}
       ${outRow}`;
     if (i === null || !S.doc.bars[i]) {
-      return `<section><h3>${tr('Chords')}</h3><p class="hint">${tr('Tap a bar (above or below the lines): set its chords here.')}</p>${pad}</section>`;
+      return `<section data-sec="chords"><h3>${tr('Chords')}</h3><p class="hint">${tr('Tap a bar (above or below the lines): set its chords here.')}</p>${pad}</section>`;
     }
     const sc = TC.score.harmonyScale(S.doc, i), sev = !!S.settings.chordSev, list = TC.score.chordsIn(S.doc, i);
     const ts = S.doc.bars[i].ts, slots = TC.score.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
@@ -362,7 +362,7 @@
       key = `<div class="row"><label>${tr('Musical key')}</label><select data-action="setHarmonyKeyRoot" class="narrow">${roots}</select>
         <select data-action="setHarmonyKeyId">${scales}</select>${btn('previewScale', undefined, '▶', false, tr('Hear the scale'), 'icon')}</div>`;
     }
-    return `<section><h3>${tr('Chords')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
+    return `<section data-sec="chords"><h3>${tr('Chords')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
       ${where}
       <div class="chord-pal">${chords}</div>
       <div class="btn-row">${btn('toggleChordSev', undefined, '7 ' + tr('Seventh chords'), sev, tr('Four-note chords: Cmaj7, Dm7, G7 …'))}
@@ -383,14 +383,14 @@
       // the selected chord: its stroke (a chord - more than one tone, or written as a chord)
       if (hit.ev.notes.length < 2 && !hit.note.chordNote) return '';
       const sk = (hit.ev.notes.find((n) => n.stroke) || {}).stroke || '';
-      return `<section><h3>${tr('Chord')}</h3><div class="row"><label>${tr('Stroke')}</label><div class="seg">
+      return `<section data-sec="chordstroke"><h3>${tr('Chord')}</h3><div class="row"><label>${tr('Stroke')}</label><div class="seg">
           ${btn('setStroke', '', '–', sk === '', tr('No stroke: all tones at once'))}
           ${btn('setStroke', 'd', '↓', sk === 'd', tr('Down stroke: from the lowest string up'))}
           ${btn('setStroke', 'u', '↑', sk === 'u', tr('Up stroke: from the highest string down'))}</div></div>
         <p class="hint tight">${tr('Or hold the chord and move down / up.')}</p></section>`;
     }
     const m = S.input.chordMode || '';
-    return `<section><h3>${tr('Chords')}</h3><div class="row"><label>${tr('A tap sets')}</label><div class="seg">
+    return `<section data-sec="chordtap"><h3>${tr('Chords')}</h3><div class="row"><label>${tr('A tap sets')}</label><div class="seg">
         ${btn('setChordMode', '', tr('Tone'), m === '', tr('A tap writes one tone'))}
         ${btn('setChordMode', 'n', tr('Chord'), m === 'n', tr('A tap writes the chord of the chord symbols there'))}
         ${btn('setChordMode', 'd', '↓', m === 'd', tr('A chord struck down'))}
@@ -412,7 +412,7 @@
   function ksSection() {
     const t = TC.curTrack(), i = S.selBar, KS = TC.ksw;
     if (!KS || !t.ksw) return '';
-    if (i === null || !S.doc.bars[i]) return `<section><h3>${tr('Way of playing')}</h3><p class="hint">${tr('Tap a bar: muted, dead notes, a slide … from a place in it.')}</p></section>`;
+    if (i === null || !S.doc.bars[i]) return `<section data-sec="way"><h3>${tr('Way of playing')}</h3><p class="hint">${tr('Tap a bar: muted, dead notes, a slide … from a place in it.')}</p></section>`;
     const ts = S.doc.bars[i].ts, slots = TC.score.chordSlots(S.doc, i, TC.gridTicks(S.input)), slot = slots.includes(S.chordSlot) ? S.chordSlot : 0;
     const list = (t.bars[i] && t.bars[i].ks) || [], at = (x) => list.filter((m) => m.t === x);
     const label = (m) => { const k = KS.keyOf(t, m.k); return k ? KS.label(k) : '?'; };
@@ -427,7 +427,7 @@
     // the ways of playing by their group (one of a group holds at a time; picking is its own)
     const groups = [...new Set(KS.scoreKeys(t).filter((k) => k.kind === 'art').map((k) => k.group || ''))];
     const GROUP = { mute: 'Muting (one holds)', pick: 'Picking', legato: 'Legato', art: 'Ways of playing (one holds until the next)', sord: 'Mute (sordino)', '': 'Holds until the next' };
-    return `<section><h3>${tr('Way of playing')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
+    return `<section data-sec="way"><h3>${tr('Way of playing')} · ${tr('Bar {n}', { n: i + 1 })}</h3>
       ${where}
       ${groups.map((g) => group('art', GROUP[g] || g, g)).join('')}${group('once', 'Before the note here')}${group('event', 'Here')}
       <p class="hint tight">${esc(tr('Keyswitches of {name} - written under the staff, sent to the VST before the notes. ↓ / ↑ strokes: its own stroke keys.', { name: t.ksw.name }))}</p>
@@ -455,7 +455,7 @@
 
     // a sign tapped in the score: another level, or remove it
     if (sel && !sel.w) {
-      return `<section class="has-sel"><h3>${tr('Dynamics')} · <span class="dyn-txt">${esc(sel.d.v)}</span></h3>
+      return `<section data-sec="dyn" class="has-sel"><h3>${tr('Dynamics')} · <span class="dyn-txt">${esc(sel.d.v)}</span></h3>
         <p class="hint tight">${esc(where(sel.bar, sel.t))} · ${tr('drag the sign in the score to move it (it snaps to the notes)')}</p>
         <div class="dyn-pal">${L.map((v) => btn('setDyn', v, `<span class="dyn-txt">${v}</span>`, sel.d.v === v, tr('{v} from here on', { v }))).join('')}</div>
         <div class="btn-row">${btn('clearDyn', 'v', '🗑 ' + tr('Remove'), false, tr('Remove'), 'danger')}${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
@@ -466,7 +466,7 @@
       const w = SC.dynEvents(S.doc, sel.track).wedges.find((x) => x.bar === sel.bar && x.t === sel.t);
       const from = L[SC.levelAt(S.doc, sel.track, sel.bar, sel.t)], to = sel.d.to || (w ? L[w.to] : from);
       const a = SC.absTick(S.doc, sel.bar, sel.t), g = AC.wedgeTargetOf(sel);
-      return `<section class="has-sel"><h3>${tr('Hairpin')} · <span class="dyn-txt">${esc(from)}</span> ${sign(sel.d.w)} <span class="dyn-txt">${esc(to)}</span></h3>
+      return `<section data-sec="dyn" class="has-sel"><h3>${tr('Hairpin')} · <span class="dyn-txt">${esc(from)}</span> ${sign(sel.d.w)} <span class="dyn-txt">${esc(to)}</span></h3>
         <p class="hint tight">${esc(where(sel.bar, sel.t))} → ${esc(whereAbs(a + sel.d.len))} · ${tr('drag the round handles in the score: start and end snap to the notes')}</p>
         <div class="row wedge-row"><label>${tr('Hairpin')}</label><select data-action="setWedgeFrom" class="dyn-sel">${lvOpts(from)}</select>
           <span class="wedge-sign">${sign(sel.d.w)}</span><select data-action="setWedgeTo" class="dyn-sel">${lvOpts(to)}</select></div>
@@ -474,7 +474,7 @@
         <div class="btn-row">${btn('clearDyn', 'w', '🗑 ' + tr('Remove'), false, tr('Remove'), 'danger')}${btn('selectNone', undefined, tr('Deselect'), false, 'Esc')}</div>
         ${all}</section>`;
     }
-    if (!p) return `<section><h3>${tr('Dynamics')}</h3><p class="hint">${tr('Tap a note: p, f … go there. For a hairpin select its notes (Shift + tap: up to the target note). A sign or hairpin in the score: tap it to change it.')}</p></section>`;
+    if (!p) return `<section data-sec="dyn"><h3>${tr('Dynamics')}</h3><p class="hint">${tr('Tap a note: p, f … go there. For a hairpin select its notes (Shift + tap: up to the target note). A sign or hairpin in the score: tap it to change it.')}</p></section>`;
     // levels at the place (the first selected note, else the start of the bar)
     const list = SC.dynIn(t, p.bar), here = list.find((d) => d.t === p.t && d.v), wedge = list.find((d) => d.t === p.t && d.w);
     const levels = L.map((v) => btn('setDyn', v, `<span class="dyn-txt">${v}</span>`, !!here && here.v === v, tr('{v} from here on', { v }))).join('');
@@ -488,7 +488,7 @@
         <div class="btn-row">${btn('makeWedge', undefined, `<span class="dyn-txt">${esc(d.from)}</span> ${up ? '&lt;' : '&gt;'} <span class="dyn-txt">${esc(d.to)}</span> ${tr('set')}`, false,
           tr(up ? 'Louder and louder from {from} to {to}' : 'Softer and softer from {from} to {to}', { from: d.from, to: d.to }) + ' – ' + whereAbs(d.abs) + ' → ' + whereAbs(d.end), 'wide')}</div>`;
     }
-    return `<section><h3>${tr('Dynamics')} · ${esc(where(p.bar, p.t))}</h3>
+    return `<section data-sec="dyn"><h3>${tr('Dynamics')} · ${esc(where(p.bar, p.t))}</h3>
       ${p.bare ? `<p class="hint tight">${tr('At the start of the bar - tap a note for another place.')}</p>` : ''}
       <div class="dyn-pal">${levels}</div>
       ${here ? `<div class="btn-row">${btn('clearDyn', 'v', '✕ ' + esc(here.v), false, tr('Remove'))}</div>` : ''}
@@ -523,7 +523,7 @@
           ${btn('autoRepeats', undefined, tr('Set all'), false, tr('Sections with |: :|, then %-bars'))}</div>` : ''}
         <p class="hint tight">${tr('Back to the notes: right-click a bar (finger: hold it) → "Show the notes instead of %" / "Write this repeat out".')}</p>`;
     }
-    return `<section><h3>${tr('Find repeats')}</h3>
+    return `<section data-sec="find"><h3>${tr('Find repeats')}</h3>
       ${btn('toggleAnalyze', undefined, '🔍 ' + tr('Mark bars that play the same'), on, tr('In colour: sections that come again, bars like the one before (e.g. after a MIDI import)'), 'wide')}
       ${body}</section>`;
   }
@@ -536,7 +536,7 @@
     const sel = (action, list, cur) => `<select data-action="${action}">${list.map(([v, l]) =>
       `<option value="${v}"${(cur || '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')}</select>`;
     const problems = TC.score.jumpProblems(S.doc);
-    return `<section><h3>${tr('Repeats & jumps')}</h3>
+    return `<section data-sec="repeats"><h3>${tr('Repeats & jumps')}</h3>
       <div class="row"><label>${tr('Repeat')}</label>
         ${btn('toggleRepeatStart', undefined, '|:', !!h.repeatStart, tr('Repeat starts here |:'))}
         <select data-action="setRepeatEnd" title="${esc(tr('Repeat ends here :|'))}">${[0, 2, 3, 4, 5, 6].map((n) =>
@@ -672,7 +672,7 @@
   function scoreSection() {
     const m = S.doc.meta;
     const field = (k, label) => `<div class="row"><label>${tr(label)}</label><input type="text" data-meta="${k}" value="${esc(m[k])}"></div>`;
-    return `<section><h3>${tr('Score')}</h3>
+    return `<section data-sec="score"><h3>${tr('Score')}</h3>
       ${field('title', 'Title')}${field('subtitle', 'Subtitle')}${field('artist', 'Artist')}
       <div class="row"><label>${tr('Tempo')}</label><input type="number" min="20" max="400" data-meta="tempo" value="${m.tempo}"> <span class="muted">BPM</span></div>
       ${tempoList()}
@@ -907,6 +907,7 @@
       // a melody track: no instruments - the tones come from the lines (and its scale)
       notesRoot.innerHTML = head(tr('Notes'), 'left') + dynSection(true) + toolSection() + valueSection() +
         (TC.curTrack().kind === 'pitched' ? melodyNoteSection(hit && hit.note.pitch !== undefined ? hit : null) : instrumentSection(cur) + noteSection(hit) + dynSection());
+      foldable(notesRoot);
       notesRoot.scrollTop = TC.actions.dynSelected() ? 0 : scroll; // (a sign tapped in the score: its section on top)
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
@@ -921,6 +922,7 @@
       // tracks and playback in their own window ("Tracks & sound…"), the rest in the settings window (⚙)
       setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackBarSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
+      foldable(setRoot);
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;
       setRoot.scrollTop = scroll;
     }
@@ -949,6 +951,32 @@
       }
     }
     if (pop) renderPop();
+  };
+
+  /**
+   * The sections of a panel fold away to their heading (a tap on it; kept per section in settings.fold, this device),
+   * so a short panel shows what is needed now. A section showing something selected (a note, a sign) stays open.
+   */
+  function foldable(root) {
+    const fold = S.settings.fold || {};
+    root.querySelectorAll('section[data-sec]').forEach((s) => {
+      const h = s.querySelector(':scope > h3');
+      if (!h) return;
+      h.dataset.action = 'toggleFold';
+      h.dataset.value = s.dataset.sec;
+      h.classList.add('fold-head');
+      h.title = tr('Tap: fold / unfold this section');
+      s.classList.toggle('folded', !!fold[s.dataset.sec] && !s.classList.contains('has-sel'));
+    });
+  }
+  /** Fold / unfold the sections `key` (at once, without drawing the panel anew: its scroll stays). */
+  P.toggleFold = function (key) {
+    const fold = Object.assign({}, S.settings.fold);
+    if (fold[key]) delete fold[key];
+    else fold[key] = true;
+    S.settings.fold = fold;
+    TC.saveSettings();
+    document.querySelectorAll(`.panel section[data-sec="${key}"]`).forEach((s) => s.classList.toggle('folded', !!fold[key] && !s.classList.contains('has-sel')));
   };
 
   // ---- Settings window (⚙ in the toolbar): drum kit, notation, page, view, keys ----------------

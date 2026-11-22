@@ -948,6 +948,7 @@
     // playing & practising: ▾ at ▶, ♩ in the stage bar
     'Playing & practising: click, count-in, loop, following, parts': 'Abspielen & Üben: Klick, Einzähler, Schleife, Folgen, Teile',
     'Playing & practising': 'Abspielen & Üben',
+    'Tap: fold / unfold this section': 'Tippen: Abschnitt ein- / ausklappen',
     'Click (metronome)': 'Klick (Metronom)',
     Loudness: 'Lautstärke',
     'Count-in (one bar) - again after each jump': 'Einzähler (ein Takt) – nach jedem Sprung erneut',

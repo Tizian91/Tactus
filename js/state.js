@@ -52,6 +52,7 @@ window.TC = window.TC || {};
       panelWidth: 270,
       showPanelRight: true, // right panel: score, bar, drum kit, view
       panelRightWidth: 270,
+      fold: {},             // panel sections folded to their heading { key: true } (js/panel.js foldable)
       leftHanded: false,    // swaps the two panels
       fingerWrites: true,   // a finger on the lines writes notes (off: only pen / mouse; fingers select and scroll)
       showDrumMap: true,    // instrument names next to the lines

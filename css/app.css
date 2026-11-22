@@ -582,3 +582,11 @@ body.perform .score .play-cursor { stroke: var(--accent); stroke-width: 4; trans
 .practice-pop .pop-parts { display: flex; flex-wrap: wrap; gap: 6px; }
 .practice-pop .pop-parts button { padding: 5px 10px; }
 .practice-pop .pop-parts button.active { background: var(--accent, #2a7); color: #fff; }
+
+/* Panel sections fold away to their heading (a tap on it) - a short panel for quick work */
+.panel h3.fold-head { cursor: pointer; user-select: none; -webkit-user-select: none; margin: -6px -14px 2px; padding: 6px 14px; }
+.panel h3.fold-head::before { content: '▾'; display: inline-block; width: 14px; }
+.panel section.folded { padding-bottom: 6px; }
+.panel section.folded > h3.fold-head { margin-bottom: -4px; }
+.panel section.folded > h3.fold-head::before { content: '▸'; }
+.panel section.folded > :not(h3) { display: none !important; }

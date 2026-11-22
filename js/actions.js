@@ -1024,6 +1024,8 @@
     TC.saveSettings();
     TC.refresh();
   }
+  /** Fold / unfold a panel section (its heading tapped; js/panel.js). */
+  A.toggleFold = (key) => TC.panel.toggleFold(key);
   A.toggleCounts = () => toggleSetting('showCounts');
   A.toggleSound = () => toggleSetting('sound');
   A.toggleMetronome = () => toggleSetting('metronome');

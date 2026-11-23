@@ -72,8 +72,8 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
   Tonart, Schlüssel), Taktart, Tempo, Wiederholungen / Klammern, Akkordsymbole, Liedtext – erst Schlagzeug, dann Melodie.
 - **Melodie-Komfort (Schritt D):** transponieren; Tonleiter wechseln, die Melodie folgt stufenweise; Stufen-Hilfe unter den Noten
   (1 2 3 / do re mi); Noten außerhalb der Stimmlage rot; Rhythmus einer anderen Spur übernehmen.
-- **Akkorde:** Noten markieren, die nach einem Akkordwechsel nicht mehr passen / „auf Akkordtöne setzen“; Akkordsymbol im Notenblatt
-  antippen; Seitenansicht: Akkorde, Klammer und Takt-Text liegen eng übereinander.
+- **Akkorde:** Noten markieren, die nach einem Akkordwechsel nicht mehr passen / „auf Akkordtöne setzen“; Seitenansicht: Akkorde,
+  Klammer und Takt-Text liegen eng übereinander. (Akkordsymbol direkt im Notenblatt antippen: nicht nötig – über das Panel passt.)
 - **Klavier / Gitarre:** Akkord per Tipp in die linke Hand; Gitarren-Lage wählbar (offen / höher); Noten von einer Hand in die andere ziehen.
 - **Dynamik:** im Taktmenü; Gabel per Ziehen im Notenbild; Dynamik und Zählhilfe bei sehr tiefen Noten.
 - **Keyswitches:** Spielweise nur für eine Note (Staccato-Punkt, Tremolo-Striche).

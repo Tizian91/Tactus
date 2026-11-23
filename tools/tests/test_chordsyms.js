@@ -51,6 +51,16 @@ module.exports = function (T) {
   T.eq('older file: the score\'s guide goes to the melody track', [SC.guideAt(ld, 0, lm), SC.guideAt(ld, 2, lm), ld.bars[2].guide], ['off', 'lock', undefined]);
   T.eq('saved and loaded: the track\'s guide stays', (() => { SC.setGuide(doc, mel, 1, 'lock'); const r = TC.normalizeDoc(JSON.parse(JSON.stringify(doc))); const m = r.tracks.find((t) => t.kind === 'pitched'); return [SC.guideAt(r, 0, m), SC.guideAt(r, 1, m)]; })(), ['mark', 'lock']);
   SC.setGuide(doc, mel, 1, 'mark');
+  // the scale help: only its tones (pentatonic) - a place outside goes to the nearest one inside; the chords lead
+  const am5 = { l: 5, a: 0, id: 'pentaMinor' }; // A C D E G
+  const dia = (k) => 35 - k; // (a step k: larger is lower; dia 35 = C5, 34 = B4)
+  const ht = (k, sg, ch, g) => P.helpedTone(k, dia, am5, ch, g || 'off', sg).tone.pitch % 12;
+  T.eq('scale locked (A minor pentatonic): B (between A and C) goes to the lower one, C stays; not locked: B is written', [ht(1, 'lock'), ht(0, 'lock'), ht(1, 'mark')], [9, 0, 11]);
+  const ch7 = P.parseChord('E7');
+  T.eq('chords locked lead (E7): the G line gives G♯, even outside the scale', P.helpedTone(3, dia, am5, ch7, 'lock', 'lock').tone.pitch % 12, 8);
+  T.eq('a tone of the chord outside the scale (E7 in A minor: G♯ on the G line; E is inside)', [!!P.alienTone(32, { l: 5, a: 0, id: 'minor' }, ch7), !!P.alienTone(30, { l: 5, a: 0, id: 'minor' }, ch7)], [true, false]);
+  T.eq('the scale help of a track: default pale outside, saved and loaded', [SC.scaleGuideOf(doc, mel), (mel.scaleGuide = 'lock', SC.scaleGuideOf(TC.normalizeDoc(JSON.parse(JSON.stringify(doc))), TC.normalizeDoc(JSON.parse(JSON.stringify(doc))).tracks.find((t) => t.kind === 'pitched')))], ['mark', 'lock']);
+  mel.scaleGuide = 'mark';
 
   // time signature: chords past the new end go
   SC.setTimeSig(doc, 0, [2, 4], true);

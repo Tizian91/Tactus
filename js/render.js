@@ -883,8 +883,9 @@
       for (const b of L.bars) {
         if (b.parts[z.k].simile || b.hidden !== undefined) continue;
         // melody: the places outside the scale (pentatonic, blues …) are marked pale - they still write their tone
+        // (the track's scale help off: not marked; locked: a tap there writes the nearest tone of the scale)
         const pi = b.parts[z.k].pitch, outside = new Set();
-        if (pi && TC.pitch.lineMap(pi.scale).some((x) => !x.in)) {
+        if (pi && TC.score.scaleGuideOf(doc, z.track) !== 'off' && TC.pitch.lineMap(pi.scale).some((x) => !x.in)) {
           for (let l = -3; l <= 11; l++) {
             if (TC.pitch.lineTone(TC.pitch.diaAt(l, z.track.clef), pi.scale).in) continue;
             outside.add(l);
@@ -902,8 +903,11 @@
           segs.forEach((x, k) => {
             const x1 = k ? RD.tickX(b, x.t) - 0.5 * SP : b.x0, x2 = k + 1 < segs.length ? RD.tickX(b, segs[k + 1].t) - 0.5 * SP : b.x + b.w;
             for (let l = -3; l <= 11; l++) {
-              const g = TC.pitch.guideTone(TC.pitch.diaAt(l, z.track.clef), pi.scale, x.ch, guide);
-              if (g.chord) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, g.root ? 'line-chord line-root' : 'line-chord'));
+              const dia = TC.pitch.diaAt(l, z.track.clef), g = TC.pitch.guideTone(dia, pi.scale, x.ch, guide);
+              // a tone of the chord outside the scale (E7 in A minor: G♯) - a colour of its own, so it is seen at once
+              const alien = TC.pitch.alienTone(dia, pi.scale, x.ch);
+              if (alien && (guide === 'lock' || !g.chord)) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-chord line-alien'));
+              else if (g.chord) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, g.root ? 'line-chord line-root' : 'line-chord'));
               else if (guide === 'lock' && !outside.has(l)) OS(b, z).push(rect(x1, stepY(l) - SP / 4, x2 - x1, SP / 2, 'line-out')); // (pale once: not twice where the scale has it already)
             }
           });

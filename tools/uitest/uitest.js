@@ -1222,6 +1222,20 @@ setTimeout(() => {
             if (pitch0() !== startPitch) TC.actions.undo();
           });
           ok('chords locked: dragged up / down onto chord tones only ' + got.join(' '), got.every((p) => [0, 4, 7].includes(p % 12)) && new Set(got).size >= 3);
+          TC.actions.setTool('write');
+          // the write tool: a note grabbed and dragged up / down lands on chord tones too (no way out but ♯ / ♭ or Shift)
+          const gotW = [], wStart = pitch0();
+          [1, 2, -1].forEach((k) => {
+            S.selection.clear();
+            mouse('pointerdown', mat(3, 0, 7));
+            mouse('pointermove', mat(3, 0, 7 - k / 2));
+            mouse('pointermove', mat(3, 0, 7 - k));
+            mouse('pointerup', mat(3, 0, 7 - k));
+            gotW.push(pitch0());
+            if (pitch0() !== wStart) TC.actions.undo();
+          });
+          ok('chords locked: dragged with the write tool, onto chord tones only ' + gotW.join(' '), gotW.every((p) => [0, 4, 7].includes(p % 12)) && gotW.some((p) => p !== wStart));
+          TC.actions.setTool('select');
           S.selection.clear();
           mouse('pointerdown', mat(3, 960, 7));
           mouse('pointermove', mat(3, 1440, 7));
@@ -1235,6 +1249,7 @@ setTimeout(() => {
           });
           ok('chords locked: ↑ ↓ go from chord tone to chord tone (from F: G C G E C) ' + keys.join(' '), keys.join() === '67,72,67,64,60');
           TC.actions.setTool('write');
+          ok('panel "Track → Writing": the scale help (not marked / pale / only scale tones)', !!tsec('track-write', 'select[data-action="setScaleGuide"]'));
           while (TC.history.undoStack.length > undoChord) TC.actions.undo();
           // piano: "+ Piano" in the panel - two staves with a brace, one entry in the list; a tap into the lower staff writes the left hand
           const undoPiano = TC.history.undoStack.length;

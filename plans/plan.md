@@ -712,6 +712,11 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
   „dieses Stück“ / „dieses Gerät“: *Notenbild & Seite (dieses Stück)*, *Bühne* (+ Bildschirm an), *Bedienung* (Linkshänder, Finger
   schreiben, Drum-Map), *Meine Profile* (Kit- und Keyswitch-Profile); Mischpult: *Master*-Streifen oben, darunter *Ausgabe (dieses
   Gerät)* – MIDI, Aufnahme-Klänge, Ausgabe-Verzögerung (immer sichtbar). Swing im MIDI-Export bleibt beim Swing (Stück).
+- ✅ **Akkord- und Tonleiter-Sperre beim Verschieben** (2026-11-23): eine Note mit dem Werkzeug Schreiben gezogen landet bei „Nur
+  Akkordtönen“ auf Akkordtönen (vorher frei; Ausweg: halten + hoch / runter = ♯ / ♭, Notenmenü, Shift beim Ziehen). **Tonleiter-Hilfe**
+  je Melodie-Spur (`track.scaleGuide`: off / mark / lock, `SC.scaleGuideOf`): „Nur Tonleitertöne“ – Tippen, Ziehen, Pfeiltasten nur auf
+  Töne der Tonleiter (`P.helpedTone`: die Akkorde haben Vorrang). Akkordtöne außerhalb der Tonleiter **orange** (`P.alienTone`,
+  `.line-alien`).
 - Offen (besprochen, noch nicht entschieden, ältere Liste – großteils erledigt): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück
   gespeichert) aus ⚙ Ansicht zum Notenbild; *Swing im MIDI-Export* in den Export-Dialog; Akkord-Pad-Ausgang zu „Spuren & Klang“;
   Ausgabe-Verzögerung immer sichtbar; *Bildschirm an* zu Bühne / Gerät; Profile dort anlegen, wo sie gewählt werden; in ⚙

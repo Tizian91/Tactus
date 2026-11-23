@@ -184,11 +184,12 @@
     changeChains((h, sc) => {
       const P = TC.pitch, dia = P.noteSpell(h.note, sc).dia;
       const at = TC.score.guideAt(S.doc, h.bar, h.track) === 'lock' ? TC.score.chordAt(S.doc, h.bar, h.ev.tick) : null;
+      const sg = TC.score.scaleGuideOf(S.doc, h.track); // (scale locked: to the next tone of the scale that way)
       let t = P.lineTone(dia - dir, sc);
-      if (at) {
+      if (at || sg === 'lock') {
         for (let k = 1; k <= 7; k++) {
-          const g = P.guideTone(dia - dir * k, sc, at.ch, 'lock');
-          if (g.chord) { t = g; break; }
+          const g = P.guideTone(dia - dir * k, sc, at && at.ch, at ? 'lock' : 'off');
+          if (at ? g.chord : g.in) { t = g; break; }
         }
       }
       return { pitch: t.pitch, dia: t.dia };
@@ -1877,6 +1878,15 @@
   };
   const GUIDE_NAMES = { off: 'Chords: no help', mark: 'Chord tones marked', lock: 'Only chord tones' };
   A.GUIDE_NAMES = GUIDE_NAMES;
+  A.SCALE_GUIDE_NAMES = { off: 'Scale: not marked', mark: 'Outside the scale pale', lock: 'Only scale tones' };
+  /** How the scale helps writing into the melody track being written (the whole track): 'off' | 'mark' | 'lock'. */
+  A.setScaleGuide = function (v) {
+    const t = TC.score.instrumentOf(S.doc, TC.curTrack());
+    if (!TC.GUIDES.includes(v) || t.kind !== 'pitched' || t.scaleGuide === v) return;
+    t.scaleGuide = v;
+    TC.commit();
+    TC.ui.hint(tr(A.SCALE_GUIDE_NAMES[v]));
+  };
   /** Hear a scale: up an octave and back to the root (the melody track's at the selected bar, else the key of the chords). */
   A.previewScale = function () {
     if (!TC.audio.context() || TC.player.playing) return;

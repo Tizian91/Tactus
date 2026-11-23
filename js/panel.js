@@ -293,13 +293,24 @@
       <p class="hint tight">${tr('Rest cleanup: a note lasts until the next one instead of leaving rests (saved with the score).')}</p>`;
   }
 
-  /** A melody track: how the chord symbols help writing into it, from the selected bar on (bar 1: the whole track). */
+  /**
+   * A melody track: how its scale helps (the whole track: places outside it pale / only its tones) and how the chord
+   * symbols help writing into it, from the selected bar on (bar 1: the whole track).
+   */
   function guideRows(t) {
+    const sg = TC.score.scaleGuideOf(S.doc, t);
+    const scaleRow = `<div class="row"><label>${tr('Scale help')}</label><select data-action="setScaleGuide">${TC.GUIDES.map((v) =>
+        `<option value="${v}"${v === sg ? ' selected' : ''}>${esc(tr(TC.actions.SCALE_GUIDE_NAMES[v]))}</option>`).join('')}</select></div>
+      <p class="hint tight">${tr(sg === 'lock' ? 'Tapping or moving a note: the nearest tone of the scale (pentatonic: five tones). ♯ / ♭ in the note menu still alter a note.' : sg === 'mark' ? 'The places outside the scale are pale; every tone can be written.' : 'The scale is not marked.')}</p>`;
+    return scaleRow + chordGuideRows(t);
+  }
+  /** A melody track: how the chord symbols help writing into it, from the selected bar on (bar 1: the whole track). */
+  function chordGuideRows(t) {
     const ti = TC.score.instrumentOf(S.doc, t), bi = S.selBar !== null ? S.selBar : 0, g = TC.score.guideAt(S.doc, bi, t), A = TC.actions;
     const change = bi > 0 && ti.bars[bi] && ti.bars[bi].guide;
     return `<div class="row"><label>${tr('Chords')}</label><select data-action="setGuide">${TC.GUIDES.map((v) =>
         `<option value="${v}"${v === g ? ' selected' : ''}>${esc(tr(A.GUIDE_NAMES[v]))}</option>`).join('')}</select></div>
-      <p class="hint tight">${tr(g === 'lock' ? 'Tapping or moving a note: the nearest chord tone; hold + up / down still leaves it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
+      <p class="hint tight">${tr(g === 'lock' ? 'Tapping or moving a note: the nearest chord tone. ♯ / ♭ in the note menu (or Shift while dragging) still leave it.' : g === 'mark' ? 'The tones of the chord sounding are marked on the lines; every tone can be written.' : 'Only the scale.')} ${g !== 'off' ? tr('Orange: a tone of the chord outside the scale.') : ''}}${bi > 0 ? ' · ' + esc(change ? tr('changes at bar {n}', { n: bi + 1 }) : tr('bar {n}: a change here applies from it on', { n: bi + 1 })) : ''}</p>
       ${change ? `<div class="btn-row">${btn('clearGuideChange', undefined, tr('Remove the change'), false, tr('The setting before it goes on'))}</div>` : ''}`;
   }
 
@@ -995,7 +1006,7 @@
     }
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
-      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.pan, t.guide, t.kitPreset, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
+      cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.pan, t.guide, t.kitPreset, t.scaleGuide, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
       S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;

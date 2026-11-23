@@ -113,10 +113,10 @@
     if (raw < RD.LINE_MIN || raw > RD.LINE_MAX) return null;
     const scale = TC.score.scaleAt(track, bi);
     // chord symbols: locked - only chord tones (the nearest one; dragging: from the side it comes from); marked - just said
+    // scale locked ("Only scale tones"): a place outside the scale moves to the nearest one inside (the chords lead)
     const guide = TC.score.guideAt(S.doc, bi, track), at = tick !== undefined && guide !== 'off' ? TC.score.chordAt(S.doc, bi, tick) : null;
-    const tone = (l) => P.guideTone(P.diaAt(l, track.clef), scale, at && at.ch, guide);
-    const l = at && guide === 'lock' ? P.lockedLine(raw, (k) => tone(k).chord, from) : raw;
-    const t = tone(l);
+    const h = P.helpedTone(raw, (k) => P.diaAt(k, track.clef), scale, at && at.ch, guide, TC.score.scaleGuideOf(S.doc, track), from);
+    const l = h.line, t = h.tone;
     if (t.pitch < 0 || t.pitch > 127) return null;
     const sig = P.sigAlter(P.fifths(scale), ((t.dia % 7) + 7) % 7);
     return { line: l, raw, pitch: t.pitch, dia: t.dia, a: t.a, pale: !t.in, acc: t.a !== sig ? t.a : null, chord: at && t.chord ? P.chordName(at.ch, de()) : '' };
@@ -814,10 +814,13 @@
     TC.render.drawHover();
   }
 
-  /** Melody: a note being dragged - sideways in time, up / down to the tone of the scale on that line. */
+  /**
+   * Melody: a note being dragged - sideways in time, up / down to the tone of the scale on that line; the chords /
+   * the scale locked: their tones only, as a tap writes them (Shift held: free - ♯ / ♭ in the note menu alter it too).
+   */
   function moveMelody(e) {
     const d = S.drag, n = d.hit.note;
-    let to = placeAt(I.toLocal(e.clientX, e.clientY), e, null, true);
+    let to = placeAt(I.toLocal(e.clientX, e.clientY), e, null, !!e.shiftKey);
     if (to && to.track !== d.hit.track) to = null;
     if (to && d.to && to.bar === d.to.bar && to.tick === d.to.tick && to.pitch === d.to.pitch) return;
     const newSound = to && (!d.to || to.pitch !== d.to.pitch);
@@ -1154,9 +1157,11 @@
       let t = P.lineTone(dia0 - k, sc);
       const pos = SC.atAbs(S.doc, d.absOf.get(d.rootOf.get(n.id)) + dt);
       const at = pos && SC.guideAt(S.doc, pos.bar, d.hit.track) === 'lock' ? SC.chordAt(S.doc, pos.bar, pos.tick) : null;
-      if (at) {
-        const sct = SC.scaleAt(d.hit.track, pos.bar), tone = (x) => P.guideTone(-x, sct, at.ch, 'lock'); // (x = -dia: like lines, larger is lower)
-        t = tone(P.lockedLine(-(dia0 - k), (x) => tone(x).chord, -dia0));
+      const sg = SC.scaleGuideOf(S.doc, d.hit.track);
+      if (at || sg === 'lock') {
+        // (x = -dia: like lines, larger is lower)
+        const sct = pos ? SC.scaleAt(d.hit.track, pos.bar) : sc;
+        t = P.helpedTone(-(dia0 - k), (x) => -x, sct, at && at.ch, at ? 'lock' : 'off', sg, -dia0).tone;
       }
       return t.pitch >= 0 && t.pitch <= 127 ? { pitch: t.pitch, dia: t.dia } : null;
     };

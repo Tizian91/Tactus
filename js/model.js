@@ -47,6 +47,8 @@
  *                                                    keyswitches of its VST (js/keyswitch.js)
  *                                         guide: 'mark'   how the chords guide writing into it: 'off' | 'mark' (the
  *                                                    chord tones marked) | 'lock' (only chord tones) - SC.guideAt
+ *                                         scaleGuide: 'mark'   how its scale guides: 'off' | 'mark' (the places
+ *                                                    outside it pale) | 'lock' (only its tones; ♯ / ♭ still alter one)
  *                                         lh: true   piano: the lower staff (left hand) of the melody track right
  *                                                    before it - one instrument; sound, scale, mute / solo, hidden
  *                                                    and name follow the upper one (SC.syncHands)
@@ -300,6 +302,7 @@
       t.voice = '';
       t.inst = 'voice';  // the instrument (how chords are written; the sound is free)
       t.guide = 'mark';  // how the chords guide writing into it: 'off' | 'mark' (chord tones marked) | 'lock' (only chord tones)
+      t.scaleGuide = 'mark'; // how its scale guides: 'off' | 'mark' (the places outside it pale) | 'lock' (only its tones; ♯ / ♭ still alter a note)
     }
     for (let i = 0; i < bars; i++) t.bars.push(TC.newTrackBar());
     return t;
@@ -469,6 +472,7 @@
         // how the chords guide writing into it (older files: the score's - harmony.guide, a bar's own from it on)
         const oldG = (raw.bars[0] && raw.bars[0].guide) || hm.guide;
         out.guide = TC.GUIDES.includes(t.guide) ? t.guide : TC.GUIDES.includes(oldG) ? oldG : 'mark';
+        out.scaleGuide = TC.GUIDES.includes(t.scaleGuide) ? t.scaleGuide : 'mark';
         if (t.lh) out.lh = true;
         out.inst = TC.INSTRUMENTS.includes(t.inst) ? t.inst : TC.instFromProgram(out.program, !!t.lh);
         // keyswitches of its VST (js/keyswitch.js) - kept with the score
@@ -731,6 +735,11 @@
     if (!t || t.kind !== 'pitched') return 'off';
     for (let i = Math.min(bi, t.bars.length - 1); i > 0; i--) if (t.bars[i] && t.bars[i].guide) return t.bars[i].guide;
     return t.guide || 'mark';
+  };
+  /** How the scale guides writing into `track` (its instrument): 'off' | 'mark' (the places outside it pale) | 'lock' (only its tones). */
+  SC.scaleGuideOf = function (doc, track) {
+    const t = track && SC.instrumentOf(doc, track);
+    return t && t.kind === 'pitched' && TC.GUIDES.includes(t.scaleGuide) ? t.scaleGuide : 'mark';
   };
   /** Set how the chords guide writing into `track` from bar bi on (bar 0: the whole track); a change like the one before it goes. */
   SC.setGuide = function (doc, track, bi, v) {

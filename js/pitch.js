@@ -235,6 +235,27 @@
     return Object.assign(t, { chord, root: chord && mod(t.pitch, 12) === root });
   };
   /**
+   * The tone of a place while writing a melody, with both helps: the chord (P.guideTone; 'lock' leads) and the scale
+   * (sg 'lock': a place outside the scale moves to the nearest one inside - P.lockedLine). l: the staff step,
+   * diaOf(l): its dia; from: the step coming from (dragging). { line, tone }.
+   */
+  P.helpedTone = function (l, diaOf, scale, ch, guide, sg, from) {
+    const tone = (k) => P.guideTone(diaOf(k), scale, ch, guide);
+    if (ch && guide === 'lock') l = P.lockedLine(l, (k) => tone(k).chord, from);
+    else if (sg === 'lock') l = P.lockedLine(l, (k) => P.lineTone(diaOf(k), scale).in, from);
+    return { line: l, tone: tone(l) };
+  };
+  /**
+   * A chord tone that is not in the scale (E7 in A minor: G♯) on the line of its letter (dia): its tone, else null.
+   * Marked in a colour of its own, so a tone of the chord outside the scale is seen at once.
+   */
+  P.alienTone = function (dia, scale, ch) {
+    const ct = ch && P.chordTones(ch).find((x) => x.l === mod(dia, 7));
+    if (!ct) return null;
+    const pitch = P.pitchOf(dia, ct.a);
+    return P.pcs(scale).has(mod(pitch, 12)) ? null : { pitch, dia, a: ct.a };
+  };
+  /**
    * Chords locked: the nearest line (staff step) with a chord tone to line l. Equally near: from - the line coming
    * from (dragging: the side it comes from), else the lower one. isChord(line) says whether a line holds one.
    */

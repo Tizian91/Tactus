@@ -265,17 +265,16 @@ details > summary { list-style-position: outside; }
 .score .staff-name { font-size: 10px; font-weight: 600; fill: var(--muted); }
 .score .staff-name.cur { fill: var(--accent); }
 .score .brace { fill: var(--ink); }
-.score .mus.dyn { font-size: 40px; }
+.score .mus.dyn { font-size: 40px; pointer-events: none; } /* (tapped: its .dyn-hit, as big as the sign) */
 .score .hairpin { stroke: var(--ink); stroke-width: 1.2; pointer-events: none; }
 .score .hairpin.sel { stroke: var(--accent); stroke-width: 1.8; }
 .score .mus.dyn.sel { fill: var(--accent); }
 .score .dyn-hit { fill: transparent; cursor: pointer; }
 .score .dyn-handle { fill: var(--canvas, #fff); stroke: var(--accent); stroke-width: 2; cursor: ew-resize; }
 .score .dyn-handle-hit { fill: transparent; cursor: ew-resize; }
-.score .mus.dyn[data-dynh] { cursor: ew-resize; }
+.score .dyn-hit[data-dynh] { cursor: ew-resize; }
 .score .dyn-drag { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 3; }
 .score .dyn-drag-label { fill: var(--accent); font-size: 13px; font-weight: 600; }
-.score .mus.dyn[data-dyn] { cursor: pointer; }
 @media print { .score .dyn-hit { display: none; } }
 .dyn-pal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0; }
 .dyn-txt { font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 700; font-size: 16px; }

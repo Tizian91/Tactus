@@ -1127,7 +1127,13 @@
     const dynAttr = (tr, bar, t, k) => ` data-dyn="${esc(tr.id)}|${bar}|${t}|${k}"`;
     const isSel = (tr, bar, t, k) => !!dsel && dsel.track === tr.id && dsel.bar === bar && dsel.t === t && !!dsel.w === (k === 'w');
     // (selected: the sign itself is the handle to drag it - h 'v'; the end level of a hairpin moves its end - h 'e')
-    const dynGlyph = (ch, x, y, tr, bar, t, k, h) => `<text class="mus dyn${isSel(tr, bar, t, k) ? ' sel' : ''}"${dynAttr(tr, bar, t, k)}${h && isSel(tr, bar, t, k) ? ` data-dynh="${h}"` : ''} x="${f(x)}" y="${f(y)}">${ch}</text>`;
+    // (tapped: an area of its own as big as the sign - the text of the music font would take the whole line height, far up
+    // over the notes above it; the sign itself takes no taps)
+    const dynGlyph = (ch, x, y, tr, bar, t, k, h) => {
+      const hAttr = h && isSel(tr, bar, t, k) ? ` data-dynh="${h}"` : '', w = [...ch].length * 1.25 * SP + 0.4 * SP;
+      return `<rect class="dyn-hit"${dynAttr(tr, bar, t, k)}${hAttr} x="${f(x - 0.2 * SP)}" y="${f(y - 1.5 * SP)}" width="${f(w)}" height="${f(2 * SP)}"/>` +
+        `<text class="mus dyn${isSel(tr, bar, t, k) ? ' sel' : ''}" x="${f(x)}" y="${f(y)}">${ch}</text>`;
+    };
     // a round handle at an end of the selected hairpin (h 's' start, 'e' end), with a wide area to hit
     const handle = (x, y, h) => `<circle class="dyn-handle-hit" data-dynh="${h}" cx="${f(x)}" cy="${f(y)}" r="${f(1.4 * SP)}"/><circle class="dyn-handle" data-dynh="${h}" cx="${f(x)}" cy="${f(y)}" r="${f(0.45 * SP)}"/>`;
     for (const z of L.staves) {

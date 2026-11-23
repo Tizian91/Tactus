@@ -1076,7 +1076,7 @@ setTimeout(() => {
           ok('dynamics: hairpin "p < f" from the first selected note up to the start of the target note ' + JSON.stringify(dt.bars[0].dyn),
             !!wd0 && wd0.t === ticks0[0] && wd0.len === k2 - ticks0[0] && wd0.to === 'f' && TC.score.levelAt(S.doc, dt, 0, k2) === 5 && document.querySelectorAll('.score .hairpin').length === 2);
           // tapped in the score: selected (coloured), the panel shows it on top; the switch: up to the end of the target note
-          const hitRect = document.querySelector('.score .dyn-hit');
+          const hitRect = document.querySelector('.score .dyn-hit[data-dyn$="|w"]:not([data-dynh])'); // (not a handle of it: that would start dragging)
           if (hitRect) hitRect.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 7, pointerType: 'mouse', clientX: 1, clientY: 1 }));
           ok('dynamics: the hairpin tapped in the score - selected, its section on top of the panel', !!hitRect && !!S.dynSel && S.dynSel.w && document.querySelectorAll('.score .hairpin.sel').length === 2 &&
             !!document.querySelector('#panel-notes section.has-sel [data-action="setWedgeToEnd"]'));
@@ -1112,16 +1112,27 @@ setTimeout(() => {
           ok('dynamics: … and back to where it ended ' + JSON.stringify(dt.bars[0].dyn), (dt.bars[0].dyn || []).some((d) => d.w && d.t === ticks0[0] && ticks0[0] + d.len === wEnd));
           TC.actions.selectDyn(dt.id, 0, ticks0[0], 'w');
           // a sign tapped: another level
-          const sign = document.querySelector('.score .mus.dyn[data-dyn$="|v"]');
+          const sign = document.querySelector('.score .dyn-hit[data-dyn$="|v"]');
           if (sign) sign.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 8, pointerType: 'mouse', clientX: 1, clientY: 1 }));
           const mpBtn = document.querySelector('#panel-notes section.has-sel [data-action="setDyn"][data-value="mp"]');
           if (mpBtn) mpBtn.click();
           ok('dynamics: the p tapped in the score becomes mp from the panel', !!sign && !!mpBtn && (dt.bars[0].dyn || []).some((d) => d.v === 'mp' && d.t === ticks0[0]));
-          dragHandle('v', ticks0[1], '#score .mus.dyn.sel[data-dynh="v"]');
+          dragHandle('v', ticks0[1], '#score .dyn-hit[data-dynh="v"]');
           ok('dynamics: the selected mp dragged to the 2nd note - it stands there, the hairpin stays ' + JSON.stringify(dt.bars[0].dyn),
             (dt.bars[0].dyn || []).some((d) => d.v === 'mp' && d.t === ticks0[1]) && !(dt.bars[0].dyn || []).some((d) => d.v && d.t === ticks0[0]) && (dt.bars[0].dyn || []).some((d) => d.w && d.t === ticks0[0]));
-          dragHandle('v', ticks0[0], '#score .mus.dyn.sel[data-dynh="v"]');
+          dragHandle('v', ticks0[0], '#score .dyn-hit[data-dynh="v"]');
           ok('dynamics: … and back', (dt.bars[0].dyn || []).some((d) => d.v === 'mp' && d.t === ticks0[0]));
+          // a note over the sign: a tap there takes the note, not the sign (pressed on the head, where both are)
+          TC.actions.selectNone();
+          const hd = TC.render.layout.heads.find((h) => h.track === dt && h.bar === 0);
+          if (hd) {
+            const [hx, hy0] = screenOf(0, hd.tick, hd.line), hy = hy0 + (hd.dy || 0) * S.doc.view.zoom;
+            const signEl = document.querySelector('.score .dyn-hit[data-dyn$="|v"]');
+            const pe = (type) => new PointerEvent(type, { clientX: hx, clientY: hy, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 12, pointerType: 'mouse' });
+            (signEl || vp).dispatchEvent(pe('pointerdown')); // (as if the sign lay over it)
+            vp.dispatchEvent(pe('pointerup'));
+          }
+          ok('dynamics: a tap on a note over the sign selects the note, not the sign', !!hd && !S.dynSel && S.selection.size === 1);
           TC.actions.selectNone();
           ok('dynamics: the notes stay as written', dt.bars[0].voices.flat().every((ev) => ev.notes.every((n) => !n.ghost || n.ghost === true)));
           S.selection = new Set([evAt(ticks0[0]).notes[0].id]);

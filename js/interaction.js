@@ -337,8 +337,13 @@
       S.drag = { mode: 'dynh', id: e.pointerId, sx: e.clientX, sy: e.clientY, down: e, which: hz.getAttribute('data-dynh'), a0, e0: dsel.w ? a0 + dsel.d.len : null, snaps: TC.render.dynSnaps(dsel.track), to: null };
       return;
     }
-    // a dynamics sign or hairpin tapped: selected (changed in the panel); the eraser removes it
-    const dz = !A().isPerforming() && e.target && e.target.closest ? e.target.closest('[data-dyn]') : null;
+    // a dynamics sign or hairpin tapped: selected (changed in the panel); the eraser removes it - a note head under the
+    // pointer wins (a sign right below a low note, a hairpin over it: the note is tapped, the sign beside it)
+    let dz = !A().isPerforming() && e.target && e.target.closest ? e.target.closest('[data-dyn]') : null;
+    if (dz) {
+      const tp = target(I.toLocal(e.clientX, e.clientY), e);
+      if (tp && tp.kind === 'head') dz = null;
+    }
     if (dz) {
       const [tid, bar, t, kind] = dz.getAttribute('data-dyn').split('|');
       A().selectDyn(tid, Number(bar), Number(t), kind);

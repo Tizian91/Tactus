@@ -60,9 +60,10 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
 2. **Akkordspur im MIDI-Export in Cubase** (eigene Datei bzw. Spur, Kanal 15, Akkordnamen als Text). (Rückmeldung 2026-11-23:
    Bedienung über das Panel, Akkord-Teppich, „Nur Akkordtöne“ und die Namen H / B passen so.)
 3. **MusicXML mit Melodie in Guitar Pro** (Schlagzeug ist getestet; Melodie, Tonart, Haltebögen, Akkordsymbole bisher nur automatisch).
-4. **Mehrere Spuren über MIDI in Cubase**: zwei VSTs gleichzeitig (Schlagzeug + Melodie) je auf eigenem loopMIDI-Port; der zweite Port
-   bekam bisher keine Daten aus dem Browser (loopMIDI / Browser, nicht Tactus) – Ausweg: ein Port, verschiedene Kanäle. MIDI-Export
-   „eine Datei pro Spur“ / „alle in einer“ in Cubase importieren.
+4. ~~**Mehrere Spuren über MIDI in Cubase**~~ ✅ (2026-11-23): ein loopMIDI-Port, Schlagzeug und Melodie auf verschiedenen Kanälen, jedes
+   VST auf seinen Kanal gefiltert – läuft; der MIDI-Export geht in Cubase. Ein zweiter loopMIDI-Port bekommt unter Windows 11 (neue
+   Windows MIDI Services) keine Daten, obwohl der Browser ihn öffnet – wohl loopMIDIs Kompatibilitätsschicht; falls nötig: die eigenen
+   Loopback-Ports von Windows MIDI Services probieren.
 5. Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase).
 
 ### Als Nächstes (Vorschläge, Reihenfolge offen)

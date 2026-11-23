@@ -68,13 +68,22 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
 
 ### Als Nächstes (Vorschläge, Reihenfolge offen)
 
+- **Noten prüfen** (vorgeschlagen als Erstes, 2026-11-23): ein Abschnitt im Panel wie „Wiederholungen finden“, drei Prüfungen zum
+  Einschalten – *passt nicht zum Akkord* (kein Ton des Akkords an ihrer Stelle, z. B. nach einem Akkordwechsel Am → F das E),
+  *außerhalb der Tonleiter*, *außerhalb der Stimmlage* (zu hoch / tief für Sopran, Alt …). Funde farbig markiert, mit Anzahl;
+  Knöpfe „auf Akkordtöne setzen“ (nächster Akkordton), „auf die Tonleiter setzen“, „in die Stimmlage holen“ (Oktave) – für alle Funde
+  oder die ausgewählten Noten; einzeln im Notenmenü „auf den nächsten Akkordton“.
+- **Klavier: Noten zwischen den Händen**: eine Note in die andere Zeile ziehen (Tonhöhe aus der Stelle dort, Zeit und Länge bleiben,
+  Sperren gelten); im Notenmenü „In die linke / rechte Hand“ (der Ton bleibt genau) – auch für mehrere ausgewählte Noten.
+- **Lage der Akkorde** (Noten-Panel → Akkorde, neben „Töne“, je nach Instrument): Klavier linke Hand – wie getippt · Grundton tief +
+  Akkord · Grundton + Quinte · nur Grundton; Gitarre – offen · höher (Barré weiter oben am Hals). (Bis dahin: „Töne: Power“ gibt
+  Grundton, Quinte, Oktave – kein Akkordsymbol „C5“ nötig.)
 - **MusicXML-Import** (Guitar Pro, MuseScore …): Schlagzeug (`<unpitched>` / `<midi-unpitched>` → Instrument), Melodie (Tonhöhe,
   Tonart, Schlüssel), Taktart, Tempo, Wiederholungen / Klammern, Akkordsymbole, Liedtext – erst Schlagzeug, dann Melodie.
 - **Melodie-Komfort (Schritt D):** transponieren; Tonleiter wechseln, die Melodie folgt stufenweise; Stufen-Hilfe unter den Noten
-  (1 2 3 / do re mi); Noten außerhalb der Stimmlage rot; Rhythmus einer anderen Spur übernehmen.
-- **Akkorde:** Noten markieren, die nach einem Akkordwechsel nicht mehr passen / „auf Akkordtöne setzen“; Seitenansicht: Akkorde,
-  Klammer und Takt-Text liegen eng übereinander. (Akkordsymbol direkt im Notenblatt antippen: nicht nötig – über das Panel passt.)
-- **Klavier / Gitarre:** Akkord per Tipp in die linke Hand; Gitarren-Lage wählbar (offen / höher); Noten von einer Hand in die andere ziehen.
+  (1 2 3 / do re mi); Rhythmus einer anderen Spur übernehmen. (Stimmlage: siehe „Noten prüfen“.)
+- **Akkorde:** Seitenansicht – Akkorde, Klammer und Takt-Text liegen eng übereinander. (Passt nicht mehr zum Akkord: siehe „Noten
+  prüfen“. Akkordsymbol direkt im Notenblatt antippen: nicht nötig – über das Panel passt.)
 - **Dynamik:** im Taktmenü; Gabel per Ziehen im Notenbild; Dynamik und Zählhilfe bei sehr tiefen Noten.
 - **Keyswitches:** Spielweise nur für eine Note (Staccato-Punkt, Tremolo-Striche).
 - **Import (Schlagzeug):** Wirbel erkennen; Wiederholungen finden mit 1. / 2. Haus und Ähnlichkeit statt Gleichheit.
@@ -82,7 +91,11 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
 
 ### Später
 
-- Tabulatur für Bass / Gitarre (Phase 6); MIDI-Import von Melodien; .gp-Export (Phase 7).
+- **Tabulatur für Gitarre / Bass** (Phase 6, Wunsch 2026-11-23): je Gitarren- / Bass-Spur umschaltbar **Noten · Tab · beides
+  untereinander** (wie Guitar Pro). Dazu: Stimmung je Spur (Standard, Drop D …, Bass 4 / 5 Saiten), jede Note mit Saite und Bund
+  (automatisch die naheliegende Lage, änderbar), in die Tab-Zeilen tippen = Saite, Bund eingeben; Akkordgriffe aus der „Lage der
+  Akkorde“ direkt als Tab; Export: MusicXML mit Tab-System (`<staff-details>`, `<string>` / `<fret>`), später .gp.
+- MIDI-Import von Melodien; .gp-Export (Phase 7).
 - Eine lange Note unter einer bewegten Melodie: automatisch in Stimme 2.
 - Klavier: Pedal-Zeichen, *l.v.*
 - Bühne: Folgen über MIDI-Clock / Song Position.

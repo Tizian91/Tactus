@@ -57,8 +57,8 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
 ### Zum Ausprobieren (wartet auf Rückmeldung)
 
 1. **Umblättern mit dem Cymatic** – wartet auf den MIDI-USB-C-Konverter (Dezember 2026); Prüfliste unter „Offen zum Ausprobieren“.
-2. **Akkorde auf dem Tablet**: Takt antippen → Panel-Knöpfe schnell genug, oder Akkordsymbol direkt im Notenblatt antippen? Akkord-
-   Teppich (Lautstärke, Lage) neben Schlagzeug und Melodie; Namen H / B; MIDI-Export mit Akkordspur in Cubase.
+2. **Akkordspur im MIDI-Export in Cubase** (eigene Datei bzw. Spur, Kanal 15, Akkordnamen als Text). (Rückmeldung 2026-11-23:
+   Bedienung über das Panel, Akkord-Teppich, „Nur Akkordtöne“ und die Namen H / B passen so.)
 3. **MusicXML mit Melodie in Guitar Pro** (Schlagzeug ist getestet; Melodie, Tonart, Haltebögen, Akkordsymbole bisher nur automatisch).
 4. **Mehrere Spuren über MIDI in Cubase**: zwei VSTs gleichzeitig (Schlagzeug + Melodie) je auf eigenem loopMIDI-Port; der zweite Port
    bekam bisher keine Daten aus dem Browser (loopMIDI / Browser, nicht Tactus) – Ausweg: ein Port, verschiedene Kanäle. MIDI-Export

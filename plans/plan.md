@@ -50,6 +50,43 @@ Song-Datenbanken.
 | **6: Tabulatur** | Saiten / Bünde, Stimmungen, Tabulatur unter dem Notensystem, Bend / Slide | |
 | **7: Extras** | .gp-Export (Guitar Pro 7/8), MIDI-Eingang (Aufnahme), Kopieren / Einfügen von Takten, Volta-Klammern | |
 
+## Offen (sortiert, Stand 2026-11-23)
+
+Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu tun ist.
+
+### Zum Ausprobieren (wartet auf Rückmeldung)
+
+1. **Umblättern mit dem Cymatic** – wartet auf den MIDI-USB-C-Konverter (Dezember 2026); Prüfliste unter „Offen zum Ausprobieren“.
+2. **Akkorde auf dem Tablet**: Takt antippen → Panel-Knöpfe schnell genug, oder Akkordsymbol direkt im Notenblatt antippen? Akkord-
+   Teppich (Lautstärke, Lage) neben Schlagzeug und Melodie; Namen H / B; MIDI-Export mit Akkordspur in Cubase.
+3. **MusicXML mit Melodie in Guitar Pro** (Schlagzeug ist getestet; Melodie, Tonart, Haltebögen, Akkordsymbole bisher nur automatisch).
+4. **Mehrere Spuren über MIDI in Cubase**: zwei VSTs gleichzeitig (Schlagzeug + Melodie) je auf eigenem loopMIDI-Port; der zweite Port
+   bekam bisher keine Daten aus dem Browser (loopMIDI / Browser, nicht Tactus) – Ausweg: ein Port, verschiedene Kanäle. MIDI-Export
+   „eine Datei pro Spur“ / „alle in einer“ in Cubase importieren.
+5. Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase).
+
+### Als Nächstes (Vorschläge, Reihenfolge offen)
+
+- **MusicXML-Import** (Guitar Pro, MuseScore …): Schlagzeug (`<unpitched>` / `<midi-unpitched>` → Instrument), Melodie (Tonhöhe,
+  Tonart, Schlüssel), Taktart, Tempo, Wiederholungen / Klammern, Akkordsymbole, Liedtext – erst Schlagzeug, dann Melodie.
+- **Melodie-Komfort (Schritt D):** transponieren; Tonleiter wechseln, die Melodie folgt stufenweise; Stufen-Hilfe unter den Noten
+  (1 2 3 / do re mi); Noten außerhalb der Stimmlage rot; Rhythmus einer anderen Spur übernehmen.
+- **Akkorde:** Noten markieren, die nach einem Akkordwechsel nicht mehr passen / „auf Akkordtöne setzen“; Akkordsymbol im Notenblatt
+  antippen; Seitenansicht: Akkorde, Klammer und Takt-Text liegen eng übereinander.
+- **Klavier / Gitarre:** Akkord per Tipp in die linke Hand; Gitarren-Lage wählbar (offen / höher); Noten von einer Hand in die andere ziehen.
+- **Dynamik:** im Taktmenü; Gabel per Ziehen im Notenbild; Dynamik und Zählhilfe bei sehr tiefen Noten.
+- **Keyswitches:** Spielweise nur für eine Note (Staccato-Punkt, Tremolo-Striche).
+- **Import (Schlagzeug):** Wirbel erkennen; Wiederholungen finden mit 1. / 2. Haus und Ähnlichkeit statt Gleichheit.
+- Vorlage für SSD 5.5 Free.
+
+### Später
+
+- Tabulatur für Bass / Gitarre (Phase 6); MIDI-Import von Melodien; .gp-Export (Phase 7).
+- Eine lange Note unter einer bewegten Melodie: automatisch in Stimme 2.
+- Klavier: Pedal-Zeichen, *l.v.*
+- Bühne: Folgen über MIDI-Clock / Song Position.
+- Vorsingen (Mikrofon erkennt die Tonhöhe); sehr niedrig: Schritt-Eingabe per MIDI-Keyboard.
+
 ## Phase 1b – Rückmeldung nach dem ersten Ausprobieren ✅
 
 - Linie leichter treffen: Standardgröße 160 %, Name an der Vorschau-Note, Linie unter dem Zeiger hervorgehoben,
@@ -672,7 +709,7 @@ Tests `test_findrepeats.js`):
   an: der ganze Teil ausgewählt (`A.sectionRange`) und wiederholt. Bühne mit Timer, angehalten: `Pc.cue(i)` – der Strich zeigt den
   Takt, das nächste ▶ startet dort, solange seine Seite gezeigt wird.
 
-## Einstellungen ordnen ⏳
+## Einstellungen ordnen ✅ (2026-11-22 / 23)
 
 Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt des Stücks · Notenbild · Klang & Spuren ·
 **Abspielen & Üben** · Bühne · Gerät · Export – und danach, ob sie im Stück oder im Browser gespeichert werden.
@@ -696,7 +733,7 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
   **Pan** (`track.pan` -100 … 100; Tactus: `AU.panOut`, ein Stereo-Panner je Klang; MIDI: CC 10 mit der Lautstärke, im Export für
   Melodie-Spuren als Startwert; Doppelklick: Mitte), M / S, Ausgang; das Akkord-Pad ein eigener Streifen (`harmony.pan`, Lautstärke,
   Ausgang, Kanal - aus dem Akkord-Abschnitt hierher). Darunter weiter die Wiedergabe.
-- Als Nächstes (entschieden 2026-11-23):
+- Dazu (entschieden 2026-11-23):
   - ✅ **Schlagzeug-Kit an die Spur** (`track.kitPreset`: standard, large, all, profile - oder `track.kit` eigene Auswahl; `D.presetIds`;
     eine neue Schlagzeug-Spur übernimmt das Kit der aktuellen; ältere Stücke: das Kit des Geräts, „Eigene“ wird die Auswahl der Spur).
   - ✅ **Ins Stück**: Notation, Hälse (+ welche Toms), Zählzeiten (`doc.page.notation / stems / stemsLow / counts`), Swing im
@@ -717,10 +754,6 @@ Bestandsaufnahme (2026-11-22): Einstellungen nach Zweck – Schreiben · Inhalt 
   je Melodie-Spur (`track.scaleGuide`: off / mark / lock, `SC.scaleGuideOf`): „Nur Tonleitertöne“ – Tippen, Ziehen, Pfeiltasten nur auf
   Töne der Tonleiter (`P.helpedTone`: die Akkorde haben Vorrang). Akkordtöne außerhalb der Tonleiter **orange** (`P.alienTone`,
   `.line-alien`).
-- Offen (besprochen, noch nicht entschieden, ältere Liste – großteils erledigt): *Ton beim Schreiben* und *Finger schreiben* zum Schreiben; *Notenwerte* (im Stück
-  gespeichert) aus ⚙ Ansicht zum Notenbild; *Swing im MIDI-Export* in den Export-Dialog; Akkord-Pad-Ausgang zu „Spuren & Klang“;
-  Ausgabe-Verzögerung immer sichtbar; *Bildschirm an* zu Bühne / Gerät; Profile dort anlegen, wo sie gewählt werden; in ⚙
-  kennzeichnen, was fürs Stück und was fürs Gerät gilt.
 
 ## Umblättern: Bühnenansicht und MIDI ✅ (zum Ausprobieren)
 
@@ -758,7 +791,7 @@ Ziel: live mit Backing-Tracks (Cymatic) spielen, die Seiten blättern sich im Ta
 - Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase)
 - Mehrere Spuren mit MIDI: je Spur eigener loopMIDI-Port / Kanal in Cubase; MIDI-Export „eine Datei pro Spur“ und „alle in einer“
   in Cubase importieren
-- **Melodie auf Tablet / Handy** (Rückmeldung steht aus):
+- ~~**Melodie auf Tablet / Handy**~~ ✅ (Rückmeldung 2026-11-23: mit der Akkord- und Tonleiter-Sperre auch beim Verschieben viel besser)
   1. Note antippen statt versehentlich eine neue setzen – reicht der größere Fangbereich? (sonst: „Note gewinnt“, siehe Stand Phase 5)
   2. Eine Linie hoch / runter ziehen, ohne dass es als Halten zählt?
   3. Seitlich ziehen für die Länge, über den Taktstrich (Haltebogen); halten + hoch / runter für ♯ / ♭

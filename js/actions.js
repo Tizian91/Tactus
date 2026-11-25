@@ -608,6 +608,26 @@
       return alt ? { dia: alt.dia } : null;
     })) TC.commit();
   };
+  /**
+   * Piano: the selected notes into the other hand (the other staff) - each exactly the tone it is, the notes tied on
+   * from them along; that hand is written on from there. Notes of both hands: only those of the hand being written.
+   */
+  A.toOtherHand = function () {
+    const SC = TC.score, cur = TC.curTrack();
+    let ids = [...S.selection].filter((id) => { const h = SC.findNote(S.doc, id); return h && h.track === cur && h.note.pitch !== undefined; });
+    if (!ids.length) {
+      // (the selection lies in the other hand: take that one)
+      const first = [...S.selection].map((id) => SC.findNote(S.doc, id)).find((h) => h && h.note.pitch !== undefined);
+      if (!first) return;
+      ids = [...S.selection].filter((id) => { const h = SC.findNote(S.doc, id); return h && h.track === first.track; });
+    }
+    const to = SC.toOtherHand(S.doc, ids);
+    if (!to) return TC.ui.hint(SC.isPiano(S.doc, cur) ? tr('There is already such a note in the other hand') : tr('Only a piano has two hands (panel: Track → Two staves)'));
+    S.trackId = to.id;
+    S.selection = new Set(ids);
+    TC.commit();
+    TC.ui.hint(tr(to.lh ? '{n} notes into the left hand' : '{n} notes into the right hand', { n: ids.length }));
+  };
   A.setTrackScaleRoot = (pc) => A.setTrackScale('root', pc);
   A.setTrackScaleId = (id) => A.setTrackScale('id', id);
   /** Melody track: the change of the chord help at the selected bar goes (the setting before it goes on). */
@@ -1810,6 +1830,11 @@
   /** A guitar's tapped chords: a full grip (all strings from the bass) or a tight one (four strings in the middle). */
   A.setChordTight = function (v) {
     S.input.chordTight = v === true || v === 'true' || v === '1';
+    TC.refresh();
+  };
+  /** Where a tapped chord lies (js/accomp.js AC.POSITIONS): a guitar '' open / 'high' up the neck; keys '' as tapped, 'bass', 'fifth', 'root'. */
+  A.setChordPos = function (v) {
+    S.input.chordPos = ['high', 'bass', 'fifth', 'root'].includes(String(v)) ? String(v) : '';
     TC.refresh();
   };
   /** How many tones a tapped chord has: '' as its symbol, '3' a triad, '4' a four-note chord, '5' a power chord. */

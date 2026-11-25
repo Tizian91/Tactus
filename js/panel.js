@@ -177,7 +177,9 @@
       <div class="btn-row two">${btn('octaveSelection', 1, '8↑ ' + tr('Octave up'), false, tr('An octave higher (Ctrl+↑)'))}
         ${btn('octaveSelection', -1, '8↓ ' + tr('Octave down'), false, tr('An octave lower (Ctrl+↓)'))}</div>
       <p class="hint tight">${tr('↑ ↓: next line (tone of the scale) · Alt+↑ ↓: semitone · Ctrl+↑ ↓: octave')}</p>
-      ${alt ? `<div class="btn-row">${btn('respell', undefined, esc(tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) })), false, tr('Same tone, written the other way'))}</div>` : ''}
+      ${TC.score.isPiano(S.doc, hit.track) ? `<div class="btn-row">${btn('toOtherHand', undefined, (hit.track.lh ? '↑ ' : '↓ ') + tr(hit.track.lh ? 'Into the right hand' : 'Into the left hand'), false,
+        tr('Into the other staff - the tone stays exactly (or drag the note there)'))}</div>` : ''}
+      ${alt ?`<div class="btn-row">${btn('respell', undefined, esc(tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) })), false, tr('Same tone, written the other way'))}</div>` : ''}
       ${voiceRow}
       <div class="btn-row">${tie}</div>
       ${tieOne ? `<div class="btn-row">${tieOne}</div>` : ''}
@@ -433,6 +435,9 @@
         <p class="hint tight">${tr('Or hold the chord and move down / up.')}</p></section>`;
     }
     const m = S.input.chordMode || '';
+    // where the chord lies: a guitar open / up the neck; voice, keys, pad (a piano's left hand) as tapped, bass low …
+    const pk = TC.accomp.positionKind(t), posList = pk && TC.accomp.POSITIONS[pk];
+    const posNow = posList && posList.some(([v]) => v === (S.input.chordPos || '')) ? S.input.chordPos || '' : '';
     return `<section data-sec="chordtap"><h3>${tr('Chords')}</h3><div class="row"><label>${tr('A tap sets')}</label><div class="seg">
         ${btn('setChordMode', '', tr('Tone'), m === '', tr('A tap writes one tone'))}
         ${btn('setChordMode', 'n', tr('Chord'), m === 'n', tr('A tap writes the chord of the chord symbols there'))}
@@ -441,9 +446,11 @@
       ${m && TC.accomp.isGuitar(t) ? `<div class="row"><label>${tr('Grip')}</label><div class="seg">
         ${btn('setChordTight', 'false', tr('Full'), !S.input.chordTight, tr('All strings from the bass up - full, for strumming'))}
         ${btn('setChordTight', 'true', tr('Tight (4 strings)'), !!S.input.chordTight, tr('Four strings in the middle, one tone each - slim, for picking or short chords'))}</div></div>` : ''}
-      ${m ? `<div class="row"><label>${tr('Tones')}</label><div class="seg">${[['', 'As written', 'The chord of the symbol as it is'], ['3', 'Triad', 'Root, third, fifth (7, 6, add9 … left out)'],
+      ${m ? `<div class="row"><label>${tr('Tones')}</label><div class="seg wrap">${[['', 'As written', 'The chord of the symbol as it is'], ['3', 'Triad', 'Root, third, fifth (7, 6, add9 … left out)'],
         ['4', 'Four-note chord', 'With the seventh: its own, else the one of the scale (C in C major: Cmaj7, G: G7)'], ['5', 'Power', 'Root, fifth, octave (a guitar: on its E or A string)']]
         .map(([v, l, h]) => btn('setChordSize', v, tr(l), (S.input.chordSize || '') === v, tr(h))).join('')}</div></div>` : ''}
+      ${m && posList ? `<div class="row"><label>${tr('Position')}</label><div class="seg${posList.length > 2 ? ' wrap' : ''}">${posList
+        .map(([v, l, h]) => btn('setChordPos', v, tr(l), posNow === v, tr(h))).join('')}</div></div>` : ''}
       <p class="hint tight">${tr(m ? 'Tap: the chord of the chord symbols there (panel "Bar · score" → Chords) - a guitar: a grip; else from the tapped tone up. Hold it, then down / up: its stroke.' : 'Chord: a tap writes the whole chord of the chord symbols there.')}</p>
     </section>`;
   }

@@ -80,4 +80,25 @@ module.exports = function (T) {
   T.eq('off: the left hand goes', [ids(doc), SC.isPiano(doc, pf)], [['Drums', 'Gesang', 'Klavier'], false]);
   const again = SC.setPiano(doc, pf, true);
   T.eq('on again: one left hand, empty', [ids(doc), again.bars[0].voices[0].length], [['Drums', 'Gesang', 'Klavier', 'Klavier(L)'], 0]);
+
+  // notes between the hands: the tone stays exactly, time and length too; tied notes go along; a tone there already: nothing
+  const notes = (t) => t.bars.map((b, i) => b.voices[0].map((ev) => `${i}:${ev.tick}:${ev.dur}:${ev.notes.map((n) => n.pitch + (n.tie ? 't' : '')).join('+')}`).join(' ')).filter(Boolean).join(' | ');
+  [pf, again].forEach((t) => t.bars.forEach((b) => { b.voices = [[]]; }));
+  const g = TC.newPitchNote(55, null, {}), gOn = Object.assign(TC.newPitchNote(55, null, {}), { tie: true }), e5 = TC.newPitchNote(76, null, {});
+  SC.place(doc, pf, 0, 0, 1920, 1920, g);
+  SC.place(doc, pf, 1, 0, 0, 960, gOn);
+  SC.place(doc, pf, 1, 0, 960, 960, e5);
+  T.eq('into the left hand: G3 with the G tied on from it - the same tones, times and lengths, still tied', [SC.toOtherHand(doc, [g.id]) === again, notes(pf), notes(again)],
+    [true, '1:960:960:76', '0:1920:1920:55 | 1:0:960:55t']);
+  T.eq('the ids stay (the selection keeps them)', SC.findNote(doc, gOn.id).track === again, true);
+  T.eq('and back into the right hand', [SC.toOtherHand(doc, [g.id]) === pf, notes(again)], [true, '']);
+  SC.place(doc, again, 1, 0, 960, 960, TC.newPitchNote(76, null, {}));
+  T.eq('a tone already there in the other hand: nothing moves', [SC.toOtherHand(doc, [e5.id]), notes(pf).includes('76')], [null, true]);
+  T.eq('notes of both hands at once, or no piano: nothing', [SC.toOtherHand(doc, [g.id, again.bars[1].voices[0][0].notes[0].id]), SC.toOtherHand(doc, [])], [null, null]);
+  const c4 = TC.newPitchNote(60, null, {});
+  SC.place(doc, again, 1, 0, 1920, 960, c4);
+  SC.place(doc, pf, 1, 0, 1920, 1920, TC.newPitchNote(67, null, {}));
+  T.eq('joining a chord in the other hand: it takes the chord\'s length', [!!SC.toOtherHand(doc, [c4.id]), notes(pf).split(' ').pop()], [true, '1:1920:1920:67+60']);
+  T.eq('moved in time and into the other hand at once (dragged): moveNotes with a target track', (SC.moveNotes(doc, [c4.id], 960, null, null, again), notes(again).split(' ').pop()), '1:2880:960:60');
+  T.eq('a drum track is no target for a melody note', SC.moveNotes(doc, [c4.id], 0, null, null, drums), false);
 };

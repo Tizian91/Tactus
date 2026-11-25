@@ -67,15 +67,14 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
 5. Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase).
 6. **Noten prüfen** (gebaut 2026-11-25, siehe „Noten prüfen“ unten): ob die Akkord-Regel („nur was auffällt“) im Alltag die richtigen
    Noten findet, ob die Lagen der Instrumente passen, ob die Ringe auf dem Tablet gut zu sehen sind.
+7. **Klavier: Noten zwischen den Händen** und **Lage der Akkorde** (gebaut 2026-11-26, siehe die beiden Abschnitte unten): ob das Ziehen in
+   die andere Zeile auf dem Tablet gut geht, ob die Lagen die Griffe / Begleitungen geben, die man erwartet.
 
 ### Als Nächstes (Vorschläge, Reihenfolge offen)
 
 - ~~**Noten prüfen**~~ ✅ (2026-11-25, zum Ausprobieren) – siehe Abschnitt „Noten prüfen“ weiter unten.
-- **Klavier: Noten zwischen den Händen**: eine Note in die andere Zeile ziehen (Tonhöhe aus der Stelle dort, Zeit und Länge bleiben,
-  Sperren gelten); im Notenmenü „In die linke / rechte Hand“ (der Ton bleibt genau) – auch für mehrere ausgewählte Noten.
-- **Lage der Akkorde** (Noten-Panel → Akkorde, neben „Töne“, je nach Instrument): Klavier linke Hand – wie getippt · Grundton tief +
-  Akkord · Grundton + Quinte · nur Grundton; Gitarre – offen · höher (Barré weiter oben am Hals). (Bis dahin: „Töne: Power“ gibt
-  Grundton, Quinte, Oktave – kein Akkordsymbol „C5“ nötig.)
+- ~~**Klavier: Noten zwischen den Händen**~~ ✅ (2026-11-26, zum Ausprobieren) – siehe „Klavier: Noten zwischen den Händen“ unten.
+- ~~**Lage der Akkorde**~~ ✅ (2026-11-26, zum Ausprobieren) – siehe „Lage der Akkorde“ unten.
 - **MusicXML-Import** (Guitar Pro, MuseScore …): Schlagzeug (`<unpitched>` / `<midi-unpitched>` → Instrument), Melodie (Tonhöhe,
   Tonart, Schlüssel), Taktart, Tempo, Wiederholungen / Klammern, Akkordsymbole, Liedtext – erst Schlagzeug, dann Melodie.
 - **Melodie-Komfort (Schritt D):** transponieren; Tonleiter wechseln, die Melodie folgt stufenweise; Stufen-Hilfe unter den Noten
@@ -389,6 +388,33 @@ Entschieden mit dem Nutzer (2026-11-25): Akkord-Regel „nur was auffällt“ mi
   Spur aus meist solchen Noten ist Begleitung (auch gebrochen: Zupfen, Alberti); das Zählen der Akkorde bleibt für Handgesetztes.
   Bisherige Grenzen: gebrochene Begleitung in einer eigenen Spur gilt als Melodie, eine Melodie mit vielen Doppelgriffen als Begleitung.
 - Wartet auf die Liste des Nutzers nach längerem Ausprobieren (2026-11-26).
+
+## Klavier: Noten zwischen den Händen ✅ (2026-11-26, zum Ausprobieren)
+
+- **Ziehen:** eine Note (mit den übergebundenen danach) in die andere Zeile des Klaviers ziehen – sie bekommt den Ton der Stelle dort (wie
+  beim Verschieben in einer Zeile: Tonleiter, Akkord-Sperre, Shift = frei), Zeit wie gezogen, Länge bleibt; die Vorschau steht in der Zielzeile,
+  Statuszeile „in die linke Hand“. Ein als Akkord gesetzter Akkord wandert als Ganzes (um so viele Tonleiterstufen wie die gezogene Note).
+  Danach ist die Zielhand aktiv.
+- **Notenmenü / Noten-Panel:** „In die linke Hand“ / „In die rechte Hand“ – der Ton bleibt genau, für alle ausgewählten Noten dieser Hand,
+  übergebundene mit; liegt dort schon derselbe Ton: nichts (Hinweis). Eine Note, die zu einem Akkord der anderen Hand dazukommt, nimmt
+  dessen Länge an (ein Schlag = ein Akkord).
+- Gezogen wird eine Note bzw. ein Akkord; mehrere ausgewählte Noten wechseln über Menü / Panel (Ziehen einer Auswahl bleibt in ihrer Zeile).
+- Code: `SC.moveNotes(…, into)` (Ziel-Spur), `SC.toOtherHand`, `A.toOtherHand`; `placeAt` / `moveMelody` / `dropMove` / `dropChord`
+  lassen beim Verschieben die andere Hand zu. Tests: `test_piano.js`, Klick-Test (Ziehen, Panel-Knopf).
+
+## Lage der Akkorde ✅ (2026-11-26, zum Ausprobieren)
+
+- Noten-Panel → **Akkorde → Lage** (nur wenn ein Tipp Akkorde setzt), je nach Instrument (`AC.POSITIONS`, `AC.positionKind`):
+  - **Gitarre:** Offen (wie bisher) · **Höher am Hals** – Griffe ab dem 3. Bund ohne offene Saiten (C: x35553, E: x76454); findet sich
+    keiner, wie bisher.
+  - **Gesang / Keys / Synth** (vor allem die linke Hand): Wie getippt · **Bass + Akkord** (Bass – Grundton bzw. Schrägstrich-Bass – mindestens
+    eine Quinte, meist eine Oktave unter dem Akkord) · **Grundton + Quinte** (nahe der angetippten Stelle) · **Nur Grundton** (bei C/E das E).
+  - Bass, Streicher / Chor / Bläser: keine Lage.
+- Gilt für angetippte Akkorde (`S.input.chordPos`, nicht im Stück gespeichert); „Töne“ (Dreiklang, Vierklang, Power) wirkt weiter – bei
+  „Grundton + Quinte“ / „Nur Grundton“ nicht.
+- Code: `AC.chordNotes(…, { pos, high })`, `guitarVoicing(…, high)`, `A.setChordPos`. Tests: `test_accomp.js`, Klick-Test.
+- Später möglich: Lage auch für Power-Akkorde auf der Gitarre (höher am Hals); die Akkord-Muster (`AC.write`, zurzeit nicht in der
+  Oberfläche) mit Lage.
 
 ## Phase 5 – Melodien (Schritt A ✅, B ✅, C Liedtext ✅, E Klavier ✅ – als Nächstes: Akkorde als Noten, Klavier + Gitarre)
 

@@ -1504,6 +1504,61 @@ setTimeout(() => {
               done();
             }, 500);
           };
+          // piano: a note dragged from the right hand into the left one (the tone of the line there), back with the panel
+          // button (the tone stays exactly); one undo step each
+          const handTest = (done) => {
+            const undoH = TC.history.undoStack.length, pf = TC.score.addTrack(S.doc, 'Piano', null, 'pitched');
+            pf.program = 0;
+            const lh = TC.score.setPiano(S.doc, pf, true);
+            TC.score.setScale(pf, 0, { l: 0, a: 0, id: 'major' });
+            pf.bars.forEach((b) => { b.scale = null; });
+            TC.score.syncHands(S.doc);
+            const g4 = TC.newPitchNote(67, null, {});
+            TC.score.place(S.doc, pf, 0, 0, 0, 960, g4);
+            S.trackId = pf.id;
+            TC.commit();
+            const L = TC.render.layout, zr = L.staves.find((q) => q.track.id === pf.id), zl = L.staves.find((q) => q.track.id === lh.id);
+            const head = L.heads.find((h) => h.id === g4.id);
+            if (!zr || !zl || !head) { ok('hands: both staves and the note drawn', false); return done(); }
+            const v = S.doc.view, r = vp.getBoundingClientRect();
+            const scr = (x, y) => [r.left + v.x + x * v.zoom, r.top + v.y + y * v.zoom];
+            const [x0, y0] = scr(head.x, zr.dy + head.y), [x1, y1] = scr(head.x, zl.dy + TC.render.stepY(5)); // (bass clef: step 5 is C3)
+            const pe = (type, x, y) => new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 14, pointerType: 'mouse' });
+            vp.dispatchEvent(pe('pointermove', x0, y0));
+            vp.dispatchEvent(pe('pointerdown', x0, y0));
+            vp.dispatchEvent(pe('pointermove', x0, (y0 + y1) / 2));
+            vp.dispatchEvent(pe('pointermove', x1, y1));
+            vp.dispatchEvent(pe('pointerup', x1, y1));
+            const inL = TC.score.findNote(S.doc, g4.id);
+            ok('hands: a note of the right hand dragged into the left one - the tone of the place there (C3), same place, the left hand written on ' + JSON.stringify(inL && [inL.track.lh, inL.note.pitch, inL.bar, inL.ev.tick]),
+              !!inL && inL.track.lh === true && inL.note.pitch === 48 && inL.bar === 0 && inL.ev.tick === 0 && S.trackId === lh.id && TC.history.undoStack.length === undoH + 2);
+            S.selection = new Set([g4.id]);
+            TC.refresh();
+            const back = document.querySelector('#panel-notes [data-action="toOtherHand"]');
+            if (back) back.click();
+            const inR = TC.score.findNote(S.doc, g4.id);
+            ok('hands: the panel button "Into the right hand" - the tone stays (C3), the right hand written on', !!back && /rechte|right/.test(back.textContent) && !!inR && !inR.track.lh && inR.note.pitch === 48 && S.trackId === pf.id);
+            // the position of a tapped chord: left hand, "Bass low + chord" - the bass an octave or more under the chord
+            TC.score.setChord(S.doc, 0, 0, { name: 'C' });
+            S.selection = new Set();
+            S.trackId = lh.id;
+            TC.actions.setChordMode('n');
+            const posBtn = document.querySelector('#panel-notes [data-action="setChordPos"][data-value="bass"]');
+            if (posBtn) posBtn.click();
+            click(0, 1920, 4, { track: S.doc.tracks.find((t) => t.id === lh.id) });
+            const lhNow = S.doc.tracks.find((t) => t.id === lh.id), chordEv = lhNow && lhNow.bars[0].voices[0].find((e) => e.tick === 1920);
+            const ps = chordEv ? chordEv.notes.map((n) => n.pitch).sort((a, b) => a - b) : [];
+            ok('position: "Bass + chord" in the panel, a C tapped in the left hand - C low, an octave under the chord ' + JSON.stringify(ps),
+              !!posBtn && ps.length === 4 && ps[0] % 12 === 0 && ps[1] - ps[0] >= 12 && S.input.chordPos === 'bass');
+            TC.actions.setChordMode('');
+            TC.actions.setChordPos('');
+            while (TC.history.undoStack.length > undoH) TC.actions.undo();
+            S.trackId = S.doc.tracks[0].id;
+            S.selection = new Set();
+            TC.refresh();
+            ok('hands: undone - the piano gone', !S.doc.tracks.some((t) => t.name === 'Piano'));
+            done();
+          };
           S.trackId = S.doc.tracks[0].id;
           // the view dragged with the middle button: held, a pause does not draw it anew (a jolt); let go: drawn anew
           // (first the samples loaded or failed: when they are done, the score is drawn anew - not a pause)
@@ -1521,13 +1576,13 @@ setTimeout(() => {
                 window.__exNames.length > 0 && window.__exNames.every((n) => !/FakeKit/.test(n)) && window.__exNames.some((n) => /Iron\.mid$/.test(n)));
               if (window.__exRestore) window.__exRestore();
               ok('view held with the middle button: not drawn anew in a pause (' + heldT + '), drawn when let go', !!heldT && svgEl.style.transform === '');
-              ckTest(() => {
+              ckTest(() => handTest(() => {
                 S.doc.view.x = 190; TC.refresh();
                 const pre = document.createElement('pre');
                 pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
                 pre.textContent = out.join('\n');
                 document.body.appendChild(pre);
-              });
+              }));
             }, 300);
           }, 400);
           };

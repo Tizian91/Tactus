@@ -119,6 +119,8 @@ button.danger { color: var(--danger); }
 .seg button { border-radius: 0; margin-left: -1px; padding: 3px 8px; display: flex; align-items: center; justify-content: center; }
 .seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
 .seg button:last-child { border-radius: 0 6px 6px 0; }
+.seg.wrap { flex-wrap: wrap; gap: 3px; }
+.seg.wrap button { flex: 1 1 45%; border-radius: 6px; margin-left: 0; } /* (long labels: two rows of buttons) */
 
 select, input[type="text"], input[type="number"] {
   font: inherit; padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px;

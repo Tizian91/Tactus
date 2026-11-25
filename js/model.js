@@ -1491,22 +1491,26 @@
    * Move notes (ids) by `delta` ticks (across bars), optionally to instrument `art` (all of them).
    * Each note keeps its length. Nothing happens (false) if a note would leave the score, land in a
    * %-bar, or on a note of the same instrument that does not move.
+   * into: melody - another melody track to move them into (a piano: the other hand), in the same voice; a note
+   * joining a chord there takes its length.
    */
-  SC.moveNotes = function (doc, ids, delta, art, pitchOf) {
+  SC.moveNotes = function (doc, ids, delta, art, pitchOf, into) {
     const first = ids.length && SC.findNote(doc, ids[0]);
     const track = first ? first.track : doc.tracks[0], moving = new Set(ids), items = [], slots = new Set();
     if (ids.some((id) => { const h = SC.findNote(doc, id); return h && h.track !== track; })) return false; // notes of several tracks do not move together
+    if (into && (into.kind !== 'pitched' || track.kind !== 'pitched' || !doc.tracks.includes(into))) return false;
+    const dest = into || track;
     for (const id of ids) {
       const h = SC.findNote(doc, id);
       if (!h) continue;
       const pos = SC.atAbs(doc, SC.absTick(doc, h.bar, h.ev.tick) + delta);
-      if (!pos || track.bars[pos.bar].simile) return false;
+      if (!pos || dest.bars[pos.bar].simile) return false;
       // drums: the instrument (art: another one); melody: the pitch (pitchOf(note): { pitch, dia } another one)
       const to = h.note.pitch !== undefined ? Object.assign({ pitch: h.note.pitch, dia: h.note.dia }, pitchOf ? pitchOf(h.note) : null) : { art: art || h.note.art };
       const key = pos.bar + ':' + pos.tick + ':' + (to.pitch !== undefined ? 'p' + to.pitch : to.art);
       if (slots.has(key)) return false; // two of them onto one place
       slots.add(key);
-      for (const v of track.bars[pos.bar].voices) {
+      for (const v of dest.bars[pos.bar].voices) {
         for (const ev of v) {
           if (ev.tick === pos.tick && ev.notes.some((n) => !moving.has(n.id) && sameSlot(n, to))) return false;
         }
@@ -1519,10 +1523,23 @@
     SC.removeNotes(doc, ids);
     for (const it of items) {
       const n = Object.assign({}, it.note, it.to);
-      if (delta && !it.keepTie) delete n.tie; // (moved in time alone: no longer tied to what was before it)
-      SC.place(doc, track, it.pos.bar, it.to.art !== undefined ? TC.drums.voiceOf(it.to.art) : it.voice, it.pos.tick, it.dur, n);
+      if ((delta || into) && !it.keepTie) delete n.tie; // (moved alone - in time or to another track: no longer tied to what was before it)
+      SC.place(doc, dest, it.pos.bar, it.to.art !== undefined ? TC.drums.voiceOf(it.to.art) : it.voice, it.pos.tick, it.dur, n);
     }
     return true;
+  };
+  /**
+   * Piano: notes into the other hand (the other staff of their instrument), each exactly the tone it is - the notes tied
+   * on from them go along. -> the hand they went to, or null (no piano, notes of both hands, a note there already).
+   */
+  SC.toOtherHand = function (doc, ids) {
+    const hs = ids.map((id) => SC.findNote(doc, id)).filter(Boolean);
+    if (!hs.length || hs.some((h) => h.track !== hs[0].track || h.note.pitch === undefined)) return null;
+    const hands = SC.handsOf(doc, hs[0].track);
+    if (hands.length < 2) return null;
+    const to = hands.find((t) => t !== hs[0].track);
+    const all = [...new Set(ids.concat(SC.tiedOn(doc, ids)))];
+    return SC.moveNotes(doc, all, 0, null, null, to) ? to : null;
   };
 
   /**

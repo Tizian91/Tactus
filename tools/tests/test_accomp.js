@@ -27,6 +27,17 @@ module.exports = function (T) {
   T.eq('a tapped chord (piano): from the tapped tone up - E4 tapped: E G C (an inversion), C4: C E G', [AC.chordNotes(ch('C'), pt, 64).map((x) => x.pitch), AC.chordNotes(ch('C'), pt, 60).map((x) => x.pitch)], [[64, 67, 72], [60, 64, 67]]);
   T.eq('a tapped slash chord: its bass below', AC.chordNotes(ch('C/G'), pt, 60).map((x) => x.pitch), [55, 60, 64]);
   T.eq('a tapped chord (guitar): the grip', AC.chordNotes(ch('G'), { program: 25 }, 60).map((x) => x.pitch), [43, 47, 50, 55, 59, 67]);
+  // the position (note panel "Chords → Position")
+  const lhT = { program: 0, clef: 'bass', inst: 'keys', lh: true }, at = (s, tap, pos) => AC.chordNotes(ch(s), lhT, tap, '', { pos }).map((x) => x.pitch);
+  T.eq('position, left hand: bass low + chord (C on C3: C2 + C3 E3 G3; C/E: E2 under C3 G3)', [at('C', 48, 'bass'), at('C/E', 48, 'bass')], [[36, 48, 52, 55], [40, 48, 55]]);
+  T.eq('position: root + fifth near the tapped place (Am on A2: A2 E3), root only (G/B: its bass B2)', [at('Am', 45, 'fifth'), at('G/B', 43, 'root')], [[45, 52], [47]]);
+  T.eq('position: as tapped is as before', at('C', 48, ''), [48, 52, 55]);
+  T.eq('position: a guitar or a bass ignores the piano\'s positions', [AC.chordNotes(ch('G'), { program: 25 }, 60, '', { pos: 'root' }).length, AC.chordNotes(ch('C'), { inst: 'bass' }, 40, '', { pos: 'fifth' }).map((x) => x.pitch)], [6, [36]]);
+  const hi = (s) => AC.chordNotes(ch(s), { inst: 'guitar' }, 60, '', { high: true }).map((x) => x.pitch);
+  T.eq('guitar up the neck: C as a barré grip on the A string (3rd fret), E in the C shape from the 4th fret (x76454), no open strings', [hi('C'), hi('E')], [[48, 55, 60, 64, 67], [52, 56, 59, 64, 68]]);
+  T.eq('… open as before (C open: x32010)', AC.chordNotes(ch('C'), { inst: 'guitar' }, 60).map((x) => x.pitch), [48, 52, 55, 60, 64]);
+  T.ok('… up the neck: every grip from the 3rd fret up (G, Am, D, F#m, Bb)', ['G', 'Am', 'D', 'F#m', 'Bb'].every((s) => { const g = AC.guitarGrip(ch(s), null, false, true); return g && g.at >= 3; }));
+  T.eq('position kinds: guitar, keys (voice, keys, pad), none for bass / strings', [AC.positionKind({ inst: 'guitar' }), AC.positionKind({ inst: 'voice' }), AC.positionKind({ inst: 'bass' }), AC.positionKind({ inst: 'ensemble' })], ['guitar', 'keys', null, null]);
 
   // ---- the click grid: that of the note value, or one of its own
   T.eq('grid: auto (the note value; dotted: the half), own: 1/16, 1/8 triplet', [TC.gridTicks({ value: 4 }), TC.gridTicks({ value: 4, dotted: true }), TC.gridTicks({ value: 4, grid: '16' }), TC.gridTicks({ value: 4, grid: '8t' }), TC.gridTicks({ value: 8, grid: 'x' })], [960, 480, 240, 320, 480]);

@@ -143,7 +143,8 @@
     if (!p || p.x < p.sys.ox) return null;
     if (p.y < RD.stepY(RD.LINE_MIN) - 5 || p.y > RD.stepY(RD.LINE_MAX) + 5) return null;
     const track = p.track || TC.curTrack();
-    if (S.drag && track !== TC.curTrack()) return null; // a note being aimed / moved stays in its track
+    // a note being aimed / moved stays in its track - a piano's note being moved may go to the other hand
+    if (S.drag && track !== TC.curTrack() && !(S.drag.mode === 'move' && isMelody(track) && TC.score.handsOf(S.doc, TC.curTrack()).includes(track))) return null;
     const bar = RD.barAt(p.x);
     if (!bar || RD.simileAt(bar, track) || p.x < bar.x0) return null;
     if (isMelody(track)) {
@@ -683,7 +684,9 @@
     const size = S.input.chordSize || '', ch = TC.accomp.resize(at.ch, size, TC.score.harmonyScale(S.doc, t.bar));
     // (a VST playing at most four tones - Iron: its profile says so - gets the tight grips)
     const tight = !!S.input.chordTight || !!(track.ksw && track.ksw.poly && track.ksw.poly <= 4);
-    const notes = TC.accomp.chordNotes(ch, track, t.pitch, size, { tight });
+    // (the position chosen in the panel: a guitar up the neck; a piano's left hand … bass low + chord, root + fifth, root)
+    const pos = S.input.chordPos || '';
+    const notes = TC.accomp.chordNotes(ch, track, t.pitch, size, { tight, high: pos === 'high', pos });
     let n = 0;
     notes.forEach((x) => {
       const note = TC.newPitchNote(x.pitch, x.dia, S.input);
@@ -826,15 +829,16 @@
   function moveMelody(e) {
     const d = S.drag, n = d.hit.note;
     let to = placeAt(I.toLocal(e.clientX, e.clientY), e, null, !!e.shiftKey);
-    if (to && to.track !== d.hit.track) to = null;
-    if (to && d.to && to.bar === d.to.bar && to.tick === d.to.tick && to.pitch === d.to.pitch) return;
+    if (to && to.track !== d.hit.track && !TC.score.handsOf(S.doc, d.hit.track).includes(to.track)) to = null; // (a piano: also the other hand)
+    if (to && d.to && to.bar === d.to.bar && to.tick === d.to.tick && to.pitch === d.to.pitch && to.track === d.to.track) return;
     const newSound = to && (!d.to || to.pitch !== d.to.pitch);
     d.to = to;
     if (!to) {
       S.hover = { bar: d.t.bar, tick: d.t.tick, line: d.t.line, headId: n.id, hx: d.t.head.x, hy: d.t.head.y, label: tr('release here: stays') };
     } else {
-      S.hover = { bar: to.bar, tick: to.tick, line: to.line, pitch: to.pitch, acc: to.acc, len: 0, label: targetName(to, true) + ' ← ' + tr('move') };
-      TC.ui.status(`${where(to)} · ${targetName(to)} · ${tr('release: move here')}`);
+      const other = to.track !== d.hit.track ? ' · ' + tr(to.track.lh ? 'into the left hand' : 'into the right hand') : '';
+      S.hover = { bar: to.bar, tick: to.tick, line: to.line, pitch: to.pitch, acc: to.acc, len: 0, trk: to.track.id, label: targetName(to, true) + ' ← ' + tr('move') + other };
+      TC.ui.status(`${where(to)} · ${targetName(to)}${other} · ${tr('release: move here')}`);
       if (newSound && S.settings.sound) TC.audio.previewTone(to.pitch, d.hit.track);
     }
     I.hoverKey = null;
@@ -845,20 +849,22 @@
     const to = d.to, n = d.hit.note;
     if (to && n.pitch !== undefined && n.chordNote && d.hit.ev.notes.length > 1) return dropChord(d, to);
     if (to && n.pitch !== undefined) {
-      if (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.pitch === n.pitch) return;
-      if (noteAt(to.bar, to.tick, null, d.hit.track, to.pitch)) return TC.ui.hint(tr('There is already such a note'));
+      const dest = to.track || d.hit.track, other = dest !== d.hit.track; // (a piano: into the other hand)
+      if (!other && to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.pitch === n.pitch) return;
+      if (noteAt(to.bar, to.tick, null, dest, to.pitch)) return TC.ui.hint(tr('There is already such a note'));
       // the note with the notes tied on from it: as long as before, from its new place (tied again if it needs to)
       const SC = TC.score, chain = SC.tieChain(S.doc, n.id).filter((c, k, all) => k >= all.findIndex((x) => x.note.id === n.id));
       const total = SC.chainTicks(chain);
       SC.removeNotes(S.doc, chain.map((c) => c.note.id));
       const moved = Object.assign({}, n, { pitch: to.pitch, dia: to.dia });
       delete moved.tie;
-      const res = SC.place(S.doc, d.hit.track, to.bar, d.hit.voice, to.tick, total, moved);
-      if (res.status === 'added' && total > res.ev.dur) SC.setMelodyLength(S.doc, d.hit.track, to.bar, d.hit.voice, res.ev, total);
+      const res = SC.place(S.doc, dest, to.bar, d.hit.voice, to.tick, total, moved);
+      if (res.status === 'added' && total > res.ev.dur) SC.setMelodyLength(S.doc, dest, to.bar, d.hit.voice, res.ev, total);
       S.selection = new Set([res.note ? res.note.id : n.id]);
+      if (other) S.trackId = dest.id; // (the hand it went to: written on from there)
       TC.selectBar(to.bar);
       TC.commit();
-      TC.ui.status(`${where(to)} · ${targetName(to)} · ${tr('moved')}`);
+      TC.ui.status(`${where(to)} · ${targetName(to)} · ${tr(other ? (dest.lh ? 'moved into the left hand' : 'moved into the right hand') : 'moved')}`);
       return;
     }
     if (!to || (to.bar === d.hit.bar && to.tick === d.hit.ev.tick && to.art.id === n.art)) return;
@@ -881,14 +887,18 @@
   function dropChord(d, to) {
     const SC = TC.score, P = TC.pitch, ids = d.hit.ev.notes.map((x) => x.id);
     const all = [...new Set(ids.concat(SC.tiedOn(S.doc, ids)))];
-    const delta = SC.absTick(S.doc, to.bar, to.tick) - SC.absTick(S.doc, d.hit.bar, d.hit.ev.tick), k = to.line - d.t.line;
-    if (!delta && !k) return;
+    const dest = to.track || d.hit.track, other = dest !== d.hit.track; // (a piano: into the other hand)
+    // steps of the scale: the lines moved (the other hand: another clef - the steps from the dragged note's to the new tone)
+    const delta = SC.absTick(S.doc, to.bar, to.tick) - SC.absTick(S.doc, d.hit.bar, d.hit.ev.tick);
+    const k = other ? P.noteSpell(d.hit.note, SC.scaleAt(d.hit.track, d.hit.bar)).dia - to.dia : to.line - d.t.line;
+    if (!delta && !k && !other) return;
     const barOf = new Map(all.map((id) => [id, (SC.findNote(S.doc, id) || { bar: 0 }).bar]));
     const lines = (x) => {
       const sc = SC.scaleAt(d.hit.track, barOf.get(x.id) || 0), t = P.lineTone(P.noteSpell(x, sc).dia - k, sc);
       return t.pitch >= 0 && t.pitch <= 127 ? { pitch: t.pitch, dia: t.dia } : null;
     };
-    if (!SC.moveNotes(S.doc, all, delta, null, k ? lines : null)) return TC.ui.hint(tr('The chord does not fit there (another note in the way)'));
+    if (!SC.moveNotes(S.doc, all, delta, null, k ? lines : null, other ? dest : null)) return TC.ui.hint(tr('The chord does not fit there (another note in the way)'));
+    if (other) S.trackId = dest.id;
     S.selection = new Set(ids);
     TC.selectBar(to.bar);
     TC.commit();
@@ -1321,6 +1331,10 @@
       { label: '♭ ' + tr('a semitone lower'), action: choose(() => A().alterSelection(-1)) },
     ];
     if (alt) items.push({ label: tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) }), action: choose(() => A().respell()) });
+    // a piano: into the other hand (the tone stays exactly; the selected notes of this hand too)
+    if (TC.score.isPiano(S.doc, d.hit.track)) {
+      items.push({ label: (d.hit.track.lh ? '↑ ' : '↓ ') + tr(d.hit.track.lh ? 'Into the right hand' : 'Into the left hand'), action: choose(() => A().toOtherHand()) });
+    }
     // found by "Check notes" (does not fit the chord): to the nearest chord tone
     const found = A().checking() && A().checked().byNote.get(n.id);
     if (found && found.includes('chord')) items.push({ label: '◎ ' + tr('To the nearest chord tone'), action: choose(() => A().noteToChord(n.id)) });

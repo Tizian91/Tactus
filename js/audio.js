@@ -345,7 +345,12 @@
     return n;
   };
 
-  AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null) {
+  /**
+   * A tone of a melody track (or the chord pad). beat: seconds of a quarter at that place (playing) - a slow attack
+   * stays within 1/8 of it and the release within 1/3 of it, so a pad or strings come in on time at a slow tempo and
+   * the chord before makes room (75 BPM: a pad swells in 0.1 s, not 0.4 s); without it (a tone tapped): as the sound is.
+   */
+  AU.tone = function (pitch, t, dur, vel = 0.72, dest = null, track = null, beat = 0) {
     if (!ensure()) return;
     // the chord pad: its own MIDI output only (if connected; else here), never the drums' output
     const toMidi = TC.midiOut && (track && track.ownPort ? !S.settings.midiOff && TC.midiOut.connected(track.midiOut) : TC.midiOut.trackActive(track) && !(track && track.synthOnly));
@@ -358,9 +363,10 @@
     const out = AU.panOut(dest || master, track), hz = 440 * Math.pow(2, (pitch - 69) / 12);
     const v = Math.max(0.05, Math.min(1.2, vel)) * F.gain * AU.trackGain(track);
     dur = Math.max(0.08, dur);
-    const end = t + dur, rel = F.rel;
-    // a short note does not wait for a slow attack (a pad's eighth would else swell after its end and break off)
-    const att = Math.min(F.attack, dur * 0.6), top = t + att;
+    const end = t + dur, rel = beat > 0 ? Math.min(F.rel, Math.max(0.08, beat / 3)) : F.rel;
+    // a short note does not wait for a slow attack (a pad's eighth would else swell after its end and break off);
+    // playing: within 1/8 of a beat
+    const att = Math.min(F.attack, dur * 0.6, beat > 0 ? Math.max(0.015, beat / 8) : Infinity), top = t + att;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(v, top);                                      // attack
@@ -487,7 +493,7 @@
         if (h.click) { if (h.t < tl.start || S.settings.metronome) AU.click(when, h.click, h.vel, cbus); } // (the click switched on / off while playing: heard at once; the count-in always)
         else if (h.ks !== undefined) { if (TC.midiOut && TC.midiOut.trackActive(h.trk)) TC.midiOut.note(h.ks, when, h.dur, 0.8, ctx, h.trk, true); } // (a keyswitch: MIDI only)
         else if (h.cc !== undefined) { if (TC.midiOut && TC.midiOut.trackActive(h.trk)) TC.midiOut.cc(h.cc, h.val, when, ctx, h.trk); } // (dynamics as a controller: MIDI only)
-        else if (h.pitch !== undefined) AU.tone(h.pitch, when, h.dur, h.vel, bus, h.trk);
+        else if (h.pitch !== undefined) AU.tone(h.pitch, when, h.dur, h.vel, bus, h.trk, h.beat);
         else AU.hit(h.art, when, h.vel, h.choke, bus, h.trk);
       }
       until = h.t;

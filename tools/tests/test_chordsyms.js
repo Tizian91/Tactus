@@ -95,6 +95,7 @@ module.exports = function (T) {
   T.eq('… held 2 beats (1 s at 120)', Math.round(pad[0].dur * 100) / 100, 0.98);
   T.eq('G7 on beat 3: bass G2 + 4 tones', at(1.1), [43, 55, 59, 62, 65]);
   T.ok('the pad plays on Tactus\' synth, a track of its own', pad.every((h) => h.trk === TC.timeline.CHORD_TRACK && h.trk.synthOnly));
+  T.eq('the pad knows the length of a beat (120 BPM: 0.5 s) - its attack keeps within it (js/audio.js)', [...new Set(pad.map((h) => h.beat))], [0.5]);
   T.eq('bar 3 (F♯m7♭5, typed) after bar 2 (Bm)', [at(2.1).length, at(4.1)[0]], [4, 42]);
   // a chord going on over the bar line is held
   SC.setChord(doc, 2, 0, null);

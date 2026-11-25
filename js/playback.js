@@ -5,7 +5,8 @@
  *
  *   TC.timeline.build(doc, { from, to, metronome, countIn }) ->
  *     { hits:  [ { t, art, vel, choke, click } ],   t in seconds from the start, sorted
- *              (melody tracks: { t, pitch, dur, vel }: a tone of dur seconds)
+ *              (melody tracks: { t, pitch, dur, vel, beat }: a tone of dur seconds; beat: seconds of a quarter there -
+ *              js/audio.js keeps a slow attack / release within it, so a pad is not late at a slow tempo)
  *       bars:  [ { bar, t0, t1, spt, ts } ],         bar -1 = count-in; spt = seconds per tick
  *       start, end }                                  where the music starts (after the count-in) and ends
  *
@@ -136,7 +137,7 @@
                   if (key !== null && key !== undefined) hits.push({ t: t0 - T.KS_LEAD, ks: key, dur: Math.max(0.05, t1 - t0 - 0.01) + T.KS_LEAD, trk: track }); // (held while the chord sounds)
                 }
                 const sp = n.stroke && !own ? T.strum(ev, n) : 0;
-                const hit = { t: t0 + sp, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - sp - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1 };
+                const hit = { t: t0 + sp, pitch: n.pitch, dur: Math.max(0.05, t1 - t0 - sp - 0.02), vel: loud(T.velocity(n), df(bi, ev.tick)), trk: track, end: t1, beat: spt * TC.TPQ };
                 hits.push(hit);
                 sounding.set(key, hit);
                 continue;
@@ -177,7 +178,7 @@
             return;
           }
           const v = TC.pitch.chordVoicing(x.ch), vel = (doc.harmony.vol / 100) * 0.6;
-          const hs = [v.bass].concat(v.tones).map((pitch, j) => ({ t: a, pitch, dur: Math.max(0.05, b - a - 0.02), vel: j ? vel : vel * 1.2, trk: chordTrk, end: b, chord: true }));
+          const hs = [v.bass].concat(v.tones).map((pitch, j) => ({ t: a, pitch, dur: Math.max(0.05, b - a - 0.02), vel: j ? vel : vel * 1.2, trk: chordTrk, end: b, chord: true, beat: spt * TC.TPQ }));
           hits.push(...hs);
           padNow = { key, end: b, hits: hs };
         });

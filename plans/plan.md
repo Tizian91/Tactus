@@ -69,6 +69,10 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
    Noten findet, ob die Lagen der Instrumente passen, ob die Ringe auf dem Tablet gut zu sehen sind.
 7. **Klavier: Noten zwischen den Händen** und **Lage der Akkorde** (gebaut 2026-11-26, siehe die beiden Abschnitte unten): ob das Ziehen in
    die andere Zeile auf dem Tablet gut geht, ob die Lagen die Griffe / Begleitungen geben, die man erwartet.
+8. **Akkord-Teppich / Flächen kommen zu spät** (Rückmeldung 2026-11-26, 75 BPM; geändert 2026-11-26): beim Abspielen hängen Ein- und
+   Ausschwingen am Tempo – Einschwingen höchstens 1/8 Schlag (75 BPM: 0,1 s statt 0,4 s), Ausklingen höchstens 1/3 Schlag; gilt für alle
+   Melodie-Klänge (Fläche, Streicher …), angetippte Töne klingen wie bisher. Prüfen: kommt der Akkord jetzt pünktlich, ist die Fläche noch
+   weich genug? Falls zu hart: Anteil (1/8) größer machen (`AU.tone`, `js/audio.js`).
 
 ### Als Nächstes (Vorschläge, Reihenfolge offen)
 

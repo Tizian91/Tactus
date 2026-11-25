@@ -1446,7 +1446,69 @@ setTimeout(() => {
           while (TC.history.undoStack.length > undoCp) TC.actions.undo();
           S.clipboard = null;
           S.trackId = S.doc.tracks[0].id;
+          // check notes: a melody under Am -> F (the E held into F, an F♯ outside C major) - switched on in the panel,
+          // rings in the score, a list; set right in one undo step; the note menu offers the nearest chord tone
+          // (run at the end of the chain: it scrolls to the notes, and the menu needs the hold time)
+          const ckTest = (done) => {
+          const undoCk = TC.history.undoStack.length, ck = TC.score.addTrack(S.doc, 'Check', null, 'pitched');
+          const ckNote = (bar, tick, dur, pitch, tie) => { const n = Object.assign(TC.newPitchNote(pitch, null, {}), tie ? { tie: true } : {}); TC.score.place(S.doc, ck, bar, 0, tick, dur, n); return n; };
+          TC.score.setScale(ck, 0, { l: 0, a: 0, id: 'major' }); ck.bars.forEach((b) => { b.scale = null; }); // (C major: the F♯ is outside)
+          TC.score.setChord(S.doc, 0, 0, { name: 'Am' });
+          TC.score.setChord(S.doc, 1, 0, { name: 'F' });
+          ckNote(0, 0, 1920, 69);
+          const ckE = ckNote(0, 1920, 1920, 76), ckE2 = ckNote(1, 0, 960, 76, true), ckFis = ckNote(1, 1440, 480, 78); // (bar 2 may be 3/4 here)
+          S.trackId = ck.id;
+          TC.commit();
+          const ckBox = (v) => document.querySelector(`#panel-settings input[data-action="toggleCheck"][data-value="${v}"]`);
+          ok('check notes: a section in the right panel, all off - no rings', !!ckBox('chord') && !ckBox('chord').checked && !document.querySelector('.score .chk'));
+          ckBox('chord').click();
+          ckBox('scale').click();
+          const ckList = () => [...document.querySelectorAll('#panel-settings [data-action="showCheck"]')];
+          ok('check notes: chord and scale on - the E held into F and the F♯ ringed and listed: ' + ckList().map((b) => b.textContent).join(' | '),
+            document.querySelectorAll('.score .chk.chord').length === 1 && document.querySelectorAll('.score .chk.scale').length === 1 && ckList().length === 2);
+          if (ckList()[1]) ckList()[1].click();
+          ok('check notes: a find tapped in the list - its note selected', S.selection.size === 1 && S.selection.has(ckFis.id));
+          TC.actions.selectNone();
+          const ckFix = document.querySelector('#panel-settings [data-action="fixCheck"][data-value="chord"]');
+          if (ckFix) ckFix.click();
+          ok('check notes: "Onto chord tones" - the held E becomes C (in Am and F), the whole tie', !!ckFix && ckE.pitch === 72 && ckE2.pitch === 72 && document.querySelectorAll('.score .chk.chord').length === 0);
+          const ckUndo = TC.history.undoStack.length;
+          TC.actions.undo();
+          ok('check notes: one undo step brings it back', TC.history.undoStack.length === ckUndo - 1 && TC.score.findNote(S.doc, ckE.id).note.pitch === 76);
+          const ckSel = document.querySelector('#panel-settings [data-action="fixCheck"][data-value="scale"]');
+          if (ckSel) ckSel.click();
+          ok('check notes: "Onto the scale" - the F♯ goes up to G', !!ckSel && TC.score.findNote(S.doc, ckFis.id).note.pitch === 79);
+          // the note menu: the E (still found) offers the nearest chord tone
+            S.trackId = ck.id;
+            TC.refresh();
+            const ckNow = S.doc.tracks.find((t) => t.id === ck.id); // (undo builds the tracks anew)
+            const L = TC.render.layout, z = L.staves.find((q) => q.track === ckNow), ckHead = L.heads.find((h) => h.id === ckE2.id);
+            if (!ckHead || !z) { ok('check notes: the head of the held E is drawn', false); return done(); }
+            const v = S.doc.view, r = vp.getBoundingClientRect();
+            const hx = r.left + v.x + ckHead.x * v.zoom, hy = r.top + v.y + (z.dy + ckHead.y) * v.zoom;
+            const realOpen = TC.menu.open;
+            let ckMenu = false;
+            TC.menu.open = (items) => { ckMenu = items.some((it) => it && it.label && /chord tone|Akkordton/.test(it.label)); };
+            const pe = (type) => new PointerEvent(type, { clientX: hx, clientY: hy, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, pointerId: 13, pointerType: 'mouse' });
+            vp.dispatchEvent(pe('pointermove'));
+            vp.dispatchEvent(pe('pointerdown'));
+            setTimeout(() => {
+              vp.dispatchEvent(pe('pointerup'));
+              TC.menu.open = realOpen;
+              ok('check notes: the note menu of a note found offers "To the nearest chord tone"', ckMenu);
+              ['chord', 'scale'].forEach((k) => { if (S.settings['check' + k[0].toUpperCase() + k.slice(1)]) TC.actions.toggleCheck(k); });
+              while (TC.history.undoStack.length > undoCk) TC.actions.undo();
+              S.trackId = S.doc.tracks[0].id;
+              TC.refresh();
+              ok('check notes: switched off, undone - no rings, the track gone', !document.querySelector('.score .chk') && !S.doc.tracks.some((t) => t.name === 'Check'));
+              done();
+            }, 500);
+          };
+          S.trackId = S.doc.tracks[0].id;
           // the view dragged with the middle button: held, a pause does not draw it anew (a jolt); let go: drawn anew
+          // (first the samples loaded or failed: when they are done, the score is drawn anew - not a pause)
+          const midTest = () => {
+          if (TC.samples && TC.samples.state() === 'loading') return void setTimeout(midTest, 100);
           const svgEl = document.getElementById('score'), rr = vp.getBoundingClientRect();
           const pe = (type, x) => new PointerEvent(type, { clientX: x, clientY: rr.top + 100, button: 1, buttons: type === 'pointerup' ? 0 : 4, bubbles: true, pointerId: 11, pointerType: 'mouse' });
           vp.dispatchEvent(pe('pointerdown', rr.left + 300));
@@ -1459,13 +1521,17 @@ setTimeout(() => {
                 window.__exNames.length > 0 && window.__exNames.every((n) => !/FakeKit/.test(n)) && window.__exNames.some((n) => /Iron\.mid$/.test(n)));
               if (window.__exRestore) window.__exRestore();
               ok('view held with the middle button: not drawn anew in a pause (' + heldT + '), drawn when let go', !!heldT && svgEl.style.transform === '');
-              S.doc.view.x = 190; TC.refresh();
-              const pre = document.createElement('pre');
-              pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
-              pre.textContent = out.join('\n');
-              document.body.appendChild(pre);
+              ckTest(() => {
+                S.doc.view.x = 190; TC.refresh();
+                const pre = document.createElement('pre');
+                pre.style.cssText = 'position:fixed;right:10px;bottom:30px;background:#fff;color:#000;border:2px solid #333;padding:8px;font:12px monospace;z-index:9999';
+                pre.textContent = out.join('\n');
+                document.body.appendChild(pre);
+              });
             }, 300);
           }, 400);
+          };
+          midTest();
         });
       }, 700);
     }, 700);

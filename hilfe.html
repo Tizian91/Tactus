@@ -32,7 +32,7 @@
     <li><a href="#takte">7. Takte und Form</a>
       <ol><li><a href="#wiederholungen">Wiederholungen</a></li><li><a href="#spruenge">Sprünge (D.S., D.C., Coda)</a></li></ol></li>
     <li><a href="#melodie">8. Melodie schreiben</a>
-      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde setzen</a></li><li><a href="#keyswitch">Keyswitches</a></li></ol></li>
+      <ol><li><a href="#melodie-setzen">Töne setzen</a></li><li><a href="#melodie-aendern">Ändern</a></li><li><a href="#tonleitern">Tonleitern</a></li><li><a href="#akkorde">Akkorde</a></li><li><a href="#liedtext">Liedtext</a></li><li><a href="#klavier">Klavier</a></li><li><a href="#akkordnoten">Akkorde setzen</a></li><li><a href="#noten-pruefen">Noten prüfen</a></li><li><a href="#keyswitch">Keyswitches</a></li></ol></li>
     <li><a href="#notenblatt">9. Notenblatt und PDF</a></li>
     <li><a href="#wiedergabe">10. Wiedergabe und Klang</a>
       <ol><li><a href="#verzoegerung">Verzögerung ausgleichen</a></li></ol></li>
@@ -538,7 +538,9 @@ Welcher Akkord es ist, bestimmst du im Akkord-Panel rechts (Stufenknopf oder ein
         getippt ergibt eine Umkehrung weiter oben; ein Schrägstrich-Bass (C/E) liegt darunter.</li>
     </ul>
     Ein Instrument gewählt setzt einmal einen passenden Klang und Schlüssel (Bass: E-Bass, Bassschlüssel) – beides danach frei änderbar.
-    Die <span class="ui">Stimmlage</span> (Sopran …) gibt es nur bei Gesang. Ältere Stücke bekommen ihr Instrument aus dem Klang.</li>
+    Bei Gesang wählt man die <span class="ui">Stimmlage</span> (Sopran …), bei Gitarre, Bass, Keys und Streicher / Bläser den
+    <span class="ui">Umfang</span> (Gitarre: 6 Saiten, Drop D, 7 oder 8 Saiten; Bass: 4, 5 oder 6 Saiten; Violine, Cello, Trompete …) – für
+    <a href="#noten-pruefen">Noten prüfen</a>. Ältere Stücke bekommen ihr Instrument aus dem Klang.</li>
   <li><b>Töne:</b> <span class="ui">wie Symbol</span> (der Akkord der Akkordzeile, wie er ist) · <span class="ui">Dreiklang</span> (Grundton, Terz,
     Quinte – aus C7 wird C E G) · <span class="ui">Vierklang</span> (mit Septime: seiner eigenen, sonst der aus der Tonleiter – in C-Dur wird C zu
     Cmaj7, G zu G7, Dm zu Dm7) · <span class="ui">Power</span> (Grundton, Quinte, Oktave – auf der Gitarre auf der E- oder A-Saite, wie gespielt).</li>
@@ -556,6 +558,25 @@ Welcher Akkord es ist, bestimmst du im Akkord-Panel rechts (Stufenknopf oder ein
     Klang „Gitarre“ – sie startet in der Tonleiter des Stücks.</li>
 </ul>
 <figure><img src="help/img/akkordnoten.png" alt="Das Melodie-Beispiel mit einer Gitarre, die ihre Akkorde mit Ab- und Aufschlägen spielt"><figcaption>Eine Gitarre spielt die Akkorde des Melodie-Beispiels: echte Griffe, Ab- und Aufschläge (⊓ / V) darüber. Links das Noten-Panel mit <span class="ui">Akkorde → Setzen</span>.</figcaption></figure>
+
+<h3 id="noten-pruefen">Noten prüfen</h3>
+<p>Panel <span class="ui">Takt · Stück → Noten prüfen</span>: drei Prüfungen zum Einschalten. Gefundene Noten bekommen einen farbigen Ring
+(nur am Bildschirm, nicht im PDF) und stehen mit Takt und Grund in einer Liste – antippen wählt die Note aus.</p>
+<ul>
+  <li><b>Passt nicht zum Akkord</b> (orange): Eine Melodie hat ständig Durchgangstöne – deshalb findet Tactus nur Noten, die auffallen:
+    <b>genau auf einem Akkordwechsel</b>, <b>in einen neuen Akkord hinein gehalten</b> (Am → F, das E klingt weiter) und <b>lange Noten
+    auf einem Schlag</b> (ab einer Viertel, Haltebögen mitgezählt). <span class="ui">Streng</span> prüft jede Note.</li>
+  <li><b>Außerhalb der Tonleiter</b> (blau): Töne, die nicht in der Tonleiter des Takts liegen. Ein Ton des Akkords, der gerade klingt, zählt
+    nicht als Fehler (G♯ über E7 in a-Moll ist gewollt).</li>
+  <li><b>Außerhalb der Lage</b> (violett, gestrichelt): zu hoch oder zu tief für die Stimmlage bzw. den Umfang des Instruments (Panel
+    <span class="ui">Spur</span>). Gitarre, Bass und Klavier haben einen Standard; bei Gesang und Streichern / Bläsern gilt erst eine gewählte Lage.</li>
+</ul>
+<p><b>Korrigieren:</b> <span class="ui">Auf Akkordtöne setzen</span> (zum nächsten Akkordton; ein gehaltener Ton zu einem Ton, den beide
+Akkorde haben), <span class="ui">Auf die Tonleiter setzen</span> (einen Halbton: ein ♯ nach oben, ein ♭ nach unten),
+<span class="ui">In die Lage holen</span> (um Oktaven). Die Knöpfe wirken auf die ausgewählten gefundenen Noten, sonst auf alle; übergebundene
+Noten wandern als Ganzes, alles ist ein Rückgängig-Schritt. Einzeln: Note halten (Rechtsklick) → <span class="ui">Auf den nächsten Akkordton</span>.</p>
+<p><b>Geprüfte Spuren:</b> die Melodien – eine linke Hand und Spuren, die meist Akkorde spielen (Begleitung), nicht. Bei mehreren Spuren lässt
+sich das im Abschnitt je Spur umschalten.</p>
 
 <h3 id="keyswitch">Keyswitches: Spielweisen eines Gitarren-VSTs (UJAM Iron 2 …)</h3>
 <p>Viele Instrument-VSTs wechseln die Spielweise über sehr tiefe Tasten (Keyswitches): gedämpft, Dead Notes, Slides, Ab- und

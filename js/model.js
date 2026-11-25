@@ -40,7 +40,10 @@
  *   Track:     { id, name, kind: 'drums' | 'pitched' | 'tab', channel, program, volume (0 … 127), pan (-100 … 100), fill, kit, oneLine, hidden,
  *                mute, solo, profile, profileName, midiOut, midiCh,
  *                melody tracks (pitched): clef: 'treble' | 'treble8' | 'bass' | 'bass8', scale: { l, a, id } (js/pitch.js),
- *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range)
+ *                                         voice: '' | 'soprano' | 'alto' | 'tenor' | 'baritone' | 'bass' (range) - or the
+ *                                                    range of an instrument: 'gtr6', 'bass5' … (js/pitch.js P.RANGES)
+ *                                         check: true | false   (only when chosen) checked in "Check notes" or not
+ *                                                    (else: a melody is, a left hand / accompaniment not - js/check.js)
  *                                         inst: 'voice' | 'keys' | 'guitar' | 'bass' | 'ensemble' | 'pad'   the
  *                                                    instrument: how chords are written for it (js/accomp.js)
  *                                         ksw: { tpl, name, c3, noteShift, poly, keys }   (only when set) the
@@ -468,7 +471,8 @@
       if (kind === 'pitched') {
         if (TC.pitch && TC.pitch.CLEFS[t.clef]) out.clef = t.clef;
         out.scale = TC.pitch ? TC.pitch.cleanScale(t.scale) : out.scale;
-        if (TC.pitch && TC.pitch.VOICES[t.voice]) out.voice = t.voice;
+        if (TC.pitch && (TC.pitch.VOICES[t.voice] || (TC.pitch.RANGES && TC.pitch.RANGES[t.voice]))) out.voice = t.voice; // a voice, or an instrument's range
+        if (typeof t.check === 'boolean') out.check = t.check; // checked (right panel "Check notes") or not - else as its notes say
         // how the chords guide writing into it (older files: the score's - harmony.guide, a bar's own from it on)
         const oldG = (raw.bars[0] && raw.bars[0].guide) || hm.guide;
         out.guide = TC.GUIDES.includes(t.guide) ? t.guide : TC.GUIDES.includes(oldG) ? oldG : 'mark';

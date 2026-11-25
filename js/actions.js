@@ -469,7 +469,7 @@
     t.inst = v;
     t.program = def.program;
     if (!piano) t.clef = def.clef;
-    if (v !== 'voice') t.voice = '';
+    if (!TC.pitch.rangeFits(t.voice, v)) t.voice = ''; // (a range of the instrument before: gone - its own default holds)
     sync(t);
     TC.commit();
     TC.ui.hint(tr('Instrument: {name} - a sound and a clef that fit it (both can be changed)', { name: de() ? def.de : def.en }));
@@ -491,12 +491,12 @@
     TC.commit();
     if (S.settings.sound) TC.audio.previewTone(t.clef === 'bass8' ? 36 : t.clef === 'bass' ? 48 : t.clef === 'treble8' ? 60 : 67, t);
   };
-  /** Melody track: voice (range; sets the clef that fits it). */
+  /** Melody track: voice (range; sets the clef that fits it) - or the range of its instrument (guitar strings …). */
   A.setTrackVoice = function (v) {
     const t = TC.curTrack();
     if (t.kind !== 'pitched') return;
-    t.voice = TC.pitch.VOICES[v] ? v : '';
-    if (t.voice) t.clef = TC.pitch.VOICES[v].clef;
+    t.voice = TC.pitch.rangeFits(v, t.inst || 'voice') ? v : '';
+    if (TC.pitch.VOICES[t.voice]) t.clef = TC.pitch.VOICES[t.voice].clef; // (an instrument keeps its clef)
     TC.commit();
   };
   /**
@@ -945,6 +945,81 @@
     TC.refresh();
     scrollToBar(a);
   };
+  // ---- Checking notes (js/check.js): rings in the score, a list in the panel, setting right ----------------------
+
+  /** Which checks are on: { chord, scale, range, strict } (settings of this browser). */
+  const checkOpts = () => ({ chord: !!S.settings.checkChord, scale: !!S.settings.checkScale, range: !!S.settings.checkRange, strict: !!S.settings.checkStrict });
+  /** Is any check on? */
+  A.checking = () => !!(S.settings.checkChord || S.settings.checkScale || S.settings.checkRange);
+  /** The notes found now (cached per change): { list: [Find], byNote: Map(note id -> [kind …]) }. */
+  let checkKey = '', checked = null;
+  A.checked = function () {
+    const o = checkOpts(), key = S.rev + ':' + JSON.stringify(o) + ':' + S.doc.tracks.map((t) => t.id + t.check + t.voice + t.inst).join();
+    if (key !== checkKey || !checked) {
+      checkKey = key;
+      const list = A.checking() && TC.check ? TC.check.find(S.doc, o) : [];
+      const byNote = new Map();
+      list.forEach((f) => { if (!byNote.has(f.id)) byNote.set(f.id, []); if (!byNote.get(f.id).includes(f.kind)) byNote.get(f.id).push(f.kind); });
+      checked = { list, byNote };
+    }
+    return checked;
+  };
+  const CHECK_SET = { chord: 'checkChord', scale: 'checkScale', range: 'checkRange', strict: 'checkStrict' };
+  /** Switch a check on / off (chord, scale, range, strict). */
+  A.toggleCheck = function (k) {
+    const key = CHECK_SET[k];
+    if (!key) return;
+    S.settings[key] = !S.settings[key];
+    TC.saveSettings();
+    TC.refresh();
+    if (k !== 'strict' && S.settings[key]) {
+      const n = A.checked().list.filter((f) => f.kind === k).length;
+      TC.ui.hint(n ? tr('{n} notes found - marked in colour', { n }) : tr('Nothing found - every note fits'));
+    }
+  };
+  /** A melody track checked or not (its own choice; the same as the default: no choice kept). */
+  A.toggleCheckTrack = function (id) {
+    const t = S.doc.tracks.find((x) => x.id === id);
+    if (!t || t.kind !== 'pitched') return;
+    const on = !TC.check.tracked(S.doc, t);
+    if (on === TC.check.trackedByDefault(S.doc, t)) delete t.check;
+    else t.check = on;
+    TC.commit();
+  };
+  /** The finds to set right: of the selected notes, if any of them is found - else all (of one kind, if given). */
+  function checkTargets(kind) {
+    const list = A.checked().list.filter((f) => !kind || f.kind === kind);
+    const sel = list.filter((f) => S.selection.has(f.id));
+    return sel.length ? sel : list;
+  }
+  /** Set the notes found right: 'chord' (nearest chord tone), 'scale' (onto the scale), 'range' (octaves) - one undo step. */
+  A.fixCheck = function (kind) {
+    if (!CHECK_SET[kind] || kind === 'strict') return;
+    const list = checkTargets(kind);
+    if (!list.length) return;
+    const r = TC.check.fix(S.doc, list, kind);
+    if (r.done) TC.commit();
+    else TC.refresh();
+    TC.ui.hint(r.skipped ? tr('{n} notes set right, {m} left as they are (no fitting tone free)', { n: r.done, m: r.skipped }) : tr('{n} notes set right', { n: r.done }));
+  };
+  /** Note menu: this note (and the selected ones found) to the nearest chord tone. */
+  A.noteToChord = function (id) {
+    const list = A.checked().list.filter((f) => f.kind === 'chord' && (f.id === id || (S.selection.has(id) && S.selection.has(f.id))));
+    if (!list.length) return;
+    const r = TC.check.fix(S.doc, list, 'chord');
+    if (r.done) TC.commit();
+  };
+  /** Panel list: select a note found and show its bar. */
+  A.showCheck = function (k) {
+    const f = A.checked().list[Number(k)];
+    if (!f) return;
+    S.trackId = f.track.id;
+    S.selection = new Set([f.id]);
+    TC.selectBar(f.bar);
+    TC.refresh();
+    scrollToBar(f.bar);
+  };
+
   /** Bar menu: a %-bar shows its notes again (all selected bars that are % in this track). */
   A.simileToNotes = function (i = curBar()) {
     const t = TC.curTrack(), [a, b] = rangeAt(i);

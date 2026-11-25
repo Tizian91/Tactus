@@ -91,6 +91,10 @@ window.TC = window.TC || {};
       followMode: 'jump',   // … 'jump' (when the cursor reaches the edge) or 'smooth' (glides along)
       followSections: false, // … at a part (text above a bar): that bar to the top left of the view
       swingMidi: true,      // swing / shuffle of the score also in the MIDI export (off: straight notes)
+      checkChord: false,    // "Check notes" (right panel, js/check.js): notes that do not fit the chord …
+      checkScale: false,    // … outside the scale of their bar …
+      checkRange: false,    // … outside the range of the voice / instrument - marked in colour
+      checkStrict: false,   // … the chord: every note (off: only where it stands out - on a change, held into one, long on a beat)
       countIn: false,       // one bar of clicks before playing
       loop: false,          // playback repeats (the selected bar, or everything)
       volume: 0.8,

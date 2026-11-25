@@ -563,4 +563,45 @@
     baritone: { range: [43, 65], clef: 'bass', en: 'Baritone', de: 'Bariton' },
     bass: { range: [40, 62], clef: 'bass', en: 'Bass', de: 'Bass' },
   };
+  /**
+   * Ranges of instruments (sounding pitches; track.voice holds the key, like a voice's): what a typical instrument of
+   * the kind plays - a guitar or a bass by its strings (frets: 22 on six strings, 24 on more). inst: the track's
+   * instrument (track.inst) it is offered for; the first one of an instrument is its default (P.rangeKey).
+   */
+  P.RANGES = {
+    gtr6: { inst: 'guitar', range: [40, 86], en: '6 strings (E standard)', de: '6 Saiten (E-Standard)' },
+    gtrDropD: { inst: 'guitar', range: [38, 86], en: '6 strings, Drop D', de: '6 Saiten, Drop D' },
+    gtr7: { inst: 'guitar', range: [35, 88], en: '7 strings (low B)', de: '7 Saiten (tiefes H)' },
+    gtr8: { inst: 'guitar', range: [30, 88], en: '8 strings (low F♯)', de: '8 Saiten (tiefes Fis)' },
+    bass4: { inst: 'bass', range: [28, 67], en: '4 strings (E A D G)', de: '4 Saiten (E A D G)' },
+    bass5: { inst: 'bass', range: [23, 67], en: '5 strings (low B)', de: '5 Saiten (tiefes H)' },
+    bass6: { inst: 'bass', range: [23, 72], en: '6 strings (B … C)', de: '6 Saiten (H … C)' },
+    piano: { inst: 'keys', range: [21, 108], en: 'Piano (88 keys)', de: 'Klavier (88 Tasten)' },
+    keys61: { inst: 'keys', range: [36, 96], en: 'Keyboard (61 keys)', de: 'Keyboard (61 Tasten)' },
+    violin: { inst: 'ensemble', range: [55, 100], en: 'Violin', de: 'Violine' },
+    viola: { inst: 'ensemble', range: [48, 88], en: 'Viola', de: 'Bratsche' },
+    cello: { inst: 'ensemble', range: [36, 76], en: 'Cello', de: 'Cello' },
+    flute: { inst: 'ensemble', range: [60, 96], en: 'Flute', de: 'Querflöte' },
+    trumpet: { inst: 'ensemble', range: [52, 82], en: 'Trumpet', de: 'Trompete' },
+    trombone: { inst: 'ensemble', range: [40, 72], en: 'Trombone', de: 'Posaune' },
+    altoSax: { inst: 'ensemble', range: [49, 80], en: 'Alto sax', de: 'Altsaxophon' },
+    tenorSax: { inst: 'ensemble', range: [44, 76], en: 'Tenor sax', de: 'Tenorsaxophon' },
+  };
+  /** The ranges offered for an instrument (track.inst): [key …] - a voice: the voices. */
+  P.rangesFor = (inst) => (!inst || inst === 'voice' ? Object.keys(P.VOICES) : Object.keys(P.RANGES).filter((k) => P.RANGES[k].inst === inst));
+  /** Does a range key (track.voice) fit an instrument? */
+  P.rangeFits = (key, inst) => !!key && P.rangesFor(inst).includes(key);
+  /**
+   * The range key that holds for a track: its own (track.voice, if it fits its instrument), else the default of its
+   * instrument (guitar: 6 strings, bass: 4, keys: the piano), else '' (a voice, strings, a pad: none chosen - no range).
+   */
+  P.rangeKey = function (track) {
+    const inst = track.inst || 'voice';
+    if (P.rangeFits(track.voice, inst)) return track.voice;
+    return { guitar: 'gtr6', bass: 'bass4', keys: 'piano' }[inst] || '';
+  };
+  /** A range by its key: { range, en, de } (a voice or an instrument), or null. */
+  P.range = (key) => P.VOICES[key] || P.RANGES[key] || null;
+  /** The dia of a letter with an alter in the octave of `pitch` (C4 + letter E, alter 0 -> E4), or null. */
+  P.diaOf = (pitch, l, a) => diaFor(pitch, l, a);
 })(window.TC);

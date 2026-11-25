@@ -1321,6 +1321,9 @@
       { label: '♭ ' + tr('a semitone lower'), action: choose(() => A().alterSelection(-1)) },
     ];
     if (alt) items.push({ label: tr('Write as {name}', { name: P.name(((alt.dia % 7) + 7) % 7, alt.a, de()) }), action: choose(() => A().respell()) });
+    // found by "Check notes" (does not fit the chord): to the nearest chord tone
+    const found = A().checking() && A().checked().byNote.get(n.id);
+    if (found && found.includes('chord')) items.push({ label: '◎ ' + tr('To the nearest chord tone'), action: choose(() => A().noteToChord(n.id)) });
     // a tie to the next note, when it is the same tone and starts where this one ends (also in the next bar) - or after
     // a rest: this note then fills it
     const next = TC.score.chordTies(S.doc, d.hit.track, d.hit.bar, d.hit.voice, d.hit.ev); // (a chord: all its tones the next one has)

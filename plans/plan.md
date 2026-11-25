@@ -50,7 +50,7 @@ Song-Datenbanken.
 | **6: Tabulatur** | Saiten / Bünde, Stimmungen, Tabulatur unter dem Notensystem, Bend / Slide | |
 | **7: Extras** | .gp-Export (Guitar Pro 7/8), MIDI-Eingang (Aufnahme), Kopieren / Einfügen von Takten, Volta-Klammern | |
 
-## Offen (sortiert, Stand 2026-11-23)
+## Offen (sortiert, Stand 2026-11-25)
 
 Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu tun ist.
 
@@ -65,14 +65,12 @@ Die Einzelheiten stehen bei den Abschnitten weiter unten; hier nur, was noch zu 
    Windows MIDI Services) keine Daten, obwohl der Browser ihn öffnet – wohl loopMIDIs Kompatibilitätsschicht; falls nötig: die eigenen
    Loopback-Ports von Windows MIDI Services probieren.
 5. Kit-Profile ohne Hersteller-Drummap (Anlernen per ▶ über Cubase).
+6. **Noten prüfen** (gebaut 2026-11-25, siehe „Noten prüfen“ unten): ob die Akkord-Regel („nur was auffällt“) im Alltag die richtigen
+   Noten findet, ob die Lagen der Instrumente passen, ob die Ringe auf dem Tablet gut zu sehen sind.
 
 ### Als Nächstes (Vorschläge, Reihenfolge offen)
 
-- **Noten prüfen** (vorgeschlagen als Erstes, 2026-11-23): ein Abschnitt im Panel wie „Wiederholungen finden“, drei Prüfungen zum
-  Einschalten – *passt nicht zum Akkord* (kein Ton des Akkords an ihrer Stelle, z. B. nach einem Akkordwechsel Am → F das E),
-  *außerhalb der Tonleiter*, *außerhalb der Stimmlage* (zu hoch / tief für Sopran, Alt …). Funde farbig markiert, mit Anzahl;
-  Knöpfe „auf Akkordtöne setzen“ (nächster Akkordton), „auf die Tonleiter setzen“, „in die Stimmlage holen“ (Oktave) – für alle Funde
-  oder die ausgewählten Noten; einzeln im Notenmenü „auf den nächsten Akkordton“.
+- ~~**Noten prüfen**~~ ✅ (2026-11-25, zum Ausprobieren) – siehe Abschnitt „Noten prüfen“ weiter unten.
 - **Klavier: Noten zwischen den Händen**: eine Note in die andere Zeile ziehen (Tonhöhe aus der Stelle dort, Zeit und Länge bleiben,
   Sperren gelten); im Notenmenü „In die linke / rechte Hand“ (der Ton bleibt genau) – auch für mehrere ausgewählte Noten.
 - **Lage der Akkorde** (Noten-Panel → Akkorde, neben „Töne“, je nach Instrument): Klavier linke Hand – wie getippt · Grundton tief +
@@ -358,6 +356,39 @@ Schritte:
 - **Sprünge wie in Guitar Pro** ✅: zusätzlich 𝄋𝄋 Segno Segno, ⊕⊕ Double Coda, „To Coda ⊕⊕“, D.S.S. (Dal Segno Segno) und jeweils
   „al Double Coda“ (D.C. / D.S. / D.S.S.); Abspielen, MIDI, „Was fehlt“, MusicXML (`segno2` / `coda2`) folgen. Später für den
   `.gp`-Export genau das Modell von Guitar Pro (Ziele und Sprünge getrennt).
+
+## Noten prüfen ✅ (2026-11-25, zum Ausprobieren)
+
+Entschieden mit dem Nutzer (2026-11-25): Akkord-Regel „nur was auffällt“ mit Schalter „Streng“; typische Lagen für Instrumente
+(Gitarre / Bass nach Saitenzahl); nur die eigentliche Melodie wird geprüft, nicht die Begleitung.
+
+- Panel **Takt · Stück → Noten prüfen** (unter „Wiederholungen finden“, nur mit Melodie-Spuren): drei Häkchen – **Passt nicht zum
+  Akkord** (orange), **Außerhalb der Tonleiter** (blau), **Außerhalb der Lage** (violett, gestrichelt); Einstellungen des Browsers
+  (`checkChord` / `checkScale` / `checkRange` / `checkStrict`), nicht des Stücks.
+- **Akkord-Regel:** gefunden wird eine Note genau auf einem Akkordwechsel, eine in einen neuen Akkord hinein gehaltene (auch übergebunden:
+  Am → F, das E) und eine lange (ab einer Viertel, Haltebögen mitgezählt) auf einem Schlag. **Streng:** jede Note gegen ihren Akkord.
+- **Tonleiter:** die Tonleiter des Takts (beim Klavier die der oberen Zeile); ein Ton des klingenden Akkords zählt nicht (G♯ über E7 in
+  a-Moll); chromatisch: nie.
+- **Lage:** `track.voice` hält jetzt auch den Umfang eines Instruments (`P.RANGES`): Gitarre 6 Saiten (Standard) / Drop D / 7 / 8 Saiten,
+  Bass 4 (Standard) / 5 / 6 Saiten, Keys Klavier 88 (Standard) / Keyboard 61, Streicher / Bläser: Violine, Bratsche, Cello, Querflöte,
+  Trompete, Posaune, Alt- / Tenorsax (kein Standard). Panel → Spur: „Stimmlage“ bei Gesang, sonst „Umfang“. Klavier (zwei Zeilen): immer
+  88 Tasten. Gesang ohne Stimmlage: keine Prüfung, das Panel sagt es.
+- **Geprüfte Spuren:** Standard = Melodie-Spuren, die keine linke Hand sind und nicht meist Akkorde spielen (mehr als die Hälfte der
+  Schläge mit mehreren Tönen = Begleitung). Je Spur umschaltbar (`track.check`, nur gespeichert, wenn anders als der Standard).
+- **Funde:** Ring um den Notenkopf (nicht im PDF / auf der Bühne), Liste im Panel (Takt, Spur, Grund; antippen wählt die Note aus).
+- **Korrigieren** (ausgewählte gefundene Noten, sonst alle; ein Rückgängig-Schritt; die ganze Haltebogen-Kette): **Auf Akkordtöne
+  setzen** – nächster Akkordton, gleich weit: zur Note davor hin; in einen neuen Akkord gehalten: ein Ton beider Akkorde, wenn es einen
+  gibt (E über Am → F wird C); ein Ton, den der Akkord der Note schon hat, wird übersprungen. **Auf die Tonleiter setzen** – ein ♯ nach
+  oben, ein ♭ nach unten, sonst zur Note davor hin. **In die Lage holen** – um Oktaven. Notenmenü einer gefundenen Note: **Auf den
+  nächsten Akkordton**.
+- Code: `js/check.js` (`TC.check.find` / `fix` / `target` / `tracked` / `rangeOf`), `P.RANGES` / `rangeKey` / `rangesFor` / `diaOf` in
+  `js/pitch.js`, Aktionen `A.checked` / `toggleCheck` / `toggleCheckTrack` / `fixCheck` / `noteToChord` / `showCheck`, Panel
+  `checkSection`, Ringe in `drawVoice`. Tests: `test_check.js`, Klick-Test (9 Prüfungen). Handbuch Kapitel 8 „Noten prüfen“.
+- Später möglich: Noten der Begleitung gegen die Akkorde prüfen (eigener Schalter); Lagen für Bläser in B / Es als geschriebene Töne.
+- Später möglich (2026-11-26, Nutzer: „reicht erstmal“): Begleitung sicherer erkennen – Noten aus „Akkorde als Noten“ markieren, eine
+  Spur aus meist solchen Noten ist Begleitung (auch gebrochen: Zupfen, Alberti); das Zählen der Akkorde bleibt für Handgesetztes.
+  Bisherige Grenzen: gebrochene Begleitung in einer eigenen Spur gilt als Melodie, eine Melodie mit vielen Doppelgriffen als Begleitung.
+- Wartet auf die Liste des Nutzers nach längerem Ausprobieren (2026-11-26).
 
 ## Phase 5 – Melodien (Schritt A ✅, B ✅, C Liedtext ✅, E Klavier ✅ – als Nächstes: Akkorde als Noten, Klavier + Gitarre)
 

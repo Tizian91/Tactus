@@ -571,6 +571,18 @@ body.perform .score .play-cursor { stroke: var(--accent); stroke-width: 4; trans
 .found-dot.sec0 { background: #2fa36b; }
 .found-dot.sec1 { background: #8a4fd8; }
 .found-dot.sim { background: #e8892a; }
+/* notes found (panel "Check notes"): a ring around the head - chord orange, scale blue, range violet */
+.found-dot[class*="chk-"] { border-radius: 50%; display: inline-block; vertical-align: -1px; }
+.found-dot.chk-chord { background: #e8762a; }
+.found-dot.chk-scale { background: #2b7de0; }
+.found-dot.chk-range { background: #9a4fd8; }
+.score .chk { fill: none; stroke-width: 2.2; pointer-events: none; }
+.score .chk.chord { stroke: #e8762a; fill: #e8762a; fill-opacity: 0.12; }
+.score .chk.scale { stroke: #2b7de0; }
+.score .chk.range { stroke: #9a4fd8; stroke-dasharray: 3 2; }
+.sub-check { margin-left: 22px; }
+.btn-col { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.btn-col button { text-align: left; padding: 4px 8px; }
 
 /* Playing & practising: ▾ at ▶ (toolbar) and ♩ in the stage bar - click, count-in, loop, following, parts */
 .transport .practice-btn { min-width: 20px; padding-left: 2px; padding-right: 2px; margin-left: -3px; }

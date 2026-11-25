@@ -55,6 +55,7 @@
   const ACCENT = { 1: ['', '', 1.356], 2: ['', '', 0.94] };
 
   let svg, world, stat, hov, play, selg, ovl, world2, dyng;
+  let checkMarks = null; // notes found (panel "Check notes"): note id -> [kind …], a ring around each head (not printed)
   let staffNow = null; // the staff drawVoice draws into (its heads remember the track and the staff)
   let signers = new Map(); // track -> signsAt(bar, tick) of its keyswitches (staccato dots, tremolo strokes …)
   const signsOf = (track, bi, tick) => {
@@ -783,6 +784,7 @@
     const doc = S.doc, page = L.page;
     const out = [];
     signers = new Map(); // (the signs of the ways of playing at the notes: worked out once per drawing)
+    checkMarks = !plain && TC.actions && TC.actions.checking && TC.actions.checking() ? TC.actions.checked().byNote : null;
     const lines = L.systems.map(() => []); // markup of each line, in staff coordinates (of the first staff)
     const O = (b) => lines[b.sys];
     // … and of each staff of each line, in its own staff coordinates (drawn at translate(0, dy))
@@ -1434,6 +1436,9 @@
         for (let l = -2; l >= h.line; l -= 2) out.push(line(cx - h.w / 2 - 0.4 * SP, stepY(l), cx + h.w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         for (let l = 10; l <= h.line; l += 2) out.push(line(cx - h.w / 2 - 0.4 * SP, stepY(l), cx + h.w / 2 + 0.4 * SP, stepY(l), 'ledger'));
         const hs = S.selection.has(h.n.id);
+        // a note found by "Check notes": a ring per check (chord, scale, range) behind the head
+        const ck = checkMarks && checkMarks.get(h.n.id);
+        if (ck) ck.forEach((k, j) => out.push(`<circle class="chk ${k}" cx="${f(cx)}" cy="${f(y)}" r="${f(0.95 * SP + j * 3.5)}"/>`));
         // melody: ♯ ♭ ♮ before the head (left of a head moved to the other side of the stem too)
         if (h.acc !== null && h.acc !== undefined) {
           const left = q.x + Math.min(0, ...q.heads.map((z) => z.dx)) - h.w / 2 - 0.2 * SP;

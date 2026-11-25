@@ -216,7 +216,10 @@
   function melodyTrackRows(t) {
     const P = TC.pitch;
     const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`;
-    const voices = [opt('', tr('Any (no range)'), !t.voice)].concat(Object.keys(P.VOICES).map((k) => opt(k, de() ? P.VOICES[k].de : P.VOICES[k].en, t.voice === k))).join('');
+    // the range: a voice (soprano …) or the instrument's (guitar by its strings …) - what "Check notes" checks
+    const inst = t.inst || 'voice', rk = P.rangeKey(t), keys = P.rangesFor(inst);
+    const voices = (inst === 'voice' || inst === 'ensemble' ? opt('', tr('Any (no range)'), !rk) : '') +
+      keys.map((k) => opt(k, de() ? P.range(k).de : P.range(k).en, rk === k)).join('');
     const clefs = Object.keys(P.CLEFS).map((k) => opt(k, de() ? P.CLEFS[k].de : P.CLEFS[k].en, t.clef === k)).join('');
     const listed = TC.MELODY_SOUNDS.some(([, , l]) => l.some(([p]) => p === t.program));
     const sounds = (listed ? '' : opt(t.program, TC.soundName(t.program, de()), true)) + TC.MELODY_SOUNDS.map(([en, dname, list]) =>
@@ -230,7 +233,7 @@
       <div class="row"><label>${tr('Sound')}</label><select data-action="setTrackProgram">${sounds}</select></div>
       ${check('togglePiano', piano, tr('Two staves (piano: right and left hand)'))}
       ${piano ? `<p class="hint tight">${tr(t.lh ? 'You are writing the left hand (lower staff). Tap the upper staff for the right hand.' : 'You are writing the right hand (upper staff). Tap the lower staff for the left hand.')}</p>` : ''}
-      ${piano || (t.inst && t.inst !== 'voice') ? '' : `<div class="row"><label>${tr('Voice')}</label><select data-action="setTrackVoice">${voices}</select></div>`}
+      ${piano || !keys.length ? '' : `<div class="row"><label>${tr(inst === 'voice' ? 'Voice' : 'Range')}</label><select data-action="setTrackVoice">${voices}</select></div>`}
       <div class="row"><label>${tr(piano ? (t.lh ? 'Clef (lower staff)' : 'Clef (upper staff)') : 'Clef')}</label><select data-action="setTrackClef">${clefs}</select></div>`;
   }
   /** Melody track: its scale from the selected bar on (a change here) - in the panel, next to the bar it belongs to. */
@@ -566,6 +569,62 @@
     return `<section data-sec="find"><h3>${tr('Find repeats')}</h3>
       ${btn('toggleAnalyze', undefined, '🔍 ' + tr('Mark bars that play the same'), on, tr('In colour: sections that come again, bars like the one before (e.g. after a MIDI import)'), 'wide')}
       ${body}</section>`;
+  }
+
+  /**
+   * Check notes (melody tracks, js/check.js): three checks to switch on - the chord, the scale, the range; the notes
+   * found get a ring in the colour of the check, listed here (tap: select it), with a button each to set them right
+   * (the selected ones found, else all). Which tracks are checked: a melody by default, accompaniment not.
+   */
+  function checkSection() {
+    const mels = S.doc.tracks.filter((t) => t.kind === 'pitched');
+    if (!mels.length || !TC.check) return '';
+    const A = TC.actions, st = S.settings, on = A.checking();
+    const hasChords = S.doc.bars.some((h) => h.chords && h.chords.length);
+    const dot = (k) => `<span class="found-dot chk-${k}"></span>`;
+    let body = `${check('toggleCheck', !!st.checkChord, dot('chord') + ' ' + tr('Does not fit the chord'), 'chord')}
+      ${st.checkChord ? `<div class="sub-check">${check('toggleCheck', !!st.checkStrict, tr('Strict: every note (also passing tones)'), 'strict')}</div>
+        ${st.checkStrict ? '' : `<p class="hint tight">${tr('Only notes that stand out: right on a chord change, held into a new chord, or long on a beat.')}</p>`}
+        ${hasChords ? '' : `<p class="hint tight">${tr('No chord symbols yet (panel: Chords).')}</p>`}` : ''}
+      ${check('toggleCheck', !!st.checkScale, dot('scale') + ' ' + tr('Outside the scale'), 'scale')}
+      ${check('toggleCheck', !!st.checkRange, dot('range') + ' ' + tr('Outside the range (voice / instrument)'), 'range')}`;
+    if (on) {
+      // the tracks checked: a melody yes, a left hand / accompaniment (mostly chords) no - each can be switched
+      const tracked = mels.filter((t) => TC.check.tracked(S.doc, t));
+      if (mels.length > 1 || !tracked.length) {
+        body += `<p class="hint tight"><b>${tr('Tracks checked')}</b></p>` + mels.map((t) => {
+          const name = t.lh ? t.name + ' (' + tr('left hand') + ')' : t.name;
+          const why = TC.check.tracked(S.doc, t) || typeof t.check === 'boolean' ? '' : ` <span class="muted">– ${tr(t.lh ? 'accompaniment' : 'mostly chords')}</span>`;
+          return check('toggleCheckTrack', TC.check.tracked(S.doc, t), esc(name) + why, t.id);
+        }).join('');
+      }
+      // a range only where one is chosen: say where it is missing
+      if (st.checkRange) {
+        const none = tracked.filter((t) => !TC.check.rangeOf(S.doc, t));
+        if (none.length) body += `<p class="hint tight">${esc(tr('No range chosen for {names} - track panel: Voice / Range.', { names: none.map((t) => t.name).join(', ') }))}</p>`;
+      }
+      const list = A.checked().list, MAX = 40;
+      const P = TC.pitch;
+      const what = (f) => {
+        const h = TC.score.findNote(S.doc, f.id);
+        const sp = P.noteSpell(h ? h.note : { pitch: f.pitch, dia: null }, TC.score.scaleAt(TC.score.instrumentOf(S.doc, f.track), f.bar));
+        const note = P.fullName(sp.dia, sp.a, de());
+        if (f.kind === 'chord') return tr(f.why === 'into' ? '{note} held into {chord}' : '{note} on {chord}', { note, chord: P.chordName(f.ch, de()) });
+        if (f.kind === 'scale') return tr('{note} not in {scale}', { note, scale: P.scaleName(f.scale, de()) });
+        return tr(f.pitch < f.range[0] ? '{note} too low' : '{note} too high', { note });
+      };
+      const many = tracked.length > 1;
+      const items = list.slice(0, MAX).map((f, k) => `<div class="found-item">${dot(f.kind)}` +
+        btn('showCheck', k, esc(tr('Bar {n}', { n: f.bar + 1 }) + ': ' + (many ? f.track.name + ' – ' : '') + what(f)), false, tr('Select this note'), 'link') + '</div>').join('');
+      const count = (k) => list.filter((f) => f.kind === k).length;
+      const selFound = list.some((f) => S.selection.has(f.id));
+      const fixBtn = (k, label) => (st['check' + k[0].toUpperCase() + k.slice(1)] && count(k) ? btn('fixCheck', k, label + ` (${selFound ? tr('selected') : count(k)})`, false, tr(selFound ? 'The selected notes found' : 'All notes found of this kind')) : '');
+      body += list.length
+        ? `<p class="hint tight"><b>${tr('{n} notes found', { n: list.length })}</b>${list.length > MAX ? ' ' + tr('(the first {n})', { n: MAX }) : ''}</p><div class="found-list">${items}</div>
+          <div class="btn-col">${fixBtn('chord', tr('Onto chord tones'))}${fixBtn('scale', tr('Onto the scale'))}${fixBtn('range', tr('Into the range'))}</div>`
+        : `<p class="hint">${tr('Nothing found - every note fits.')}</p>`;
+    }
+    return `<section data-sec="check"><h3>${tr('Check notes')}</h3>${body}</section>`;
   }
 
   /** Repeats and jumps of the selected bar: |: :| endings, 𝄋 / ⊕, Fine / To Coda, D.C. / D.S. */
@@ -1007,14 +1066,14 @@
     const cur = TC.curTrack(), curBar = S.selBar !== null && cur.bars[S.selBar];
     const keyS = JSON.stringify([S.selBar, S.selBarEnd, S.selBar !== null && S.doc.bars[S.selBar], S.selBar !== null && !!(S.doc.bars[S.selBar + 1] || {}).lineBreak, S.doc.meta, lang,
       cur.id, !!(curBar && curBar.simile), S.input.art, JSON.stringify(S.doc.tracks.map((t) => [t.id, t.name, t.hidden, t.kit, t.oneLine, t.mute, t.solo, t.profile, t.midiOut, t.midiCh, t.kind, t.clef, t.voice, t.scale, t.program, t.volume, t.inst, t.ksw, t.fill, t.pan, t.guide, t.kitPreset, t.scaleGuide, t.bars.map((b) => b.guide || '').join(), S.selBar !== null && t.bars[S.selBar] && t.bars[S.selBar].dyn])), S.dynAll, cur.kind === 'pitched' && JSON.stringify([TC.score.scaleAt(cur, S.selBar || 0), curBar && curBar.scale]), TC.kits.list.map((p) => p.id + p.name).join(), TC.kswLib && TC.kswLib.list.map((p) => p.id + p.name).join(),
-      S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
+      S.settings, S.tsMode, !!S.clipboard, !!(S.clipboard && S.clipboard.only), S.doc.tracks.length, TC.curTrack().id, TC.curTrack().name, S.doc.bars.length, S.chordSlot, TC.gridTicks(S.input), !!S.analyze && S.rev, TC.actions.checking() && [S.rev, [...S.selection].join()], S.doc.harmony, TC.score.harmonyScale(S.doc, S.selBar || 0), S.doc.bars.map((b) => (b.guide || '') + (b.chords ? b.chords.length : '')).join(), TC.samples && TC.samples.state(), Math.round(TC.audio.reportedDelay() * 1000), S.doc.bars.map((b) => [b.tempo || 0, b.mark, b.end, b.jump, b.repeatStart ? 1 : 0, b.repeatEnd, b.volta].join(":")).join(), TC.midiOut && TC.midiOut.outputs().join(), TC.midiOut && TC.midiOut.active()]);
     if ((force || keyS !== lastSet) && !(!force && typing(setRoot))) {
       lastSet = keyS;
       const scroll = setRoot.scrollTop;
       const kitOpen = setRoot.querySelector('details.kit-list[open]') !== null; // (instruments of the track: stays open)
       // what is needed while writing: the track (and a melody's scale), the bar and what belongs to it, the score -
       // the mixer (all tracks) and the playback in their own window ("Mixer…"), the rest in the settings window (⚙)
-      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackSection() + barSection() + chordSection() + repeatSection() + findSection() + scoreSection() +
+      setRoot.innerHTML = head(tr('Bar · score'), 'right') + trackSection() + barSection() + chordSection() + repeatSection() + findSection() + checkSection() + scoreSection() +
         `<section>${btn('openSettings', undefined, '⚙ ' + tr('More settings…'), false, tr('Drum kit, notation, page, view, keyboard shortcuts'), 'wide')}</section>`;
       foldable(setRoot);
       if (kitOpen && setRoot.querySelector('details.kit-list')) setRoot.querySelector('details.kit-list').open = true;

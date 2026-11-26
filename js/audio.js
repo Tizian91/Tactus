@@ -520,7 +520,8 @@
     if (!c || S.settings.followPlay === false) return;
     // at a part (a text above the bar: Verse, Chorus …): its bar to the top left, so a part is seldom broken up on
     // the screen; up to the next part the view then only moves when the cursor would leave it (keeping the cursor at
-    // a third would move the part away) - "smooth": it glides there, "jumping": it jumps
+    // a third would move the part away) - "jumping": it jumps; "smooth": endless view - the part stays at the left
+    // until the cursor reaches a third, then the view glides along; page view - it glides when the line would leave
     const smooth = S.settings.followMode === 'smooth';
     const parts = S.settings.followSections && !document.body.classList.contains('perform'); // (the stage view shows whole pages)
     if (parts) {
@@ -549,7 +550,8 @@
    *   smooth             the view glides along: the cursor stays at a third of the width (endless
    *                      view), the line being played in the upper quarter (page view), so the next
    *                      one is already in view; a jump back (repeat) glides as well
-   *   smooth + edge      (following the parts) moves only when "jumping" would, but glides there
+   *   smooth + edge      (following the parts) page view: moves only when "jumping" would, but glides there;
+   *                      endless view: the part stays at the left until the cursor reaches a third, then glides along
    */
   P.keepInView = function (c, smooth, edge) {
     // gliding only at the edge: once started, it glides on to where it was aimed
@@ -574,6 +576,12 @@
       } else if (sx < 0 || sx > w || (wide && (sx > w * 0.85 || sx < w * 0.05))) tx = w * 0.15 - c.x * z;
     } else if (along) {
       if (sx > w / 3 || sx < w * 0.05) tx = w / 3 - c.x * z;
+    } else if (smooth && edge) {
+      // endless view after a part: the part's start stays at the left until the cursor reaches a third of the
+      // width, then the view glides along with it (as "smooth") - no glide at the edge, which looked like a jump
+      if (sx > w / 3 || sx < 0) tx = w / 3 - c.x * z;
+      P.moveTo(tx, ty, true);
+      return;
     } else if (sx > w * 0.85 || sx < 0) tx = w * 0.15 - c.x * z;
     if (smooth && edge) {
       if (tx === v.x && ty === v.y) return;
